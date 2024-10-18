@@ -11,24 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('t_sales_return_products', function (Blueprint $table) {
+        Schema::create('t_stock_transfer_products', function (Blueprint $table) {
             $table->id();
-            $table->integer('sales_return_id');
+            $table->integer('transfer_id');
             $table->integer('product_id');
             $table->string('product_name');
             // as it don't support `length`, it can store upto `65,535 characters for TEXT type in MySQL`
             $table->text('description');
-            $table->string('brand');
             $table->integer('quantity');
             $table->integer('unit');
-            $table->float('price');
-            $table->float('discount');
-            $table->string('hsn');
-            $table->float('tax');
-            $table->float('cgst');
-            $table->float('sqst');
-            $table->float('igst');
-            $table->integer('godown');
+            $table->string('status');
             $table->timestamps();
         });
     }
@@ -38,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('t_sales_return_products');
+        Schema::dropIfExists('t_stock_transfer_products');
     }
 };
