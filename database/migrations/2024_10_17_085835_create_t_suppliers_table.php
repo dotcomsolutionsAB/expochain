@@ -14,14 +14,14 @@ return new class extends Migration
         Schema::create('t_suppliers', function (Blueprint $table) {
             $table->id();
             $table->integer('supplier_id');
-            $table->string('name');
+            $table->string('name')->unique();
             $table->string('address_line_1');
             $table->string('address_line_2');
             $table->string('city');
             $table->string('pincode');
             $table->string('state');
             $table->string('country');
-            $table->string('gstin');
+            $table->string('gstin')->unique();
             $table->timestamps();
         });
     }

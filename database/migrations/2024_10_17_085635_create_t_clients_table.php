@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('t_clients', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->integer('customer_id');
+            $table->string('name')->unique();
+            $table->unsignedBigInteger('customer_id');
             $table->string('type');
             $table->string('category');
             $table->string('division');
@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('pincode');
             $table->string('state');
             $table->string('country');
-            $table->string('gstin');
+            $table->string('gstin')->unique();
             $table->timestamps();
         });
     }

@@ -24,4 +24,11 @@ class ClientsModel extends Model
         'country',
         'gstin',
     ];
+
+    // One client has many contacts
+    // public functions constacts
+    public function contacts()
+    {
+        return $this->hasMany(ClientsContactsModel::class, 'customer_id', 'customer_id');
+    }
 }

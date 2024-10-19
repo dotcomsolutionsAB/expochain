@@ -20,4 +20,10 @@ class SuppliersModel extends Model
         'country',
         'gstin',
     ];
+
+    // One client has many contacts
+    public function contact()
+    {
+        return $this->hasMany(ClientsModel::class, 'customer_id', 'customer_id');
+    }
 }

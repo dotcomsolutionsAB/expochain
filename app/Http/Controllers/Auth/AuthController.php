@@ -28,20 +28,12 @@ class AuthController extends Controller
                 'password' => bcrypt($request->input('password')),
                 'mobile' => $request->input('mobile'),
             ]);
-    
-            if (isset($register_user)) {
-                return response()->json([
-                    'message' => 'User created successfully!',
-                    'data' => $register_user
-                ], 201);
-            }
-    
-            else {
-                return response()->json([
-                    'message' => 'Failed to create successfully!',
-                    'data' => 'error'
-                ], 400);
-            }
+            
+            unset($register_user['id'], $register_user['created_at'], $register_user['updated_at']);
+
+            return isset($register_user) && $register_user !== null
+            ? response()->json(['User registered successfully!', 'data' => $register_user], 201)
+            : response()->json(['Failed to register user'], 400);
         }
     
         // genearate otp and send to `whatsapp`
@@ -173,7 +165,7 @@ class AuthController extends Controller
                     'email' => ['required', 'string', 'min:12', 'max:14'],
                     'password' => 'required',
                 ]);
-    
+
                 if(Auth::attempt(['email' => $request->email, 'password' => $request->password]))
                 {
                     $user = Auth::user();
