@@ -3,26 +3,33 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\UsersController;
 use App\Http\Controllers\MastersController;
+use App\Http\Controllers\Auth\ClientsController;
+use App\Http\Controllers\Auth\SuppliersController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
 // })->middleware('auth:sanctum');
-Route::post('/register', [AuthController::class, 'register']);
+Route::post('/register', [UsersController::class, 'register']);
 
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
 
-    Route::post('/client', [MastersController::class, 'add_clients']);
-    Route::get('/client', [MastersController::class, 'view_clients']);
-    Route::post('/update_client/{id}', [MastersController::class, 'update_clients']);
-    Route::delete('/client/{id}', [MastersController::class, 'delete_clients']);
+    Route::get('/user', [UsersController::class, 'view']);
+    Route::post('/edit/{id}', [UsersController::class, 'update']);
+    Route::delete('/delete/{id}', [UsersController::class, 'delete']);
 
-    Route::post('/suppliers', [MastersController::class, 'add_suppliers']);
-    Route::get('/suppliers', [MastersController::class, 'view_suppliers']);
-    Route::post('/update_suppliers/{id}', [MastersController::class, 'update_suppliers']);
-    Route::delete('/suppliers/{id}', [MastersController::class, 'delete_supplier']);
+    Route::post('/client', [ClientsController::class, 'add_clients']);
+    Route::get('/client', [ClientsController::class, 'view_clients']);
+    Route::post('/update_client/{id}', [ClientsController::class, 'update_clients']);
+    Route::delete('/client/{id}', [ClientsController::class, 'delete_clients']);
+
+    Route::post('/suppliers', [SuppliersController::class, 'add_suppliers']);
+    Route::get('/suppliers', [SuppliersController::class, 'view_suppliers']);
+    Route::post('/update_suppliers/{id}', [SuppliersController::class, 'update_suppliers']);
+    Route::delete('/suppliers/{id}', [SuppliersController::class, 'delete_supplier']);
 
     Route::post('/products', [MastersController::class, 'add_products']);
     Route::get('/products', [MastersController::class, 'view_products']);

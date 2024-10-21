@@ -7,35 +7,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Utils\sendWhatsAppUtility;
 use App\Models\User;
-use Hash;
 
 class AuthController extends Controller
 {
-    //
-        //register user
-        public function register(Request $request)
-        {
-            $request->validate([
-                'name' => 'required|string',
-                'email' => 'required|unique:users,email',
-                'mobile' => 'required|string',
-                'password' => 'required|string',
-            ]);
-    
-            $register_user = User::create([
-                'name' => $request->input('name'),
-                'email' => strtolower($request->input('email')),
-                'password' => bcrypt($request->input('password')),
-                'mobile' => $request->input('mobile'),
-            ]);
-            
-            unset($register_user['id'], $register_user['created_at'], $register_user['updated_at']);
-
-            return isset($register_user) && $register_user !== null
-            ? response()->json(['User registered successfully!', 'data' => $register_user], 201)
-            : response()->json(['Failed to register user'], 400);
-        }
-    
+    //    
         // genearate otp and send to `whatsapp`
         public function generate_otp(Request $request)
         {
