@@ -1,0 +1,26 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class PurchaseReturnModel extends Model
+{
+    //
+    protected $table = 't_purchase_return';
+
+    protected $fillable = [
+        'supplier_id',
+        'name',
+        'purchase_return_no',
+        'purchase_return_date',
+        'purchase_invoice_no',
+        'cgst',
+        'sgst',
+        'igst',
+        'total',
+        'currency',
+        'template',
+        'status'
+    ];
+}

@@ -13,6 +13,10 @@ use App\Http\Controllers\SalesInvoiceController;
 use App\Http\Controllers\SalesReturnController;
 use App\Http\Controllers\CreditNoteController;
 use App\Http\Controllers\TestCertificateController;
+use App\Http\Controllers\PurchaseInvoiceController;
+use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\PurchaseReturnController;
+use App\Http\Controllers\DebitNoteController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -91,6 +95,26 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/test_certificate', [TestCertificateController::class, 'test_certificate']);
     Route::post('/update_test_certificate/{id?}', [TestCertificateController::class, 'edit_test_certificate']);
     Route::delete('/test_certificate', [TestCertificateController::class, 'delete_test_certificate']);
+
+    Route::post('/add_purchase_invoice', [PurchaseInvoiceController::class, 'add_purchase_invoice']);
+    Route::get('/purchase_invoice', [PurchaseInvoiceController::class, 'purchase_invoice']);
+    Route::post('/update_purchase_invoice/{id?}', [PurchaseInvoiceController::class, 'edit_purchase_invoice']);
+    Route::delete('/purchase_invoice', [PurchaseInvoiceController::class, 'delete_purchase_invoice']);
+
+    Route::post('/add_purchase_order', [PurchaseOrderController::class, 'add_purchase_order']);
+    Route::get('/purchase_order', [PurchaseOrderController::class, 'purchase_order']);
+    Route::post('/update_purchase_order/{id?}', [PurchaseOrderController::class, 'edit_purchase_order']);
+    Route::delete('/purchase_order', [PurchaseOrderController::class, 'delete_purchase_order']);
+
+    Route::post('/add_purchase_return', [PurchaseReturnController::class, 'add_purchase_return']);
+    Route::get('/purchase_return', [PurchaseReturnController::class, 'purchase_return']);
+    Route::post('/update_purchase_return/{id?}', [PurchaseReturnController::class, 'edit_purchase_return']);
+    Route::delete('/purchase_return', [PurchaseReturnController::class, 'delete_purchase_return']);
+
+    Route::post('/add_debit_note', [DebitNoteController::class, 'add_debit_note']);
+    Route::get('/debit_note', [DebitNoteController::class, 'debit_note']);
+    Route::post('/update_debit_note/{id?}', [DebitNoteController::class, 'edit_debit_note']);
+    Route::delete('/debit_note', [DebitNoteController::class, 'delete_debit_note']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
 });
