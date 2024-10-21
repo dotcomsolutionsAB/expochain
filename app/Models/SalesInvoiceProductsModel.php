@@ -4,13 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class SalesOrderProductsModel extends Model
+class SalesInvoiceProductsModel extends Model
 {
     //
-    protected $table = 't_sales_order_products';
+    protected $table = 't_sales_invoice_products';
 
     protected $fillable = [
-        'sales_order_id',
+        'sales_invoice_id',
         'product_id',
         'product_name',
         'description',
@@ -24,5 +24,6 @@ class SalesOrderProductsModel extends Model
         'cgst',
         'sgst',
         'igst',
+        'godown',
     ];
 }

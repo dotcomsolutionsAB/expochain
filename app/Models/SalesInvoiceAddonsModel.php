@@ -4,13 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class SalesOrderAddonsModel extends Model
+class SalesInvoiceAddonsModel extends Model
 {
     //
-    protected $table = 't_sales_order_addons';
+    protected $table = 't_sales_invoice_addons';
 
     protected $fillable = [
-       'sales_order_id',
+       'sales_invoice_id',
         'name',
         'amount',
         'tax',

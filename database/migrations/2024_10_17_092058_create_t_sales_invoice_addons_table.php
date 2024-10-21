@@ -19,7 +19,7 @@ return new class extends Migration
             $table->float('tax');
             $table->string('hsn');
             $table->float('cgst');
-            $table->float('sqst');
+            $table->float('sgst');
             $table->float('igst');
             $table->timestamps();
         });

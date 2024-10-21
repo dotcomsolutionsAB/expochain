@@ -8,6 +8,8 @@ use App\Http\Controllers\MastersController;
 use App\Http\Controllers\ClientsController;
 use App\Http\Controllers\SuppliersController;
 use App\Http\Controllers\QuotationsController;
+use App\Http\Controllers\SalesOrderController;
+use App\Http\Controllers\SalesInvoiceController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -67,12 +69,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_quotations/{id?}', [MastersController::class, 'edit_quotations']);
     Route::delete('/quotations', [MastersController::class, 'delete_quotations']);
 
-    Route::post('/add_pdf', [MastersController::class, 'add_pdf_template']);
-    Route::get('/pdf', [MastersController::class, 'pdf_template']);
-    Route::post('/update_pdf/{id?}', [MastersController::class, 'edit_pdf_template']);
-    Route::delete('/pdf', [MastersController::class, 'delete_pdf_template']);
+    Route::post('/add_sales', [SalesOrderController::class, 'add_sales_order']);
+    Route::get('/sales', [SalesOrderController::class, 'pdf_template']);
+    Route::post('/update_sales/{id?}', [SalesOrderController::class, 'edit_pdf_template']);
+    Route::delete('/sales', [SalesOrderController::class, 'delete_pdf_template']);
 
-
+    Route::post('/add_sales_invoice', [SalesInvoiceController::class, 'add_sales_invoice']);
+    Route::get('/sales', [SalesOrderController::class, 'pdf_template']);
+    Route::post('/update_sales/{id?}', [SalesOrderController::class, 'edit_pdf_template']);
+    Route::delete('/sales', [SalesOrderController::class, 'delete_pdf_template']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
 });

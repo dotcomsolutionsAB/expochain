@@ -33,7 +33,7 @@ return new class extends Migration
             $table->string('currency');
             $table->integer('template');
             $table->integer('status');
-            $table->float('commision');
+            $table->float('commission');
             $table->float('cash');
             $table->timestamps();
         });

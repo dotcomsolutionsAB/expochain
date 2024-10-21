@@ -26,7 +26,7 @@ return new class extends Migration
             $table->string('hsn');
             $table->float('tax');
             $table->float('cgst');
-            $table->float('sqst');
+            $table->float('sgst');
             $table->float('igst');
             $table->timestamps();
         });

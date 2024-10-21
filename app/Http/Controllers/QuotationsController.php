@@ -123,7 +123,7 @@ class QuotationsController extends Controller
         unset($register_quotations['id'], $register_quotations['created_at'], $register_quotations['updated_at']);
     
         return isset($register_quotations) && $register_quotations !== null
-        ? response()->json(['Quotatins registered successfully!', 'data' => $register_quotations], 201)
+        ? response()->json(['Quotations registered successfully!', 'data' => $register_quotations], 201)
         : response()->json(['Failed to register quotations record'], 400);
     }
 }
