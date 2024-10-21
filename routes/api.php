@@ -10,6 +10,9 @@ use App\Http\Controllers\SuppliersController;
 use App\Http\Controllers\QuotationsController;
 use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\SalesInvoiceController;
+use App\Http\Controllers\SalesReturnController;
+use App\Http\Controllers\CreditNoteController;
+use App\Http\Controllers\TestCertificateController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -78,6 +81,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/sales', [SalesOrderController::class, 'pdf_template']);
     Route::post('/update_sales/{id?}', [SalesOrderController::class, 'edit_pdf_template']);
     Route::delete('/sales', [SalesOrderController::class, 'delete_pdf_template']);
+
+    Route::post('/add_credit_note', [CreditNoteController::class, 'add_credit_note']);
+    Route::get('/credit_note', [CreditNoteController::class, 'pdf_template']);
+    Route::post('/update_credit_note/{id?}', [CreditNoteController::class, 'edit_credit_note']);
+    Route::delete('/credit_note', [CreditNoteController::class, 'delete_credit_note']);
+
+    Route::post('/add_test_certificate', [TestCertificateController::class, 'add_test_certificate']);
+    Route::get('/test_certificate', [TestCertificateController::class, 'test_certificate']);
+    Route::post('/update_test_certificate/{id?}', [TestCertificateController::class, 'edit_test_certificate']);
+    Route::delete('/test_certificate', [TestCertificateController::class, 'delete_test_certificate']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
 });
