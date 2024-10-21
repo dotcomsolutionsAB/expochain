@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('pincode');
             $table->string('state');
             $table->string('country');
-            $table->string('quotation_no');
+            $table->unsignedBigInteger('quotation_no');
             $table->string('quotation_date');
             $table->string('enquiry_no');
             $table->string('enquiry_date');

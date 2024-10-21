@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('t_suppliers_contacts', function (Blueprint $table) {
             $table->id();
-            $table->integer('supplier_id');
+            $table->unsignedBigInteger('supplier_id');
             $table->string('name');
             $table->string('designation');
             $table->string('mobile');

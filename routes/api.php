@@ -3,10 +3,11 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\Auth\UsersController;
+use App\Http\Controllers\UsersController;
 use App\Http\Controllers\MastersController;
-use App\Http\Controllers\Auth\ClientsController;
-use App\Http\Controllers\Auth\SuppliersController;
+use App\Http\Controllers\ClientsController;
+use App\Http\Controllers\SuppliersController;
+use App\Http\Controllers\QuotationsController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -61,15 +62,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_brand/{id?}', [MastersController::class, 'edit_brand']);
     Route::delete('/brand', [MastersController::class, 'delete_brand']);
 
-    // Route::post('/add_pdf', [MastersController::class, 'add_pdf_template']);
-    // Route::get('/pdf', [MastersController::class, 'pdf_template']);
-    // Route::post('/update_pdf/{id?}', [MastersController::class, 'edit_pdf_template']);
-    // Route::delete('/pdf', [MastersController::class, 'delete_pdf_template']);
+    Route::post('/add_quotations', [QuotationsController::class, 'add_quotations']);
+    Route::get('/quotations', [QuotationsController::class, 'quotations']);
+    Route::post('/update_quotations/{id?}', [MastersController::class, 'edit_quotations']);
+    Route::delete('/quotations', [MastersController::class, 'delete_quotations']);
 
-    // Route::post('/add_pdf', [MastersController::class, 'add_pdf_template']);
-    // Route::get('/pdf', [MastersController::class, 'pdf_template']);
-    // Route::post('/update_pdf/{id?}', [MastersController::class, 'edit_pdf_template']);
-    // Route::delete('/pdf', [MastersController::class, 'delete_pdf_template']);
+    Route::post('/add_pdf', [MastersController::class, 'add_pdf_template']);
+    Route::get('/pdf', [MastersController::class, 'pdf_template']);
+    Route::post('/update_pdf/{id?}', [MastersController::class, 'edit_pdf_template']);
+    Route::delete('/pdf', [MastersController::class, 'delete_pdf_template']);
 
 
 
