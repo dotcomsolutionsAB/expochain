@@ -26,4 +26,10 @@ class PurchaseReturnProductsModel extends Model
         'igst',
         'godown'
     ];
+
+    // Defining the relationship with PurchaseReturnModel (Parent)
+    public function purchaseReturn()
+    {
+        return $this->belongsTo(PurchaseReturnModel::class, 'purchase_return_number', 'id');
+    }
 }

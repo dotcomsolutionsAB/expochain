@@ -27,4 +27,9 @@ class PurchaseOrderModel extends Model
         'template',
         'status'
     ];
+
+    public function products()
+    {
+        return $this->hasMany(PurchaseOrderProductsModel::class, 'purchase_order_number', 'id');
+    }
 }

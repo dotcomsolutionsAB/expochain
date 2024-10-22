@@ -16,4 +16,9 @@ class AssemblyModel extends Model
         'quantity',
         'log_user'
     ];
+
+    public function products()
+    {
+        return $this->hasMany(AssemblyProductsModel::class, 'assembly_id', 'assembly_id');
+    }
 }

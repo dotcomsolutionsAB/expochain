@@ -25,4 +25,9 @@ class PurchaseOrderProductsModel extends Model
         'sgst',
         'igst',
     ];
+
+    public function purchaseOrder()
+    {
+        return $this->belongsTo(PurchaseOrderModel::class, 'purchase_order_number', 'id');
+    }
 }

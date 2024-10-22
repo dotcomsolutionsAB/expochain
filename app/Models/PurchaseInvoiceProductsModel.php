@@ -26,4 +26,9 @@ class PurchaseInvoiceProductsModel extends Model
         'igst',
         'godown'
     ];
+
+    public function purchaseInvoice()
+    {
+        return $this->belongsTo(PurchaseInvoiceModel::class, 'purchase_invoice_number', 'id');
+    }
 }

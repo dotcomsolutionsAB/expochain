@@ -23,4 +23,10 @@ class PurchaseReturnModel extends Model
         'template',
         'status'
     ];
+
+    // Defining the relationship with PurchaseReturnProductsModel
+    public function products()
+    {
+        return $this->hasMany(PurchaseReturnProductsModel::class, 'purchase_return_number', 'id');
+    }
 }

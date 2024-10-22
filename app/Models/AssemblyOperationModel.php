@@ -21,4 +21,9 @@ class AssemblyOperationModel extends Model
         'amount',
         'log_user'
     ];
+
+    public function products()
+    {
+        return $this->hasMany(AssemblyOperationProductsModel::class, 'assembly_operations_id', 'assembly_operations_id');
+    }
 }

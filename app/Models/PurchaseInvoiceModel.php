@@ -28,4 +28,9 @@ class PurchaseInvoiceModel extends Model
         'template',
         'status'
     ];
+
+    public function products()
+    {
+        return $this->hasMany(PurchaseInvoiceProductsModel::class, 'purchase_invoice_number', 'id');
+    }
 }
