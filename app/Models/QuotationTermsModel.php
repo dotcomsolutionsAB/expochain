@@ -9,9 +9,10 @@ class QuotationTermsModel extends Model
     //
     protected $table = 't_quotation_terms';
 
-    protected $fillable = [
-        'quotation_id',
-        'name',
-        'value',
-    ];
+    protected $fillable = ['quotation_id', 'name', 'value'];
+
+    public function quotation()
+    {
+        return $this->belongsTo(QuotationsModel::class, 'quotation_id', 'id');
+    }
 }

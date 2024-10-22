@@ -18,4 +18,9 @@ class TestCertificateModel extends Model
         'client_flag',
         'log_user'
     ];
+
+    public function products()
+    {
+        return $this->hasMany(TestCertificateProductsModel::class, 'tc_id', 'id');
+    }
 }

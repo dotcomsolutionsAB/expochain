@@ -23,4 +23,10 @@ class CreditNoteModel extends Model
         'template',
         'status'
     ];
+
+    public function products()
+    {
+        return $this->hasMany(CreditNoteProductsModel::class, 'credit_note_id');
+    }
+
 }

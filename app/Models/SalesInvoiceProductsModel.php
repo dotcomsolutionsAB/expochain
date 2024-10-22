@@ -26,4 +26,10 @@ class SalesInvoiceProductsModel extends Model
         'igst',
         'godown',
     ];
+
+    public function salesInvoice()
+    {
+        return $this->belongsTo(SalesInvoiceModel::class, 'sales_invoice_id');
+    }
+    
 }

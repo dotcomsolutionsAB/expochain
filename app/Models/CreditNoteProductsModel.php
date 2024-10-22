@@ -27,4 +27,10 @@ class CreditNoteProductsModel extends Model
         'igst',
         'godown',
     ];
+
+    public function creditNote()
+    {
+        return $this->belongsTo(CreditNoteModel::class, 'credit_note_id');
+    }
+
 }

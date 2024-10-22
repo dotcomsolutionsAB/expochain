@@ -25,4 +25,10 @@ class SalesOrderProductsModel extends Model
         'sgst',
         'igst',
     ];
+
+    public function salesOrder()
+    {
+        return $this->belongsTo(SalesOrderModel::class, 'sales_order_id');
+    }
+
 }

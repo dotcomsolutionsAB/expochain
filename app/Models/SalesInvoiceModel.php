@@ -33,4 +33,15 @@ class SalesInvoiceModel extends Model
         'commission',
         'cash',
     ];
+
+    public function products()
+    {
+        return $this->hasMany(SalesInvoiceProductsModel::class, 'sales_invoice_id');
+    }
+
+    public function addons()
+    {
+        return $this->hasMany(SalesInvoiceAddonsModel::class, 'sales_invoice_id');
+    }
+
 }

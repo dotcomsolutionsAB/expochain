@@ -30,4 +30,15 @@ class SalesOrderModel extends Model
         'template',
         'status',
     ];
+
+    public function products()
+    {
+        return $this->hasMany(SalesOrderProductsModel::class, 'sales_order_id');
+    }
+
+    public function addons()
+    {
+        return $this->hasMany(SalesOrderAddonsModel::class, 'sales_order_id');
+    }
+
 }
