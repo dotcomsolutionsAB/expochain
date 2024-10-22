@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('t_stock_transfer_products', function (Blueprint $table) {
             $table->id();
-            $table->integer('transfer_id');
+            $table->unsignedBigInteger('transfer_id');
             $table->integer('product_id');
             $table->string('product_name');
             // as it don't support `length`, it can store upto `65,535 characters for TEXT type in MySQL`

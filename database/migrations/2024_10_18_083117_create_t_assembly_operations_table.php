@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('t_assembly_operations', function (Blueprint $table) {
             $table->id();
-            $table->integer('assembly_operations_id');
+            $table->unsignedBigInteger('assembly_operations_id');
             $table->date('assembly_operations_date');
             $table->enum('type', ['assemble', 'de-assemble']);
             $table->integer('product_id');
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->integer('godown');
             $table->float('rate');
             $table->float('amount');
-            $table->float('log_user');
+            $table->string('log_user');
             $table->timestamps();
         });
     }

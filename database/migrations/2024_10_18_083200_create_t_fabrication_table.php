@@ -23,7 +23,7 @@ return new class extends Migration
             $table->float('amount');
             // as it don't support `length`, it can store upto `65,535 characters for TEXT type in MySQL`
             $table->text('description');
-            $table->float('log_user');
+            $table->string('log_user');
             $table->timestamps();
         });
     }

@@ -17,6 +17,10 @@ use App\Http\Controllers\PurchaseInvoiceController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseReturnController;
 use App\Http\Controllers\DebitNoteController;
+use App\Http\Controllers\StockTransferController;
+use App\Http\Controllers\AssemblyController;
+use App\Http\Controllers\AssemblyOperationsController;
+use App\Http\Controllers\FabricationController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -115,6 +119,26 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/debit_note', [DebitNoteController::class, 'debit_note']);
     Route::post('/update_debit_note/{id?}', [DebitNoteController::class, 'edit_debit_note']);
     Route::delete('/debit_note', [DebitNoteController::class, 'delete_debit_note']);
+
+    Route::post('/add_stock_transfer', [StockTransferController::class, 'add_stock_transfer']);
+    Route::get('/tock_transfer', [StockTransferController::class, 'stock_transfer']);
+    Route::post('/update_stock_transfer/{id?}', [StockTransferController::class, 'edit_tock_transfer']);
+    Route::delete('/stock_transfer', [StockTransferController::class, 'delete_tock_transfer']);
+
+    Route::post('/add_assembly', [AssemblyController::class, 'add_assembly']);
+    Route::get('/assembly', [AssemblyController::class, 'assembly']);
+    Route::post('/update_assembly/{id?}', [AssemblyController::class, 'edit_assembly']);
+    Route::delete('/assembly', [AssemblyController::class, 'delete_assembly']);
+
+    Route::post('/add_assembly_operations', [AssemblyOperationsController::class, 'add_assembly_operations']);
+    Route::get('/assembly_operations', [AssemblyOperationsController::class, 'assembly_operations']);
+    Route::post('/update_assembly_operations/{id?}', [AssemblyOperationsController::class, 'edit_assembly_operations']);
+    Route::delete('/assembly_operations', [AssemblyOperationsController::class, 'delete_assembly_operations']);
+
+    Route::post('/add_fabrication', [FabricationController::class, 'add_fabrication']);
+    Route::get('/fabrication', [FabricationController::class, 'fabrication']);
+    Route::post('/update_fabrication/{id?}', [FabricationController::class, 'edit_fabrication']);
+    Route::delete('/fabrication', [FabricationController::class, 'delete_fabrication']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
 });
