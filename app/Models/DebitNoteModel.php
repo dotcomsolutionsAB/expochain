@@ -23,4 +23,10 @@ class DebitNoteModel extends Model
         'template',
         'status'
     ];
+
+    // Defining the relationship with PurchaseReturnProductsModel
+    public function products()
+    {
+        return $this->hasMany(DebitNoteProductsModel::class, 'debit_note_number', 'id');
+    }
 }

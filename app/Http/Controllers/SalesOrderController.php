@@ -122,10 +122,9 @@ class SalesOrderController extends Controller
     }
 
     // Update Sales Order
-    public function update_sales_order(Request $request)
+    public function edit_sales_order(Request $request, $id)
     {
         $request->validate([
-            'sales_order_id' => 'required|integer',
             'client_id' => 'required|integer',
             'client_contact_id' => 'required|integer',
             'name' => 'required|string',
@@ -146,6 +145,7 @@ class SalesOrderController extends Controller
             'template' => 'required|integer',
             'status' => 'required|integer',
             'products' => 'required|array',
+            'products.*.sales_order_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
@@ -160,6 +160,7 @@ class SalesOrderController extends Controller
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
             'addons' => 'nullable|array',
+            'addons.*.sales_order_id' => 'required|integer',
             'addons.*.name' => 'required|string',
             'addons.*.amount' => 'required|numeric',
             'addons.*.tax' => 'required|numeric',
@@ -169,7 +170,7 @@ class SalesOrderController extends Controller
             'addons.*.igst' => 'required|numeric',
         ]);
 
-        $salesOrder = SalesOrderModel::where('id', $request->input('sales_order_id'))->first();
+        $salesOrder = SalesOrderModel::where('id', $id)->first();
 
         $salesOrderUpdated = $salesOrder->update([
             'client_id' => $request->input('client_id'),
@@ -200,9 +201,10 @@ class SalesOrderController extends Controller
         foreach ($products as $productData) {
             $requestProductIDs[] = $productData['product_id'];
 
-            $existingProduct = SalesOrderProductsModel::where('sales_order_id', $request->input('sales_order_id'))
+            $existingProduct = SalesOrderProductsModel::where('sales_order_id', $productData['sales_order_id'])
                                                     ->where('product_id', $productData['product_id'])
-                                                    ->first();
+                                                    ->toSql();
+                                                    // dd($productData['product_id']);
 
             if ($existingProduct) {
                 $existingProduct->update([
@@ -221,7 +223,7 @@ class SalesOrderController extends Controller
                 ]);
             } else {
                 SalesOrderProductsModel::create([
-                    'sales_order_id' => $request->input('sales_order_id'),
+                    'sales_order_id' => $productData['sales_order_id'],
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
@@ -246,7 +248,7 @@ class SalesOrderController extends Controller
         foreach ($addons as $addonData) {
             $requestAddonIDs[] = $addonData['name'];
 
-            $existingAddon = SalesOrderAddonsModel::where('sales_order_id', $request->input('sales_order_id'))
+            $existingAddon = SalesOrderAddonsModel::where('sales_order_id', $addonData['sales_order_id'])
                                                 ->where('name', $addonData['name'])
                                                 ->first();
 
@@ -261,7 +263,7 @@ class SalesOrderController extends Controller
                 ]);
             } else {
                 SalesOrderAddonsModel::create([
-                    'sales_order_id' => $request->input('sales_order_id'),
+                    'sales_order_id' => $addonData['sales_order_id'],
                     'name' => $addonData['name'],
                     'amount' => $addonData['amount'],
                     'tax' => $addonData['tax'],
@@ -274,13 +276,13 @@ class SalesOrderController extends Controller
         }
 
         // Delete products not included in the request
-        $productsDeleted = SalesOrderProductsModel::where('sales_order_id', $request->input('sales_order_id'))
-                                                ->whereNotIn('product_id', $requestProductIDs)
+        $productsDeleted = SalesOrderProductsModel::where('sales_order_id', $id)
+                                                ->where('product_id', $requestProductIDs)
                                                 ->delete();
 
         // Delete addons not included in the request
-        $addonsDeleted = SalesOrderAddonsModel::where('sales_order_id', $request->input('sales_order_id'))
-                                            ->whereNotIn('name', $requestAddonIDs)
+        $addonsDeleted = SalesOrderAddonsModel::where('sales_order_id', $id)
+                                            ->where('name', $requestAddonIDs)
                                             ->delete();
 
         return ($salesOrderUpdated || $productsDeleted || $addonsDeleted)

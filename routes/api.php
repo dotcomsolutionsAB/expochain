@@ -81,52 +81,57 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/quotations/{id?}', [MastersController::class, 'delete_quotations']);
 
     Route::post('/add_sales', [SalesOrderController::class, 'add_sales_order']);
-    Route::get('/sales', [SalesOrderController::class, 'pdf_template']);
-    Route::post('/update_sales/{id?}', [SalesOrderController::class, 'edit_pdf_template']);
-    Route::delete('/sales/{id?}', [SalesOrderController::class, 'delete_pdf_template']);
+    Route::get('/sales', [SalesOrderController::class, 'view_sales_order']);
+    Route::post('/update_sales/{id?}', [SalesOrderController::class, 'edit_sales_order']);
+    Route::delete('/sales/{id?}', [SalesOrderController::class, 'delete_sales_order']);
 
     Route::post('/add_sales_invoice', [SalesInvoiceController::class, 'add_sales_invoice']);
-    Route::get('/sales', [SalesOrderController::class, 'pdf_template']);
-    Route::post('/update_sales/{id?}', [SalesOrderController::class, 'edit_pdf_template']);
-    Route::delete('/sales/{id?}', [SalesOrderController::class, 'delete_pdf_template']);
+    Route::get('/sales_invoice', [SalesInvoiceController::class, 'view_sales_invoice']);
+    Route::post('/update_sales_invoice/{id?}', [SalesInvoiceController::class, 'edit_sales_invoice']);
+    Route::delete('/sales_invoice/{id?}', [SalesInvoiceController::class, 'delete_sales_invoice']);
+
+    Route::post('/add_sales_return', [SalesReturnController::class, 'add_sales_return']);
+    Route::get('/sales_return', [SalesReturnController::class, 'view_sales_return']);
+    Route::post('/update_sales_return/{id?}', [SalesReturnController::class, 'edit_sales_return']);
+    Route::delete('/sales_return/{id?}', [SalesReturnController::class, 'delete_sales_return']);
 
     Route::post('/add_credit_note', [CreditNoteController::class, 'add_credit_note']);
-    Route::get('/credit_note', [CreditNoteController::class, 'pdf_template']);
+    Route::get('/credit_note', [CreditNoteController::class, 'view_credit_note']);
     Route::post('/update_credit_note/{id?}', [CreditNoteController::class, 'edit_credit_note']);
     Route::delete('/credit_note/{id?}', [CreditNoteController::class, 'delete_credit_note']);
 
     Route::post('/add_test_certificate', [TestCertificateController::class, 'add_test_certificate']);
-    Route::get('/test_certificate', [TestCertificateController::class, 'test_certificate']);
+    Route::get('/test_certificate', [TestCertificateController::class, 'view_test_certificate']);
     Route::post('/update_test_certificate/{id?}', [TestCertificateController::class, 'edit_test_certificate']);
     Route::delete('/test_certificate/{id?}', [TestCertificateController::class, 'delete_test_certificate']);
 
-    Route::post('/add_purchase_invoice', [PurchaseInvoiceController::class, 'add_purchase_invoice']);
-    Route::get('/purchase_invoice', [PurchaseInvoiceController::class, 'purchase_invoice']);
-    Route::post('/update_purchase_invoice/{id?}', [PurchaseInvoiceController::class, 'edit_purchase_invoice']);
-    Route::delete('/purchase_invoice/{id?}', [PurchaseInvoiceController::class, 'delete_purchase_invoice']);
-
     Route::post('/add_purchase_order', [PurchaseOrderController::class, 'add_purchase_order']);
-    Route::get('/purchase_order', [PurchaseOrderController::class, 'purchase_order']);
+    Route::get('/purchase_order', [PurchaseOrderController::class, 'view_purchase_order']);
     Route::post('/update_purchase_order/{id?}', [PurchaseOrderController::class, 'edit_purchase_order']);
     Route::delete('/purchase_order/{id?}', [PurchaseOrderController::class, 'delete_purchase_order']);
 
+    Route::post('/add_purchase_invoice', [PurchaseInvoiceController::class, 'add_purchase_invoice']);
+    Route::get('/purchase_invoice', [PurchaseInvoiceController::class, 'view_purchase_invoice']);
+    Route::post('/update_purchase_invoice/{id?}', [PurchaseInvoiceController::class, 'edit_purchase_invoice']);
+    Route::delete('/purchase_invoice/{id?}', [PurchaseInvoiceController::class, 'delete_purchase_invoice']);
+
     Route::post('/add_purchase_return', [PurchaseReturnController::class, 'add_purchase_return']);
-    Route::get('/purchase_return', [PurchaseReturnController::class, 'purchase_return']);
+    Route::get('/purchase_return', [PurchaseReturnController::class, 'view_purchase_return']);
     Route::post('/update_purchase_return/{id?}', [PurchaseReturnController::class, 'edit_purchase_return']);
     Route::delete('/purchase_return/{id?}', [PurchaseReturnController::class, 'delete_purchase_return']);
 
     Route::post('/add_debit_note', [DebitNoteController::class, 'add_debit_note']);
-    Route::get('/debit_note', [DebitNoteController::class, 'debit_note']);
+    Route::get('/debit_note', [DebitNoteController::class, 'view_debit_note']);
     Route::post('/update_debit_note/{id?}', [DebitNoteController::class, 'edit_debit_note']);
     Route::delete('/debit_note/{id?}', [DebitNoteController::class, 'delete_debit_note']);
 
     Route::post('/add_stock_transfer', [StockTransferController::class, 'add_stock_transfer']);
-    Route::get('/tock_transfer', [StockTransferController::class, 'stock_transfer']);
-    Route::post('/update_stock_transfer/{id?}', [StockTransferController::class, 'edit_tock_transfer']);
-    Route::delete('/stock_transfer/{id?}', [StockTransferController::class, 'delete_tock_transfer']);
+    Route::get('/stock_transfer', [StockTransferController::class, 'view_stock_transfer']);
+    Route::post('/update_stock_transfer/{id?}', [StockTransferController::class, 'edit_stock_transfer']);
+    Route::delete('/stock_transfer/{id?}', [StockTransferController::class, 'delete_stock_transfer']);
 
     Route::post('/add_assembly', [AssemblyController::class, 'add_assembly']);
-    Route::get('/assembly', [AssemblyController::class, 'assembly']);
+    Route::get('/assembly', [AssemblyController::class, 'view_assembly']);
     Route::post('/update_assembly/{id?}', [AssemblyController::class, 'edit_assembly']);
     Route::delete('/assembly/{id?}', [AssemblyController::class, 'delete_assembly']);
 
@@ -136,7 +141,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/assembly_operations/{id?}', [AssemblyOperationsController::class, 'delete_assembly_operations']);
 
     Route::post('/add_fabrication', [FabricationController::class, 'add_fabrication']);
-    Route::get('/fabrication', [FabricationController::class, 'fabrication']);
+    Route::get('/fabrication', [FabricationController::class, 'view_fabrication']);
     Route::post('/update_fabrication/{id?}', [FabricationController::class, 'edit_fabrication']);
     Route::delete('/fabrication/{id?}', [FabricationController::class, 'delete_fabrication']);
 

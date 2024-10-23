@@ -108,15 +108,14 @@ class PurchaseInvoiceController extends Controller
         ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 'purchase_invoice_date', 'purchase_order_no', 'cgst', 'sgst', 'igst', 'currency', 'template', 'status')
         ->get();
 
-        return isset($get_purchase_invoices) && $get_purchase_invoices !== null
+        return isset($get_purchase_invoices) && $get_purchase_invoices->isNotEmpty()
             ? response()->json(['Purchase Invoices fetched successfully!', 'data' => $get_purchase_invoices], 200)
             : response()->json(['Failed to fetch Purchase Invoice data'], 404);
     }
 
-    public function update_purchase_invoice(Request $request)
+    public function edit_purchase_invoice(Request $request, $id)
     {
         $request->validate([
-            'purchase_invoice_number' => 'required|integer',
             'supplier_id' => 'required|integer',
             'name' => 'required|string',
             'address_line_1' => 'required|string',
@@ -135,6 +134,7 @@ class PurchaseInvoiceController extends Controller
             'template' => 'required|integer',
             'status' => 'required|integer',
             'products' => 'required|array',
+            'products.*.purchase_invoice_number' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
@@ -151,7 +151,7 @@ class PurchaseInvoiceController extends Controller
             'products.*.godown' => 'required|integer',
         ]);
 
-        $purchaseInvoice = PurchaseInvoiceModel::where('id', $request->input('purchase_invoice_number'))->first();
+        $purchaseInvoice = PurchaseInvoiceModel::where('id', $id)->first();
 
         $purchaseInvoiceUpdated = $purchaseInvoice->update([
             'supplier_id' => $request->input('supplier_id'),
@@ -179,7 +179,7 @@ class PurchaseInvoiceController extends Controller
         foreach ($products as $productData) {
             $requestProductIDs[] = $productData['product_id'];
 
-            $existingProduct = PurchaseInvoiceProductsModel::where('purchase_invoice_number', $request->input('purchase_invoice_number'))
+            $existingProduct = PurchaseInvoiceProductsModel::where('purchase_invoice_number', $productData['purchase_invoice_number'])
                                                         ->where('product_id', $productData['product_id'])
                                                         ->first();
 
@@ -203,7 +203,7 @@ class PurchaseInvoiceController extends Controller
             } else {
                 // Add new product
                 PurchaseInvoiceProductsModel::create([
-                    'purchase_invoice_number' => $request->input('purchase_invoice_number'),
+                    'purchase_invoice_number' => $productData['purchase_invoice_number'],
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
@@ -222,9 +222,11 @@ class PurchaseInvoiceController extends Controller
             }
         }
 
-        $productsDeleted = PurchaseInvoiceProductsModel::where('purchase_invoice_number', $request->input('purchase_invoice_number'))
-                                                    ->whereNotIn('product_id', $requestProductIDs)
+        $productsDeleted = PurchaseInvoiceProductsModel::where('purchase_invoice_number', $id)
+                                                    ->where('product_id', $requestProductIDs)
                                                     ->delete();
+
+        unset($purchaseInvoice['created_at'], $purchaseInvoice['updated_at']);
 
         return ($purchaseInvoiceUpdated || $productsDeleted)
             ? response()->json(['message' => 'Purchase Invoice and products updated successfully!', 'data' => $purchaseInvoice], 200)

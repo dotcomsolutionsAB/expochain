@@ -44,12 +44,12 @@ class FabricationController extends Controller
         : response()->json(['Failed to register Fabrication record'], 400);
     }
 
-    public function fabrication()
+    public function view_fabrication()
     {        
         $get_fabrication = FabricationModel::select('id', 'fabrication_date','product_id', 'product_name','type', 'quantity', 'godown', 'rate', 'amount', 'description', 'log_user')->get();
         
 
-        return isset($get_fabrication) && $get_fabrication !== null
+        return isset($get_fabrication) && $get_fabrication->isNotEmpty()
         ? response()->json(['Fetch data successfully!', 'data' => $get_fabrication], 200)
         : response()->json(['Failed to fetch data'], 404); 
     }

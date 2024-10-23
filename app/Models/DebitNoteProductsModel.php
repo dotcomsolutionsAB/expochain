@@ -25,4 +25,10 @@ class DebitNoteProductsModel extends Model
         'sgst',
         'igst',
     ];
+
+    // Defining the relationship with PurchaseReturnModel (Parent)
+    public function purchaseReturn()
+    {
+        return $this->belongsTo(DebitNoteModel::class, 'debit_note_number', 'id');
+    }
 }

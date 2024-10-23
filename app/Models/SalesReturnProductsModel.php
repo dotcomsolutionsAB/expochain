@@ -27,4 +27,9 @@ class SalesReturnProductsModel extends Model
         'igst',
         'godown',
     ];
+
+    public function salesreturn()
+    {
+        return $this->belongsTo(SalesReturnModel::class, 'sales_return_id', 'id');
+    }
 }

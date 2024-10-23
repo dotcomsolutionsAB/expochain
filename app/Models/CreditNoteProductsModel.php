@@ -30,7 +30,7 @@ class CreditNoteProductsModel extends Model
 
     public function creditNote()
     {
-        return $this->belongsTo(CreditNoteModel::class, 'credit_note_id');
+        return $this->belongsTo(CreditNoteModel::class, 'credit_note_id', 'id');
     }
 
 }

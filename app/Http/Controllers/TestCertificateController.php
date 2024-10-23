@@ -74,10 +74,9 @@ class TestCertificateController extends Controller
     }
 
     // update
-    public function update_test_certificate(Request $request)
+    public function edit_test_certificate(Request $request, $id)
     {
         $request->validate([
-            'tc_id' => 'required|integer',
             'client_id' => 'required|integer',
             'sales_invoice_no' => 'required|string',
             'reference_no' => 'required|string',
@@ -86,13 +85,14 @@ class TestCertificateController extends Controller
             'client_flag' => 'required|boolean',
             'log_user' => 'required|string',
             'products' => 'required|array',
+            'products.*.tc_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.quantity' => 'required|integer',
             'products.*.sales_invoice_no' => 'required|string',
         ]);
 
-        $testCertificate = TestCertificateModel::where('id', $request->input('tc_id'))->first();
+        $testCertificate = TestCertificateModel::where('id', $id)->first();
 
         $testCertificateUpdated = $testCertificate->update([
             'client_id' => $request->input('client_id'),
@@ -110,7 +110,7 @@ class TestCertificateController extends Controller
         foreach ($products as $productData) {
             $requestProductIDs[] = $productData['product_id'];
 
-            $existingProduct = TestCertificateProductsModel::where('tc_id', $request->input('tc_id'))
+            $existingProduct = TestCertificateProductsModel::where('tc_id', $productData['tc_id'])
                                                         ->where('product_id', $productData['product_id'])
                                                         ->first();
 
@@ -124,7 +124,7 @@ class TestCertificateController extends Controller
             } else {
                 // Create new product
                 TestCertificateProductsModel::create([
-                    'tc_id' => $request->input('tc_id'),
+                    'tc_id' => $productData['tc_id'],
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'quantity' => $productData['quantity'],
@@ -134,9 +134,11 @@ class TestCertificateController extends Controller
         }
 
         // Delete products not included in the request
-        $productsDeleted = TestCertificateProductsModel::where('tc_id', $request->input('tc_id'))
-                                                    ->whereNotIn('product_id', $requestProductIDs)
+        $productsDeleted = TestCertificateProductsModel::where('tc_id', $id)
+                                                    ->where('product_id', $requestProductIDs)
                                                     ->delete();
+
+        unset($testCertificate['created_at'], $testCertificate['updated_at']);
 
         return ($testCertificateUpdated || $productsDeleted)
             ? response()->json(['message' => 'Test Certificate and products updated successfully!', 'data' => $testCertificate], 200)

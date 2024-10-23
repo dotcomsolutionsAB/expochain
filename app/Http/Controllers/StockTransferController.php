@@ -62,7 +62,7 @@ class StockTransferController extends Controller
     }
 
     // view
-    public function view_stock_transfers()
+    public function view_stock_transfer()
     {
         $get_stock_transfers = StockTransferModel::with(['products' => function ($query)
         {
@@ -71,13 +71,13 @@ class StockTransferController extends Controller
         ->select('transfer_id', 'godown_from', 'godown_to', 'transfer_date', 'status', 'log_user')
         ->get();
 
-        return isset($get_stock_transfers) && $get_stock_transfers !== null
+        return isset($get_stock_transfers) && $get_stock_transfers->isNotEmpty()
             ? response()->json(['Stock Transfers fetched successfully!', 'data' => $get_stock_transfers], 200)
             : response()->json(['Failed to fetch Stock Transfers data'], 404);
     }
 
     // update
-    public function update_stock_transfer(Request $request, $id)
+    public function edit_stock_transfer(Request $request, $id)
     {
         $request->validate([
             'transfer_id' => 'required|integer',
@@ -87,6 +87,7 @@ class StockTransferController extends Controller
             'status' => 'required|string',
             'log_user' => 'required|string',
             'products' => 'required|array',
+            'products.*.transfer_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
@@ -115,7 +116,7 @@ class StockTransferController extends Controller
             $requestProductIDs[] = $productData['product_id'];
 
             // Check if the product exists for this transfer_id
-            $existingProduct = StockTransferProductsModel::where('transfer_id', $request->input('transfer_id'))
+            $existingProduct = StockTransferProductsModel::where('transfer_id', $productData['transfer_id'])
                                                         ->where('product_id', $productData['product_id'])
                                                         ->first();
 
@@ -131,7 +132,7 @@ class StockTransferController extends Controller
             } else {
                 // Create new product if it does not exist
                 StockTransferProductsModel::create([
-                    'transfer_id' => $request->input('transfer_id'),
+                    'transfer_id' =>$productData['transfer_id'],
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
@@ -143,9 +144,12 @@ class StockTransferController extends Controller
         }
 
         // Delete products not in the request but in the database
-        $productsDeleted = StockTransferProductsModel::where('transfer_id', $request->input('transfer_id'))
-                                                    ->whereNotIn('product_id', $requestProductIDs)
+        $productsDeleted = StockTransferProductsModel::where('transfer_id', $id)
+                                                    ->where('product_id', $requestProductIDs)
                                                     ->delete();
+
+        // Remove timestamps from the response for neatness
+        unset($stockTransfer['created_at'], $stockTransfer['updated_at']);
 
         return ($stockTransferUpdated || $productsDeleted)
             ? response()->json(['message' => 'Stock Transfer updated successfully!', 'data' => $stockTransfer], 200)

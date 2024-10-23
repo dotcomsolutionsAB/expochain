@@ -102,10 +102,9 @@ class CreditNoteController extends Controller
     }
 
     // update
-    public function update_credit_note(Request $request)
+    public function edit_credit_note(Request $request, $id)
     {
         $request->validate([
-            'credit_note_id' => 'required|integer',
             'client_id' => 'required|integer',
             'name' => 'required|string',
             'credit_note_no' => 'required|string',
@@ -119,6 +118,7 @@ class CreditNoteController extends Controller
             'template' => 'required|integer',
             'status' => 'required|integer',
             'products' => 'required|array',
+            'products.*.credit_note_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
@@ -134,7 +134,7 @@ class CreditNoteController extends Controller
             'products.*.igst' => 'required|numeric',
         ]);
 
-        $creditNote = CreditNoteModel::where('id', $request->input('credit_note_id'))->first();
+        $creditNote = CreditNoteModel::where('id', $id)->first();
 
         $creditNoteUpdated = $creditNote->update([
             'client_id' => $request->input('client_id'),
@@ -157,7 +157,7 @@ class CreditNoteController extends Controller
         foreach ($products as $productData) {
             $requestProductIDs[] = $productData['product_id'];
 
-            $existingProduct = CreditNoteProductsModel::where('credit_note_id', $request->input('credit_note_id'))
+            $existingProduct = CreditNoteProductsModel::where('credit_note_id', $productData['credit_note_id'])
                                                     ->where('product_id', $productData['product_id'])
                                                     ->first();
 
@@ -180,7 +180,7 @@ class CreditNoteController extends Controller
             } else {
                 // Create new product
                 CreditNoteProductsModel::create([
-                    'credit_note_id' => $request->input('credit_note_id'),
+                    'credit_note_id' => $productData['credit_note_id'],
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
@@ -199,9 +199,11 @@ class CreditNoteController extends Controller
         }
 
         // Delete products not included in the request
-        $productsDeleted = CreditNoteProductsModel::where('credit_note_id', $request->input('credit_note_id'))
-                                                ->whereNotIn('product_id', $requestProductIDs)
+        $productsDeleted = CreditNoteProductsModel::where('credit_note_id', $id)
+                                                ->where('product_id', $requestProductIDs)
                                                 ->delete();
+
+        unset($creditNote['created_at'], $creditNote['updated_at']);
 
         return ($creditNoteUpdated || $productsDeleted)
             ? response()->json(['message' => 'Credit Note and products updated successfully!', 'data' => $creditNote], 200)

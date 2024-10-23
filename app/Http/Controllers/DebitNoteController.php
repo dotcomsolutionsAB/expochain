@@ -90,7 +90,7 @@ class DebitNoteController extends Controller
     }
 
     // view
-    public function view_debit_notes()
+    public function view_debit_note()
     {
         $get_debit_notes = DebitNoteModel::with(['products' => function ($query) {
             $query->select('debit_note_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
@@ -98,16 +98,15 @@ class DebitNoteController extends Controller
         ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
         ->get();
 
-        return isset($get_debit_notes) && $get_debit_notes !== null
+        return isset($get_debit_notes) && $get_debit_notes->isNotEmpty()
             ? response()->json(['Debit Notes fetched successfully!', 'data' => $get_debit_notes], 200)
             : response()->json(['Failed to fetch Debit Notes data'], 404);
     }
 
     // update
-    public function update_debit_note(Request $request)
+    public function edit_debit_note(Request $request, $id)
     {
         $request->validate([
-            'debit_note_number' => 'required|integer',
             'supplier_id' => 'required|integer',
             'name' => 'required|string',
             'debit_note_no' => 'required|string',
@@ -138,7 +137,7 @@ class DebitNoteController extends Controller
         ]);
 
         // Get the debit note record by ID
-        $debitNote = DebitNoteModel::where('id', $request->input('debit_note_number'))->first();
+        $debitNote = DebitNoteModel::where('id', $id)->first();
 
         // Update debit note details
         $debitNoteUpdated = $debitNote->update([
@@ -164,7 +163,7 @@ class DebitNoteController extends Controller
             $requestProductIDs[] = $productData['product_id'];
 
             // Check if the product exists for this debit_note_number
-            $existingProduct = DebitNoteProductsModel::where('debit_note_number', $request->input('debit_note_number'))
+            $existingProduct = DebitNoteProductsModel::where('debit_note_number', $productData['debit_note_number'])
                                                     ->where('product_id', $productData['product_id'])
                                                     ->first();
 
@@ -187,7 +186,7 @@ class DebitNoteController extends Controller
             } else {
                 // Create new product if it does not exist
                 DebitNoteProductsModel::create([
-                    'debit_note_number' => $request->input('debit_note_number'),
+                    'debit_note_number' => $productData['debit_note_number'],
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
@@ -206,9 +205,12 @@ class DebitNoteController extends Controller
         }
 
         // Delete products that are not in the request but exist in the database for this debit_note_number
-        $productsDeleted = DebitNoteProductsModel::where('debit_note_number', $request->input('debit_note_number'))
-                                                ->whereNotIn('product_id', $requestProductIDs)
+        $productsDeleted = DebitNoteProductsModel::where('debit_note_number', $id)
+                                                ->where('product_id', $requestProductIDs)
                                                 ->delete();
+
+        // Remove timestamps from the response for neatness
+        unset($debitNote['created_at'], $debitNote['updated_at']);
 
         return ($debitNoteUpdated || $productsDeleted)
             ? response()->json(['message' => 'Debit Note and products updated successfully!', 'data' => $debitNote], 200)

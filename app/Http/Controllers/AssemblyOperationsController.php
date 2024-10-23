@@ -77,15 +77,14 @@ class AssemblyOperationsController extends Controller
             $query->select('assembly_operations_id','product_id','product_name','quantity','rate','godown','amount');
         }])
         ->select('assembly_operations_id','assembly_operations_date','type','product_id','product_name','quantity','godown','rate','amount')->get();
-        
 
-        return isset($get_assembly_operations) && $get_assembly_operations !== null
+        return isset($get_assembly_operations) && $get_assembly_operations->isNotEmpty()
         ? response()->json(['Assembly Operations data successfully!', 'data' => $get_assembly_operations], 200)
         : response()->json(['Failed to fetch data'], 404); 
     }
 
     // update
-    public function update_assembly_operations(Request $request)
+    public function edit_assembly_operations(Request $request)
     {
         $request->validate([
             'assembly_operations_id' => 'required|integer',
@@ -99,6 +98,7 @@ class AssemblyOperationsController extends Controller
             'amount' => 'required|numeric',
             'log_user' => 'required|string',
             'products' => 'required|array', // Validating array of products
+            'products.*.assembly_operations_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.quantity' => 'required|integer',
@@ -131,7 +131,7 @@ class AssemblyOperationsController extends Controller
             $requestProductIDs[] = $productData['product_id'];
 
             // Check if the product exists for this assembly_operations_id and product_id
-            $existingProduct = AssemblyOperationProductsModel::where('assembly_operations_id', $request->input('assembly_operations_id'))
+            $existingProduct = AssemblyOperationProductsModel::where('assembly_operations_id',  $productData['assembly_operations_id'])
                                                             ->where('product_id', $productData['product_id'])
                                                             ->first();
 
@@ -147,7 +147,7 @@ class AssemblyOperationsController extends Controller
             } else {
                 // Create a new product if not exists
                 AssemblyOperationProductsModel::create([
-                    'assembly_operations_id' => $request->input('assembly_operations_id'),
+                    'assembly_operations_id' => $productData['assembly_operations_id'],
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'quantity' => $productData['quantity'],
@@ -159,8 +159,8 @@ class AssemblyOperationsController extends Controller
         }
 
             // Delete products that are not in the request but exist in the database for this assembly_operations_id
-            $productsDeleted = AssemblyOperationProductsModel::where('assembly_operations_id', $request->input('assembly_operations_id'))
-                                                            ->whereNotIn('product_id', $requestProductIDs)
+            $productsDeleted = AssemblyOperationProductsModel::where('assembly_operations_id', $id)
+                                                            ->where('product_id', $requestProductIDs)
                                                             ->delete();
 
             // Remove timestamps from the response for neatness
@@ -181,7 +181,7 @@ class AssemblyOperationsController extends Controller
         
         // Check if the client exists
 
-        if ($get_client_id) 
+        if ($get_assembly_operations_id) 
         {
             // Delete the client
             $delete_assembly_operations = AssemblyOperationModel::where('id', $id)->delete();

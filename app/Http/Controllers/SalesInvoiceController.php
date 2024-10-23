@@ -123,16 +123,15 @@ class SalesInvoiceController extends Controller
         ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_no', 'quotation_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status', 'commission', 'cash')
         ->get();
 
-        return isset($get_sales_invoices) && $get_sales_invoices !== null
+        return isset($get_sales_invoices) && $get_sales_invoices->isNotEmpty()
             ? response()->json(['Sales Invoices fetched successfully!', 'data' => $get_sales_invoices], 200)
             : response()->json(['Failed to fetch Sales Invoice data'], 404);
     }
 
     // Update Sales Invoice
-    public function update_sales_invoice(Request $request)
+    public function edit_sales_invoice(Request $request, $id)
     {
         $request->validate([
-            'sales_invoice_id' => 'required|integer',
             'client_id' => 'required|integer',
             'client_contact_id' => 'required|integer',
             'name' => 'required|string',
@@ -156,6 +155,7 @@ class SalesInvoiceController extends Controller
             'commission' => 'required|numeric',
             'cash' => 'required|numeric',
             'products' => 'required|array',
+            'products.*.sales_invoice_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
@@ -171,6 +171,7 @@ class SalesInvoiceController extends Controller
             'products.*.igst' => 'required|numeric',
             'products.*.godown' => 'required|integer',
             'addons' => 'nullable|array',
+            'addons.*.sales_invoice_id' => 'required|integer',
             'addons.*.name' => 'required|string',
             'addons.*.amount' => 'required|numeric',
             'addons.*.tax' => 'required|numeric',
@@ -180,7 +181,7 @@ class SalesInvoiceController extends Controller
             'addons.*.igst' => 'required|numeric',
         ]);
 
-        $salesInvoice = SalesInvoiceModel::where('id', $request->input('sales_invoice_id'))->first();
+        $salesInvoice = SalesInvoiceModel::where('id', $id)->first();
 
         $salesInvoiceUpdated = $salesInvoice->update([
             'client_id' => $request->input('client_id'),
@@ -207,14 +208,16 @@ class SalesInvoiceController extends Controller
             'cash' => $request->input('cash'),
         ]);
 
+        // Handle Products
         $products = $request->input('products');
+        $existingProductIDs = SalesInvoiceProductsModel::where('sales_invoice_id', $id)->pluck('product_id')->toArray();
         $requestProductIDs = [];
 
         // Process products
         foreach ($products as $productData) {
             $requestProductIDs[] = $productData['product_id'];
 
-            $existingProduct = SalesInvoiceProductsModel::where('sales_invoice_id', $request->input('sales_invoice_id'))
+            $existingProduct = SalesInvoiceProductsModel::where('sales_invoice_id', $productData['sales_invoice_id'])
                                                     ->where('product_id', $productData['product_id'])
                                                     ->first();
 
@@ -236,7 +239,7 @@ class SalesInvoiceController extends Controller
                 ]);
             } else {
                 SalesInvoiceProductsModel::create([
-                    'sales_invoice_id' => $request->input('sales_invoice_id'),
+                    'sales_invoice_id' => $productData['sales_invoice_id'],
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
@@ -262,7 +265,7 @@ class SalesInvoiceController extends Controller
         foreach ($addons as $addonData) {
             $requestAddonIDs[] = $addonData['name'];
 
-            $existingAddon = SalesInvoiceAddonsModel::where('sales_invoice_id', $request->input('sales_invoice_id'))
+            $existingAddon = SalesInvoiceAddonsModel::where('sales_invoice_id', $addonData['sales_invoice_id'])
                                                     ->where('name', $addonData['name'])
                                                     ->first();
 
@@ -277,7 +280,7 @@ class SalesInvoiceController extends Controller
                 ]);
             } else {
                 SalesInvoiceAddonsModel::create([
-                    'sales_invoice_id' => $request->input('sales_invoice_id'),
+                    'sales_invoice_id' => $addonData['sales_invoice_id'],
                     'name' => $addonData['name'],
                     'amount' => $addonData['amount'],
                     'tax' => $addonData['tax'],
@@ -290,14 +293,16 @@ class SalesInvoiceController extends Controller
         }
 
         // Delete products not included in the request
-        $productsDeleted = SalesInvoiceProductsModel::where('sales_invoice_id', $request->input('sales_invoice_id'))
-                                                    ->whereNotIn('product_id', $requestProductIDs)
+        $productsDeleted = SalesInvoiceProductsModel::where('sales_invoice_id', $id)
+                                                    ->where('product_id', $requestProductIDs)
                                                     ->delete();
 
         // Delete addons not included in the request
-        $addonsDeleted = SalesInvoiceAddonsModel::where('sales_invoice_id', $request->input('sales_invoice_id'))
-                                                ->whereNotIn('name', $requestAddonIDs)
+        $addonsDeleted = SalesInvoiceAddonsModel::where('sales_invoice_id', $id)
+                                                ->where('name', $requestAddonIDs)
                                                 ->delete();
+
+        unset($salesInvoice['created_at'], $salesInvoice['updated_at']);
 
         return ($salesInvoiceUpdated || $productsDeleted || $addonsDeleted)
             ? response()->json(['message' => 'Sales Invoice, products, and addons updated successfully!', 'data' => $salesInvoice], 200)

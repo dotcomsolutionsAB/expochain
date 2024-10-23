@@ -23,4 +23,9 @@ class SalesReturnModel extends Model
         'template',
         'status',
     ];
+
+    public function products()
+    {
+        return $this->hasMany(SalesReturnProductsModel::class, 'sales_return_id', 'id');
+    }
 }

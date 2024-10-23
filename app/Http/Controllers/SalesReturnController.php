@@ -10,7 +10,7 @@ class SalesReturnController extends Controller
 {
     //
     // create
-    public function add_sales_retrun(Request $request)
+    public function add_sales_return(Request $request)
     {
         $request->validate([
             'client_id' => 'required|integer',
@@ -105,10 +105,9 @@ class SalesReturnController extends Controller
     }
 
     // update
-    public function update_sales_return(Request $request)
+    public function edit_sales_return(Request $request, $id)
     {
         $request->validate([
-            'sales_return_id' => 'required|integer',
             'client_id' => 'required|integer',
             'name' => 'required|string',
             'sales_return_no' => 'required|string',
@@ -122,6 +121,7 @@ class SalesReturnController extends Controller
             'template' => 'required|integer',
             'status' => 'required|integer',
             'products' => 'required|array',
+            'products.*.sales_return_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
@@ -138,7 +138,7 @@ class SalesReturnController extends Controller
             'products.*.godown' => 'required|integer',
         ]);
 
-        $salesReturn = SalesReturnModel::where('id', $request->input('sales_return_id'))->first();
+        $salesReturn = SalesReturnModel::where('id', $id)->first();
 
         $salesReturnUpdated = $salesReturn->update([
             'client_id' => $request->input('client_id'),
@@ -161,7 +161,7 @@ class SalesReturnController extends Controller
         foreach ($products as $productData) {
             $requestProductIDs[] = $productData['product_id'];
 
-            $existingProduct = SalesReturnProductsModel::where('sales_return_id', $request->input('sales_return_id'))
+            $existingProduct = SalesReturnProductsModel::where('sales_return_id', $productData['sales_return_id'])
                                                     ->where('product_id', $productData['product_id'])
                                                     ->first();
 
@@ -185,7 +185,7 @@ class SalesReturnController extends Controller
             } else {
                 // Create new product
                 SalesReturnProductsModel::create([
-                    'sales_return_id' => $request->input('sales_return_id'),
+                    'sales_return_id' => $productData['sales_return_id'],
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
@@ -205,10 +205,12 @@ class SalesReturnController extends Controller
         }
 
         // Delete products not included in the request
-        $productsDeleted = SalesReturnProductsModel::where('sales_return_id', $request->input('sales_return_id'))
+        $productsDeleted = SalesReturnProductsModel::where('sales_return_id', $id)
                                                 ->whereNotIn('product_id', $requestProductIDs)
                                                 ->delete();
 
+        unset($salesReturn['created_at'], $salesReturn['updated_at']);
+        
         return ($salesReturnUpdated || $productsDeleted)
             ? response()->json(['message' => 'Sales Return and products updated successfully!', 'data' => $salesReturn], 200)
             : response()->json(['message' => 'No changes detected.'], 304);

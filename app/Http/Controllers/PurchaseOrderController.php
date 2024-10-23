@@ -102,21 +102,20 @@ class PurchaseOrderController extends Controller
     public function view_purchase_order()
     {
         $get_purchase_orders = PurchaseOrderModel::with(['products' => function ($query) {
-            $query->select('purchase_order_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
+            $query->select('purchase_order_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
         }])
         ->select('id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'cgst', 'sgst', 'igst', 'currency', 'template', 'status')
         ->get();
 
-        return isset($get_purchase_orders) && $get_purchase_orders !== null
+        return isset($get_purchase_orders) && $get_purchase_orders->isNotEmpty()
             ? response()->json(['Purchase Orders fetched successfully!', 'data' => $get_purchase_orders], 200)
             : response()->json(['Failed to fetch Purchase Order data'], 404);
     }
 
     // update
-    public function update_purchase_order(Request $request)
+    public function edit_purchase_order(Request $request, $id)
     {
         $request->validate([
-            'purchase_order_number' => 'required|integer',
             'supplier_id' => 'required|integer',
             'name' => 'required|string',
             'address_line_1' => 'required|string',
@@ -134,6 +133,7 @@ class PurchaseOrderController extends Controller
             'template' => 'required|integer',
             'status' => 'required|integer',
             'products' => 'required|array',
+            'products.*.purchase_order_number' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
@@ -150,7 +150,7 @@ class PurchaseOrderController extends Controller
             'products.*.godown' => 'required|integer',
         ]);
 
-        $purchaseOrder = PurchaseOrderModel::where('id', $request->input('purchase_order_number'))->first();
+        $purchaseOrder = PurchaseOrderModel::where('id', $id)->first();
 
         $purchaseOrderUpdated = $purchaseOrder->update([
             'supplier_id' => $request->input('supplier_id'),
@@ -177,7 +177,7 @@ class PurchaseOrderController extends Controller
         foreach ($products as $productData) {
             $requestProductIDs[] = $productData['product_id'];
 
-            $existingProduct = PurchaseOrderProductsModel::where('purchase_order_number', $request->input('purchase_order_number'))
+            $existingProduct = PurchaseOrderProductsModel::where('purchase_order_number', $productData['purchase_order_number'])
                                                         ->where('product_id', $productData['product_id'])
                                                         ->first();
 
@@ -199,7 +199,7 @@ class PurchaseOrderController extends Controller
                 ]);
             } else {
                 PurchaseOrderProductsModel::create([
-                    'purchase_order_number' => $request->input('purchase_order_number'),
+                    'purchase_order_number' => $productData['purchase_order_number'],
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
@@ -218,9 +218,11 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        $productsDeleted = PurchaseOrderProductsModel::where('purchase_order_number', $request->input('purchase_order_number'))
-                                                    ->whereNotIn('product_id', $requestProductIDs)
+        $productsDeleted = PurchaseOrderProductsModel::where('purchase_order_number', $id)
+                                                    ->where('product_id', $requestProductIDs)
                                                     ->delete();
+
+        unset($purchaseOrder['created_at'], $purchaseOrder['updated_at']);
 
         return ($purchaseOrderUpdated || $productsDeleted)
             ? response()->json(['message' => 'Purchase Order and products updated successfully!', 'data' => $purchaseOrder], 200)

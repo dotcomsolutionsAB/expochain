@@ -56,7 +56,7 @@ class AssemblyController extends Controller
     }
 
     // view
-    public function assembly()
+    public function view_assembly()
     {        
         $get_assembly = AssemblyModel::with(['products' => function ($query)
         {
@@ -65,13 +65,13 @@ class AssemblyController extends Controller
         ->select('assembly_id','product_id','product_name','quantity','log_user')->get();
         
 
-        return isset($get_assembly) && $get_assembly !== null
+        return isset($get_assembly) && $get_assembly->isNotEmpty()
         ? response()->json(['Assembly record fetch successfully!', 'data' => $get_assembly], 200)
         : response()->json(['Failed to fetch data'], 404); 
     }
 
     // update
-    public function update_assembly_operations(Request $request)
+    public function edit_assembly(Request $request)
     {
         $request->validate([
             'assembly_id' => 'required|integer',
@@ -80,6 +80,8 @@ class AssemblyController extends Controller
             'quantity' => 'required|integer',
             'log_user' => 'required|string',
             'products' => 'required|array', // Validating array of products
+            'products.*.assembly_id' => 'required|integer',
+            'products.*.product_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.quantity' => 'required|integer',
@@ -87,62 +89,70 @@ class AssemblyController extends Controller
         ]);
 
         // Fetch the assembly record by ID
-        $assembly = AssemblyModel::where('assembly_id', $request->input('assembly_id'))->firstOrFail();
+        $assembly = AssemblyModel::where('assembly_id', $request->input('assembly_id'))->first();
 
-        // Update the assembly operation details
-        $assemblyUpdated = $assembly->update([
-            'product_id' => $request->input('product_id'),
-            'product_name' => $request->input('product_name'),
-            'quantity' => $request->input('quantity'),
-            'log_user' => $request->input('log_user'),
-        ]);
+        if($assembly)
+        {
+            // Update the assembly operation details
+            $assemblyUpdated = $assembly->update([
+                'product_id' => $request->input('product_id'),
+                'product_name' => $request->input('product_name'),
+                'quantity' => $request->input('quantity'),
+                'log_user' => $request->input('log_user'),
+            ]);
 
-        // Get the list of products from the request
-        $products = $request->input('products');
-        $requestProductIDs = [];
+            // Get the list of products from the request
+            $products = $request->input('products');
+            $requestProductIDs = [];
 
-        // Loop through each product in the request
-        foreach ($products as $productData) {
-            $requestProductIDs[] = $productData['product_id'];
+            // Loop through each product in the request
+            foreach ($products as $productData) 
+            {
+                $requestProductIDs[] = $productData['product_id'];
 
-            // Check if the product exists for this assembly_operations_id and product_id
-            $existingProduct = AssemblyProductsModel::where('assembly_id', $request->input('assembly_id'))
-                                                            ->where('product_id', $productData['product_id'])
-                                                            ->first();
+                // Check if the product exists for this assembly_operations_id and product_id
+                $existingProduct = AssemblyProductsModel::where('assembly_id', $productData['assembly_id'])
+                                                                ->where('product_id', $productData['product_id'])
+                                                                ->first();
 
-            if ($existingProduct) {
-                // Update the existing product
-                $existingProduct->update([
-                    'product_name' => $productData['product_name'],
-                    'quantity' => $productData['quantity'],
-                    'rate' => $productData['rate'] ?? null,
-                    'godown' => $productData['godown'] ?? null,
-                    'amount' => $productData['amount'] ?? null,
-                ]);
-            } else {
-                // Create a new product if not exists
-                AssemblyProductsModel::create([
-                    'assembly_operations_id' => $request->input('assembly_id'),
-                    'product_id' => $productData['product_id'],
-                    'product_name' => $productData['product_name'],
-                    'quantity' => $productData['quantity'],
-                    'log_user' => $productData['log_user'],
-                                    
-                ]);
+                if ($existingProduct) 
+                {
+                    // Update the existing product
+                    $existingProduct->update([
+                        'product_name' => $productData['product_name'],
+                        'quantity' => $productData['quantity'],
+                        'rate' => $productData['rate'] ?? null,
+                        'godown' => $productData['godown'] ?? null,
+                        'amount' => $productData['amount'] ?? null,
+                    ]);
+                } 
+                else 
+                {
+                    // Create a new product if not exists
+                    AssemblyProductsModel::create([
+                        'assembly_id' => $productData['assembly_id'],
+                        'product_id' => $productData['product_id'],
+                        'product_name' => $productData['product_name'],
+                        'quantity' => $productData['quantity'],
+                        'log_user' => $productData['log_user'],
+                                        
+                    ]);
+                }
             }
+
+            // Delete products that are not in the request but exist in the database for this assembly_operations_id
+            $productsDeleted = AssemblyProductsModel::where('assembly_id', $id)
+                                                            ->where('product_id', $requestProductIDs)
+                                                            ->delete();
+
+            // Remove timestamps from the response for neatness
+            unset($assembly['created_at'], $assembly['updated_at']);
+
+            return ($assemblyUpdated || $productsDeleted)
+                ? response()->json(['message' => 'Assembly and products updated successfully!', 'data' => $assembly], 200)
+                : response()->json(['message' => 'No changes detected.'], 304);
         }
-
-        // Delete products that are not in the request but exist in the database for this assembly_operations_id
-        $productsDeleted = AssemblyProductsModel::where('assembly_id', $request->input('assembly_id'))
-                                                        ->whereNotIn('product_id', $requestProductIDs)
-                                                        ->delete();
-
-        // Remove timestamps from the response for neatness
-        unset($assembly['created_at'], $assembly['updated_at']);
-
-        return ($assemblyUpdated || $productsDeleted)
-            ? response()->json(['message' => 'Assembly and products updated successfully!', 'data' => $assembly], 200)
-            : response()->json(['message' => 'No changes detected.'], 304);
+        return response()->json(['message' => 'Sorry, record not available!.'], 404);
     }
 
 

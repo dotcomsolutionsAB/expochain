@@ -100,16 +100,15 @@ class PurchaseReturnController extends Controller
         ->select('id', 'supplier_id', 'name', 'purchase_return_no', 'purchase_return_date', 'purchase_invoice_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
         ->get();
 
-        return isset($get_purchase_returns) && $get_purchase_returns !== null
+        return isset($get_purchase_returns) && $get_purchase_returns->isNotEmpty()
             ? response()->json(['Purchase Returns fetched successfully!', 'data' => $get_purchase_returns], 200)
             : response()->json(['Failed to fetch Purchase Return data'], 404);
     }
 
     // update
-    public function update_purchase_return(Request $request)
+    public function edit_purchase_return(Request $request, $id)
     {
         $request->validate([
-            'purchase_return_number' => 'required|integer',
             'supplier_id' => 'required|integer',
             'name' => 'required|string',
             'purchase_return_no' => 'required|string',
@@ -123,6 +122,7 @@ class PurchaseReturnController extends Controller
             'template' => 'required|integer',
             'status' => 'required|integer',
             'products' => 'required|array',
+            'products.*.purchase_return_number' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
@@ -139,7 +139,7 @@ class PurchaseReturnController extends Controller
             'products.*.godown' => 'required|integer',
         ]);
 
-        $purchaseReturn = PurchaseReturnModel::where('id', $request->input('purchase_return_number'))->first();
+        $purchaseReturn = PurchaseReturnModel::where('id', $id)->first();
 
         $purchaseReturnUpdated = $purchaseReturn->update([
             'supplier_id' => $request->input('supplier_id'),
@@ -162,7 +162,7 @@ class PurchaseReturnController extends Controller
         foreach ($products as $productData) {
             $requestProductIDs[] = $productData['product_id'];
 
-            $existingProduct = PurchaseReturnProductsModel::where('purchase_return_number', $request->input('purchase_return_number'))
+            $existingProduct = PurchaseReturnProductsModel::where('purchase_return_number', $productData['purchase_return_number'])
                                                         ->where('product_id', $productData['product_id'])
                                                         ->first();
 
@@ -184,7 +184,7 @@ class PurchaseReturnController extends Controller
                 ]);
             } else {
                 PurchaseReturnProductsModel::create([
-                    'purchase_return_number' => $request->input('purchase_return_number'),
+                    'purchase_return_number' => $productData['purchase_return_number'],
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
@@ -203,9 +203,11 @@ class PurchaseReturnController extends Controller
             }
         }
 
-        $productsDeleted = PurchaseReturnProductsModel::where('purchase_return_number', $request->input('purchase_return_number'))
-                                                    ->whereNotIn('product_id', $requestProductIDs)
+        $productsDeleted = PurchaseReturnProductsModel::where('purchase_return_number', $id)
+                                                    ->where('product_id', $requestProductIDs)
                                                     ->delete();
+
+        unset($purchaseReturn['created_at'], $purchaseReturn['updated_at']);
 
         return ($purchaseReturnUpdated || $productsDeleted)
             ? response()->json(['message' => 'Purchase Return and products updated successfully!', 'data' => $purchaseReturn], 200)

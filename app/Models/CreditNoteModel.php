@@ -26,7 +26,7 @@ class CreditNoteModel extends Model
 
     public function products()
     {
-        return $this->hasMany(CreditNoteProductsModel::class, 'credit_note_id');
+        return $this->hasMany(CreditNoteProductsModel::class, 'credit_note_id', 'id');
     }
 
 }
