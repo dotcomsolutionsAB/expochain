@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Hash;
+use Illuminate\Support\Str;
 
 class UsersController extends Controller
 {
@@ -76,5 +79,78 @@ class UsersController extends Controller
         return $delete_user
         ? response()->json(['message' => 'Delete User record successfully!'], 204)
         : response()->json(['message' => 'Sorry, User record not found'], 400);
+    }
+
+    // migrate from old
+    public function get_migrate()
+    {
+        // Define the external URL
+        $url = 'https://expo.egsm.in/assets/custom/migrate/users.php'; // replace with the actual URL
+        
+        // Fetch data from the external URL
+        try {
+            $response = Http::get($url);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+        }
+
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch data.'], 500);
+        }
+
+        // Decode the response
+        $data = $response->json('data');
+
+        if (empty($data)) {
+            return response()->json(['message' => 'No data found'], 404);
+        }
+
+        // Process and save each record
+        $successfulInserts = 0;
+        $errors = [];
+        
+        foreach ($data as $record) {
+
+             // Generate a random email if email is null or empty
+            if (empty($record['email'])) {
+                $record['email'] = 'user_' . uniqid() . '@randomdomain.com';
+            }
+            
+            // Generate a random mobile if mobile is null or empty
+            if (empty($record['mobile'])) {
+                $record['mobile'] = '+911234567890'; // Example random number or dynamically generate if needed
+            }
+
+            // Validate each record
+            $validator = Validator::make($record, [
+                'name' => 'required|string',
+                'email' => 'nullable|email|unique:users,email',
+                'mobile' => 'nullable|string',
+                'password' => 'required|string',
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+                continue;
+            }
+
+             // Insert the record into the database
+            try {
+                User::create([
+                    'name' => $record['name'],
+                    'email' => strtolower($record['email']),
+                    'password' => ($record['password']),
+                    'mobile' => $record['mobile'],
+                ]);
+                $successfulInserts++;
+            } catch (\Exception $e) {
+                $errors[] = ['record' => $record, 'error' => 'Failed to insert record: ' . $e->getMessage()];
+            }
+        }
+
+        return response()->json([
+            'message' => "Import completed with $successfulInserts successful inserts.",
+            'errors' => $errors,
+        ], 200);
     }
 }

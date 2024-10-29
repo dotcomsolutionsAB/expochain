@@ -34,6 +34,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', [UsersController::class, 'view']);
     Route::post('/edit/{id}', [UsersController::class, 'update']);
     Route::delete('/delete/{id}', [UsersController::class, 'delete']);
+    Route::get('/migrate', [UsersController::class, 'get_migrate']);
 
     Route::post('/client', [ClientsController::class, 'add_clients']);
     Route::get('/client', [ClientsController::class, 'view_clients']);
