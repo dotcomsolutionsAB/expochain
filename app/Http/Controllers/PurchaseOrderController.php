@@ -246,4 +246,6 @@ class PurchaseOrderController extends Controller
             return response()->json(['message' => 'Purchase Order not found.'], 404);
         }
     }
+
+    
 }

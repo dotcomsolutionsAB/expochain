@@ -34,17 +34,19 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user', [UsersController::class, 'view']);
     Route::post('/edit/{id}', [UsersController::class, 'update']);
     Route::delete('/delete/{id}', [UsersController::class, 'delete']);
-    Route::get('/migrate', [UsersController::class, 'get_migrate']);
+    Route::get('/users_migrate', [UsersController::class, 'get_migrate']);
 
     Route::post('/client', [ClientsController::class, 'add_clients']);
     Route::get('/client', [ClientsController::class, 'view_clients']);
     Route::post('/update_client/{id}', [ClientsController::class, 'update_clients']);
     Route::delete('/client/{id}', [ClientsController::class, 'delete_clients']);
+    Route::get('/client_migrate', [ClientsController::class, 'importClientsData']);
 
     Route::post('/suppliers', [SuppliersController::class, 'add_suppliers']);
     Route::get('/suppliers', [SuppliersController::class, 'view_suppliers']);
     Route::post('/update_suppliers/{id}', [SuppliersController::class, 'update_suppliers']);
     Route::delete('/suppliers/{id}', [SuppliersController::class, 'delete_supplier']);
+    Route::get('/suppliers_migrate', [SuppliersController::class, 'importSuppliersData']);
 
     Route::post('/products', [MastersController::class, 'add_products']);
     Route::get('/products', [MastersController::class, 'view_products']);
@@ -78,8 +80,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/add_quotations', [QuotationsController::class, 'add_quotations']);
     Route::get('/quotations', [QuotationsController::class, 'quotations']);
-    Route::post('/update_quotations/{id?}', [MastersController::class, 'edit_quotations']);
-    Route::delete('/quotations/{id?}', [MastersController::class, 'delete_quotations']);
+    Route::post('/update_quotations/{id?}', [QuotationsController::class, 'edit_quotations']);
+    Route::delete('/quotations/{id?}', [QuotationsController::class, 'delete_quotations']);
+    Route::get('/quotations_migrate', [QuotationsController::class, 'importQuotations']);
 
     Route::post('/add_sales', [SalesOrderController::class, 'add_sales_order']);
     Route::get('/sales', [SalesOrderController::class, 'view_sales_order']);

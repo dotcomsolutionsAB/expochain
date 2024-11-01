@@ -84,6 +84,9 @@ class UsersController extends Controller
     // migrate from old
     public function get_migrate()
     {
+        // Truncate the table to remove existing data
+        User::truncate();  // Clears all existing records in the 'users' table
+
         // Define the external URL
         $url = 'https://expo.egsm.in/assets/custom/migrate/users.php'; // replace with the actual URL
         

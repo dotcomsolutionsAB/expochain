@@ -1,10 +1,12 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\SuppliersModel;
 use App\Models\SuppliersContactsModel;
+use Illuminate\Support\Str;
 
 class SuppliersController extends Controller
 {
@@ -194,5 +196,116 @@ class SuppliersController extends Controller
             // Return error response if supplier not found
             return response()->json(['message' => 'Supplier not found.'], 404);
         }
+    }
+
+    // migrate
+    public function importSuppliersData()
+    {
+        SuppliersModel::truncate();  
+        
+        SuppliersContactsModel::truncate();  
+
+        // Define the external URL
+        $url = 'https://expo.egsm.in/assets/custom/migrate/suppliers.php'; // Replace with the actual URL
+
+        try {
+            $response = Http::get($url);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+        }
+    
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch data.'], 500);
+        }
+    
+        $data = $response->json('data');
+    
+        if (empty($data)) {
+            return response()->json(['message' => 'No data found'], 404);
+        }
+    
+        $successfulInserts = 0;
+        $errors = [];
+    
+        foreach ($data as $record) {
+            $existingSuppliers = SuppliersModel::where('name', $record['name'])->first();
+            if ($existingSuppliers) {
+                continue; // Skip if supplier already exists
+            }
+
+             // Decode JSON-encoded fields if they are not empty
+            $addressData = json_decode($record['address'], true) ?? [];
+
+            // Set default values for address fields if missing
+            $validationData = [
+                'name' => $record['name'],
+                'address_line_1' => !empty($addressData['address1']) ? $addressData['address1'] : 'Default Address Line 1',
+                'address_line_2' => !empty($addressData['address2']) ? $addressData['address2'] : 'Default Address Line 2',
+                'city' => !empty($addressData['city']) ? $addressData['city'] : 'Default City',
+                'pincode' =>  !empty($addressData['pincode']) ? $addressData['pincode'] : '000000',
+                'state' => !empty($record['state']) ? $record['state'] : 'Unknown State',
+                'country' => !empty($record['country']) ? $record['country'] : 'India',
+                'gstin' => !empty($record['GSTIN']) ? $record['GSTIN'] : 'Random GSTIN' . now()->timestamp . '_' . Str::random(5),
+                'contacts' => [['name' => $record['name'], 'mobile' => $record['mobile'], 'email' => $record['email']]],
+            ];    
+    
+            // Validate the record
+            $validator = Validator::make($validationData, [
+                'name' => 'required|string|unique:t_suppliers,name',
+                'address_line_1' => 'required|string',
+                'address_line_2' => 'required|string',
+                'city' => 'required|string',
+                'pincode' => 'required|string',
+                'state' => 'required|string',
+                'country' => 'required|string',
+                'gstin' => 'required|string|unique:t_suppliers,gstin',
+                'contacts' => 'required|array',
+            ]);
+    
+            if ($validator->fails()) {
+                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+                continue;
+            }
+    
+            // Generate unique supplier ID
+            $supplier_id = rand(1111111111, 9999999999);
+    
+            // Insert supplier record
+            try {
+                $register_supplier = SuppliersModel::create([
+                    'supplier_id' => $supplier_id,
+                    'name' => $validationData['name'],
+                    'address_line_1' => $validationData['address_line_1'],
+                    'address_line_2' => $validationData['address_line_2'],
+                    'city' => $validationData['city'],
+                    'pincode' => $validationData['pincode'],
+                    'state' => $validationData['state'],
+                    'country' => $validationData['country'],
+                    'gstin' => $validationData['gstin'],
+                ]);
+                $successfulInserts++;
+            } catch (\Exception $e) {
+                $errors[] = ['record' => $record, 'error' => 'Failed to insert supplier: ' . $e->getMessage()];
+                continue;
+            }
+
+           // Insert contact record using data from the supplier record itself
+            try {
+                SuppliersContactsModel::create([
+                    'supplier_id' => $register_supplier->supplier_id,
+                    'name' => $record['name'],
+                    'designation' => 'Default Designation',
+                    'mobile' => $record['mobile'] ?? '0000000000',
+                    'email' => filter_var($record['email'], FILTER_VALIDATE_EMAIL) ? $record['email'] : 'placeholder_' . now()->timestamp . '@example.com',
+                ]);
+            } catch (\Exception $e) {
+                $errors[] = ['record' => $record, 'error' => 'Failed to insert contact: ' . $e->getMessage()];
+            }
+        }
+
+        return response()->json([
+            'message' => "Data import completed with $successfulInserts successful inserts.",
+            'errors' => $errors,
+        ], 200);
     }
 }

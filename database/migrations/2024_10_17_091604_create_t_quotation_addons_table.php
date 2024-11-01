@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('t_quotation_addons', function (Blueprint $table) {
             $table->id();
-            $table->integer('quotation_id');
+            $table->string('quotation_id');
             $table->string('name');
             $table->float('amount');
             $table->float('tax');
