@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\PurchaseOrderModel;
 use App\Models\PurchaseOrderProductsModel;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class PurchaseOrderController extends Controller
 {
@@ -247,5 +250,124 @@ class PurchaseOrderController extends Controller
         }
     }
 
-    
+    public function importPurchaseOrders()
+    {
+        $url = 'https://example.com'; // Replace with the actual URL
+
+        try {
+            $response = Http::get($url);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+        }
+
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch data.'], 500);
+        }
+
+        $data = $response->json('data');
+
+        if (empty($data)) {
+            return response()->json(['message' => 'No data found'], 404);
+        }
+
+        $successfulInserts = 0;
+        $errors = [];
+
+        foreach ($data as $record) {
+            // Fetch or create supplier details
+            $supplier = Supplier::firstOrCreate(['name' => $record['supplier']]);
+
+            // Parse JSON data for items and tax
+            $itemsData = json_decode($record['items'], true);
+            $taxData = json_decode($record['tax'], true);
+            $addonsData = json_decode($record['addons'], true);
+            $topData = json_decode($record['top'], true);
+
+            // Prepare purchase order data
+            $purchaseOrderData = [
+                'supplier_id' => $supplier->id,
+                'name' => $record['supplier'],
+                'address_line_1' => 'N/A', // Default, since no specific address is provided in data
+                'address_line_2' => '',
+                'city' => 'N/A', // Default values
+                'pincode' => '000000',
+                'state' => $record['state'] ?? 'Unknown State',
+                'country' => 'INDIA',
+                'purchase_order_no' => $record['po_no'] ?? '0000',
+                'purchase_order_date' => $record['po_date'] ?? '1970-01-01',
+                'cgst' => $taxData['cgst'] ?? 0,
+                'sgst' => $taxData['sgst'] ?? 0,
+                'igst' => $taxData['igst'] ?? 0,
+                'currency' => $record['currency'] ?? 'INR',
+                'template' => json_decode($record['pdf_template'], true)['id'] ?? 1,
+                'status' => $record['status'] ?? 1,
+            ];
+
+            // Validate purchase order data
+            $validator = Validator::make($purchaseOrderData, [
+                'supplier_id' => 'required|integer',
+                'name' => 'required|string',
+                'address_line_1' => 'required|string',
+                'address_line_2' => 'nullable|string',
+                'city' => 'required|string',
+                'pincode' => 'required|string',
+                'state' => 'required|string',
+                'country' => 'required|string',
+                'purchase_order_no' => 'required|string',
+                'purchase_order_date' => 'required|date',
+                'cgst' => 'required|numeric',
+                'sgst' => 'required|numeric',
+                'igst' => 'required|numeric',
+                'currency' => 'required|string',
+                'template' => 'required|integer',
+                'status' => 'required|integer',
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+                continue;
+            }
+
+            // Insert purchase order data
+            try {
+                $purchaseOrder = PurchaseOrderModel::create($purchaseOrderData);
+                $successfulInserts++;
+            } catch (\Exception $e) {
+                $errors[] = ['record' => $record, 'error' => 'Failed to insert purchase order: ' . $e->getMessage()];
+                continue;
+            }
+
+            // Insert products
+            if ($itemsData && is_array($itemsData['product'])) {
+                foreach ($itemsData['product'] as $index => $productName) {
+                    try {
+                        PurchaseOrderProductsModel::create([
+                            'purchase_order_number' => $purchaseOrder->id,
+                            'product_id' => $index + 1,
+                            'product_name' => $productName,
+                            'description' => $itemsData['desc'][$index] ?? 'No Description',
+                            'brand' => 'Unknown', // Default as brand data is missing in the sample
+                            'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
+                            'unit' => $itemsData['unit'][$index] ?? '',
+                            'price' => (float) $itemsData['price'][$index] ?? 0.0,
+                            'discount' => isset($itemsData['discount'][$index]) && $itemsData['discount'][$index] !== '' ? (float) $itemsData['discount'][$index] : 0.0,
+                            'hsn' => $itemsData['hsn'][$index] ?? '',
+                            'tax' => (float) $itemsData['tax'][$index] ?? 0,
+                            'cgst' => $taxData['cgst'] ?? 0,
+                            'sgst' => $taxData['sgst'] ?? 0,
+                            'igst' => (float) $itemsData['igst'][$index] ?? 0,
+                        ]);
+                    } catch (\Exception $e) {
+                        $errors[] = ['record' => $record, 'error' => 'Failed to insert product: ' . $e->getMessage()];
+                    }
+                }
+            }
+        }
+
+        return response()->json([
+            'message' => "Data import completed with $successfulInserts successful inserts.",
+            'errors' => $errors,
+        ], 200);
+    }
+
 }
