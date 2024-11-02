@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\PurchaseOrderModel;
 use App\Models\PurchaseOrderProductsModel;
+use App\Models\SuppliersModel;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -252,7 +253,11 @@ class PurchaseOrderController extends Controller
 
     public function importPurchaseOrders()
     {
-        $url = 'https://example.com'; // Replace with the actual URL
+        PurchaseOrderModel::truncate();  
+        
+        PurchaseOrderProductsModel::truncate();  
+
+        $url = 'https://expo.egsm.in/assets/custom/migrate/purchase_order.php'; // Replace with the actual URL
 
         try {
             $response = Http::get($url);
@@ -274,34 +279,54 @@ class PurchaseOrderController extends Controller
         $errors = [];
 
         foreach ($data as $record) {
-            // Fetch or create supplier details
-            $supplier = Supplier::firstOrCreate(['name' => $record['supplier']]);
-
+        
             // Parse JSON data for items and tax
             $itemsData = json_decode($record['items'], true);
             $taxData = json_decode($record['tax'], true);
             $addonsData = json_decode($record['addons'], true);
             $topData = json_decode($record['top'], true);
 
+            if (!is_array($itemsData) || !is_array($taxData) || !is_array($addonsData) || !is_array($topData)) {
+                $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure in one of the fields.'];
+                continue;
+            }
+
+            // Generate dummy sales data and fallback for missing fields
+            $supplier = SuppliersModel::where('name', $record['supplier'])->first();
+
+            $defaultSupplierId = 0;
+
+            if (!empty($record['po_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $record['po_date']) && $record['po_date'] !== '0000-00-00') {
+                $purchaseOrderDate = \DateTime::createFromFormat('Y-m-d', $record['po_date']);
+            }
+
+            $formattedDate = $purchaseOrderDate ? $purchaseOrderDate->format('Y-m-d') : '1970-01-01';
+
+            // echo "<pre>";
+
+            // print_r($formattedDate);
+
             // Prepare purchase order data
             $purchaseOrderData = [
-                'supplier_id' => $supplier->id,
-                'name' => $record['supplier'],
-                'address_line_1' => 'N/A', // Default, since no specific address is provided in data
-                'address_line_2' => '',
-                'city' => 'N/A', // Default values
-                'pincode' => '000000',
-                'state' => $record['state'] ?? 'Unknown State',
-                'country' => 'INDIA',
+                'supplier_id' => $supplier->id ?? $defaultSupplierId,
+                'name' =>$supplier->name ?? "Random Supplier",
+                'address_line_1' => $supplier->address_line_1 ?? 'N/A', // Default, since no specific address is provided in data
+                'address_line_2' => $supplier->address_line_2 ?? 'N/A',
+                'city' => $supplier->city ?? 'N/A', // Default values
+                'pincode' => $supplier->pincode ??'000000',
+                'state' => !empty($record['state']) ? $record['state'] : 'Unknown State',
+                'country' => $supplier->country ?? 'INDIA',
                 'purchase_order_no' => $record['po_no'] ?? '0000',
-                'purchase_order_date' => $record['po_date'] ?? '1970-01-01',
-                'cgst' => $taxData['cgst'] ?? 0,
-                'sgst' => $taxData['sgst'] ?? 0,
-                'igst' => $taxData['igst'] ?? 0,
-                'currency' => $record['currency'] ?? 'INR',
+                'purchase_order_date' => $formattedDate,
+                'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
+                'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
+                'igst' => !empty($taxData['igst']) ? $taxData['igst'] : 0,
+                'currency' => !empty($record['currency']) ? $record['currency'] : 'INR',
                 'template' => json_decode($record['pdf_template'], true)['id'] ?? 1,
                 'status' => $record['status'] ?? 1,
             ];
+
+            // print_r($purchaseOrderData);
 
             // Validate purchase order data
             $validator = Validator::make($purchaseOrderData, [
@@ -314,7 +339,7 @@ class PurchaseOrderController extends Controller
                 'state' => 'required|string',
                 'country' => 'required|string',
                 'purchase_order_no' => 'required|string',
-                'purchase_order_date' => 'required|date',
+                'purchase_order_date' => 'required|date_format:Y-m-d',
                 'cgst' => 'required|numeric',
                 'sgst' => 'required|numeric',
                 'igst' => 'required|numeric',
@@ -353,9 +378,9 @@ class PurchaseOrderController extends Controller
                             'discount' => isset($itemsData['discount'][$index]) && $itemsData['discount'][$index] !== '' ? (float) $itemsData['discount'][$index] : 0.0,
                             'hsn' => $itemsData['hsn'][$index] ?? '',
                             'tax' => (float) $itemsData['tax'][$index] ?? 0,
-                            'cgst' => $taxData['cgst'] ?? 0,
-                            'sgst' => $taxData['sgst'] ?? 0,
-                            'igst' => (float) $itemsData['igst'][$index] ?? 0,
+                            'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
+                            'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
+                            'igst' => isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
                         ]);
                     } catch (\Exception $e) {
                         $errors[] = ['record' => $record, 'error' => 'Failed to insert product: ' . $e->getMessage()];
