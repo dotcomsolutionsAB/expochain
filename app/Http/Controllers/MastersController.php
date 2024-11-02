@@ -9,6 +9,7 @@ use App\Models\PdfTemplateModel;
 use App\Models\GodownModel;
 use App\Models\CategoryModel;
 use App\Models\SubCategoryModel;
+use App\Models\BrandModel;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 
@@ -166,6 +167,15 @@ class MastersController extends Controller
                 ['serial_number' => random_int(10000, 99999)]
             );
 
+             // Generate a random 5-digit ID for the sub-category if it doesn't exist
+             $brand = BrandModel::firstOrCreate(
+                ['name' => $record['group_name']],
+                [
+                    'serial_number' => random_int(10000, 99999),
+                    'logo' => random_int(10000, 99999)
+                ]
+            );
+
             // Prepare purchase order data
             $purchaseData = [
                 'serial_number' => $record['sn'],
@@ -173,7 +183,7 @@ class MastersController extends Controller
                 'alias' => $record['alias'], 
                 'description' => $record['description'] ?? 'No description available',
                 'type' => $record['type'],
-                'brand' => !empty($record['group_name']) ? $record['group_name'] : 'Not Available',
+                'brand' => $brand->id,
                 'category' => $category->id,
                 'sub_category' => $subCategory->id,
                 'cost_price' => $record['cost_price'],
@@ -190,7 +200,7 @@ class MastersController extends Controller
                 'alias' => 'required|string',
                 'description' => 'nullable|string',
                 'type' => 'required|string',
-                'brand' => 'required|string',
+                'brand' => 'required|integer|exists:t_brand,id',
                 'category' => 'required|integer|exists:t_category,id',
                 'sub_category' => 'required|integer|exists:t_sub_category,id',
                 'cost_price' => 'required|numeric',
@@ -418,6 +428,96 @@ class MastersController extends Controller
         return $delete_pdf_template
         ? response()->json(['message' => 'Delete Pdf template successfully!'], 204)
         : response()->json(['message' => 'Sorry, Pdf Template not found'], 400);
+    }
+
+    // migrate
+    public function importPdfTemplates()
+    {
+        $successfulInserts = 0;
+        $errors = [];
+    
+        // Define the external URL
+        $url = 'https://expo.egsm.in/assets/custom/migrate/pdf_template.php';
+    
+        // Fetch data from the external URL
+        try {
+            $response = Http::get($url);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+        }
+    
+        // Check if fetching failed
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch data.'], 500);
+        }
+    
+        $data = $response->json();
+    
+        if (empty($data)) {
+            return response()->json(['message' => 'No data found'], 404);
+        }
+    
+        // Decode nested JSON strings for address and bank details
+        $data['address'] = json_decode($data['address'], true);
+        $data['bank_details'] = json_decode($data['bank_details'], true);
+    
+         // Prepare PDF template data
+        $pdfTemplateData = [
+            'name' => $data['name'],
+            'phone_number' => $data['phone'],
+            'mobile' => $data['mobile'],
+            'email' => $data['email'],
+            'address_line_1' => $data['address']['address1'],
+            'address_line_2' => $data['address']['address2'],
+            'city' => $data['address']['city'],
+            'state' => $data['address']['state'],
+            'pincode' => $data['address']['pincode'],
+            'country' => 'India', // Default value or customize as needed
+            'gstin' => $data['gstin'],
+            'bank_account_name' => $data['bank_details']['bank_name'],
+            'bank_branch' => $data['bank_details']['branch'],
+            'bank_account_number' => $data['bank_details']['ac_no'],
+            'bank_ifsc' => $data['bank_details']['ifsc'],
+            'footer' => $data['footer']
+        ];
+
+        // Validate PDF template data
+        $validator = Validator::make($pdfTemplateData, [
+            'name' => 'required|string',
+            'phone_number' => 'required|string',
+            'mobile' => 'required|string',
+            'email' => 'required|string|email',
+            'address_line_1' => 'required|string',
+            'address_line_2' => 'required|string',
+            'city' => 'required|string',
+            'state' => 'required|string',
+            'pincode' => 'required|string',
+            'country' => 'required|string',
+            'gstin' => 'required|string',
+            'bank_account_name' => 'required|string',
+            'bank_branch' => 'required|string',
+            'bank_account_number' => 'required|string',
+            'bank_ifsc' => 'required|string',
+            'footer' => 'required|string'
+        ]);
+
+        if ($validator->fails()) {
+            $errors[] = ['record' => $pdfTemplateData, 'validation_errors' => $validator->errors()];
+        } else {
+            // Insert PDF template record if validation passes
+            try {
+                PdfTemplateModel::create($pdfTemplateData);
+                $successfulInserts++;
+            } catch (\Exception $e) {
+                $errors[] = ['record' => $pdfTemplateData, 'insert_error' => 'Failed to create PDF template: ' . $e->getMessage()];
+            }
+        }
+
+        // Return summary of the operation
+        return response()->json([
+            'message' => "PDF template import completed. Successful inserts: $successfulInserts.",
+            'errors' => $errors,
+        ], 200);
     }
 
     // uploads setup table

@@ -65,19 +65,21 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/godown/{id?}', [MastersController::class, 'delete_godown']);
 
     Route::post('/category', [MastersController::class, 'add_category']);
-    Route::get('/pdf', [MastersController::class, 'view_category']);
+    Route::get('/category', [MastersController::class, 'view_category']);
     Route::post('/update_category/{id?}', [MastersController::class, 'edit_category']);
-    Route::delete('/pdf/{id?}', [MastersController::class, 'delete_category']);
+    Route::delete('/category/{id?}', [MastersController::class, 'delete_category']);
 
     Route::post('/sub_category', [MastersController::class, 'add_sub_category']);
-    Route::get('/pdf', [MastersController::class, 'sub_category']);
-    Route::post('/update_pdf/{id?}', [MastersController::class, 'edit_sub_category']);
-    Route::delete('/pdf/{id?}', [MastersController::class, 'delete_sub_category']);
+    Route::get('/sub_category', [MastersController::class, 'sub_category']);
+    Route::post('/update_sub_category/{id?}', [MastersController::class, 'edit_sub_category']);
+    Route::delete('/sub_category/{id?}', [MastersController::class, 'delete_sub_category']);
 
     Route::post('/brand', [MastersController::class, 'add_brand']);
     Route::get('/brand', [MastersController::class, 'brand']);
     Route::post('/update_brand/{id?}', [MastersController::class, 'edit_brand']);
     Route::delete('/brand/{id?}', [MastersController::class, 'delete_brand']);
+
+    Route::delete('/sub_category/{id?}', [MastersController::class, 'delete_sub_category']);
 
     Route::post('/add_quotations', [QuotationsController::class, 'add_quotations']);
     Route::get('/quotations', [QuotationsController::class, 'quotations']);
