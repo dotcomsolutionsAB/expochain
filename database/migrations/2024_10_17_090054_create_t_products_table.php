@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('sub_category');
             $table->float('cost_price');
             $table->float('sale_price');
-            $table->integer('unit');
+            $table->string('unit');
             $table->string('hsn');
             $table->float('tax');
             $table->timestamps();

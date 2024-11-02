@@ -8,6 +8,9 @@ use App\Models\FinancialYearModel;
 use App\Models\PdfTemplateModel;
 use App\Models\GodownModel;
 use App\Models\CategoryModel;
+use App\Models\SubCategoryModel;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 
 
 class MastersController extends Controller
@@ -121,6 +124,103 @@ class MastersController extends Controller
         : response()->json(['message' => 'Sorry, products not found'], 400);
     }
 
+    // migrate
+    public function importProducts()
+    {
+        ProductsModel::truncate();
+
+        // Define the external URL
+        $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
+
+        // Fetch data from the external URL
+        try {
+            $response = Http::get($url);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+        }
+
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch data.'], 500);
+        }
+
+        $data = $response->json('data');
+
+        if (empty($data)) {
+            return response()->json(['message' => 'No data found'], 404);
+        }
+
+        $successfulInserts = 0;
+        $errors = [];
+
+        foreach ($data as $record) {
+
+            // Generate a random 5-digit ID for the category if it doesn't exist
+            $category = CategoryModel::firstOrCreate(
+                ['name' => $record['category']],
+                ['serial_number' => random_int(10000, 99999)]
+            );
+
+            // Generate a random 5-digit ID for the sub-category if it doesn't exist
+            $subCategory = SubCategoryModel::firstOrCreate(
+                ['name' => $record['sub_category']],
+                ['serial_number' => random_int(10000, 99999)]
+            );
+
+            // Prepare purchase order data
+            $purchaseData = [
+                'serial_number' => $record['sn'],
+                'name' => $record['name'],
+                'alias' => $record['alias'], 
+                'description' => $record['description'] ?? 'No description available',
+                'type' => $record['type'],
+                'brand' => !empty($record['group_name']) ? $record['group_name'] : 'Not Available',
+                'category' => $category->id,
+                'sub_category' => $subCategory->id,
+                'cost_price' => $record['cost_price'],
+                'sale_price' => !empty($record['sale_price']) ? $record['sale_price'] : 0,
+                'unit' => !empty($record['unit']) ? $record['unit'] : 'N/A',
+                'hsn' => !empty($record['hsn']) ? $record['hsn'] : 'N/A',
+                'tax' => $record['tax'],
+            ];
+
+            // Validate record data
+            $validator = Validator::make($purchaseData, [
+                'serial_number' => 'required|integer',
+                'name' => 'required|string',
+                'alias' => 'required|string',
+                'description' => 'nullable|string',
+                'type' => 'required|string',
+                'brand' => 'required|string',
+                'category' => 'required|integer|exists:t_category,id',
+                'sub_category' => 'required|integer|exists:t_sub_category,id',
+                'cost_price' => 'required|numeric',
+                'sale_price' => 'required|numeric',
+                'unit' => 'required|string',
+                'hsn' => 'required|string',
+                'tax' => 'required|integer',
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+                continue;
+            }
+
+            // Insert Product
+            try {
+                ProductsModel::create($purchaseData);
+                $successfulInserts++;
+            } catch (\Exception $e) {
+                $errors[] = ['record' => $record, 'error' => 'Failed to insert product: ' . $e->getMessage()];
+            }
+        }
+
+        // Return summary of the operation
+        return response()->json([
+            'message' => "Product data import completed. Successful inserts: $successfulInserts.",
+            'errors' => $errors,
+        ], 200);
+
+    }
 
     // finacial year table
     //create
