@@ -3,9 +3,14 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 use App\Models\SalesOrderModel;
 use App\Models\SalesOrderProductsModel;
 use App\Models\SalesOrderAddonsModel;
+use App\Models\ClientsModel;
+use App\Models\ClientsContactsModel;
+use App\Models\ProductsModel;
 
 class SalesOrderController extends Controller
 {
@@ -302,4 +307,182 @@ class SalesOrderController extends Controller
             ? response()->json(['message' => 'Sales Order and associated products/addons deleted successfully!'], 200)
             : response()->json(['message' => 'Sales Order not found.'], 404);
     }
+
+    // migrate
+    public function importSalesOrders()
+    {
+        set_time_limit(300);
+
+        SalesOrderModel::truncate();
+        SalesOrderProductsModel::truncate();
+        SalesOrderAddonsModel::truncate();
+
+        // Define the external URL
+        $url = 'https://expo.egsm.in/assets/custom/migrate/sells_order.php';
+
+        // Fetch data from the external URL
+        try {
+            $response = Http::get($url);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+        }
+
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch data.'], 500);
+        }
+
+        $data = $response->json('data');
+
+        if (empty($data)) {
+            return response()->json(['message' => 'No data found'], 404);
+        }
+
+        $successfulInserts = 0;
+        $errors = [];
+
+        foreach ($data as $record) {
+            // Decode JSON fields for items, tax, and addons
+            $itemsData = json_decode($record['items'] ?? '{}', true);
+            $taxData = json_decode($record['tax'] ?? '{}', true);
+            $addonsData = json_decode($record['addons'] ?? '{}', true);
+
+            // Retrieve client and client contact IDs
+            $client = ClientsModel::where('name', $record['client'])->first();
+
+            if (!$client) {
+                // If the client is not found, log an error or skip this record
+                $errors[] = [
+                    'record' => $record,
+                    'error' => 'Client not found for the provided name: ' . $record['client']
+                ];
+                continue; // Skip to the next record in the loop
+            }
+
+            $clientContact = ClientsContactsModel::where('customer_id', $client->customer_id)->first();
+
+            if (!$clientContact) {
+                // If the client contact is not found, log an error or skip this record
+                $errors[] = [
+                    'record' => $record,
+                    'error' => 'Client contact not found for customer ID: ' . $client->customer_id
+                ];
+                continue; // Skip to the next record in the loop
+            }
+
+            // Set up main sales order data with fallbacks
+            $salesOrderData = [
+                'client_id' => $client->id ?? null,
+                'client_contact_id' => $clientContact->id ?? null,
+                'name' => $record['client'] ?? 'Unnamed Client',
+                'address_line_1' => $client->address_line_1 ?? 'Address Line 1',
+                'address_line_2' => $client->address_line_2 ?? 'Address Line 2',
+                'city' => $client->city ?? 'City Name',
+                'pincode' => $client->pincode ?? '000000',
+                'state' => $client->state ?? 'State Name',
+                'country' => $client->country ?? 'India',
+                'sales_order_no' => $record['so_no'] ?? 'Unknown',
+                'sales_order_date' => $record['so_date'] ?? now(),
+                'quotation_no' => $record['quotation_no'] ?? 0,
+                'cgst' => $taxData['cgst'] ?? 0,
+                'sgst' => $taxData['sgst'] ?? 0,
+                'igst' => $taxData['igst'] ?? 0,
+                'total' => $record['total'] ?? 0,
+                'currency' => 'INR',
+                'template' => json_decode($record['pdf_template'], true)['id'] ?? '0',
+                'status' => $record['status'] ?? 1,
+            ];
+
+            // Validate main sales order data
+            $validator = Validator::make($salesOrderData, [
+                'client_id' => 'nullable|integer',
+                'client_contact_id' => 'nullable|integer',
+                'name' => 'required|string',
+                'address_line_1' => 'required|string',
+                'city' => 'required|string',
+                'pincode' => 'required|string',
+                'state' => 'required|string',
+                'country' => 'required|string',
+                'sales_order_no' => 'required|string',
+                'sales_order_date' => 'required|date',
+                'quotation_no' => 'required|integer',
+                'cgst' => 'required|numeric',
+                'sgst' => 'required|numeric',
+                'igst' => 'required|numeric',
+                'total' => 'required|numeric',
+                'currency' => 'required|string',
+                'template' => 'required|string',
+                'status' => 'required|integer',
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+                continue;
+            }
+
+            try {
+                $salesOrder = SalesOrderModel::create($salesOrderData);
+                $successfulInserts++;
+            } catch (\Exception $e) {
+                $errors[] = ['record' => $record, 'error' => 'Failed to insert sales order: ' . $e->getMessage()];
+                continue;
+            }
+
+            // Process items (products) associated with the sales order
+            if ($itemsData && isset($itemsData['product']) && is_array($itemsData['product'])) {
+                foreach ($itemsData['product'] as $index => $product) {
+
+                    $get_product = ProductsModel::where('name', $product)->first();
+                    // Check if the product exists
+                    if (!$get_product) {
+                        $errors[] = [
+                            'record' => $itemsData,
+                            'error' => "Product with name '{$get_product}' not found."
+                        ];
+                        continue; // Skip this product if not found
+                    }
+
+                    SalesOrderProductsModel::create([
+                        'sales_order_id' => $salesOrder->id,
+                        'product_id' => $get_product->id,
+                        'product_name' => $itemsData['product'][$index] ?? 'Unnamed Product',
+                        'description' => $itemsData['desc'][$index] ?? '',
+                        'brand' => $itemsData['brand'][$index] ?? '',
+                        'quantity' => $itemsData['quantity'][$index] ?? 0,
+                        'unit' => $itemsData['unit'][$index] ?? '',
+                        'price' => isset($itemsData['price'][$index]) && $itemsData['price'][$index] !== '' ? (float)$itemsData['price'][$index] : 0,
+                        'discount' => (float)($itemsData['discount'][$index] ?? 0),
+                        'hsn' => $itemsData['hsn'][$index] ?? '',
+                        'tax' => isset($itemsData['tax'][$index]) && $itemsData['tax'][$index] !== '' ? (float)$itemsData['tax'][$index] : 0,
+                        'cgst' => $itemsData['cgst'][$index] ?? 0,
+                        'sgst' => $itemsData['sgst'][$index] ?? 0,
+                        'igst' => $itemsData['igst'][$index] ?? 0,
+                    ]);
+                }
+            }
+
+            // Process addons for the sales order
+            if ($addonsData) {
+                foreach ($addonsData as $name => $values) {
+                    $totalAmount = (float)($values['cgst'] ?? 0) + (float)($values['sgst'] ?? 0) + (float)($values['igst'] ?? 0);
+
+                    SalesOrderAddonsModel::create([
+                        'sales_order_id' => $salesOrder->id,
+                        'name' => $name,
+                        'amount' => $totalAmount,
+                        'tax' => 18,
+                        'hsn' => $values['hsn'] ?? '',
+                        'cgst' => (float)($values['cgst'] ?? 0),
+                        'sgst' => (float)($values['sgst'] ?? 0),
+                        'igst' => (float)($values['igst'] ?? 0),
+                    ]);
+                }
+            }
+        }
+
+        return response()->json([
+            'message' => "Sales orders import completed with $successfulInserts successful inserts.",
+            'errors' => $errors,
+        ], 200);
+    }
+
 }

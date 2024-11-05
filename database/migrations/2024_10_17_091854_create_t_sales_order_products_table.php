@@ -20,7 +20,7 @@ return new class extends Migration
             $table->text('description');
             $table->string('brand');
             $table->integer('quantity');
-            $table->integer('unit');
+            $table->string('unit');
             $table->float('price');
             $table->float('discount');
             $table->string('hsn');
