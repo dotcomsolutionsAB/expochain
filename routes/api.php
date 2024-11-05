@@ -79,7 +79,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_brand/{id?}', [MastersController::class, 'edit_brand']);
     Route::delete('/brand/{id?}', [MastersController::class, 'delete_brand']);
 
-    Route::delete('/sub_category/{id?}', [MastersController::class, 'delete_sub_category']);
+    Route::get('/pdf_template_migrate', [MastersController::class, 'importPdfTemplates']);
 
     Route::post('/add_quotations', [QuotationsController::class, 'add_quotations']);
     Route::get('/quotations', [QuotationsController::class, 'quotations']);

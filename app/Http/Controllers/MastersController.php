@@ -433,6 +433,8 @@ class MastersController extends Controller
     // migrate
     public function importPdfTemplates()
     {
+        PdfTemplateModel::truncate();
+
         $successfulInserts = 0;
         $errors = [];
     
@@ -457,59 +459,73 @@ class MastersController extends Controller
             return response()->json(['message' => 'No data found'], 404);
         }
     
-        // Decode nested JSON strings for address and bank details
-        $data['address'] = json_decode($data['address'], true);
-        $data['bank_details'] = json_decode($data['bank_details'], true);
-    
-         // Prepare PDF template data
-        $pdfTemplateData = [
-            'name' => $data['name'],
-            'phone_number' => $data['phone'],
-            'mobile' => $data['mobile'],
-            'email' => $data['email'],
-            'address_line_1' => $data['address']['address1'],
-            'address_line_2' => $data['address']['address2'],
-            'city' => $data['address']['city'],
-            'state' => $data['address']['state'],
-            'pincode' => $data['address']['pincode'],
-            'country' => 'India', // Default value or customize as needed
-            'gstin' => $data['gstin'],
-            'bank_account_name' => $data['bank_details']['bank_name'],
-            'bank_branch' => $data['bank_details']['branch'],
-            'bank_account_number' => $data['bank_details']['ac_no'],
-            'bank_ifsc' => $data['bank_details']['ifsc'],
-            'footer' => $data['footer']
-        ];
+        $successfulInserts = 0;
+        $errors = [];
 
-        // Validate PDF template data
-        $validator = Validator::make($pdfTemplateData, [
-            'name' => 'required|string',
-            'phone_number' => 'required|string',
-            'mobile' => 'required|string',
-            'email' => 'required|string|email',
-            'address_line_1' => 'required|string',
-            'address_line_2' => 'required|string',
-            'city' => 'required|string',
-            'state' => 'required|string',
-            'pincode' => 'required|string',
-            'country' => 'required|string',
-            'gstin' => 'required|string',
-            'bank_account_name' => 'required|string',
-            'bank_branch' => 'required|string',
-            'bank_account_number' => 'required|string',
-            'bank_ifsc' => 'required|string',
-            'footer' => 'required|string'
-        ]);
+        foreach ($data['data'] as $pdf_record)
+        {    
+            // Decode nested JSON strings for address and bank details
+            $address = isset($pdf_record['address']) ? json_decode($pdf_record['address'], true) : [];
+            $bank_details = isset($pdf_record['bank_details']) && json_decode($pdf_record['bank_details'], true) !== null 
+            ? json_decode($pdf_record['bank_details'], true) 
+            : [];
 
-        if ($validator->fails()) {
-            $errors[] = ['record' => $pdfTemplateData, 'validation_errors' => $validator->errors()];
-        } else {
-            // Insert PDF template record if validation passes
-            try {
-                PdfTemplateModel::create($pdfTemplateData);
-                $successfulInserts++;
-            } catch (\Exception $e) {
-                $errors[] = ['record' => $pdfTemplateData, 'insert_error' => 'Failed to create PDF template: ' . $e->getMessage()];
+            // Replace empty values with null
+            $bank_details = array_map(function($value) {
+                return $value === '' ? null : $value;
+            }, $bank_details);
+        
+            // Prepare PDF template data
+            $pdfTemplateData = [
+                'name' => $pdf_record['name'],
+                'phone_number' => $pdf_record['phone'],
+                'mobile' => $pdf_record['mobile'],
+                'email' => $pdf_record['email'],
+                'address_line_1' => $address['address1'] ?? 'No Address1 Provided',
+                'address_line_2' => $address['address2'] ?? 'No Address2 Provided',
+                'city' => $address['city'] ?? 'No City Provided',
+                'state' => $address['state'] ?? 'No State Provided',
+                'pincode' => $address['pincode'] ?? 'No Pincode Provided',
+                'country' => 'India', // Default value or customize as needed
+                'gstin' => $pdf_record['gstin'],
+                'bank_number' => $bank_details['bank_name'] ?? 'No Bank Name Provided',
+                'bank_account_name' => $bank_details['branch'] ?? 'No Branch Provided',
+                'bank_account_number' => $bank_details['ac_no'] ?? 'No Account Number Provided',
+                'bank_ifsc' => $bank_details['ifsc'] ?? 'No IFSC Provided',
+                'header' => 'No Header Provided',
+                'footer' => $pdf_record['footer']
+            ];
+
+            // Validate PDF template data
+            $validator = Validator::make($pdfTemplateData, [
+                'name' => 'required|string',
+                'phone_number' => 'required|string',
+                'mobile' => 'required|string',
+                'email' => 'required|string|email',
+                'address_line_1' => 'required|string',
+                'address_line_2' => 'required|string',
+                'city' => 'required|string',
+                'state' => 'required|string',
+                'pincode' => 'required|string',
+                'country' => 'required|string',
+                'gstin' => 'required|string',
+                'bank_number' => 'required|string',
+                'bank_account_name' => 'required|string',
+                'bank_account_number' => 'required|string',
+                'bank_ifsc' => 'required|string',
+                'footer' => 'required|string'
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = ['record' => $pdfTemplateData, 'validation_errors' => $validator->errors()];
+            } else {
+                // Insert PDF template record if validation passes
+                try {
+                    PdfTemplateModel::create($pdfTemplateData);
+                    $successfulInserts++;
+                } catch (\Exception $e) {
+                    $errors[] = ['record' => $pdfTemplateData, 'insert_error' => 'Failed to create PDF template: ' . $e->getMessage()];
+                }
             }
         }
 

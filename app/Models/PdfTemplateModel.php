@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class PdfTemplateModel extends Model
 {
     //
-    protected $table = ' t_pdf_template';
+    protected $table = 't_pdf_template';
 
     protected $fillable = [
         'name',

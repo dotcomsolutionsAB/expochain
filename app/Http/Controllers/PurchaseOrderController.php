@@ -302,10 +302,6 @@ class PurchaseOrderController extends Controller
 
             $formattedDate = $purchaseOrderDate ? $purchaseOrderDate->format('Y-m-d') : '1970-01-01';
 
-            // echo "<pre>";
-
-            // print_r($formattedDate);
-
             // Prepare purchase order data
             $purchaseOrderData = [
                 'supplier_id' => $supplier->id ?? $defaultSupplierId,
