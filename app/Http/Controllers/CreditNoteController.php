@@ -1,10 +1,12 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\CreditNoteModel;
 use App\Models\CreditNoteProductsModel;
+use App\Models\ClientsModel;
 
 class CreditNoteController extends Controller
 {
@@ -221,4 +223,138 @@ class CreditNoteController extends Controller
             ? response()->json(['message' => 'Credit Note and associated products deleted successfully!'], 200)
             : response()->json(['message' => 'Credit Note not found.'], 404);
     }
+
+    public function importCreditNotes()
+    {
+        // Increase execution time for large data sets
+        set_time_limit(300);
+
+        // Clear existing records from related tables
+        CreditNoteModel::truncate();
+        CreditNoteProductsModel::truncate();
+
+        // Define the external URL to fetch the data
+        $url = 'https://expo.egsm.in/assets/custom/migrate/credit_note.php';
+
+        try {
+            // Fetch data from the URL
+            $response = Http::timeout(120)->get($url);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch data: ' . $e->getMessage()], 500);
+        }
+
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch data.'], 500);
+        }
+
+        $data = $response->json('data');
+
+        if (empty($data)) {
+            return response()->json(['message' => 'No data found'], 404);
+        }
+
+        $successfulInserts = 0;
+        $errors = [];
+
+        foreach ($data as $record) {
+            // Parse JSON data for items, tax, and addons
+            $itemsData = json_decode($record['items'], true);
+            $taxData = json_decode($record['tax'], true);
+            $addonsData = json_decode($record['addons'], true);
+
+            // Validate JSON structure
+            if (!is_array($itemsData) || !is_array($taxData) || !is_array($addonsData)) {
+                $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure in one of the fields.'];
+                continue;
+            }
+
+            // Retrieve client based on the name
+            $client = ClientsModel::where('name', $record['client'])->first();
+
+            if (!$client) {
+                $errors[] = ['record' => $record, 'error' => 'Client not found: ' . $record['client']];
+                continue;
+            }
+
+            // Prepare credit note data
+            $creditNoteData = [
+                'client_id' => $client->id,
+                'name' => $record['client'],
+                'credit_note_no' => !empty($record['cgst']) ? $record['cn_no'] : 'Unknown',
+                'credit_note_date' => $record['cn_date'] ?? now(),
+                'remarks' => $record['remarks'] ?? '',
+                'cgst' => !empty($taxData['cgst']) ? (float) $taxData['cgst'] : 0,
+                'sgst' => !empty($taxData['sgst']) ? (float) $taxData['sgst'] : 0,
+                'igst' => !empty($taxData['igst']) ? (float) $taxData['igst'] : 0,
+                'total' => (float) $record['total'] ?? 0.0,
+                'currency' => 'INR',
+                'template' => 1, // Default template ID
+                'status' => (int) $record['status'] ?? 0,
+            ];
+
+            // Validate credit note data
+            $validator = Validator::make($creditNoteData, [
+                'client_id' => 'required|integer',
+                'name' => 'required|string',
+                'credit_note_no' => 'required|string',
+                'credit_note_date' => 'required|date',
+                'remarks' => 'nullable|string',
+                'cgst' => 'required|numeric',
+                'sgst' => 'required|numeric',
+                'igst' => 'required|numeric',
+                'total' => 'required|numeric',
+                'currency' => 'required|string',
+                'template' => 'required|integer',
+                'status' => 'required|integer',
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+                continue;
+            }
+
+            try {
+                // Insert the credit note data
+                $creditNote = CreditNoteModel::create($creditNoteData);
+                $successfulInserts++;
+            } catch (\Exception $e) {
+                $errors[] = ['record' => $record, 'error' => 'Failed to insert credit note: ' . $e->getMessage()];
+                continue;
+            }
+
+            // Insert products related to the credit note
+            if (!empty($itemsData['product']) && is_array($itemsData['product'])) {
+                foreach ($itemsData['product'] as $index => $product) {
+                    if (empty($product)) continue; // Skip empty product entries
+
+                    try {
+                        CreditNoteProductsModel::create([
+                            'credit_note_id' => $creditNote->id,
+                            'product_id' => $index + 1, // This might need to be adjusted to match your actual product ID logic
+                            'product_name' => $product,
+                            'description' => $itemsData['desc'][$index] ?? 'No Description',
+                            'brand' => 'Unknown', // Default as brand data is missing
+                            'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
+                            'unit' => $itemsData['unit'][$index] ?? '',
+                            'price' => (float) $itemsData['price'][$index] ?? 0.0,
+                            'discount' => (float) $itemsData['discount'][$index] ?? 0.0,
+                            'hsn' => $itemsData['hsn'][$index] ?? '',
+                            'tax' => (float) $itemsData['tax'][$index] ?? 0.0,
+                            'cgst' => !empty($taxData['cgst']) ? (float) $taxData['cgst'] : 0,
+                            'sgst' => !empty($taxData['sgst']) ? (float) $taxData['sgst'] : 0,
+                            'igst' => isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
+                        ]);
+                    } catch (\Exception $e) {
+                        $errors[] = ['record' => $record, 'error' => 'Failed to insert product: ' . $e->getMessage()];
+                    }
+                }
+            }
+        }
+
+        return response()->json([
+            'message' => "Credit notes import completed with $successfulInserts successful inserts.",
+            'errors' => $errors,
+        ], 200);
+    }
+
 }

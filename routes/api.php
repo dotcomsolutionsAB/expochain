@@ -104,6 +104,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_sales_invoice/{id?}', [SalesInvoiceController::class, 'edit_sales_invoice']);
     Route::delete('/sales_invoice/{id?}', [SalesInvoiceController::class, 'delete_sales_invoice']);
 
+    Route::get('/sales_invoice_migrate', [SalesInvoiceController::class, 'importSalesInvoices']);
+
     Route::post('/add_sales_return', [SalesReturnController::class, 'add_sales_return']);
     Route::get('/sales_return', [SalesReturnController::class, 'view_sales_return']);
     Route::post('/update_sales_return/{id?}', [SalesReturnController::class, 'edit_sales_return']);
@@ -114,10 +116,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_credit_note/{id?}', [CreditNoteController::class, 'edit_credit_note']);
     Route::delete('/credit_note/{id?}', [CreditNoteController::class, 'delete_credit_note']);
 
+    Route::get('/credit_note_migrate', [CreditNoteController::class, 'importCreditNotes']);
+
     Route::post('/add_test_certificate', [TestCertificateController::class, 'add_test_certificate']);
     Route::get('/test_certificate', [TestCertificateController::class, 'view_test_certificate']);
     Route::post('/update_test_certificate/{id?}', [TestCertificateController::class, 'edit_test_certificate']);
     Route::delete('/test_certificate/{id?}', [TestCertificateController::class, 'delete_test_certificate']);
+
+    Route::get('/test_certificate_migrate', [TestCertificateController::class, 'importTestCertificates']);
 
     Route::post('/add_purchase_order', [PurchaseOrderController::class, 'add_purchase_order']);
     Route::get('/purchase_order', [PurchaseOrderController::class, 'view_purchase_order']);
@@ -130,6 +136,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_purchase_invoice/{id?}', [PurchaseInvoiceController::class, 'edit_purchase_invoice']);
     Route::delete('/purchase_invoice/{id?}', [PurchaseInvoiceController::class, 'delete_purchase_invoice']);
 
+    Route::get('/purchase_invoice_migrate', [PurchaseInvoiceController::class, 'importPurchaseInvoices']);
+
     Route::post('/add_purchase_return', [PurchaseReturnController::class, 'add_purchase_return']);
     Route::get('/purchase_return', [PurchaseReturnController::class, 'view_purchase_return']);
     Route::post('/update_purchase_return/{id?}', [PurchaseReturnController::class, 'edit_purchase_return']);
@@ -139,6 +147,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/debit_note', [DebitNoteController::class, 'view_debit_note']);
     Route::post('/update_debit_note/{id?}', [DebitNoteController::class, 'edit_debit_note']);
     Route::delete('/debit_note/{id?}', [DebitNoteController::class, 'delete_debit_note']);
+
+    Route::get('/debit_note_migrate', [DebitNoteController::class, 'importDebitNotes']);
 
     Route::post('/add_stock_transfer', [StockTransferController::class, 'add_stock_transfer']);
     Route::get('/stock_transfer', [StockTransferController::class, 'view_stock_transfer']);
@@ -162,3 +172,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
 });
+
+Route::get('/sales_invoice_migrate', [SalesInvoiceController::class, 'importSalesInvoices']);
+

@@ -1,10 +1,12 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\TestCertificateModel;
 use App\Models\TestCertificateProductsModel;
+use App\Models\ClientsModel;
 
 class TestCertificateController extends Controller
 {
@@ -162,4 +164,117 @@ class TestCertificateController extends Controller
             return response()->json(['message' => 'Test Certificate not found.'], 404);
         }
     }
+
+    public function importTestCertificates()
+    {
+        // Increase the maximum execution time for large data sets
+        set_time_limit(300);
+    
+        // Clear existing records from the related tables
+        TestCertificateModel::truncate();
+        TestCertificateProductsModel::truncate();
+    
+        // Define the external URL to fetch the data
+        $url = 'https://expo.egsm.in/assets/custom/migrate/test_certificate.php'; // Replace with the actual URL
+    
+        try {
+            // Fetch data from the URL
+            $response = Http::timeout(120)->get($url);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch data: ' . $e->getMessage()], 500);
+        }
+    
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch data.'], 500);
+        }
+    
+        $data = $response->json('data');
+    
+        if (empty($data)) {
+            return response()->json(['message' => 'No data found'], 404);
+        }
+    
+        $successfulInserts = 0;
+        $errors = [];
+    
+        foreach ($data as $record) {
+            // Parse JSON data for items
+            $itemsData = json_decode($record['items'], true);
+    
+            // Validate JSON structure
+            if (!is_array($itemsData) || !isset($itemsData['id']) || !isset($itemsData['product_name'])) {
+                $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure for items.'];
+                continue;
+            }
+    
+            // Retrieve client ID based on the name
+            $client = ClientsModel::where('name', $record['client'])->first();
+    
+            if (!$client) {
+                $errors[] = ['record' => $record, 'error' => 'Client not found: ' . $record['client']];
+                continue;
+            }
+    
+            // Handle invalid or empty tc_date
+            $tcDate = ($record['tc_date'] === '0000-00-00' || !strtotime($record['tc_date'])) ? now() : $record['tc_date'];
+    
+            // Prepare test certificate data
+            $testCertificateData = [
+                'client_id' => $client->id,
+                'sales_invoice_no' => !empty($record['si_no']) ? $record['si_no'] : 'Unknown', // Map to si_no
+                'reference_no' => $record['reference_no'] ?? 'Unknown',
+                'tc_date' => $tcDate, // Use default date if invalid
+                'seller' => !empty($record['cgst']) ? $record['seller'] : 'Unknown', // Fetch from seller column
+                'client_flag' => (bool) $record['hide_client'],
+                'log_user' => $record['log_user'] ?? 'Unknown',
+            ];
+    
+            // Validate test certificate data
+            $validator = Validator::make($testCertificateData, [
+                'client_id' => 'required|integer',
+                'sales_invoice_no' => 'required|string',
+                'reference_no' => 'required|string',
+                'tc_date' => 'required|date',
+                'seller' => 'required|string',
+                'client_flag' => 'required|boolean',
+                'log_user' => 'required|string',
+            ]);
+    
+            if ($validator->fails()) {
+                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+                continue;
+            }
+    
+            try {
+                // Insert the test certificate data
+                $testCertificate = TestCertificateModel::create($testCertificateData);
+                $successfulInserts++;
+            } catch (\Exception $e) {
+                $errors[] = ['record' => $record, 'error' => 'Failed to insert test certificate: ' . $e->getMessage()];
+                continue;
+            }
+    
+            // Insert products related to the test certificate
+            foreach ($itemsData['id'] as $index => $productId) {
+                try {
+                    TestCertificateProductsModel::create([
+                        'tc_id' => $testCertificate->id,
+                        'product_id' => $productId,
+                        'product_name' => $itemsData['product_name'][$index] ?? 'Unknown Product',
+                        'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
+                        'sales_invoice_no' => $itemsData['inv'][$index] ?? 'Unknown',
+                    ]);
+                } catch (\Exception $e) {
+                    $errors[] = ['record' => $record, 'error' => 'Failed to insert product: ' . $e->getMessage()];
+                }
+            }
+        }
+    
+        return response()->json([
+            'message' => "Test certificates import completed with $successfulInserts successful inserts.",
+            'errors' => $errors,
+        ], 200);
+    }
+    
+
 }
