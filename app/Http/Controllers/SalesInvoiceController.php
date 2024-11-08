@@ -514,7 +514,7 @@ class SalesInvoiceController extends Controller
 
     public function importSalesInvoices()
     {
-        set_time_limit(600);
+        set_time_limit(1200);
 
         // Clear existing data from SalesInvoice and related tables
         SalesInvoiceModel::truncate();
