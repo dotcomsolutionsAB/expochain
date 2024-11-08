@@ -1,10 +1,12 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\AssemblyModel;
 use App\Models\AssemblyProductsModel;
+use App\Models\ProductsModel;
 
 class AssemblyController extends Controller
 {
@@ -186,4 +188,118 @@ class AssemblyController extends Controller
             return response()->json(['message' => 'Assembly not found.'], 404);
         }
     }
+
+    public function importAssemblies()
+    {
+        set_time_limit(300);
+
+        // Clear the Assembly and related tables
+        AssemblyModel::truncate();
+        AssemblyProductsModel::truncate();
+
+        // Define the external URL
+        $url = 'https://expo.egsm.in/assets/custom/migrate/assembly.php'; // Replace with the actual URL
+
+        try {
+            $response = Http::timeout(120)->get($url);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch data: ' . $e->getMessage()], 500);
+        }
+
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch data.'], 500);
+        }
+
+        $data = $response->json('data');
+
+        if (empty($data)) {
+            return response()->json(['message' => 'No data found'], 404);
+        }
+
+        $successfulInserts = 0;
+        $errors = [];
+
+        foreach ($data as $record) {
+            // Fetch the product details for the composite
+            $compositeProduct = ProductsModel::where('name', $record['composite'])->first();
+
+            if (!$compositeProduct) {
+                $errors[] = [
+                    'record' => $record,
+                    'error' => "Composite product '{$record['composite']}' not found."
+                ];
+                continue; // Skip this record if the composite product is not found
+            }
+
+            // Generate a random assembly ID
+            $assembly_id = rand(1111111111, 9999999999);
+
+            // Prepare Assembly data
+            $assemblyData = [
+                'assembly_id' => $assembly_id,
+                'product_id' => $compositeProduct->id,
+                'product_name' => $compositeProduct->name,
+                'quantity' => 1, // Assuming quantity is 1 for the composite
+                'log_user' => $record['log_user'] ?? 'Unknown',
+            ];
+
+            // Validate Assembly data
+            $validator = Validator::make($assemblyData, [
+                'assembly_id' => 'required|integer',
+                'product_id' => 'required|integer',
+                'product_name' => 'required|string',
+                'quantity' => 'required|integer',
+                'log_user' => 'required|string',
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+                continue;
+            }
+
+            try {
+                $assembly = AssemblyModel::create($assemblyData);
+                $successfulInserts++;
+            } catch (\Exception $e) {
+                $errors[] = ['record' => $record, 'error' => 'Failed to insert assembly: ' . $e->getMessage()];
+                continue;
+            }
+
+            // Parse and handle spares
+            $sparesData = json_decode($record['spares'], true);
+
+            if (is_array($sparesData) && isset($sparesData['product'], $sparesData['quantity'])) {
+                foreach ($sparesData['product'] as $index => $spareProductName) {
+                    // Fetch the spare product details
+                    $spareProduct = ProductsModel::where('name', $spareProductName)->first();
+
+                    if (!$spareProduct) {
+                        $errors[] = [
+                            'record' => $record,
+                            'error' => "Spare product '{$spareProductName}' not found."
+                        ];
+                        continue; // Skip this spare if not found
+                    }
+
+                    try {
+                        AssemblyProductsModel::create([
+                            'assembly_id' => $assembly_id,
+                            'product_id' => $spareProduct->id,
+                            'product_name' => $spareProduct->name,
+                            'quantity' => (int)($sparesData['quantity'][$index] ?? 1),
+                            'log_user' => $record['log_user'] ?? 'Unknown',
+                        ]);
+                    } catch (\Exception $e) {
+                        $errors[] = ['record' => $record, 'error' => 'Failed to insert spare product: ' . $e->getMessage()];
+                    }
+                }
+            }
+        }
+
+        return response()->json([
+            'message' => "Import completed with $successfulInserts successful inserts.",
+            'errors' => $errors,
+        ], 200);
+    }
+
 }

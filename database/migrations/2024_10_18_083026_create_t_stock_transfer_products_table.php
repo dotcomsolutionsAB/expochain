@@ -19,7 +19,7 @@ return new class extends Migration
             // as it don't support `length`, it can store upto `65,535 characters for TEXT type in MySQL`
             $table->text('description');
             $table->integer('quantity');
-            $table->integer('unit');
+            $table->string('unit');
             $table->string('status');
             $table->timestamps();
         });

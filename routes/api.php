@@ -155,15 +155,21 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_stock_transfer/{id?}', [StockTransferController::class, 'edit_stock_transfer']);
     Route::delete('/stock_transfer/{id?}', [StockTransferController::class, 'delete_stock_transfer']);
 
+    Route::get('/stock_transfer_migrate', [StockTransferController::class, 'importStockTransfers']);
+
     Route::post('/add_assembly', [AssemblyController::class, 'add_assembly']);
     Route::get('/assembly', [AssemblyController::class, 'view_assembly']);
     Route::post('/update_assembly/{id?}', [AssemblyController::class, 'edit_assembly']);
     Route::delete('/assembly/{id?}', [AssemblyController::class, 'delete_assembly']);
 
+    Route::get('/assembly_migrate', [AssemblyController::class, 'importAssemblies']);
+
     Route::post('/add_assembly_operations', [AssemblyOperationsController::class, 'add_assembly_operations']);
     Route::get('/assembly_operations', [AssemblyOperationsController::class, 'assembly_operations']);
     Route::post('/update_assembly_operations/{id?}', [AssemblyOperationsController::class, 'edit_assembly_operations']);
     Route::delete('/assembly_operations/{id?}', [AssemblyOperationsController::class, 'delete_assembly_operations']);
+
+    Route::get('/assembly_operations_migrate', [AssemblyOperationsController::class, 'importAssemblyOperations']);
 
     Route::post('/add_fabrication', [FabricationController::class, 'add_fabrication']);
     Route::get('/fabrication', [FabricationController::class, 'view_fabrication']);

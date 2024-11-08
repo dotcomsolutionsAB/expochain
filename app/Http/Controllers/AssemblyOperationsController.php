@@ -1,10 +1,12 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\AssemblyOperationModel;
 use App\Models\AssemblyOperationProductsModel;
+use App\Models\ProductsModel;
 
 class AssemblyOperationsController extends Controller
 {
@@ -201,4 +203,142 @@ class AssemblyOperationsController extends Controller
             return response()->json(['message' => 'Assembly Operations not found.'], 404);
         }
     }
+
+    public function importAssemblyOperations()
+    {
+        set_time_limit(300);
+
+        // Define the external URL
+        $url = 'https://expo.egsm.in/assets/custom/migrate/assembly_operation.php'; // Replace with the actual URL
+
+        try {
+            $response = Http::timeout(120)->get($url);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch data: ' . $e->getMessage()], 500);
+        }
+
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch data.'], 500);
+        }
+
+        $data = $response->json('data');
+
+        if (empty($data)) {
+            return response()->json(['message' => 'No data found'], 404);
+        }
+
+        $successfulInserts = 0;
+        $errors = [];
+
+        foreach ($data as $record) {
+            // Generate a random assembly_operations_id
+            $assembly_operations_id = rand(1111111111, 9999999999);
+
+            // Generate a static date for assembly_operations_date
+            $assembly_operations_date = '2021-05-13';
+
+            // Determine the type based on the operation
+            $type = ($record['operation'] === 'Disassembled') ? 'de-assemble' : 'assemble';
+
+            // Fetch product details for the composite
+            $compositeProduct = ProductsModel::where('name', $record['composite'])->first();
+
+            if (!$compositeProduct) {
+                $errors[] = [
+                    'record' => $record,
+                    'error' => "Composite product '{$record['composite']}' not found."
+                ];
+                continue; // Skip if composite product is not found
+            }
+
+            // Calculate the amount (quantity * rate)
+            $quantity = (float)$record['quantity'];
+            $rate = (float)$record['rate'];
+            $amount = $quantity * $rate;
+
+            // Prepare main assembly operation data
+            $assemblyOperationData = [
+                'assembly_operations_id' => $assembly_operations_id,
+                'assembly_operations_date' => $assembly_operations_date,
+                'type' => $type,
+                'product_id' => $compositeProduct->id,
+                'product_name' => $compositeProduct->name,
+                'quantity' => $quantity,
+                'godown' => $record['place'] ?? 'Unknown',
+                'rate' => $rate,
+                'amount' => $amount,
+                'log_user' => $record['log_user'] ?? 'Unknown'
+            ];
+
+            // Validate main assembly operation data
+            $validator = Validator::make($assemblyOperationData, [
+                'assembly_operations_id' => 'required|integer',
+                'assembly_operations_date' => 'required|date',
+                'type' => 'required|in:assemble,de-assemble',
+                'product_id' => 'required|integer',
+                'product_name' => 'required|string',
+                'quantity' => 'required|numeric',
+                'godown' => 'required|string',
+                'rate' => 'required|numeric',
+                'amount' => 'required|numeric',
+                'log_user' => 'required|string',
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+                continue;
+            }
+
+            try {
+                $assemblyOperation = AssemblyOperationModel::create($assemblyOperationData);
+                $successfulInserts++;
+            } catch (\Exception $e) {
+                $errors[] = ['record' => $record, 'error' => 'Failed to insert assembly operation: ' . $e->getMessage()];
+                continue;
+            }
+
+            // Parse and handle items
+            $itemsData = json_decode($record['items'], true);
+
+            if (is_array($itemsData) && isset($itemsData['product'], $itemsData['quantity'], $itemsData['rate'], $itemsData['place'])) {
+                foreach ($itemsData['product'] as $index => $productName) {
+                    // Fetch product details for each item
+                    $itemProduct = ProductsModel::where('name', $productName)->first();
+
+                    if (!$itemProduct) {
+                        $errors[] = [
+                            'record' => $record,
+                            'error' => "Item product '{$productName}' not found."
+                        ];
+                        continue; // Skip this item if not found
+                    }
+
+                    // Calculate the item amount (quantity * rate)
+                    $itemQuantity = (float)$itemsData['quantity'][$index];
+                    $itemRate = (float)$itemsData['rate'][$index];
+                    $itemAmount = $itemQuantity * $itemRate;
+
+                    try {
+                        AssemblyOperationProductsModel::create([
+                            'assembly_operations_id' => $assembly_operations_id,
+                            'product_id' => $itemProduct->id,
+                            'product_name' => $itemProduct->name,
+                            'quantity' => $itemQuantity,
+                            'rate' => $itemRate,
+                            'godown' => $itemsData['place'][$index] ?? 'Unknown',
+                            'amount' => $itemAmount,
+                        ]);
+                    } catch (\Exception $e) {
+                        $errors[] = ['record' => $record, 'error' => 'Failed to insert item product: ' . $e->getMessage()];
+                    }
+                }
+            }
+        }
+
+        return response()->json([
+            'message' => "Import completed with $successfulInserts successful inserts.",
+            'errors' => $errors,
+        ], 200);
+    }
+
 }

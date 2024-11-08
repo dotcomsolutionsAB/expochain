@@ -1,10 +1,12 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\StockTransferModel;
 use App\Models\StockTransferProductsModel;
+use App\Models\ProductsModel;
 
 class StockTransferController extends Controller
 {
@@ -179,4 +181,117 @@ class StockTransferController extends Controller
             return response()->json(['message' => 'Stock Transfer not found.'], 404);
         }
     }
+
+    public function importStockTransfers()
+    {
+        set_time_limit(300);
+
+        // Clear the StockTransfer and related tables
+        StockTransferModel::truncate();
+        StockTransferProductsModel::truncate();
+
+        // Define the external URL
+        $url = 'https://expo.egsm.in/assets/custom/migrate/stock_transfer.php'; // Replace with the actual URL
+
+        try {
+            $response = Http::timeout(120)->get($url);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch data: ' . $e->getMessage()], 500);
+        }
+
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch data.'], 500);
+        }
+
+        $data = $response->json('data');
+
+        if (empty($data)) {
+            return response()->json(['message' => 'No data found'], 404);
+        }
+
+        $successfulInserts = 0;
+        $errors = [];
+
+        foreach ($data as $record) {
+            // Decode JSON fields for items
+            $itemsData = json_decode($record['items'], true);
+            // print_r($itemsData);
+            // echo "mmm";
+            // $a = (!is_array($itemsData['id']));
+            // print_r($a);
+
+            if (!is_array($itemsData) || !isset($itemsData['product'], $itemsData['desc'], $itemsData['quantity'], $itemsData['unit'], $itemsData['status'])) {
+                $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure in items field.'];
+                continue;
+            }
+
+            // Prepare Stock Transfer data
+            $stockTransferData = [
+                'transfer_id' => $record['transfer_id'],
+                'godown_from' => $record['from'] ?? 'Unknown',
+                'godown_to' => $record['to'] ?? 'Unknown',
+                'transfer_date' => !empty($record['t_date']) ? $record['t_date'] : now(),
+                'status' => $record['status'] ?? '0',
+                'log_user' => $record['log_user'] ?? 'Unknown',
+            ];
+
+            // Validate Stock Transfer data
+            $validator = Validator::make($stockTransferData, [
+                'transfer_id' => 'required|integer',
+                'godown_from' => 'required|string',
+                'godown_to' => 'required|string',
+                'transfer_date' => 'required|date',
+                'status' => 'required|string',
+                'log_user' => 'required|string',
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+                continue;
+            }
+
+            try {
+                $stockTransfer = StockTransferModel::create($stockTransferData);
+                $successfulInserts++;
+            } catch (\Exception $e) {
+                $errors[] = ['record' => $record, 'error' => 'Failed to insert Stock Transfer: ' . $e->getMessage()];
+                continue;
+            }
+
+            // Insert associated products
+            foreach ($itemsData['product'] as $index => $productName) {
+
+                // Fetch the product ID from the ProductsModel
+                $product = ProductsModel::where('name', $productName)->first();
+
+                if (!$product) {
+                    $errors[] = [
+                        'record' => $record,
+                        'error' => "Product with name '{$productName}' not found."
+                    ];
+                    continue; // Skip this product if not found
+                }
+
+                try {
+                    StockTransferProductsModel::create([
+                        'transfer_id' => $record['transfer_id'],
+                        'product_id' => $product->id,
+                        'product_name' => $itemsData['product_name'][$index] ?? 'Unnamed Product',
+                        'description' => $itemsData['desc'][$index] ?? 'No Description',
+                        'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
+                        'unit' => $itemsData['unit'][$index] ?? 'PCS',
+                        'status' => $itemsData['status'][$index] ?? '1',
+                    ]);
+                } catch (\Exception $e) {
+                    $errors[] = ['record' => $record, 'error' => 'Failed to insert product: ' . $e->getMessage()];
+                }
+            }
+        }
+
+        return response()->json([
+            'message' => "Import completed with $successfulInserts successful inserts.",
+            'errors' => $errors,
+        ], 200);
+    }
+
 }
