@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('pincode');
             $table->string('state');
             $table->string('country');
-            $table->integer('sales_invoice_no');
+            $table->bigInteger('sales_invoice_no');
             $table->date('sales_invoice_date');
             $table->integer('sales_order_no');
             $table->integer('quotation_no');

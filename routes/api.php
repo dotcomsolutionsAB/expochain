@@ -111,6 +111,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_sales_return/{id?}', [SalesReturnController::class, 'edit_sales_return']);
     Route::delete('/sales_return/{id?}', [SalesReturnController::class, 'delete_sales_return']);
 
+    Route::get('/sales_return_migrate', [SalesReturnController::class, 'importSalesReturns']);
+
     Route::post('/add_credit_note', [CreditNoteController::class, 'add_credit_note']);
     Route::get('/credit_note', [CreditNoteController::class, 'view_credit_note']);
     Route::post('/update_credit_note/{id?}', [CreditNoteController::class, 'edit_credit_note']);
@@ -142,6 +144,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/purchase_return', [PurchaseReturnController::class, 'view_purchase_return']);
     Route::post('/update_purchase_return/{id?}', [PurchaseReturnController::class, 'edit_purchase_return']);
     Route::delete('/purchase_return/{id?}', [PurchaseReturnController::class, 'delete_purchase_return']);
+
+    Route::get('/purchase_return_migrate', [PurchaseReturnController::class, 'importPurchaseReturns']);
 
     Route::post('/add_debit_note', [DebitNoteController::class, 'add_debit_note']);
     Route::get('/debit_note', [DebitNoteController::class, 'view_debit_note']);

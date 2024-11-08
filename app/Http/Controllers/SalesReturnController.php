@@ -1,10 +1,13 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\SalesReturnModel;
 use App\Models\SalesReturnProductsModel;
+use App\Models\ClientsModel;
+use App\Models\ProductsModel;
 
 class SalesReturnController extends Controller
 {
@@ -227,4 +230,137 @@ class SalesReturnController extends Controller
             ? response()->json(['message' => 'Sales Return and associated products deleted successfully!'], 200)
             : response()->json(['message' => 'Sales Return not found.'], 404);
     }
+
+    // migration
+    public function importSalesReturns()
+    {
+        // Clear the SalesReturn and related tables
+        SalesReturnModel::truncate();
+        SalesReturnProductsModel::truncate();
+
+        // Example URL to fetch the data from
+        $url = 'https://expo.egsm.in/assets/custom/migrate/sales_return.php'; // Replace with the actual URL
+
+        // Fetch data from the external URL
+        try {
+            $response = Http::get($url);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch data from the external source: ' . $e->getMessage()], 500);
+        }
+
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch data.'], 500);
+        }
+
+        $data = $response->json('data');
+
+        if (empty($data)) {
+            return response()->json(['message' => 'No data found'], 404);
+        }
+
+        $successfulInserts = 0;
+        $errors = [];
+
+        foreach ($data as $record) {
+            // Decode JSON fields for items
+            $itemsData = json_decode($record['items'], true);
+            $taxData = json_decode($record['tax'], true);
+            // $addonsData = json_decode($record['addons'], true);
+
+            if (!is_array($itemsData)) {
+                $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure for items.'];
+                continue;
+            }
+
+            // Retrieve supplier information
+            $supplier = ClientsModel::where('name', $record['supplier'])->first();
+            if (!$supplier) {
+                $errors[] = ['record' => $record, 'error' => 'Supplier not found: ' . $record['supplier']];
+                continue;
+            }
+
+            // Prepare sales return data
+            $salesReturnData = [
+                'client_id' => $supplier->id,
+                'name' => $record['supplier'],
+                'sales_return_no' => $record['pi_no'] ?? 'Unknown', // Generate a random sales return number
+                'sales_return_date' => $record['pi_date'] ?? now()->format('Y-m-d'),
+                'sales_invoice_no' => $record['reference_no'] ?? 'Unknown',
+                'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
+                'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
+                'igst' => !empty($taxData['igst']) ? $taxData['igst'] : 0,
+                'total' => $record['total'] ?? 0,
+                'currency' => 'INR', // Default currency
+                'template' => json_decode($record['pdf_template'], true)['id'] ?? 0, // Default template ID
+                'status' => $record['status'] ?? 0,
+            ];
+
+            // Validate and insert sales return data
+            $validator = Validator::make($salesReturnData, [
+                'client_id' => 'required|integer',
+                'name' => 'required|string',
+                'sales_return_no' => 'required|string',
+                'sales_return_date' => 'required|date',
+                'sales_invoice_no' => 'required|string',
+                'cgst' => 'required|numeric',
+                'sgst' => 'required|numeric',
+                'igst' => 'required|numeric',
+                'total' => 'required|numeric',
+                'currency' => 'required|string',
+                'template' => 'required|integer',
+                'status' => 'required|integer',
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+                continue;
+            }
+
+            try {
+                $salesReturn = SalesReturnModel::create($salesReturnData);
+                $successfulInserts++;
+            } catch (\Exception $e) {
+                $errors[] = ['record' => $record, 'error' => 'Failed to insert sales return: ' . $e->getMessage()];
+                continue;
+            }
+
+            // Insert products data
+            foreach ($itemsData['product'] as $index => $productName) {
+                $product = ProductsModel::where('name', $productName)->first();
+
+                if (!$product) {
+                    $errors[] = ['record' => $record, 'error' => "Product not found: {$productName}"];
+                    continue;
+                }
+
+                try {
+                    SalesReturnProductsModel::create([
+                        'sales_return_id' => $salesReturn->id,
+                        'product_id' => $product->id,
+                        'product_name' => $productName,
+                        'description' => !empty($itemsData['desc'][$index]) ? $itemsData['desc'][$index] : 'No Desc',
+                        'brand' => 'DefaultBrand/ No brand available', // Replace with actual brand if available
+                        'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
+                        'unit' => $itemsData['unit'][$index] ?? '',
+                        'price' => (float) $itemsData['price'][$index] ?? 0,
+                        'discount' => (float) $itemsData['discount'][$index] ?? 0,
+                        'hsn' => $itemsData['hsn'][$index] ?? '',
+                        'tax' => (float) $itemsData['tax'][$index] ?? 0,
+                        'cgst' => (float) ($itemsData['cgst'][$index] ?? 0),
+                        'sgst' => (float) ($itemsData['sgst'][$index] ?? 0),
+                        'igst' => 0,
+                        'godown' => 'DefaultGodown', // Replace with actual godown if available
+                    ]);
+                } catch (\Exception $e) {
+                    $errors[] = ['record' => $record, 'error' => 'Failed to insert product: ' . $e->getMessage()];
+                }
+            }
+        }
+
+        return response()->json([
+            'message' => "Data import completed with $successfulInserts successful inserts.",
+            'errors' => $errors,
+        ], 200);
+    }
+
 }

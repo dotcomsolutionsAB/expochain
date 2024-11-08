@@ -20,7 +20,7 @@ return new class extends Migration
             $table->text('description');
             $table->string('brand');
             $table->integer('quantity');
-            $table->integer('unit');
+            $table->string('unit');
             $table->float('price');
             $table->float('discount');
             $table->string('hsn');
@@ -28,7 +28,7 @@ return new class extends Migration
             $table->float('cgst');
             $table->float('sgst');
             $table->float('igst');
-            $table->integer('godown');
+            $table->string('godown');
             $table->timestamps();
         });
     }
