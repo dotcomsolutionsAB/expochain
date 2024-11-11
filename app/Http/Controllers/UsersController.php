@@ -17,7 +17,20 @@ class UsersController extends Controller
     {
         $request->validate([
             'name' => 'required|string',
-            'email' => 'required|unique:users,email',
+            'company_id' => 'required|integer',
+            'email' => [
+                'required',
+                'email',
+                function ($attribute, $value, $fail) use ($request) {
+                    // Check if the combination of email and contact_id already exists
+                    $exists = \App\Models\User::where('email', $value)
+                                            ->where('company_id', $request->input('company_id'))
+                                            ->exists();
+                    if ($exists) {
+                        $fail('The combination of email and contact ID must be unique.');
+                    }
+                },
+            ],
             'mobile' => 'required|string',
             'password' => 'required|string',
         ]);
@@ -27,6 +40,7 @@ class UsersController extends Controller
             'email' => strtolower($request->input('email')),
             'password' => bcrypt($request->input('password')),
             'mobile' => $request->input('mobile'),
+            'company_id' => $request->input('company_id'),
         ]);
         
         unset($register_user['id'], $register_user['created_at'], $register_user['updated_at']);
