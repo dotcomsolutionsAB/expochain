@@ -17,6 +17,7 @@ class ClientsController extends Controller
     {
         $request->validate([
             'name' => 'required|string|unique:t_clients,name',
+            'company_id' => 'required|integer',
             'type' => 'required|string',
             'category' => 'required|string',
             'division' => 'required|string',
@@ -48,6 +49,7 @@ class ClientsController extends Controller
 
         $register_clients = clientsModel::create([
             'name' => $request->input('name'),
+            'company_id' => $request->input('company_id'),
             'customer_id' => $customer_id,
             'type' => $request->input('type'),
             'category' => $request->input('category'),
