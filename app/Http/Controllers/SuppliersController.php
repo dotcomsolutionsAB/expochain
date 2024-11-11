@@ -48,7 +48,7 @@ class SuppliersController extends Controller
             'supplier_id' => $supplier_id,
             'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
-            'address_line_1	' => $request->input('address_line_1'),
+            'address_line_1' => $request->input('address_line_1'),
             'address_line_2' => $request->input('address_line_2'),
             'city' => $request->input('city'),
             'pincode' => $request->input('pincode'),
