@@ -18,7 +18,6 @@ class ClientsController extends Controller
     {
         $request->validate([
             'name' => 'required|string|unique:t_clients,name',
-            'company_id' => 'required|integer',
             'type' => 'required|string',
             'category' => 'required|string',
             'division' => 'required|string',

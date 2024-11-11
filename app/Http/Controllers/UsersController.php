@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Hash;
 use Illuminate\Support\Str;
+use Auth;
 
 class UsersController extends Controller
 {
@@ -69,6 +70,16 @@ class UsersController extends Controller
             ];
         });
         
+
+        return isset($get_user_records) && $get_user_records !== null
+        ? response()->json(['Fetch data successfully!', 'data' => $get_user_records], 200)
+        : response()->json(['Failed to fetch data'], 404); 
+    }
+
+    // view user's record
+    public function view_user()
+    {     
+        $get_user_records = User::select('name','email', 'mobile', 'role')->get();
 
         return isset($get_user_records) && $get_user_records !== null
         ? response()->json(['Fetch data successfully!', 'data' => $get_user_records], 200)

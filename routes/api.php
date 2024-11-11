@@ -32,6 +32,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/user', [UsersController::class, 'view']);
+    Route::get('/fetch', [UsersController::class, 'view_user']);
     Route::post('/edit/{id}', [UsersController::class, 'update']);
     Route::delete('/delete/{id}', [UsersController::class, 'delete']);
     
