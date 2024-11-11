@@ -79,10 +79,12 @@ class UsersController extends Controller
     // view user's record
     public function view_user()
     {     
-        $get_user_records = User::select('name','email', 'mobile', 'role')->get();
+        $get_records = User::select('name','email', 'mobile', 'role')
+                            ->where('id', Auth::id())
+                            ->get();
 
-        return isset($get_user_records) && $get_user_records !== null
-        ? response()->json(['Fetch data successfully!', 'data' => $get_user_records], 200)
+        return isset($get_records) && $get_records !== null
+        ? response()->json(['Fetch data successfully!', 'data' => $get_records], 200)
         : response()->json(['Failed to fetch data'], 404); 
     }
 
