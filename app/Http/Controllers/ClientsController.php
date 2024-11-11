@@ -51,7 +51,6 @@ class ClientsController extends Controller
         $register_clients = clientsModel::create([
             'name' => $request->input('name'),
             'company_id' => Auth::user()->company_id,
-            'company_id' => $request->input('company_id'),
             'customer_id' => $customer_id,
             'type' => $request->input('type'),
             'category' => $request->input('category'),
