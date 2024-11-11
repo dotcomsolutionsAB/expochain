@@ -53,7 +53,21 @@ class UsersController extends Controller
     //view
     public function view()
     {        
-        $get_user_records = User::select('name','email', 'mobile', 'role')->get();
+        $get_user_records = User::with(['company' => function ($query)
+        {
+            $query->select('id', 'company_name');
+        }])
+        ->select('name','email', 'mobile', 'role', 'company_id')
+        ->get()
+        ->map(function ($get_user_records) {
+            return [
+                'name' => $get_user_records->name,
+                'email' => $get_user_records->email,
+                'mobile' => $get_user_records->mobile,
+                'role' => $get_user_records->role,
+                'company' => $get_user_records->company ? $get_user_records->company->company_name : null, // Handle null case
+            ];
+        });
         
 
         return isset($get_user_records) && $get_user_records !== null
