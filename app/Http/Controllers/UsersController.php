@@ -28,7 +28,7 @@ class UsersController extends Controller
                                             ->where('company_id', $request->input('company_id'))
                                             ->exists();
                     if ($exists) {
-                        $fail('The combination of email and contact ID must be unique.');
+                        $fail('The combination of email and company ID must be unique.');
                     }
                 },
             ],
