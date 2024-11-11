@@ -930,4 +930,21 @@ class MastersController extends Controller
         ? response()->json(['message' => 'Delete brand successfully!'], 204)
         : response()->json(['message' => 'Sorry, category not found'], 400);
     }
+
+    public function add_company(Request $request)
+    {
+        $request->validate([
+            'name' => 'required',
+        ]);
+
+        $register_company = CompanyModel::create([
+            'name' => $request->input('name'),
+        ]);
+        
+        unset($register_company['id'], $register_company['created_at'], $register_company['updated_at']);
+
+        return isset($register_company) && $register_company !== null
+        ? response()->json(['Company registered successfully!', 'data' => $register_company], 201)
+        : response()->json(['Failed to register Products record'], 400);
+    }
 }
