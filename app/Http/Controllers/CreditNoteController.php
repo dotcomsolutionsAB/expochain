@@ -99,6 +99,7 @@ class CreditNoteController extends Controller
             $query->select('credit_note_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
         }])
         ->select('id', 'client_id', 'name', 'credit_note_no', 'credit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
+        ->where('company_id',Auth::user()->company_id)
         ->get();
 
         return isset($get_credit_notes) && $get_credit_notes !== null

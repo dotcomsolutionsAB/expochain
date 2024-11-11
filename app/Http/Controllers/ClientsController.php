@@ -91,7 +91,9 @@ class ClientsController extends Controller
         {
             $query->select('customer_id','name','designation','mobile','email');
         }])
-        ->select('name','customer_id','type','category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city','pincode','state','country', 'gstin')->get();
+        ->select('name','customer_id','type','category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city','pincode','state','country', 'gstin')
+        ->where('company_id',Auth::user()->company_id) 
+        ->get();
         
 
         return isset($get_clients) && $get_clients !== null

@@ -83,7 +83,9 @@ class SuppliersController extends Controller
         {
             $query->select('supplier_id','name','designation','mobile','email');
         }])
-        ->select('supplier_id','name','address_line_1','address_line_2', 'city', 'pincode', 'state', 'country','gstin')->get();
+        ->select('supplier_id','name','address_line_1','address_line_2', 'city', 'pincode', 'state', 'country','gstin')
+        ->where('company_id',Auth::user()->company_id)
+        ->get();
         
 
         return isset($get_suppliers) && $get_suppliers !== null

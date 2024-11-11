@@ -112,6 +112,7 @@ class PurchaseInvoiceController extends Controller
             $query->select('purchase_invoice_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
         }])
         ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 'purchase_invoice_date', 'purchase_order_no', 'cgst', 'sgst', 'igst', 'currency', 'template', 'status')
+        ->where('company_id',Auth::user()->company_id)
         ->get();
 
         return isset($get_purchase_invoices) && $get_purchase_invoices->isNotEmpty()

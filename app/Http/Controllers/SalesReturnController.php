@@ -103,6 +103,7 @@ class SalesReturnController extends Controller
             $query->select('sales_return_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
         }])
         ->select('id', 'client_id', 'name', 'sales_return_no', 'sales_return_date', 'sales_invoice_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
+        ->where('company_id',Auth::user()->company_id)
         ->get();
 
         return isset($get_sales_returns) && $get_sales_returns !== null

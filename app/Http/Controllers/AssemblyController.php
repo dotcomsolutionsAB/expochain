@@ -67,11 +67,13 @@ class AssemblyController extends Controller
         {
             $query->select('assembly_id','product_id','product_name','quantity','log_user');
         }])
-        ->select('assembly_id','product_id','product_name','quantity','log_user')->get();
+        ->select('assembly_id','product_id','product_name','quantity','log_user')
+        ->where('company_id',Auth::user()->company_id) 
+        ->get();
         
 
         return isset($get_assembly) && $get_assembly->isNotEmpty()
-        ? response()->json(['Assembly record fetch successfully!', 'data' => $get_assembly], 200)
+        ? response()->json(['Assembly record fetch successfully!', 'data' => $get_assembly, 'count' => count($get_assembly)], 200)
         : response()->json(['Failed to fetch data'], 404); 
     }
 

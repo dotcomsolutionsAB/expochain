@@ -264,7 +264,9 @@ class MastersController extends Controller
     //view
     public function view_f_year()
     {        
-        $get_f_year = FinancialYearModel::select('name','start_date','end_date','opening_stock','closing_stock')->get();
+        $get_f_year = FinancialYearModel::select('name','start_date','end_date','opening_stock','closing_stock')
+        ->where('company_id',Auth::user()->company_id)
+        ->get();
         
 
         return isset($get_f_year) && $get_f_year !== null

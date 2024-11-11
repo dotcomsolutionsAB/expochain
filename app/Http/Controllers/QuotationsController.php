@@ -147,6 +147,7 @@ class QuotationsController extends Controller
             $query->select('quotation_id', 'name', 'value');
         }])
         ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'quotation_no', 'quotation_date', 'enquiry_no', 'enquiry_date', 'sales_person', 'sales_contact', 'sales_email', 'discount', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template')
+        ->where('company_id',Auth::user()->company_id)
         ->get();
 
         return isset($get_quotations) && $get_quotations !== null

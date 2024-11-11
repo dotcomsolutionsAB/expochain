@@ -130,6 +130,7 @@ class SalesInvoiceController extends Controller
             $query->select('sales_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
         }])
         ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_no', 'quotation_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status', 'commission', 'cash')
+        ->where('company_id',Auth::user()->company_id)
         ->get();
 
         return isset($get_sales_invoices) && $get_sales_invoices->isNotEmpty()

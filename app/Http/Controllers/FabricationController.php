@@ -48,7 +48,9 @@ class FabricationController extends Controller
 
     public function view_fabrication()
     {        
-        $get_fabrication = FabricationModel::select('id', 'fabrication_date','product_id', 'product_name','type', 'quantity', 'godown', 'rate', 'amount', 'description', 'log_user')->get();
+        $get_fabrication = FabricationModel::select('id', 'fabrication_date','product_id', 'product_name','type', 'quantity', 'godown', 'rate', 'amount', 'description', 'log_user')
+        ->where('company_id',Auth::user()->company_id)
+        ->get();
         
 
         return isset($get_fabrication) && $get_fabrication->isNotEmpty()

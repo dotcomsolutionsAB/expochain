@@ -101,6 +101,7 @@ class DebitNoteController extends Controller
             $query->select('debit_note_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
         }])
         ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
+        ->where('company_id',Auth::user()->company_id)
         ->get();
 
         return isset($get_debit_notes) && $get_debit_notes->isNotEmpty()

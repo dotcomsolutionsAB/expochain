@@ -81,7 +81,9 @@ class AssemblyOperationsController extends Controller
         {
             $query->select('assembly_operations_id','product_id','product_name','quantity','rate','godown','amount');
         }])
-        ->select('assembly_operations_id','assembly_operations_date','type','product_id','product_name','quantity','godown','rate','amount')->get();
+        ->select('assembly_operations_id','assembly_operations_date','type','product_id','product_name','quantity','godown','rate','amount')
+        ->where('company_id',Auth::user()->company_id) 
+        ->get();
 
         return isset($get_assembly_operations) && $get_assembly_operations->isNotEmpty()
         ? response()->json(['Assembly Operations data successfully!', 'data' => $get_assembly_operations], 200)

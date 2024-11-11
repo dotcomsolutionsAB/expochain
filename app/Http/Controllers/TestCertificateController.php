@@ -71,6 +71,7 @@ class TestCertificateController extends Controller
             $query->select('tc_id', 'product_id', 'product_name', 'quantity', 'sales_invoice_no');
         }])
         ->select('id', 'client_id', 'sales_invoice_no', 'reference_no', 'tc_date', 'seller', 'client_flag', 'log_user')
+        ->where('company_id',Auth::user()->company_id)
         ->get();
 
         return isset($get_test_certificates) && $get_test_certificates !== null

@@ -103,6 +103,7 @@ class PurchaseReturnController extends Controller
             $query->select('purchase_return_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
         }])
         ->select('id', 'supplier_id', 'name', 'purchase_return_no', 'purchase_return_date', 'purchase_invoice_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
+        ->where('company_id',Auth::user()->company_id)
         ->get();
 
         return isset($get_purchase_returns) && $get_purchase_returns->isNotEmpty()

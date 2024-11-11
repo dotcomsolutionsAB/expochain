@@ -112,6 +112,7 @@ class PurchaseOrderController extends Controller
             $query->select('purchase_order_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
         }])
         ->select('id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'cgst', 'sgst', 'igst', 'currency', 'template', 'status')
+        ->where('company_id',Auth::user()->company_id)
         ->get();
 
         return isset($get_purchase_orders) && $get_purchase_orders->isNotEmpty()

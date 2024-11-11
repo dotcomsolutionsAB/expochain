@@ -74,6 +74,7 @@ class StockTransferController extends Controller
             $query->select('transfer_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'status');
         }])
         ->select('transfer_id', 'godown_from', 'godown_to', 'transfer_date', 'status', 'log_user')
+        ->where('company_id',Auth::user()->company_id)
         ->get();
 
         return isset($get_stock_transfers) && $get_stock_transfers->isNotEmpty()
