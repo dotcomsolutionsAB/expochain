@@ -12,6 +12,7 @@ class PurchaseInvoiceProductsModel extends Model
     protected $fillable = [
         'purchase_invoice_number',
         'product_id',
+        'company_id',
         'product_name',
         'description',
         'brand',

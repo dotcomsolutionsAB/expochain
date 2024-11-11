@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name')->unique();
             $table->unsignedBigInteger('customer_id');
+            $table->integer('company_id');
             $table->string('type');
             $table->string('category');
             $table->string('division');

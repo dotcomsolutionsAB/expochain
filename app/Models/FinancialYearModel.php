@@ -11,6 +11,7 @@ class FinancialYearModel extends Model
 
     protected $fillable = [
         'name',
+        'company_id',
         'start_date',
         'end_date',
         'opening_stock',

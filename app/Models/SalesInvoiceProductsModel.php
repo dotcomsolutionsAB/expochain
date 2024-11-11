@@ -12,6 +12,7 @@ class SalesInvoiceProductsModel extends Model
     protected $fillable = [
         'sales_invoice_id',
         'product_id',
+        'company_id',
         'product_name',
         'description',
         'brand',

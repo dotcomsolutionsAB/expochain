@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('t_financial_year', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->integer('company_id');
             $table->date('start_date');
             $table->date('end_date');
             $table->float('opening_stock');

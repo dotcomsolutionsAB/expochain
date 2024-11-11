@@ -9,7 +9,7 @@ class QuotationAddonsModel extends Model
     //
     protected $table = 't_quotation_addons';
 
-    protected $fillable = ['quotation_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst'];
+    protected $fillable = ['quotation_id', 'company_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst'];
 
     public function quotation()
     {

@@ -11,6 +11,7 @@ class DebitNoteProductsModel extends Model
 
     protected $fillable = [
         'debit_note_number',
+        'company_id',
         'product_id',
         'product_name',
         'description',

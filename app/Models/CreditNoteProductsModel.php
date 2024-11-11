@@ -11,6 +11,7 @@ class CreditNoteProductsModel extends Model
 
     protected $fillable = [
         'credit_note_id',
+        'company_id',
         'product_id',
         'product_name',
         'description',

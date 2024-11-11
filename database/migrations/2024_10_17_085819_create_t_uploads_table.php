@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('t_uploads', function (Blueprint $table) {
             $table->id();
+            $table->integer('company_id');
             $table->string('file_ext');
             $table->string('file_url');
             $table->string('file_size');

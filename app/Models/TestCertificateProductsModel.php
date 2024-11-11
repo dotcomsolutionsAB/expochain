@@ -11,6 +11,7 @@ class TestCertificateProductsModel extends Model
 
     protected $fillable = [
         'tc_id',
+        'company_id',
         'product_id',
         'product_name',
         'quantity',

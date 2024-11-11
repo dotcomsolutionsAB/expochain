@@ -11,6 +11,7 @@ class SalesInvoiceAddonsModel extends Model
 
     protected $fillable = [
        'sales_invoice_id',
+       'company_id',
         'name',
         'amount',
         'tax',

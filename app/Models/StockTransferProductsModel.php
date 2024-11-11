@@ -12,6 +12,7 @@ class StockTransferProductsModel extends Model
     protected $fillable = [
         'transfer_id',
         'product_id',
+        'company_id',
         'product_name',
         'description',
         'quantity',

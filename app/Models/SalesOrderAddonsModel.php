@@ -11,6 +11,7 @@ class SalesOrderAddonsModel extends Model
 
     protected $fillable = [
        'sales_order_id',
+       'company_id',
         'name',
         'amount',
         'tax',

@@ -11,6 +11,7 @@ class PdfTemplateModel extends Model
 
     protected $fillable = [
         'name',
+        'company_id',
         'phone_number',
         'mobile',
         'email',

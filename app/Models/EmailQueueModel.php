@@ -10,8 +10,7 @@ class EmailQueueModel extends Model
     protected $table = 't_email_queue';
 
     protected $fillable = [
-        'jamiat_id',
-        'family_id',
+        'company_id',
         'to',
         'cc',
         'bcc',
