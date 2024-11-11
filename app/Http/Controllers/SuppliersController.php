@@ -126,7 +126,6 @@ class SuppliersController extends Controller
         {
             $requestContactNames[] = $contactData['name'];
 
-
             // Check if the contact exists by customer_id and name
             $contact = SuppliersContactsModel::where('supplier_id', $contactData['supplier_id'])
                                             ->where('name',$contactData['name'])

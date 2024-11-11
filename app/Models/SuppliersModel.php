@@ -25,6 +25,6 @@ class SuppliersModel extends Model
     // One client has many contacts
     public function contact()
     {
-        return $this->hasMany(ClientsModel::class, 'customer_id', 'customer_id');
+        return $this->hasMany(SuppliersContactsModel::class, 'supplier_id', 'supplier_id');
     }
 }

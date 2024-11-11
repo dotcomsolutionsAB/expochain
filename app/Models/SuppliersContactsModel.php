@@ -21,6 +21,6 @@ class SuppliersContactsModel extends Model
     // Define the inverse relationship back to the Suppliers
     public function suppliers()
     {
-        return $this->belongsTo(ClientsModel::class, 'customer_id', 'customer_id');
+        return $this->belongsTo(SuppliersModel::class, 'supplier_id', 'supplier_id');
     }
 }
