@@ -28,6 +28,18 @@ class SuppliersController extends Controller
             'contacts' => 'required',
         ]);
 
+        $company_id = Auth::user()->company_id;
+
+        // Check if the combination of name, gstin, and contact_id is unique
+        $exists = Client::where('name', $request->input('name'))
+                        ->where('gstin', $request->input('gstin'))
+                        ->where('company_id', $company_id)
+                        ->exists();
+
+        if ($exists) {
+            return response()->json(['error' => 'The combination of name, GSTIN, and company ID must be unique.'], 422);
+        }
+
         $supplier_id = rand(1111111111,9999999999);
 
         $contacts = $request->input('contacts');
@@ -36,7 +48,7 @@ class SuppliersController extends Controller
         foreach ($contacts as $contact) {
                 SuppliersContactsModel::create([
                 'supplier_id' => $supplier_id,
-                'company_id' => Auth::user()->company_id,
+                'company_id' => $company_id,
                 'name' => $contact['name'],
                 'designation' => $contact['designation'],
                 'mobile' => $contact['mobile'],
@@ -145,6 +157,7 @@ class SuppliersController extends Controller
                 // Create a new contact since it doesn't exist
                 $newContact = SuppliersContactsModel::create([
                     'supplier_id' => $client->supplier_id,
+                    'company_id' => Auth::user()->company_id,
                     'name' => $contactData['name'],
                     'designation' => $contactData['designation'],
                     'mobile' => $contactData['mobile'],

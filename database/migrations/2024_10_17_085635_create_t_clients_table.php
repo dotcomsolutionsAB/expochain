@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('t_clients', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
+            $table->string('name');
             $table->unsignedBigInteger('customer_id');
             $table->integer('company_id');
             $table->string('type');
@@ -26,8 +26,11 @@ return new class extends Migration
             $table->string('pincode');
             $table->string('state');
             $table->string('country');
-            $table->string('gstin')->unique();
+            $table->string('gstin');
             $table->timestamps();
+
+            // Add a composite unique index for name, gstin, and contact_id
+            $table->unique(['name', 'gstin', 'company_id'], 'unique_name_gstin_company_id');
         });
     }
 

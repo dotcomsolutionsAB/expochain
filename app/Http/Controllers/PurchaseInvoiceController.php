@@ -210,6 +210,7 @@ class PurchaseInvoiceController extends Controller
                 // Add new product
                 PurchaseInvoiceProductsModel::create([
                     'purchase_invoice_number' => $productData['purchase_invoice_number'],
+                    'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],

@@ -186,6 +186,7 @@ class CreditNoteController extends Controller
                 // Create new product
                 CreditNoteProductsModel::create([
                     'credit_note_id' => $productData['credit_note_id'],
+                    'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],

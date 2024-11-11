@@ -192,6 +192,7 @@ class DebitNoteController extends Controller
                 // Create new product if it does not exist
                 DebitNoteProductsModel::create([
                     'debit_note_number' => $productData['debit_note_number'],
+                    'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],

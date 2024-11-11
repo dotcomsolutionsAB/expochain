@@ -118,6 +118,7 @@ class AssemblyOperationsController extends Controller
         // Update the assembly operation details
         $assemblyUpdated = $assemblyOperation->update([
             'assembly_operations_date' => $request->input('assembly_operations_date'),
+            'company_id' => Auth::user()->company_id,
             'type' => $request->input('type'),
             'product_id' => $request->input('product_id'),
             'product_name' => $request->input('product_name'),

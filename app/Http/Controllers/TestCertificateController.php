@@ -101,6 +101,7 @@ class TestCertificateController extends Controller
 
         $testCertificateUpdated = $testCertificate->update([
             'client_id' => $request->input('client_id'),
+            'company_id' => Auth::user()->company_id,
             'sales_invoice_no' => $request->input('sales_invoice_no'),
             'reference_no' => $request->input('reference_no'),
             'tc_date' => $request->input('tc_date'),

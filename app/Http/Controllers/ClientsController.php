@@ -32,6 +32,18 @@ class ClientsController extends Controller
             'contacts' => 'required',
         ]);
 
+        $company_id = Auth::user()->company_id;
+
+        // Check if the combination of name, gstin, and contact_id is unique
+        $exists = clientsModel::where('name', $request->input('name'))
+                        ->where('gstin', $request->input('gstin'))
+                        ->where('company_id', $company_id)
+                        ->exists();
+
+        if ($exists) {
+            return response()->json(['error' => 'The combination of name, GSTIN, and company ID must be unique.'], 422);
+        }
+
         $customer_id = rand(1111111111,9999999999);
 
         $contacts = $request->input('contacts');
@@ -40,7 +52,7 @@ class ClientsController extends Controller
         foreach ($contacts as $contact) {
             ClientsContactsModel::create([
             'customer_id' => $customer_id,
-            'company_id' => Auth::user()->company_id,
+            'company_id' => $company_id,
             'name' => $contact['name'],
             'designation' => $contact['designation'],
             'mobile' => $contact['mobile'],
@@ -163,6 +175,7 @@ class ClientsController extends Controller
                 // Create a new contact since it doesn't exist
                 $newContact = ClientsContactsModel::create([
                     'customer_id' => $client->customer_id,
+                    'company_id' => Auth::user()->company_id,
                     'name' => $contactData['name'],
                     'designation' => $contactData['designation'],
                     'mobile' => $contactData['mobile'],

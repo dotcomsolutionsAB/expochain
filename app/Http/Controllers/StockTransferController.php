@@ -138,6 +138,7 @@ class StockTransferController extends Controller
                 // Create new product if it does not exist
                 StockTransferProductsModel::create([
                     'transfer_id' =>$productData['transfer_id'],
+                    'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],

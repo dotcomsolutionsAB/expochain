@@ -15,15 +15,18 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('supplier_id');
             $table->integer('company_id');
-            $table->string('name')->unique();
+            $table->string('name');
             $table->string('address_line_1');
             $table->string('address_line_2');
             $table->string('city');
             $table->string('pincode');
             $table->string('state');
             $table->string('country');
-            $table->string('gstin')->unique();
+            $table->string('gstin');
             $table->timestamps();
+
+            // Add a composite unique index for name, gstin, and contact_id
+            $table->unique(['name', 'gstin', 'contact_id'], 'unique_supplier_name_gstin_company_id');
         });
     }
 

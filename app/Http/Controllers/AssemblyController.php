@@ -136,6 +136,7 @@ class AssemblyController extends Controller
                     // Create a new product if not exists
                     AssemblyProductsModel::create([
                         'assembly_id' => $productData['assembly_id'],
+                        'company_id' => Auth::user()->company_id,
                         'product_id' => $productData['product_id'],
                         'product_name' => $productData['product_name'],
                         'quantity' => $productData['quantity'],

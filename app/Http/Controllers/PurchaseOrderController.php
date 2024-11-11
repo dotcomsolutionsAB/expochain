@@ -207,6 +207,7 @@ class PurchaseOrderController extends Controller
             } else {
                 PurchaseOrderProductsModel::create([
                     'purchase_order_number' => $productData['purchase_order_number'],
+                    'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],

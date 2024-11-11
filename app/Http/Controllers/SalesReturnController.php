@@ -192,6 +192,7 @@ class SalesReturnController extends Controller
                 // Create new product
                 SalesReturnProductsModel::create([
                     'sales_return_id' => $productData['sales_return_id'],
+                    'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],

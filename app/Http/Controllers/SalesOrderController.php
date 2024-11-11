@@ -184,6 +184,7 @@ class SalesOrderController extends Controller
         $salesOrderUpdated = $salesOrder->update([
             'client_id' => $request->input('client_id'),
             'client_contact_id' => $request->input('client_contact_id'),
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'address_line_1' => $request->input('address_line_1'),
             'address_line_2' => $request->input('address_line_2'),

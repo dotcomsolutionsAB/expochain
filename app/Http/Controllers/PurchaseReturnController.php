@@ -148,6 +148,7 @@ class PurchaseReturnController extends Controller
 
         $purchaseReturnUpdated = $purchaseReturn->update([
             'supplier_id' => $request->input('supplier_id'),
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'purchase_return_no' => $request->input('purchase_return_no'),
             'purchase_return_date' => $request->input('purchase_return_date'),
