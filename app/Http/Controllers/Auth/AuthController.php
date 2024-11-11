@@ -139,9 +139,10 @@ class AuthController extends Controller
                 $request->validate([
                     'email' => ['required', 'string', 'min:12', 'max:14'],
                     'password' => 'required',
+                    'company_id' => 'required'
                 ]);
 
-                if(Auth::attempt(['email' => $request->email, 'password' => $request->password]))
+                if(Auth::attempt(['email' => $request->email, 'password' => $request->password, 'company_id' => $request->company_id]))
                 {
                     $user = Auth::user();
     
