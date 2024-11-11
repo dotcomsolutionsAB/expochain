@@ -11,6 +11,7 @@ class CategoryModel extends Model
 
     protected $fillable = [
         'serial_number',
+        'company_id',
         'name',
         'logo',
     ];

@@ -11,6 +11,7 @@ class FabricationModel extends Model
 
     protected $fillable = [
         'fabrication_date',
+        'company_id',
         'product_id',
         'product_name',
         'type',

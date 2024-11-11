@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('assembly_operations_id');
             $table->date('assembly_operations_date');
+            $table->integer('company_id');
             $table->enum('type', ['assemble', 'de-assemble']);
             $table->integer('product_id');
             $table->string('product_name');

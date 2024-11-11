@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('t_suppliers', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('supplier_id');
+            $table->integer('company_id');
             $table->string('name')->unique();
             $table->string('address_line_1');
             $table->string('address_line_2');

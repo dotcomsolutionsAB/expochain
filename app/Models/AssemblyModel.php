@@ -11,6 +11,7 @@ class AssemblyModel extends Model
 
     protected $fillable = [
         'assembly_id',
+        'company_id',
         'product_id',
         'product_name',
         'quantity',

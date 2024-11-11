@@ -11,6 +11,7 @@ class ProductsModel extends Model
 
     protected $fillable = [
         'serial_number',
+        'company_id',
         'name',
         'alias',
         'description',

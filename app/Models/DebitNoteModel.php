@@ -10,6 +10,7 @@ class DebitNoteModel extends Model
     protected $table = 't_debit_note';
 
     protected $fillable = [
+        'company_id',
         'supplier_id',
         'name',
         'debit_note_no',

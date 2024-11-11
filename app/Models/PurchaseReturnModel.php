@@ -10,6 +10,7 @@ class PurchaseReturnModel extends Model
     protected $table = 't_purchase_return';
 
     protected $fillable = [
+        'company_id',
         'supplier_id',
         'name',
         'purchase_return_no',

@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('t_sub_category', function (Blueprint $table) {
             $table->id();
             $table->integer('serial_number');
+            $table->integer('company_id');
             $table->string('name');
             $table->string('logo')->nullable();
             $table->timestamps();

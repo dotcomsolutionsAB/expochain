@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('t_assembly', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('assembly_id');
+            $table->integer('company_id');
             $table->integer('product_id');
             $table->string('product_name');
             $table->integer('quantity');

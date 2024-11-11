@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('t_quotations', function (Blueprint $table) {
             $table->id();
+            $table->integer('company_id');
             $table->integer('client_id');
             $table->integer('client_contact_id');
             $table->string('name');

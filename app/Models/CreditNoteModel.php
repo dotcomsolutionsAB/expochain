@@ -10,6 +10,7 @@ class CreditNoteModel extends Model
     protected $table = 't_credit_note';
 
     protected $fillable = [
+        'company_id',
         'client_id',
         'name',
         'credit_note_no',

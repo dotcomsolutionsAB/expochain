@@ -10,6 +10,7 @@ class TestCertificateModel extends Model
     protected $table = 't_test_certificate';
 
     protected $fillable = [
+        'company_id',
         'client_id',
         'sales_invoice_no',
         'reference_no',

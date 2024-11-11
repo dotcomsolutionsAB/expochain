@@ -10,7 +10,8 @@ class SalesInvoiceModel extends Model
     protected $table = 't_sales_invoice';
 
     protected $fillable = [
-       'client_id',
+        'company_id',
+        'client_id',
         'client_contact_id',
         'name',
         'address_line_1',

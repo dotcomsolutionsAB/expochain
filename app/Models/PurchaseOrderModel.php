@@ -10,6 +10,7 @@ class PurchaseOrderModel extends Model
     protected $table = 't_purchase_order';
 
     protected $fillable = [
+        'company_id',
         'supplier_id',
         'name',
         'address_line_1',

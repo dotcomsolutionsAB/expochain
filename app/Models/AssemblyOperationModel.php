@@ -12,6 +12,7 @@ class AssemblyOperationModel extends Model
     protected $fillable = [
         'assembly_operations_id',
         'assembly_operations_date',
+        'company_id',
         'type',
         'product_id',
         'product_name',

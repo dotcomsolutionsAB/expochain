@@ -10,6 +10,7 @@ class PurchaseInvoiceModel extends Model
     protected $table = 't_purchase_invoice';
 
     protected $fillable = [
+        'company_id',
         'supplier_id',
         'name',
         'address_line_1',

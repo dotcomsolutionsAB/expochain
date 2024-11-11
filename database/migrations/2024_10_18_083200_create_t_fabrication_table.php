@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('t_fabrication', function (Blueprint $table) {
             $table->id();
             $table->date('fabrication_date');
+            $table->integer('company_id');
             $table->integer('product_id');
             $table->string('product_name');
             $table->enum('type', ['wastage', 'sample']);

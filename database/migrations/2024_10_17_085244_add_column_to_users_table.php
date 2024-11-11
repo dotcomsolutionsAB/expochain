@@ -17,6 +17,7 @@ return new class extends Migration
             $table->integer('otp')->after('mobile')->nullable();
             $table->timestamp('expires_at')->after('otp')->nullable();
             $table->enum('role', ['admin', 'user'])->after('expires_at');
+            $table->integer('company_id')->after('role');
         });
     }
 

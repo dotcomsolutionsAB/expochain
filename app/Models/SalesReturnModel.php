@@ -10,6 +10,7 @@ class SalesReturnModel extends Model
     protected $table = 't_sales_return';
 
     protected $fillable = [
+        'company_id',
         'client_id',
         'name',
         'sales_return_no',

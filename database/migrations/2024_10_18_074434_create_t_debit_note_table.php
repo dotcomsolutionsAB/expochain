@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('t_debit_note', function (Blueprint $table) {
             $table->id();
+            $table->integer('company_id');
             $table->integer('supplier_id');
             $table->string('name');
             $table->string('debit_note_no');

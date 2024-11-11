@@ -11,6 +11,7 @@ class StockTransferModel extends Model
 
     protected $fillable = [
         'transfer_id',
+        'company_id',
         'godown_from',
         'godown_to',
         'transfer_date',

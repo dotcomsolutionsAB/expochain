@@ -11,13 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('t_godown', function (Blueprint $table) {
+        Schema::create('t_company', function (Blueprint $table) {
             $table->id();
-            $table->integer('company_id');
-            $table->string('name');
-            $table->string('address');
-            $table->string('mobile');
-            $table->string('email');
+            $table->string('company_name');
             $table->timestamps();
         });
     }
@@ -27,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('t_godown');
+        Schema::dropIfExists('t_company');
     }
 };

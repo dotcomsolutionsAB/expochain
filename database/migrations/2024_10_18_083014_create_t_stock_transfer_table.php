@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('t_stock_transfer', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('transfer_id');
+            $table->integer('company_id');
             $table->string('godown_from');
             $table->string('godown_to');
             $table->date('transfer_date');

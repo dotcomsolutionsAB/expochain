@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('t_test_certificate', function (Blueprint $table) {
             $table->id();
+            $table->integer('company_id');
             $table->integer('client_id');
             $table->string('sales_invoice_no');
             $table->string('reference_no');

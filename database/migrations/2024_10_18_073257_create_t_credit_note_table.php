@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('t_credit_note', function (Blueprint $table) {
             $table->id();
+            $table->integer('company_id');
             $table->integer('client_id');
             $table->string('name');
             $table->string('credit_note_no');
