@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\StockTransferModel;
 use App\Models\StockTransferProductsModel;
 use App\Models\ProductsModel;
+use Auth;
 
 class StockTransferController extends Controller
 {
@@ -33,6 +34,7 @@ class StockTransferController extends Controller
 
         $register_stock_transfer = StockTransferModel::create([
             'transfer_id' => $transfer_id,
+            'company_id' => Auth::user()->company_id,
             'godown_from' => $request->input('godown_from'),
             'godown_to' => $request->input('godown_to'),
             'transfer_date' => $request->input('transfer_date'),
@@ -47,6 +49,7 @@ class StockTransferController extends Controller
         {
             StockTransferProductsModel::create([
                 'transfer_id' => $transfer_id,
+                'company_id' => Auth::user()->company_id,
                 'product_id' => $product['product_id'],
                 'product_name' => $product['product_name'],
                 'description' => $product['description'],

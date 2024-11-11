@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\clientsModel;
 use App\Models\ClientsContactsModel;
 use Illuminate\Support\Str;
+use Auth;
 
 class ClientsController extends Controller
 {
@@ -40,6 +41,7 @@ class ClientsController extends Controller
         foreach ($contacts as $contact) {
             ClientsContactsModel::create([
             'customer_id' => $customer_id,
+            'company_id' => Auth::user()->company_id,
             'name' => $contact['name'],
             'designation' => $contact['designation'],
             'mobile' => $contact['mobile'],
@@ -49,6 +51,7 @@ class ClientsController extends Controller
 
         $register_clients = clientsModel::create([
             'name' => $request->input('name'),
+            'company_id' => Auth::user()->company_id,
             'company_id' => $request->input('company_id'),
             'customer_id' => $customer_id,
             'type' => $request->input('type'),

@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Hash;
 use Illuminate\Support\Str;
+use Auth;
 
 class UsersController extends Controller
 {
@@ -37,6 +38,7 @@ class UsersController extends Controller
 
         $register_user = User::create([
             'name' => $request->input('name'),
+            'company_id' => Auth::user()->company_id,
             'email' => strtolower($request->input('email')),
             'password' => bcrypt($request->input('password')),
             'mobile' => $request->input('mobile'),

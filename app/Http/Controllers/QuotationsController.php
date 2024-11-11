@@ -11,6 +11,7 @@ use App\Models\ClientsModel;
 use App\Models\ClientsContactsModel;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Auth;
 
 class QuotationsController extends Controller
 {
@@ -49,6 +50,7 @@ class QuotationsController extends Controller
         $register_quotations = QuotationsModel::create([
             'client_id' => $request->input('client_id'),
             'client_contact_id' => $request->input('client_contact_id'),
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'address_line_1' => $request->input('address_line_1'),
             'address_line_2' => $request->input('address_line_2'),
@@ -79,6 +81,7 @@ class QuotationsController extends Controller
         {
             QuotationProductsModel::create([
             'quotation_id' => $register_quotations['id'],
+            'company_id' => Auth::user()->company_id,
             'product_id' => $product['product_id'],
             'product_name' => $product['product_name'],
             'description' => $product['description'],
@@ -102,6 +105,7 @@ class QuotationsController extends Controller
         {
             QuotationAddonsModel::create([
             'quotation_id' => $register_quotations['id'],
+            'company_id' => Auth::user()->company_id,
             'name' => $addon['name'],
             'amount' => $addon['amount'],
             'tax' => $addon['tax'],
@@ -119,6 +123,7 @@ class QuotationsController extends Controller
         {
             QuotationTermsModel::create([
             'quotation_id' => $register_quotations['id'],
+            'company_id' => Auth::user()->company_id,
             'name' => $term['name'],
             'value' => $term['value'],
             ]);

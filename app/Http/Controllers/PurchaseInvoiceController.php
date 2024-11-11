@@ -8,6 +8,7 @@ use App\Models\PurchaseInvoiceModel;
 use App\Models\PurchaseInvoiceProductsModel;
 use App\Models\SuppliersModel;
 use App\Models\ProductsModel;
+use Auth;
 
 class PurchaseInvoiceController extends Controller
 {
@@ -53,6 +54,7 @@ class PurchaseInvoiceController extends Controller
     
         $register_purchase_invoice = PurchaseInvoiceModel::create([
             'supplier_id' => $request->input('supplier_id'),
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'address_line_1' => $request->input('address_line_1'),
             'address_line_2' => $request->input('address_line_2'),
@@ -79,6 +81,7 @@ class PurchaseInvoiceController extends Controller
             PurchaseInvoiceProductsModel::create([
                 'purchase_invoice_number' => $register_purchase_invoice['id'],
                 'product_id' => $product['product_id'],
+                'company_id' => Auth::user()->company_id,
                 'product_name' => $product['product_name'],
                 'description' => $product['description'],
                 'brand' => $product['brand'],

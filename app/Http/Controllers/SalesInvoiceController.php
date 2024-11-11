@@ -11,6 +11,7 @@ use App\Models\SalesInvoiceAddonsModel;
 use App\Models\ClientsModel;
 use App\Models\ClientsContactsModel;
 use App\Models\ProductsModel;
+use Auth;
 
 class SalesInvoiceController extends Controller
 {
@@ -47,6 +48,7 @@ class SalesInvoiceController extends Controller
         $register_sales_invoice = SalesInvoiceModel::create([
             'client_id' => $request->input('client_id'),
             'client_contact_id' => $request->input('client_contact_id'),
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'address_line_1' => $request->input('address_line_1'),
             'address_line_2' => $request->input('address_line_2'),
@@ -76,6 +78,7 @@ class SalesInvoiceController extends Controller
         {
             SalesInvoiceProductsModel::create([
             'sales_invoice_id' => $register_sales_invoice['id'],
+            'company_id' => Auth::user()->company_id,
             'product_id' => $product['product_id'],
             'product_name' => $product['product_name'],
             'description' => $product['description'],
@@ -100,6 +103,7 @@ class SalesInvoiceController extends Controller
         {
             SalesInvoiceAddonsModel::create([
             'sales_invoice_id' => $register_sales_invoice['id'],
+            'company_id' => Auth::user()->company_id,
             'name' => $addon['name'],
             'amount' => $addon['amount'],
             'tax' => $addon['tax'],

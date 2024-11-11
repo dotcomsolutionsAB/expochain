@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\AssemblyModel;
 use App\Models\AssemblyProductsModel;
 use App\Models\ProductsModel;
+use Auth;
 
 class AssemblyController extends Controller
 {
@@ -30,6 +31,7 @@ class AssemblyController extends Controller
 
         $register_assembly = AssemblyModel::create([
             'assembly_id' => $assembly_id,
+            'company_id' => Auth::user()->company_id,
             'product_id' => $request->input('product_id'),
             'product_name' => $request->input('product_name'),
             'quantity' => $request->input('quantity'),
@@ -43,6 +45,7 @@ class AssemblyController extends Controller
         {
             AssemblyProductsModel::create([
                 'assembly_id' => $assembly_id,
+                'company_id' => Auth::user()->company_id,
                 'product_id' => $product['product_id'],
                 'product_name' => $product['product_name'],
                 'quantity' => $product['quantity'],

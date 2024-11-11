@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\DebitNoteModel;
 use App\Models\DebitNoteProductsModel;
 use App\Models\SuppliersModel;
+use Auth;
 
 class DebitNoteController extends Controller
 {
@@ -47,6 +48,7 @@ class DebitNoteController extends Controller
     
         $register_debit_note = DebitNoteModel::create([
             'supplier_id' => $request->input('supplier_id'),
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'debit_note_no' => $request->input('debit_note_no'),
             'debit_note_date' => $request->input('debit_note_date'),
@@ -67,6 +69,7 @@ class DebitNoteController extends Controller
         {
             DebitNoteProductsModel::create([
                 'debit_note_number' => $register_debit_note['id'],
+                'company_id' => Auth::user()->company_id,
                 'product_id' => $product['product_id'],
                 'product_name' => $product['product_name'],
                 'description' => $product['description'],

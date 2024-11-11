@@ -8,6 +8,7 @@ use App\Models\PurchaseReturnModel;
 use App\Models\PurchaseReturnProductsModel;
 use App\Models\SuppliersModel;
 use App\Models\ProductsModel;
+use Auth;
 
 class PurchaseReturnController extends Controller
 {
@@ -48,6 +49,7 @@ class PurchaseReturnController extends Controller
     
         $register_purchase_return = PurchaseReturnModel::create([
             'supplier_id' => $request->input('supplier_id'),
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'purchase_return_no' => $request->input('purchase_return_no'),
             'purchase_return_date' => $request->input('purchase_return_date'),
@@ -69,6 +71,7 @@ class PurchaseReturnController extends Controller
             PurchaseReturnProductsModel::create([
                 'purchase_return_number' => $register_purchase_return['id'],
                 'product_id' => $product['product_id'],
+                'company_id' => Auth::user()->company_id,
                 'product_name' => $product['product_name'],
                 'description' => $product['description'],
                 'brand' => $product['brand'],

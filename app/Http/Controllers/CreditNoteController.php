@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\CreditNoteModel;
 use App\Models\CreditNoteProductsModel;
 use App\Models\ClientsModel;
+use Auth;
 
 class CreditNoteController extends Controller
 {
@@ -46,6 +47,7 @@ class CreditNoteController extends Controller
     
         $register_credit_note = CreditNoteModel::create([
             'client_id' => $request->input('client_id'),
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'credit_note_no' => $request->input('credit_note_no'),
             'credit_note_date' => $request->input('credit_note_date'),
@@ -66,6 +68,7 @@ class CreditNoteController extends Controller
         {
             CreditNoteProductsModel::create([
                 'credit_note_id' => $register_credit_note['id'],
+                'company_id' => Auth::user()->company_id,
                 'product_id' => $product['product_id'],
                 'product_name' => $product['product_name'],
                 'description' => $product['description'],

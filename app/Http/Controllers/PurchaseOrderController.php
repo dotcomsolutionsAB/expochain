@@ -9,6 +9,7 @@ use App\Models\SuppliersModel;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Auth;
 
 class PurchaseOrderController extends Controller
 {
@@ -53,6 +54,7 @@ class PurchaseOrderController extends Controller
     
         $register_purchase_order = PurchaseOrderModel::create([
             'supplier_id' => $request->input('supplier_id'),
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'address_line_1' => $request->input('address_line_1'),
             'address_line_2' => $request->input('address_line_2'),
@@ -79,6 +81,7 @@ class PurchaseOrderController extends Controller
             PurchaseOrderProductsModel::create([
                 'purchase_order_number' => $register_purchase_order['id'],
                 'product_id' => $product['product_id'],
+                'company_id' => Auth::user()->company_id,
                 'product_name' => $product['product_name'],
                 'description' => $product['description'],
                 'brand' => $product['brand'],

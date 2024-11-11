@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\EmailQueueModel;
 use App\Models\WhatsappQueueModel;
+use Auth;
 
 class CommunicationController extends Controller
 {
@@ -13,8 +14,6 @@ class CommunicationController extends Controller
     public function add_email(Request $request)
     {
         $request->validate([
-            'jamiat_id' => 'required|integer',
-            'family_id' => 'required|integer',
             'to' => 'required|string|email',
             'cc' => 'nullable|string|email',
             'bcc' => 'nullable|string|email',
@@ -30,8 +29,7 @@ class CommunicationController extends Controller
     
     
         $register_email = EmailQueueModel::create([
-            'jamiat_id' => $request->input('jamiat_id'),
-            'family_id' => $request->input('family_id'),
+            'company_id' => Auth::user()->company_id,
             'to' => $request->input('to'),
             'cc' => $request->input('cc'),
             'bcc' => $request->input('bcc'),

@@ -11,6 +11,7 @@ use App\Models\SalesOrderAddonsModel;
 use App\Models\ClientsModel;
 use App\Models\ClientsContactsModel;
 use App\Models\ProductsModel;
+use Auth;
 
 class SalesOrderController extends Controller
 {
@@ -44,6 +45,7 @@ class SalesOrderController extends Controller
         $register_sales_order = SalesOrderModel::create([
             'client_id' => $request->input('client_id'),
             'client_contact_id' => $request->input('client_contact_id'),
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'address_line_1' => $request->input('address_line_1'),
             'address_line_2' => $request->input('address_line_2'),
@@ -70,6 +72,7 @@ class SalesOrderController extends Controller
         {
             SalesOrderProductsModel::create([
             'sales_order_id' => $register_sales_order['id'],
+            'company_id' => Auth::user()->company_id,
             'product_id' => $product['product_id'],
             'product_name' => $product['product_name'],
             'description' => $product['description'],
@@ -93,6 +96,7 @@ class SalesOrderController extends Controller
         {
             SalesOrderAddonsModel::create([
             'sales_order_id' => $register_sales_order['id'],
+            'company_id' => Auth::user()->company_id,
             'name' => $addon['name'],
             'amount' => $addon['amount'],
             'tax' => $addon['tax'],

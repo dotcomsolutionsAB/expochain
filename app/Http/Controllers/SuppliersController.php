@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\SuppliersModel;
 use App\Models\SuppliersContactsModel;
 use Illuminate\Support\Str;
+use Auth;
 
 class SuppliersController extends Controller
 {
@@ -35,6 +36,7 @@ class SuppliersController extends Controller
         foreach ($contacts as $contact) {
                 SuppliersContactsModel::create([
                 'supplier_id' => $supplier_id,
+                'company_id' => Auth::user()->company_id,
                 'name' => $contact['name'],
                 'designation' => $contact['designation'],
                 'mobile' => $contact['mobile'],
@@ -44,6 +46,7 @@ class SuppliersController extends Controller
 
         $register_suppliers = SuppliersModel::create([
             'supplier_id' => $supplier_id,
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'address_line_1	' => $request->input('address_line_1'),
             'address_line_2' => $request->input('address_line_2'),

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\FabricationModel;
+use Auth;
 
 class FabricationController extends Controller
 {
@@ -26,6 +27,7 @@ class FabricationController extends Controller
 
         $register_fabrication = FabricationModel::create([
             'fabrication_date' => $request->input('fabrication_date'),
+            'company_id' => Auth::user()->company_id,
             'product_id' => $request->input('product_id'),
             'product_name' => $request->input('product_name'),
             'type' => $request->input('type'),

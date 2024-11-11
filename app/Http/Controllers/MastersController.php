@@ -12,6 +12,7 @@ use App\Models\SubCategoryModel;
 use App\Models\BrandModel;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
+use Auth;
 
 
 class MastersController extends Controller
@@ -38,6 +39,7 @@ class MastersController extends Controller
 
         $register_products = ProductsModel::create([
             'serial_number' => $request->input('supplier_id'),
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'alias	' => $request->input('alias'),
             'description' => $request->input('description'),

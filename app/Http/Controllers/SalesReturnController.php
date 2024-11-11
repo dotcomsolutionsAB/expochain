@@ -8,6 +8,7 @@ use App\Models\SalesReturnModel;
 use App\Models\SalesReturnProductsModel;
 use App\Models\ClientsModel;
 use App\Models\ProductsModel;
+use Auth;
 
 class SalesReturnController extends Controller
 {
@@ -49,6 +50,7 @@ class SalesReturnController extends Controller
     
         $register_sales_return = SalesReturnModel::create([
             'client_id' => $request->input('client_id'),
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'sales_return_no' => $request->input('sales_return_no'),
             'sales_return_date' => $request->input('sales_return_date'),
@@ -69,6 +71,7 @@ class SalesReturnController extends Controller
         {
             SalesReturnProductsModel::create([
                 'sales_return_id' => $register_sales_return['id'],
+                'company_id' => Auth::user()->company_id,
                 'product_id' => $product['product_id'],
                 'product_name' => $product['product_name'],
                 'description' => $product['description'],

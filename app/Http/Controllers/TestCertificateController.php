@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\TestCertificateModel;
 use App\Models\TestCertificateProductsModel;
 use App\Models\ClientsModel;
+use Auth;
 
 class TestCertificateController extends Controller
 {
@@ -32,6 +33,7 @@ class TestCertificateController extends Controller
     
         $register_test_certificate = TestCertificateModel::create([
             'client_id' => $request->input('client_id'),
+            'company_id' => Auth::user()->company_id,
             'sales_invoice_no' => $request->input('sales_invoice_no'),
             'reference_no' => $request->input('reference_no'),
             'tc_date' => $request->input('tc_date'),
@@ -47,6 +49,7 @@ class TestCertificateController extends Controller
         {
             TestCertificateProductsModel::create([
                 'tc_id' => $register_test_certificate['id'],
+                'company_id' => Auth::user()->company_id,
                 'product_id' => $product['product_id'],
                 'product_name' => $product['product_name'],
                 'quantity' => $product['quantity'],
