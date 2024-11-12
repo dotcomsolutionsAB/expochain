@@ -24,6 +24,7 @@ class PurchaseOrderModel extends Model
         'cgst',
         'sgst',
         'igst',
+        'total',
         'currency',
         'template',
         'status'

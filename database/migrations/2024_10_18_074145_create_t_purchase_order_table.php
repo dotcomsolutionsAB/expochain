@@ -27,6 +27,7 @@ return new class extends Migration
             $table->float('cgst');
             $table->float('sgst');
             $table->float('igst');
+            $table->float('total');
             $table->string('currency');
             $table->integer('template');
             $table->integer('status');

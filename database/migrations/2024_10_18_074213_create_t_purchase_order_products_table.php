@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('t_purchase_order_products', function (Blueprint $table) {
             $table->id();
             $table->string('purchase_order_number');
+            $table->integer('company_id');
             $table->integer('product_id');
             $table->string('product_name');
             // as it don't support `length`, it can store upto `65,535 characters for TEXT type in MySQL`
