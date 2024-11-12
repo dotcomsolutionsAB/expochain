@@ -9,7 +9,8 @@ use App\Models\QuotationAddonsModel;
 use App\Models\QuotationTermsModel;
 use App\Models\ClientsModel;
 use App\Models\ClientsContactsModel;
-use App\Models\DiscountsModel;
+use App\Models\DiscountModel;
+use App\Models\ProductsModel;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Auth;
@@ -179,15 +180,8 @@ class QuotationsController extends Controller
 
         // Fetch user ID and get discount logic
         $user_id = Auth::user()->id;
-        $sub_category_discount = DiscountsModel::where('user_id', $user_id)
-                                                ->where('sub_category', $request->input('client_id'))
-                                                ->first();
-
-        $category_discount = DiscountsModel::where('user_id', $user_id)
-                                        ->where('category', $request->input('client_id'))
-                                        ->first();
-
-        $discount = $sub_category_discount->discount ?? $category_discount->discount ?? 0;
+        
+        $discount = 0;
 
         // Fetch client contact ID
         $get_customer_id = ClientsModel::select('customer_id')
@@ -245,15 +239,28 @@ class QuotationsController extends Controller
         // Iterate over the products array, calculate and apply tax
         foreach ($products as $product) 
         {
-            $product_details = ProductModel::find($product['product_id']);
+            $product_details = ProductsModel::find($product['product_id']);
 
             if ($product_details) {
-                $rate = $product_details->selling_price;
+                $rate = $product_details->sale_price;
                 $tax_rate = $product_details->tax;
+
+                // Calculate the discount based on category or sub-category
+                $sub_category_discount = DiscountModel::where('client', $request->input('client_id'))
+                ->where('sub_category', $product_details->sub_category)
+                ->first();
+
+                $category_discount = DiscountModel::where('client', $request->input('client_id'))
+                ->where('category', $product_details->category)
+                ->first();
+
+                $discount_rate = $sub_category_discount->discount ?? $category_discount->discount ?? 0;
+                $discount_amount = $rate * ($discount_rate / 100);
+                $total_discount += $discount_amount;
     
                 // Calculate the total for the product
-                $product_total = $rate + ($rate * ($tax_rate / 100));
-                $tax_amount = $rate * ($tax_rate / 100);
+                $product_total = ($rate * ($tax_rate / 100));
+                $tax_amount = ($tax_rate / 100);
     
                 // Determine the tax distribution
                 if ($state === 'west bengal') {
@@ -297,7 +304,8 @@ class QuotationsController extends Controller
             'total' => $total_amount,
             'cgst' => $total_cgst,
             'sgst' => $total_sgst,
-            'igst' => $total_igst
+            'igst' => $total_igst,
+            'discount' => $total_discount
         ]);
     
         // Process and insert addons
