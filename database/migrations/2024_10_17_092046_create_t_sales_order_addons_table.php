@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('t_sales_order_addons', function (Blueprint $table) {
             $table->id();
             $table->integer('sales_order_id');
+            $table->integer('company_id');
             $table->string('name');
             $table->float('amount');
             $table->float('tax');

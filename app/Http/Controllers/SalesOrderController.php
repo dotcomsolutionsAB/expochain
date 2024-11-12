@@ -11,7 +11,9 @@ use App\Models\SalesOrderAddonsModel;
 use App\Models\ClientsModel;
 use App\Models\ClientsContactsModel;
 use App\Models\ProductsModel;
+use App\Models\DiscountModel;
 use Auth;
+use Carbon\Carbon;
 
 class SalesOrderController extends Controller
 {
@@ -121,7 +123,6 @@ class SalesOrderController extends Controller
             'client_id' => 'required|integer',
             'client_contact_id' => 'required|integer',
             'sales_order_no' => 'required|integer',
-            'sales_order_date' => 'required|date',
             'quotation_no' => 'required|integer',
             'currency' => 'required|string',
             'template' => 'required|integer',
@@ -134,6 +135,8 @@ class SalesOrderController extends Controller
         if (!$client) {
             return response()->json(['message' => 'Client not found'], 404);
         }
+
+        $currentDate = Carbon::now()->toDateString();
 
         // Register the sales order
         $register_sales_order = SalesOrderModel::create([
@@ -148,8 +151,12 @@ class SalesOrderController extends Controller
             'state' => $client->state,
             'country' => $client->country,
             'sales_order_no' => $request->input('sales_order_no'),
-            'sales_order_date' => $request->input('sales_order_date'),
+            'sales_order_date' => $currentDate,
             'quotation_no' => $request->input('quotation_no'),
+            'cgst' => 0,
+            'sgst' => 0,
+            'igst' => 0,
+            'total' => 0,
             'currency' => $request->input('currency'),
             'template' => $request->input('template'),
             'status' => $request->input('status'),
@@ -164,11 +171,11 @@ class SalesOrderController extends Controller
 
         // Iterate over the products array and calculate totals
         foreach ($products as $product) {
-            $product_details = ProductModel::find($product['product_id']);
+            $product_details = ProductsModel::find($product['product_id']);
 
             if ($product_details) {
                 $quantity = $product['quantity'];
-                $rate = $product_details->selling_price;
+                $rate = $product_details->sale_price;
                 $tax_rate = $product_details->tax;
 
                 // Calculate the discount based on category or sub-category
