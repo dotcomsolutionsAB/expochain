@@ -161,6 +161,7 @@ class QuotationsController extends Controller
             'enquiry_date' => 'required',
             'template' => 'required',
             'products.*.product_id' => 'required|integer',
+            'products.*.quantity' => 'required|integer',
             'addons.*.name' => 'required|string',
             'addons.*.amount' => 'required|numeric',
             'addons.*.tax' => 'required|numeric',
@@ -242,6 +243,7 @@ class QuotationsController extends Controller
             $product_details = ProductsModel::find($product['product_id']);
 
             if ($product_details) {
+                $quantity = $product['quantity'];
                 $rate = $product_details->sale_price;
                 $tax_rate = $product_details->tax;
 
@@ -255,12 +257,12 @@ class QuotationsController extends Controller
                 ->first();
 
                 $discount_rate = $sub_category_discount->discount ?? $category_discount->discount ?? 0;
-                $discount_amount = $rate * ($discount_rate / 100);
+                $discount_amount = $rate * $quantity * ($discount_rate / 100);
                 $total_discount += $discount_amount;
     
                 // Calculate the total for the product
-                $product_total = ($rate * ($tax_rate / 100));
-                $tax_amount = ($tax_rate / 100);
+                $product_total = $rate * $quantity -$discount_amount;
+                $tax_amount = $product_total - ($tax_rate * 100);
     
                 // Determine the tax distribution
                 if ($state === 'west bengal') {
@@ -274,7 +276,7 @@ class QuotationsController extends Controller
                 }
     
                 // Accumulate the totals
-                $total_amount += $rate; // Adding the product's rate to total_amount
+                $total_amount += $product_total; // Adding the product's rate to total_amount
                 $total_cgst += $cgst;
                 $total_sgst += $sgst;
                 $total_igst += $igst;
@@ -287,7 +289,7 @@ class QuotationsController extends Controller
                     'product_name' => $product_details->name,
                     'description' => $product_details->description,
                     'brand' => $product_details->brand,
-                    'quantity' => 1, // Assuming quantity is not used, set to 1
+                    'quantity' => $quantity,
                     'unit' => $product['unit'],
                     'price' => $rate,
                     'hsn' => $product_details->hsn,
