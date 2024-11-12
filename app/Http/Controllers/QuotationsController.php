@@ -9,132 +9,335 @@ use App\Models\QuotationAddonsModel;
 use App\Models\QuotationTermsModel;
 use App\Models\ClientsModel;
 use App\Models\ClientsContactsModel;
+use App\Models\DiscountsModel;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Auth;
+use Carbon\Carbon;
 
 class QuotationsController extends Controller
 {
     //
 
     // create
+    // public function add_quotations(Request $request)
+    // {
+    //     $request->validate([
+    //         'client_id' => 'required|integer',
+    //         'client_contact_id' => 'nullable|integer',
+    //         'enquiry_no' => 'required',
+    //         'enquiry_date' => 'required',
+    //         'template' => 'required',
+    //         'products.*.product_id' => 'required|integer',
+    //         'addons.*.name' => 'required|string',
+    //         'addons.*.amount' => 'required|numeric',
+    //         'addons.*.tax' => 'required|numeric',
+    //         'addons.*.hsn' => 'required|numeric',
+    //         'addons.*.cgst' => 'required|numeric',
+    //         'addons.*.sgst' => 'required|numeric',
+    //         'addons.*.igst' => 'required|numeric',
+    //         'terms.*.name' => 'required|string',
+    //         'terms.*.value' => 'required|numeric'
+    //     ]);
+    
+    //     do{
+    //         $quotation_no = rand(1111111111,9999999999);
+
+    //         $exists = QuotationsModel::where('quotation_no', $quotation_no)->exists();
+    //     }while ($exists);
+    
+    //     $get_customer_id = ClientsModel::select('customer_id')
+    //                                 ->where('id', $request->input('client_id'))
+    //                                 ->get();
+
+    //     $client_contact_id = $request->input('client_contact_id') ??
+    //                                     ClientsContactsModel::select('id')
+    //                                                         ->where('customer_id', $get_customer_id[0]->customer_id)->first();
+
+    //     $client_contact_record = ClientsModel::select('name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country')
+    //     ->get();
+
+
+    //     $currentDate = Carbon::now()->toDateString();
+
+
+    //     $register_quotations = QuotationsModel::create([
+    //         'client_id' => $request->input('client_id'),
+    //         'client_contact_id' => $client_contact_id->id,
+    //         'company_id' => Auth::user()->company_id,
+    //         'name' => $client_contact_record[0]->name,
+    //         'address_line_1' => $client_contact_record[0]->address_line_1,
+    //         'address_line_2' => $client_contact_record[0]->address_line_2,
+    //         'city' => $client_contact_record[0]->city,
+    //         'pincode' => $client_contact_record[0]->pincode,
+    //         'state' => $client_contact_record[0]->state,
+    //         'country' => $client_contact_record[0]->country,
+    //         'quotation_no' => $quotation_no,
+    //         'quotation_date' => $currentDate,
+    //         'enquiry_no' => $request->input('enquiry_no'),
+    //         'enquiry_date' => $request->input('enquiry_date'),
+    //         'sales_person' => Auth::user()->name,
+    //         'sales_contact' => Auth::user()->mobile,
+    //         'sales_email' => Auth::user()->email,
+    //         'discount' => $request->input('discount'),
+    //         'cgst' => $request->input('cgst'),
+    //         'sgst' => $request->input('sgst'),
+    //         'igst' => $request->input('igst'),
+    //         'total' => $request->input('total'),
+    //         'currency' => $request->input('currency'),
+    //         'template' => $request->input('template'),
+    //     ]);
+        
+    //     $products = $request->input('products');
+    
+    //     // Iterate over the products array and insert each contact
+    //     foreach ($products as $product) 
+    //     {
+    //         QuotationProductsModel::create([
+    //         'quotation_id' => $register_quotations['id'],
+    //         'company_id' => Auth::user()->company_id,
+    //         'product_id' => $product['product_id'],
+    //         'product_name' => $product['product_name'],
+    //         'description' => $product['description'],
+    //         'brand' => $product['brand'],
+    //         'quantity' => $product['quantity'],
+    //         'unit' => $product['unit'],
+    //         'price' => $product['price'],
+    //         'discount' => $product['discount'],
+    //         'hsn' => $product['hsn'],
+    //         'tax' => $product['tax'],
+    //         'cgst' => $product['cgst'],
+    //         'sgst' => $product['sgst'],
+    //         'igst' => $product['igst'],
+    //         ]);
+    //     }
+
+    //     $addons = $request->input('addons');
+    
+    //     // Iterate over the addons array and insert each contact
+    //     foreach ($addons as $addon) 
+    //     {
+    //         QuotationAddonsModel::create([
+    //         'quotation_id' => $register_quotations['id'],
+    //         'company_id' => Auth::user()->company_id,
+    //         'name' => $addon['name'],
+    //         'amount' => $addon['amount'],
+    //         'tax' => $addon['tax'],
+    //         'hsn' => $addon['hsn'],
+    //         'cgst' => $addon['cgst'],
+    //         'sgst' => $addon['sgst'],
+    //         'igst' => $addon['igst'],
+    //         ]);
+    //     }
+
+    //     $terms = $request->input('terms');
+    
+    //     // Iterate over the terms array and insert each contact
+    //     foreach ($terms as $term) 
+    //     {
+    //         QuotationTermsModel::create([
+    //         'quotation_id' => $register_quotations['id'],
+    //         'company_id' => Auth::user()->company_id,
+    //         'name' => $term['name'],
+    //         'value' => $term['value'],
+    //         ]);
+    //     }
+
+    //     unset($register_quotations['id'], $register_quotations['created_at'], $register_quotations['updated_at']);
+    
+    //     return isset($register_quotations) && $register_quotations !== null
+    //     ? response()->json(['Quotations registered successfully!', 'data' => $register_quotations], 201)
+    //     : response()->json(['Failed to register quotations record'], 400);
+    // }
+
     public function add_quotations(Request $request)
     {
+        // Validate the request data
         $request->validate([
-            'client_id' => 'required',
-            'client_contact_id' => 'required',
-            'name' => 'required|string',
-            'address_line_1' => 'required|string',
-            'address_line_2' => 'required|string',
-            'city' => 'required|string',
-            'pincode' => 'required',
-            'state' => 'required|string',
-            'country' => 'required|string',
-            'quotation_date' => 'required',
+            'client_id' => 'required|integer',
+            'client_contact_id' => 'nullable|integer',
             'enquiry_no' => 'required',
             'enquiry_date' => 'required',
-            'sales_person' => 'required|string',
-            'sales_contact' => 'required|string',
-            'sales_email' => 'required|string',
-            'discount' => 'required',
-            'cgst' => 'required',
-            'sgst' => 'required',
-            'igst' => 'required',
-            'total' => 'required',
-            'currency' => 'required',
             'template' => 'required',
+            'products.*.product_id' => 'required|integer',
+            'addons.*.name' => 'required|string',
+            'addons.*.amount' => 'required|numeric',
+            'addons.*.tax' => 'required|numeric',
+            'addons.*.hsn' => 'required|numeric',
+            'addons.*.cgst' => 'required|numeric',
+            'addons.*.sgst' => 'required|numeric',
+            'addons.*.igst' => 'required|numeric',
+            'terms.*.name' => 'required|string',
+            'terms.*.value' => 'required|numeric'
         ]);
-    
-        $quotation_no = rand(1111111111,9999999999);
-    
+
+        // Generate a unique quotation number
+        do {
+            $quotation_no = rand(1111111111, 9999999999);
+            $exists = QuotationsModel::where('quotation_no', $quotation_no)->exists();
+        } while ($exists);
+
+        // Fetch user ID and get discount logic
+        $user_id = Auth::user()->id;
+        $sub_category_discount = DiscountsModel::where('user_id', $user_id)
+                                                ->where('sub_category', $request->input('client_id'))
+                                                ->first();
+
+        $category_discount = DiscountsModel::where('user_id', $user_id)
+                                        ->where('category', $request->input('client_id'))
+                                        ->first();
+
+        $discount = $sub_category_discount->discount ?? $category_discount->discount ?? 0;
+
+        // Fetch client contact ID
+        $get_customer_id = ClientsModel::select('customer_id')
+                                    ->where('id', $request->input('client_id'))
+                                    ->get();
+
+        $client_contact_id = $request->input('client_contact_id') ??
+                            ClientsContactsModel::select('id')
+                                                ->where('customer_id', $get_customer_id[0]->customer_id)
+                                                ->first();
+
+        // Fetch client contact record details
+        $client_contact_record = ClientsModel::select('name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country')
+                                            ->where('id', $request->input('client_id'))
+                                            ->get();
+
+        $currentDate = Carbon::now()->toDateString();
+        $state = strtolower($client_contact_record[0]->state);
+
+        $total_amount = 0;
+        $total_cgst = 0;
+        $total_sgst = 0;
+        $total_igst = 0;
+
+        // Register the quotation
         $register_quotations = QuotationsModel::create([
             'client_id' => $request->input('client_id'),
-            'client_contact_id' => $request->input('client_contact_id'),
+            'client_contact_id' => $client_contact_id->id,
             'company_id' => Auth::user()->company_id,
-            'name' => $request->input('name'),
-            'address_line_1' => $request->input('address_line_1'),
-            'address_line_2' => $request->input('address_line_2'),
-            'city' => $request->input('city'),
-            'pincode' => $request->input('pincode'),
-            'state' => $request->input('state'),
-            'country' => $request->input('country'),
+            'name' => $client_contact_record[0]->name,
+            'address_line_1' => $client_contact_record[0]->address_line_1,
+            'address_line_2' => $client_contact_record[0]->address_line_2,
+            'city' => $client_contact_record[0]->city,
+            'pincode' => $client_contact_record[0]->pincode,
+            'state' => $client_contact_record[0]->state,
+            'country' => $client_contact_record[0]->country,
             'quotation_no' => $quotation_no,
-            'quotation_date' => $request->input('quotation_date'),
+            'quotation_date' => $currentDate,
             'enquiry_no' => $request->input('enquiry_no'),
             'enquiry_date' => $request->input('enquiry_date'),
-            'sales_person' => $request->input('sales_person'),
-            'sales_contact' => $request->input('sales_contact'),
-            'sales_email' => $request->input('sales_email'),
-            'discount' => $request->input('discount'),
-            'cgst' => $request->input('cgst'),
-            'sgst' => $request->input('sgst'),
-            'igst' => $request->input('igst'),
-            'total' => $request->input('total'),
+            'sales_person' => Auth::user()->name,
+            'sales_contact' => Auth::user()->mobile,
+            'sales_email' => Auth::user()->email,
+            'discount' => $discount,
+            'total' => 0, // Will be updated later
+            'cgst' => 0, // Placeholder, will be updated later
+            'sgst' => 0, // Placeholder, will be updated later
+            'igst' => 0, // Placeholder, will be updated later
             'currency' => $request->input('currency'),
             'template' => $request->input('template'),
         ]);
-        
+
         $products = $request->input('products');
-    
-        // Iterate over the products array and insert each contact
+
+        // Iterate over the products array, calculate and apply tax
         foreach ($products as $product) 
         {
-            QuotationProductsModel::create([
-            'quotation_id' => $register_quotations['id'],
-            'company_id' => Auth::user()->company_id,
-            'product_id' => $product['product_id'],
-            'product_name' => $product['product_name'],
-            'description' => $product['description'],
-            'brand' => $product['brand'],
-            'quantity' => $product['quantity'],
-            'unit' => $product['unit'],
-            'price' => $product['price'],
-            'discount' => $product['discount'],
-            'hsn' => $product['hsn'],
-            'tax' => $product['tax'],
-            'cgst' => $product['cgst'],
-            'sgst' => $product['sgst'],
-            'igst' => $product['igst'],
-            ]);
-        }
+            $product_details = ProductModel::find($product['product_id']);
 
+            if ($product_details) {
+                $rate = $product_details->selling_price;
+                $tax_rate = $product_details->tax;
+    
+                // Calculate the total for the product
+                $product_total = $rate + ($rate * ($tax_rate / 100));
+                $tax_amount = $rate * ($tax_rate / 100);
+    
+                // Determine the tax distribution
+                if ($state === 'west bengal') {
+                    $cgst = $tax_amount / 2;
+                    $sgst = $tax_amount / 2;
+                    $igst = 0;
+                } else {
+                    $cgst = 0;
+                    $sgst = 0;
+                    $igst = $tax_amount;
+                }
+    
+                // Accumulate the totals
+                $total_amount += $rate; // Adding the product's rate to total_amount
+                $total_cgst += $cgst;
+                $total_sgst += $sgst;
+                $total_igst += $igst;
+    
+                // Create a record for the product
+                QuotationProductsModel::create([
+                    'quotation_id' => $register_quotations->id,
+                    'company_id' => Auth::user()->company_id,
+                    'product_id' => $product_details->id,
+                    'product_name' => $product_details->name,
+                    'description' => $product_details->description,
+                    'brand' => $product_details->brand,
+                    'quantity' => 1, // Assuming quantity is not used, set to 1
+                    'unit' => $product['unit'],
+                    'price' => $rate,
+                    'hsn' => $product_details->hsn,
+                    'tax' => $tax_rate,
+                    'cgst' => $cgst,
+                    'sgst' => $sgst,
+                    'igst' => $igst,
+                ]);
+            }
+        }
+    
+        // Update the total amount and tax values in the quotations record
+        $register_quotations->update([
+            'total' => $total_amount,
+            'cgst' => $total_cgst,
+            'sgst' => $total_sgst,
+            'igst' => $total_igst
+        ]);
+    
+        // Process and insert addons
         $addons = $request->input('addons');
-    
-        // Iterate over the addons array and insert each contact
-        foreach ($addons as $addon) 
-        {
+        foreach ($addons as $addon) {
             QuotationAddonsModel::create([
-            'quotation_id' => $register_quotations['id'],
-            'company_id' => Auth::user()->company_id,
-            'name' => $addon['name'],
-            'amount' => $addon['amount'],
-            'tax' => $addon['tax'],
-            'hsn' => $addon['hsn'],
-            'cgst' => $addon['cgst'],
-            'sgst' => $addon['sgst'],
-            'igst' => $addon['igst'],
+                'quotation_id' => $register_quotations->id,
+                'company_id' => Auth::user()->company_id,
+                'name' => $addon['name'],
+                'amount' => $addon['amount'],
+                'tax' => $addon['tax'],
+                'hsn' => $addon['hsn'],
+                'cgst' => $addon['cgst'],
+                'sgst' => $addon['sgst'],
+                'igst' => $addon['igst'],
             ]);
         }
-
+    
+        // Process and insert terms
         $terms = $request->input('terms');
-    
-        // Iterate over the terms array and insert each contact
-        foreach ($terms as $term) 
-        {
+        foreach ($terms as $term) {
             QuotationTermsModel::create([
-            'quotation_id' => $register_quotations['id'],
-            'company_id' => Auth::user()->company_id,
-            'name' => $term['name'],
-            'value' => $term['value'],
+                'quotation_id' => $register_quotations->id,
+                'company_id' => Auth::user()->company_id,
+                'name' => $term['name'],
+                'value' => $term['value'],
             ]);
         }
-
-        unset($register_quotations['id'], $register_quotations['created_at'], $register_quotations['updated_at']);
     
-        return isset($register_quotations) && $register_quotations !== null
-        ? response()->json(['Quotations registered successfully!', 'data' => $register_quotations], 201)
-        : response()->json(['Failed to register quotations record'], 400);
+        // Return the response
+        return response()->json([
+            'message' => 'Quotations registered successfully!',
+            'data' => $register_quotations,
+            'total_cgst' => $total_cgst,
+            'total_sgst' => $total_sgst,
+            'total_igst' => $total_igst,
+            'total_amount' => $total_amount
+        ], 201);
     }
+
 
     // View Quotations
     public function view_quotations()

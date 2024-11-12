@@ -11,14 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('t_assembly', function (Blueprint $table) {
+        Schema::create('t_discount', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('assembly_id')->unique();
-            $table->integer('company_id');
-            $table->integer('product_id');
-            $table->string('product_name');
-            $table->integer('quantity');
-            $table->string('log_user');
+            $table->integer('client');
+            $table->integer('category');
+            $table->integer('sub_category')->nullable();
+            $table->float('amount');
             $table->timestamps();
         });
     }
@@ -28,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('t_assembly');
+        Schema::dropIfExists('t_discount');
     }
 };

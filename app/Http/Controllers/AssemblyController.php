@@ -27,7 +27,11 @@ class AssemblyController extends Controller
             'products.*.log_user' => 'required|string',
         ]);
     
-        $assembly_id = rand(1111111111,9999999999);
+        do{
+            $assembly_id = rand(1111111111,9999999999);
+
+            $exists = AssemblyModel::where('assembly_id', $assembly_id)->exists();
+        }while ($exists);
 
         $register_assembly = AssemblyModel::create([
             'assembly_id' => $assembly_id,
