@@ -248,13 +248,15 @@ class QuotationsController extends Controller
                 $tax_rate = $product_details->tax;
 
                 // Calculate the discount based on category or sub-category
-                $sub_category_discount = DiscountModel::where('client', $request->input('client_id'))
-                ->where('sub_category', $product_details->sub_category)
-                ->first();
+                $sub_category_discount = DiscountModel::select('discount')
+                                                        ->where('client', $request->input('client_id'))
+                                                        ->where('sub_category', $product_details->sub_category)
+                                                        ->first();
 
-                $category_discount = DiscountModel::where('client', $request->input('client_id'))
-                ->where('category', $product_details->category)
-                ->first();
+                $category_discount = DiscountModel::select('discount')
+                                                    ->where('client', $request->input('client_id'))
+                                                    ->where('category', $product_details->category)
+                                                    ->first();
 
                 $discount_rate = $sub_category_discount->discount ?? $category_discount->discount ?? 0;
                 $discount_amount = $rate * $quantity * ($discount_rate / 100);

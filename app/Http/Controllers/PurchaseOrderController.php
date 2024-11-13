@@ -171,13 +171,15 @@ class PurchaseOrderController extends Controller
                 $tax_rate = $product_details->tax;
 
                // Calculate the discount based on category or sub-category
-               $sub_category_discount = DiscountModel::where('client', $request->input('client_id'))
-               ->where('sub_category', $product_details->sub_category)
-               ->first();
+               $sub_category_discount = DiscountModel::select('discount')
+                                                    ->where('client', $request->input('supplier_id'))
+                                                    ->where('sub_category', $product_details->sub_category)
+                                                    ->first();
 
-                $category_discount = DiscountModel::where('client', $request->input('client_id'))
-                        ->where('category', $product_details->category)
-                        ->first();
+                $category_discount = DiscountModel::select('discount')
+                                                    ->where('client', $request->input('supplier_id'))
+                                                    ->where('category', $product_details->category)
+                                                    ->first();
 
                 $discount_rate = $sub_category_discount->discount ?? $category_discount->discount ?? 0;
                 $discount_amount = $rate * $quantity * ($discount_rate / 100);
@@ -209,12 +211,11 @@ class PurchaseOrderController extends Controller
                     'product_id' => $product['product_id'],
                     'company_id' => Auth::user()->company_id,
                     'product_name' => $product_details->name,
-                    'description' => $product_details->name,
-                    'brand' => $product_details->name,
+                    'description' => $product_details->description,
+                    'brand' => $product_details->brand,
                     'quantity' => $product['quantity'],
-                    'brand' => $product_details->name,
-                    'unit' => $product_details->name,
-                    'price' => $product_details->name,
+                    'unit' => $product_details->unit,
+                    'price' => $rate,
                     'discount' => $discount_amount,
                     'hsn' => $product_details->hsn,
                     'tax' => $product_details->tax,
@@ -240,7 +241,7 @@ class PurchaseOrderController extends Controller
         unset($register_purchase_order['id'], $register_purchase_order['created_at'], $register_purchase_order['updated_at']);
     
         return isset($register_purchase_order) && $register_purchase_order !== null
-        ? response()->json(['Purchase Order registered successfully!', 'data' => $register_purchase_order], 201)
+        ? response()->json(['Purchase Order registered successfully!', 'data' => $register_purchase_order, 'total_cgst' => $total_cgst, 'total_sgst' => $total_sgst, 'total_igst' => $total_igst, 'total_discount' => $total_discount, 'total_amount' => $total_amount], 201)
         : response()->json(['Failed to register Purchase Order record'], 400);
     }
 

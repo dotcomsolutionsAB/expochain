@@ -16,7 +16,7 @@ return new class extends Migration
             $table->integer('client');
             $table->integer('category');
             $table->integer('sub_category')->nullable();
-            $table->float('amount');
+            $table->float('discount');
             $table->timestamps();
         });
     }

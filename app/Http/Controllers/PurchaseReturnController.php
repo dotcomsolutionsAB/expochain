@@ -8,6 +8,8 @@ use App\Models\PurchaseReturnModel;
 use App\Models\PurchaseReturnProductsModel;
 use App\Models\SuppliersModel;
 use App\Models\ProductsModel;
+use App\Models\DiscountModel;
+use Carbon\Carbon;
 use Auth;
 
 class PurchaseReturnController extends Controller
@@ -18,81 +20,133 @@ class PurchaseReturnController extends Controller
     {
         $request->validate([
             'supplier_id' => 'required|integer',
-            'name' => 'required|string',
             'purchase_return_no' => 'required|string',
-            'purchase_return_date' => 'required|date',
             'purchase_invoice_no' => 'required|string',
-            'cgst' => 'required|numeric',
-            'sgst' => 'required|numeric',
-            'igst' => 'required|numeric',
-            'total' => 'required|numeric',
             'currency' => 'required|string',
             'template' => 'required|integer',
             'status' => 'required|integer',
             'products' => 'required|array', // Validating array of products
             'products.*.product_id' => 'required|integer',
-            'products.*.product_name' => 'required|string',
-            'products.*.description' => 'nullable|string',
-            'products.*.brand' => 'required|string',
             'products.*.quantity' => 'required|integer',
-            'products.*.unit' => 'required|string',
-            'products.*.price' => 'required|numeric',
-            'products.*.discount' => 'nullable|numeric',
-            'products.*.hsn' => 'required|string',
-            'products.*.tax' => 'required|numeric',
-            'products.*.cgst' => 'required|numeric',
-            'products.*.sgst' => 'required|numeric',
-            'products.*.igst' => 'required|numeric',
             'products.*.godown' => 'required|integer'
         ]);
+
+        // Fetch supplier details using supplier_id
+        $supplier = SuppliersModel::find($request->input('supplier_id'));
+        if (!$supplier) {
+            return response()->json(['message' => 'Supplier not found'], 404);
+        }
+    
+        $currentDate = Carbon::now()->toDateString();
     
     
         $register_purchase_return = PurchaseReturnModel::create([
             'supplier_id' => $request->input('supplier_id'),
             'company_id' => Auth::user()->company_id,
-            'name' => $request->input('name'),
+            'name' =>  $supplier->name,
             'purchase_return_no' => $request->input('purchase_return_no'),
-            'purchase_return_date' => $request->input('purchase_return_date'),
+            'purchase_return_date' => $currentDate,
             'purchase_invoice_no' => $request->input('purchase_invoice_no'),
-            'cgst' => $request->input('cgst'),
-            'sgst' => $request->input('sgst'),
-            'igst' => $request->input('igst'),
-            'total' => $request->input('total'),
+            'cgst' => 0,
+            'sgst' => 0,
+            'igst' => 0,
+            'total' => 0,
             'currency' => $request->input('currency'),
             'template' => $request->input('template'),
             'status' => $request->input('status'),
         ]);
         
         $products = $request->input('products');
+        $total_amount = 0;
+        $total_cgst = 0;
+        $total_sgst = 0;
+        $total_igst = 0;
+        $total_discount = 0;
 
         // Iterate over the products array and insert each contact
         foreach ($products as $product) 
         {
-            PurchaseReturnProductsModel::create([
-                'purchase_return_number' => $register_purchase_return['id'],
-                'product_id' => $product['product_id'],
-                'company_id' => Auth::user()->company_id,
-                'product_name' => $product['product_name'],
-                'description' => $product['description'],
-                'brand' => $product['brand'],
-                'quantity' => $product['quantity'],
-                'brand' => $product['brand'],
-                'unit' => $product['unit'],
-                'price' => $product['price'],
-                'discount' => $product['discount'],
-                'hsn' => $product['hsn'],
-                'tax' => $product['tax'],
-                'cgst' => $product['cgst'],
-                'sgst' => $product['sgst'],
-                'igst' => $product['igst'],
-                'godown' => $product['godown'],
+            $product_details = ProductsModel::find($product['product_id']);
+            
+            if ($product_details) 
+            {
+                $quantity = $product['quantity'];
+                $rate = $product_details->sale_price;
+                $tax_rate = $product_details->tax;
+
+               // Calculate the discount based on category or sub-category
+               $sub_category_discount = DiscountModel::select('discount')
+                                                    ->where('client', $request->input('supplier_id'))
+                                                    ->where('sub_category', $product_details->sub_category)
+                                                    ->first();
+
+                $category_discount = DiscountModel::select('discount')
+                                                    ->where('client', $request->input('supplier_id'))
+                                                    ->where('category', $product_details->category)
+                                                    ->first();
+
+                $discount_rate = $sub_category_discount->discount ?? $category_discount->discount ?? 0;
+                $discount_amount = $rate * $quantity * ($discount_rate / 100);
+                $total_discount += $discount_amount;
+
+                // Calculate the total for the product
+                $product_total = $rate * $quantity - $discount_amount;
+                $tax_amount = $product_total * ($tax_rate / 100);
+
+                // Determine the tax distribution based on the client's state
+                if (strtolower($supplier->state) === 'west bengal') {
+                    $cgst = $tax_amount / 2;
+                    $sgst = $tax_amount / 2;
+                    $igst = 0;
+                } else {
+                    $cgst = 0;
+                    $sgst = 0;
+                    $igst = $tax_amount;
+                }
+
+                // Accumulate totals
+                $total_amount += $product_total;
+                $total_cgst += $cgst;
+                $total_sgst += $sgst;
+                $total_igst += $igst;
+
+                PurchaseReturnProductsModel::create([
+                    'purchase_return_number' => $register_purchase_return['id'],
+                    'product_id' => $product['product_id'],
+                    'company_id' => Auth::user()->company_id,
+                    'product_name' => $product_details->name,
+                    'description' => $product_details->description,
+                    'brand' => $product_details->brand,
+                    'quantity' => $product['quantity'],
+                    'unit' => $product_details->unit,
+                    'price' => $rate,
+                    'discount' => $discount_amount,
+                    'hsn' => $product_details->hsn,
+                    'tax' => $product_details->tax,
+                    'cgst' => $cgst,
+                    'sgst' => $sgst,
+                    'igst' => $igst,
+                    'godown' => $product['godown'],
+                ]);
+            }
+
+            else{
+                return response()->json(['message' => 'Sorry, Products not found'], 404);
+            }
+
+            // Update the total amount and tax values in the sales invoice record
+            $register_purchase_return->update([
+                'total' => $total_amount,
+                'cgst' => $total_cgst,
+                'sgst' => $total_sgst,
+                'igst' => $total_igst,
             ]);
         }
 
         unset($register_purchase_return['id'], $register_purchase_return['created_at'], $register_purchase_return['updated_at']);
     
         return isset($register_purchase_return) && $register_purchase_return !== null
-        ? response()->json(['Purchase Return registered successfully!', 'data' => $register_purchase_return], 201)
+        ? response()->json(['Purchase Return registered successfully!', 'data' => $register_purchase_return, 'total_cgst' => $total_cgst, 'total_sgst' => $total_sgst, 'total_igst' => $total_igst, 'total_discount' => $total_discount, 'total_amount' => $total_amount], 201)
         : response()->json(['Failed to register Purchase Return record'], 400);
     }
 
