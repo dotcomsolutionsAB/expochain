@@ -49,18 +49,27 @@ class StockTransferController extends Controller
         // Iterate over the products array and insert each contact
         foreach ($products as $product) 
         {
-            $product_details = ProductsModel::find($product['product_id']);
+            $product_details = ProductsModel::where('id', $product['product_id'])
+                                            ->where('company_id', Auth::user()->company_id)
+                                            ->first();
 
-            StockTransferProductsModel::create([
-                'transfer_id' => $transfer_id,
-                'company_id' => Auth::user()->company_id,
-                'product_id' => $product['product_id'],
-                'product_name' => $product_details->name,
-                'description' => $product_details->description,
-                'quantity' => $product['quantity'],
-                'unit' => $product_details->unit,
-                'status' => $product['status'],
-            ]);
+            if ($product_details) 
+            {
+                StockTransferProductsModel::create([
+                    'transfer_id' => $transfer_id,
+                    'company_id' => Auth::user()->company_id,
+                    'product_id' => $product['product_id'],
+                    'product_name' => $product_details->name,
+                    'description' => $product_details->description,
+                    'quantity' => $product['quantity'],
+                    'unit' => $product_details->unit,
+                    'status' => $product['status'],
+                ]);
+            }
+
+            else{
+                return response()->json(['message' => 'Sorry, Products not found'], 404);
+            }
         }
 
         unset($register_stock_transfer['id'], $register_stock_transfer['created_at'], $register_stock_transfer['updated_at']);

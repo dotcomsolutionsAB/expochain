@@ -8,6 +8,7 @@ use App\Models\CreditNoteModel;
 use App\Models\CreditNoteProductsModel;
 use App\Models\ClientsModel;
 use App\Models\DiscountModel;
+use App\Models\ProductsModel;
 use Carbon\Carbon;
 use Auth;
 
@@ -142,7 +143,9 @@ class CreditNoteController extends Controller
         // Iterate over the products array and insert each contact
         foreach ($products as $product) 
         {
-            $product_details = ProductsModel::find($product['product_id']);
+            $product_details = ProductsModel::where('id', $product['product_id'])
+                                            ->where('company_id', Auth::user()->company_id)
+                                            ->first();
             
             if ($product_details) 
             {
@@ -152,12 +155,12 @@ class CreditNoteController extends Controller
 
                // Calculate the discount based on category or sub-category
                $sub_category_discount = DiscountModel::select('discount')
-                                                    ->where('client', $request->input('supplier_id'))
+                                                    ->where('client', $request->input('client_id'))
                                                     ->where('sub_category', $product_details->sub_category)
                                                     ->first();
 
                 $category_discount = DiscountModel::select('discount')
-                                                    ->where('client', $request->input('supplier_id'))
+                                                    ->where('client', $request->input('client_id'))
                                                     ->where('category', $product_details->category)
                                                     ->first();
 
@@ -170,7 +173,7 @@ class CreditNoteController extends Controller
                 $tax_amount = $product_total * ($tax_rate / 100);
 
                 // Determine the tax distribution based on the client's state
-                if (strtolower($supplier->state) === 'west bengal') {
+                if (strtolower($client->state) === 'west bengal') {
                     $cgst = $tax_amount / 2;
                     $sgst = $tax_amount / 2;
                     $igst = 0;

@@ -157,11 +157,13 @@ class QuotationsController extends Controller
         $request->validate([
             'client_id' => 'required|integer',
             'client_contact_id' => 'nullable|integer',
-            'enquiry_no' => 'required',
-            'enquiry_date' => 'required',
-            'template' => 'required',
+            'enquiry_no' => 'required|string',
+            'enquiry_date' => 'required|date',
+            'template' => 'required|integer',
+            'currency' => 'required|string',
             'products.*.product_id' => 'required|integer',
             'products.*.quantity' => 'required|integer',
+            'products.*.unit' => 'required|string',
             'addons.*.name' => 'required|string',
             'addons.*.amount' => 'required|numeric',
             'addons.*.tax' => 'required|numeric',
@@ -179,15 +181,14 @@ class QuotationsController extends Controller
             $exists = QuotationsModel::where('quotation_no', $quotation_no)->exists();
         } while ($exists);
 
-        // Fetch user ID and get discount logic
-        $user_id = Auth::user()->id;
-        
-        $discount = 0;
-
         // Fetch client contact ID
         $get_customer_id = ClientsModel::select('customer_id')
                                     ->where('id', $request->input('client_id'))
                                     ->get();
+
+        if ($get_customer_id->isEmpty()) {
+            return response()->json(['message' => 'Client not found'], 404);
+        }
 
         $client_contact_id = $request->input('client_contact_id') ??
                             ClientsContactsModel::select('id')
@@ -202,6 +203,7 @@ class QuotationsController extends Controller
         $currentDate = Carbon::now()->toDateString();
         $state = strtolower($client_contact_record[0]->state);
 
+        $total_discount = 0; // Initialize the total_discount variable
         $total_amount = 0;
         $total_cgst = 0;
         $total_sgst = 0;
@@ -226,7 +228,7 @@ class QuotationsController extends Controller
             'sales_person' => Auth::user()->name,
             'sales_contact' => Auth::user()->mobile,
             'sales_email' => Auth::user()->email,
-            'discount' => $discount,
+            'discount' => 0,
             'total' => 0, // Will be updated later
             'cgst' => 0, // Placeholder, will be updated later
             'sgst' => 0, // Placeholder, will be updated later
@@ -240,7 +242,9 @@ class QuotationsController extends Controller
         // Iterate over the products array, calculate and apply tax
         foreach ($products as $product) 
         {
-            $product_details = ProductsModel::find($product['product_id']);
+            $product_details = ProductsModel::where('id', $product['product_id'])
+                                            ->where('company_id', Auth::user()->company_id)
+                                            ->first();
 
             if ($product_details) {
                 $quantity = $product['quantity'];
@@ -294,12 +298,17 @@ class QuotationsController extends Controller
                     'quantity' => $quantity,
                     'unit' => $product['unit'],
                     'price' => $rate,
+                    'discount' => $discount_amount,
                     'hsn' => $product_details->hsn,
                     'tax' => $tax_rate,
                     'cgst' => $cgst,
                     'sgst' => $sgst,
                     'igst' => $igst,
                 ]);
+            }
+
+            else{
+                return response()->json(['message' => 'Sorry, Products not found'], 404);
             }
         }
     
@@ -346,7 +355,8 @@ class QuotationsController extends Controller
             'total_cgst' => $total_cgst,
             'total_sgst' => $total_sgst,
             'total_igst' => $total_igst,
-            'total_amount' => $total_amount
+            'total_amount' => $total_amount,
+            'total_discount' => $total_discount
         ], 201);
     }
 

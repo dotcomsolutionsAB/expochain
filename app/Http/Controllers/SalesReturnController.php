@@ -102,7 +102,6 @@ class SalesReturnController extends Controller
     {
         $request->validate([
             'client_id' => 'required|integer',
-            'name' => 'required|string',
             'sales_return_no' => 'required|string',
             'sales_invoice_no' => 'required|string',
             'currency' => 'required|string',
@@ -110,6 +109,7 @@ class SalesReturnController extends Controller
             'status' => 'required|integer',
             'products' => 'required|array', // For validating array of products
             'products.*.sales_return_id' => 'required|integer',
+            'products.*.quantity' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.godown' => 'required|integer'
         ]);
@@ -149,7 +149,9 @@ class SalesReturnController extends Controller
         foreach ($products as $product) 
         {
 
-            $product_details = ProductsModel::find($product['product_id']);
+            $product_details = ProductsModel::where('id', $product['product_id'])
+                                            ->where('company_id', Auth::user()->company_id)
+                                            ->first();
             
             if ($product_details) 
             {
@@ -159,12 +161,12 @@ class SalesReturnController extends Controller
 
                // Calculate the discount based on category or sub-category
                $sub_category_discount = DiscountModel::select('discount')
-                                                    ->where('client', $request->input('supplier_id'))
+                                                    ->where('client', $request->input('client_id'))
                                                     ->where('sub_category', $product_details->sub_category)
                                                     ->first();
 
                 $category_discount = DiscountModel::select('discount')
-                                                    ->where('client', $request->input('supplier_id'))
+                                                    ->where('client', $request->input('client_id'))
                                                     ->where('category', $product_details->category)
                                                     ->first();
 
@@ -177,7 +179,7 @@ class SalesReturnController extends Controller
                 $tax_amount = $product_total * ($tax_rate / 100);
 
                 // Determine the tax distribution based on the client's state
-                if (strtolower($supplier->state) === 'west bengal') {
+                if (strtolower($client->state) === 'west bengal') {
                     $cgst = $tax_amount / 2;
                     $sgst = $tax_amount / 2;
                     $igst = 0;

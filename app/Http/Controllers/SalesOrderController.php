@@ -127,6 +127,15 @@ class SalesOrderController extends Controller
             'currency' => 'required|string',
             'template' => 'required|integer',
             'status' => 'required|integer',
+            'products.*.product_id' => 'required|integer',
+            'products.*.quantity' => 'required|integer',
+            'addons.*.name' => 'required|string',
+            'addons.*.amount' => 'required|numeric',
+            'addons.*.tax' => 'required|numeric',
+            'addons.*.hsn' => 'required|numeric',
+            'addons.*.cgst' => 'required|numeric',
+            'addons.*.sgst' => 'required|numeric',
+            'addons.*.igst' => 'required|numeric'
         ]);
 
         // Fetch the client details using client_id
@@ -171,7 +180,9 @@ class SalesOrderController extends Controller
 
         // Iterate over the products array and calculate totals
         foreach ($products as $product) {
-            $product_details = ProductsModel::find($product['product_id']);
+            $product_details = ProductsModel::where('id', $product['product_id'])
+                                            ->where('company_id', Auth::user()->company_id)
+                                            ->first();
 
             if ($product_details) {
                 $quantity = $product['quantity'];

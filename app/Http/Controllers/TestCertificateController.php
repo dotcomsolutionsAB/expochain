@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\TestCertificateModel;
 use App\Models\TestCertificateProductsModel;
 use App\Models\ClientsModel;
+use App\Models\ProductsModel;
 use Carbon\Carbon;
 use Auth;
 
@@ -47,16 +48,26 @@ class TestCertificateController extends Controller
         // Iterate over the products array and insert each contact
         foreach ($products as $product) 
         {
-            $product_details = ProductsModel::find($product['product_id']);
+            $product_details = ProductsModel::where('id', $product['product_id'])
+                                            ->where('company_id', Auth::user()->company_id)
+                                            ->first();
 
-            TestCertificateProductsModel::create([
-                'tc_id' => $register_test_certificate['id'],
-                'company_id' => Auth::user()->company_id,
-                'product_id' => $product['product_id'],
-                'product_name' => $product_details->name,
-                'quantity' => $product['quantity'],
-                'sales_invoice_no' => $product['sales_invoice_no'],
-            ]);
+            if ($product_details) 
+            {
+                TestCertificateProductsModel::create([
+                    'tc_id' => $register_test_certificate['id'],
+                    'company_id' => Auth::user()->company_id,
+                    'product_id' => $product['product_id'],
+                    'product_name' => $product_details->name,
+                    'quantity' => $product['quantity'],
+                    'sales_invoice_no' => $product['sales_invoice_no'],
+                ]);
+
+            }
+
+            else{
+                return response()->json(['message' => 'Sorry, Products not found'], 404);
+            }
         }
 
         unset($register_test_certificate['id'], $register_test_certificate['created_at'], $register_test_certificate['updated_at']);
