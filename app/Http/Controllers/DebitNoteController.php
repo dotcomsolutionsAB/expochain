@@ -228,11 +228,11 @@ class DebitNoteController extends Controller
     public function delete_debit_note($id)
     {
         // Fetch the debit note by ID
-        $get_debit_note_id = DebitNoteModel::select('id')
+        $get_debit_note_id = DebitNoteModel::select('id', 'company_id')
                                         ->where('id', $id)
                                         ->first();
 
-        if ($get_debit_note_id) {
+        if ($get_debit_note_id && $get_debit_note_id->company_id === Auth::user()->company_id) {
             // Delete the debit note
             $delete_debit_note = DebitNoteModel::where('id', $id)->delete();
 

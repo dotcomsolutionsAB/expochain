@@ -501,10 +501,17 @@ class SalesInvoiceController extends Controller
     // Delete Sales Invoice
     public function delete_sales_invoice($id)
     {
-        $delete_sales_invoice = SalesInvoiceModel::where('id', $id)->delete();
+        $delete_sales_invoice = SalesInvoiceModel::where('id', $id)
+                                                    ->where('company_id', $company_id)
+                                                    ->delete();
 
-        $delete_sales_invoice_products = SalesInvoiceProductsModel::where('sales_invoice_id', $id)->delete();
-        $delete_sales_invoice_addons = SalesInvoiceAddonsModel::where('sales_invoice_id', $id)->delete();
+        $delete_sales_invoice_products = SalesInvoiceProductsModel::where('sales_invoice_id', $id)
+                                                                    ->where('company_id', $company_id)
+                                                                    ->delete();
+                                                                    
+        $delete_sales_invoice_addons = SalesInvoiceAddonsModel::where('sales_invoice_id', $id)
+                                                                ->where('company_id', $company_id)
+                                                                ->delete();
 
         return $delete_sales_invoice && $delete_sales_invoice_products && $delete_sales_invoice_addons
             ? response()->json(['message' => 'Sales Invoice and associated products/addons deleted successfully!'], 200)

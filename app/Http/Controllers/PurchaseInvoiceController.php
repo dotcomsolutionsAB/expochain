@@ -255,7 +255,7 @@ class PurchaseInvoiceController extends Controller
         ->get();
 
         return isset($get_purchase_invoices) && $get_purchase_invoices->isNotEmpty()
-            ? response()->json(['Purchase Invoices fetched successfully!', 'data' => $get_purchase_invoices], 200)
+            ? response()->json(['Purchase Invoices fetched successfully!', 'data' => $get_purchase_invoices, 'count' => count($get_purchase_invoices)], 200)
             : response()->json(['Failed to fetch Purchase Invoice data'], 404);
     }
 

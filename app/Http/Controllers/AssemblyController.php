@@ -172,13 +172,13 @@ class AssemblyController extends Controller
     public function delete_assembly($id)
     {
         // Try to find the client by the given ID
-        $get_assembly_id = AssemblyModel::select('assembly_id')
+        $get_assembly_id = AssemblyModel::select('assembly_id', 'company_id')
                                         ->where('id', $id)
                                         ->first();
         
         // Check if the client exists
 
-        if ($get_assembly_id) 
+        if ($get_assembly_id && $get_assembly_id->company_id === Auth::user()->company_id) 
         {
             // Delete the client
             $delete_assembly = AssemblyModel::where('id', $id)->delete();

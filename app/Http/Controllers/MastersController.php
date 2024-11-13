@@ -69,7 +69,7 @@ class MastersController extends Controller
         
 
         return isset($get_products) && $get_products !== null
-        ? response()->json(['Fetch data successfully!', 'data' => $get_products], 200)
+        ? response()->json(['Fetch data successfully!', 'data' => $get_products, 'count' => count($get_products)], 200)
         : response()->json(['Failed to fetch data'], 404); 
     }
 
@@ -233,7 +233,7 @@ class MastersController extends Controller
 
     }
 
-    public function get_product($id)
+    public function get_product()
     {
         $get_user_company_id = Auth::user()->company_id;
         
@@ -243,7 +243,7 @@ class MastersController extends Controller
 
 
         return isset($get_product_details) && $get_product_details !== null
-        ? response()->json(['Fetch data successfully!', 'data' => $get_product_details], 200)
+        ? response()->json(['Fetch data successfully!', 'data' => $get_product_details, 'count' => count($get_product_details)], 200)
         : response()->json(['Failed to fetch data'], 404); 
     }
 

@@ -353,9 +353,13 @@ class CreditNoteController extends Controller
     // Delete Credit Note
     public function delete_credit_note($id)
     {
-        $delete_credit_note = CreditNoteModel::where('id', $id)->delete();
+        $delete_credit_note = CreditNoteModel::where('id', $id)
+                                                ->where('company_id', $Auth::user()->company_id)
+                                                ->delete();
 
-        $delete_credit_note_products = CreditNoteProductsModel::where('credit_note_id', $id)->delete();
+        $delete_credit_note_products = CreditNoteProductsModel::where('credit_note_id', $id)
+                                                                ->where('company_id', Auth::user()->company_id)
+                                                                ->delete();
 
         return $delete_credit_note && $delete_credit_note_products
             ? response()->json(['message' => 'Credit Note and associated products deleted successfully!'], 200)

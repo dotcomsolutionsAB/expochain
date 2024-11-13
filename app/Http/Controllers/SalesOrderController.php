@@ -183,7 +183,7 @@ class SalesOrderController extends Controller
                                                         ->where('client', $request->input('client_id'))
                                                         ->where('sub_category', $product_details->sub_category)
                                                         ->first();
-                                                        
+
                 $category_discount = DiscountModel::select('discount')
                                                     ->where('client', $request->input('client_id'))
                                                     ->where('category', $product_details->category)
@@ -463,10 +463,17 @@ class SalesOrderController extends Controller
     // Delete Sales Order
     public function delete_sales_order($id)
     {
-        $delete_sales_order = SalesOrderModel::where('id', $id)->delete();
+        $delete_sales_order = SalesOrderModel::where('id', $id)
+                                                ->where('company_id', $company_id)
+                                                ->delete();
 
-        $delete_sales_order_products = SalesOrderProductsModel::where('sales_order_id', $id)->delete();
-        $delete_sales_order_addons = SalesOrderAddonsModel::where('sales_order_id', $id)->delete();
+        $delete_sales_order_products = SalesOrderProductsModel::where('sales_order_id', $id)
+                                                                ->where('company_id', $company_id)
+                                                                ->delete();
+
+        $delete_sales_order_addons = SalesOrderAddonsModel::where('sales_order_id', $id)
+                                                            ->where('company_id', $company_id)
+                                                            ->delete();
 
         return $delete_sales_order && $delete_sales_order_products && $delete_sales_order_addons
             ? response()->json(['message' => 'Sales Order and associated products/addons deleted successfully!'], 200)

@@ -97,7 +97,9 @@ class FabricationController extends Controller
     public function delete_fabrication($id)
     {
         // Delete the fabrication
-        $delete_fabrication = FabricationModel::where('id', $id)->delete();
+        $delete_fabrication = FabricationModel::where('id', $id)
+                                                ->where('company_id', Auth::user()->company_id)
+                                                ->delete();
 
         // Return success response if deletion was successful
         return $delete_fabrication

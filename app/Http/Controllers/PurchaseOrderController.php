@@ -381,9 +381,9 @@ class PurchaseOrderController extends Controller
     // delete
     public function delete_purchase_order($id)
     {
-        $get_purchase_order_id = PurchaseOrderModel::select('id')->where('id', $id)->first();
+        $get_purchase_order_id = PurchaseOrderModel::select('id', 'company_id')->where('id', $id)->first();
 
-        if ($get_purchase_order_id) {
+        if ($get_purchase_order_id && $get_purchase_order_id->company_id === Auth::user()->company_id) {
             $delete_purchase_order = PurchaseOrderModel::where('id', $id)->delete();
 
             $delete_purchase_order_products = PurchaseOrderProductsModel::where('purchase_order_number', $get_purchase_order_id->id)->delete();

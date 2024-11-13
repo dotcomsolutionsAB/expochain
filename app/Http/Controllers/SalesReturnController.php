@@ -364,9 +364,13 @@ class SalesReturnController extends Controller
     // delete
     public function delete_sales_return($id)
     {
-        $delete_sales_return = SalesReturnModel::where('id', $id)->delete();
+        $delete_sales_return = SalesReturnModel::where('id', $id)
+                                                ->where('company_id', $company_id)
+                                                ->delete();
 
-        $delete_sales_return_products = SalesReturnProductsModel::where('sales_return_id', $id)->delete();
+        $delete_sales_return_products = SalesReturnProductsModel::where('sales_return_id', $id)
+                                                                ->where('company_id', $company_id)
+                                                                ->delete();
 
         return $delete_sales_return && $delete_sales_return_products
             ? response()->json(['message' => 'Sales Return and associated products deleted successfully!'], 200)

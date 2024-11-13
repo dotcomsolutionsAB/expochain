@@ -170,11 +170,11 @@ class StockTransferController extends Controller
     public function delete_stock_transfer($id)
     {
         // Fetch the transfer by ID
-        $get_transfer_id = StockTransferModel::select('transfer_id')
+        $get_transfer_id = StockTransferModel::select('transfer_id', 'company_id')
                                             ->where('id', $id)
                                             ->first();
 
-        if ($get_transfer_id) {
+        if ($get_transfer_id && $get_transfer_id->company_id === Auth::user()->company_id) {
             // Delete the stock transfer
             $delete_stock_transfer = StockTransferModel::where('id', $id)->delete();
 

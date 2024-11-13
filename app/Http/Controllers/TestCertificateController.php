@@ -157,9 +157,9 @@ class TestCertificateController extends Controller
     // delete
     public function delete_test_certificate($id)
     {
-        $get_test_certificate_id = TestCertificateModel::select('id')->where('id', $id)->first();
+        $get_test_certificate_id = TestCertificateModel::select('id', 'company_id')->where('id', $id)->first();
 
-        if ($get_test_certificate_id) {
+        if ($get_test_certificate_id && $get_test_certificate_id->company_id === Auth::user()->company_id) {
             $delete_test_certificate = TestCertificateModel::where('id', $id)->delete();
 
             $delete_test_certificate_products = TestCertificateProductsModel::where('tc_id', $get_test_certificate_id->id)->delete();

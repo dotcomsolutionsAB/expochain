@@ -574,10 +574,18 @@ class QuotationsController extends Controller
     // Delete Quotations
     public function delete_quotations($id)
     {
-        $delete_quotation = QuotationsModel::where('id', $id)->delete();
-        $delete_quotation_products = QuotationProductsModel::where('quotation_id', $id)->delete();
-        $delete_quotation_addons = QuotationAddonsModel::where('quotation_id', $id)->delete();
-        $delete_quotation_terms = QuotationTermsModel::where('quotation_id', $id)->delete();
+        $delete_quotation = QuotationsModel::where('id', $id)
+                                            ->where('company_id', $company_id)
+                                            ->delete();
+        $delete_quotation_products = QuotationProductsModel::where('quotation_id', $id)
+                                                            ->where('company_id', $company_id)
+                                                            ->delete();
+        $delete_quotation_addons = QuotationAddonsModel::where('quotation_id', $id)
+                                                        ->where('company_id', $company_id)
+                                                        ->delete();
+        $delete_quotation_terms = QuotationTermsModel::where('quotation_id', $id)
+                                                       ->where('company_id', $company_id)
+                                                       ->delete();
 
         return $delete_quotation && $delete_quotation_products && $delete_quotation_addons && $delete_quotation_terms
             ? response()->json(['message' => 'Quotation and associated data deleted successfully!'], 200)

@@ -278,9 +278,9 @@ class PurchaseReturnController extends Controller
     // delete
     public function delete_purchase_return($id)
     {
-        $get_purchase_return_id = PurchaseReturnModel::select('id')->where('id', $id)->first();
+        $get_purchase_return_id = PurchaseReturnModel::select('id', 'company_id')->where('id', $id)->first();
 
-        if ($get_purchase_return_id) {
+        if ($get_purchase_return_id && $get_purchase_return_id->company_id === Auth::user()->company_id) {
             $delete_purchase_return = PurchaseReturnModel::where('id', $id)->delete();
 
             $delete_purchase_return_products = PurchaseReturnProductsModel::where('purchase_return_number', $get_purchase_return_id->id)->delete();

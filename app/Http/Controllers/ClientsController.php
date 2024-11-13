@@ -206,13 +206,13 @@ class ClientsController extends Controller
     public function delete_clients($id)
     {
         // Try to find the client by the given ID
-        $get_client_id = ClientsModel::select('customer_id')
+        $get_client_id = ClientsModel::select('customer_id', 'company_id')
                                      ->where('id', $id)
                                      ->first();
         
         // Check if the client exists
 
-        if ($get_client_id) 
+        if ($get_client_id && $get_client_id->company_id === Auth::user()->company_id) 
         {
             // Delete the client
             $delete_clients = ClientsModel::where('id', $id)->delete();
