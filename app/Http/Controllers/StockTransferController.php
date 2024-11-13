@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\StockTransferModel;
 use App\Models\StockTransferProductsModel;
 use App\Models\ProductsModel;
+use Carbon\Carbon;
 use Auth;
 
 class StockTransferController extends Controller
@@ -18,26 +19,27 @@ class StockTransferController extends Controller
         $request->validate([
             'godown_from' => 'required|string',
             'godown_to' => 'required|string',
-            'transfer_date' => 'required|date',
             'status' => 'required|string',
             'log_user' => 'required|string',
             'products' => 'required|array', // Validating array of products
             'products.*.product_id' => 'required|integer',
-            'products.*.product_name' => 'required|string',
-            'products.*.description' => 'nullable|string',
             'products.*.quantity' => 'required|integer',
-            'products.*.unit' => 'required|string',
             'products.*.status' => 'required|string',
         ]);
     
-        $transfer_id = rand(1111111111,9999999999);
+        do {
+            $transfer_id = rand(1111111111,9999999999);
+            $exists = StockTransferModel::where('transfer_id', $transfer_id)->exists();
+        } while ($exists);
+
+        $currentDate = Carbon::now()->toDateString();
 
         $register_stock_transfer = StockTransferModel::create([
             'transfer_id' => $transfer_id,
             'company_id' => Auth::user()->company_id,
             'godown_from' => $request->input('godown_from'),
             'godown_to' => $request->input('godown_to'),
-            'transfer_date' => $request->input('transfer_date'),
+            'transfer_date' => $currentDate,
             'status' => $request->input('status'),
             'log_user' => $request->input('log_user'),
         ]);
@@ -47,14 +49,16 @@ class StockTransferController extends Controller
         // Iterate over the products array and insert each contact
         foreach ($products as $product) 
         {
+            $product_details = ProductsModel::find($product['product_id']);
+
             StockTransferProductsModel::create([
                 'transfer_id' => $transfer_id,
                 'company_id' => Auth::user()->company_id,
                 'product_id' => $product['product_id'],
-                'product_name' => $product['product_name'],
-                'description' => $product['description'],
+                'product_name' => $product_details->name,
+                'description' => $product_details->description,
                 'quantity' => $product['quantity'],
-                'unit' => $product['unit'],
+                'unit' => $product_details->unit,
                 'status' => $product['status'],
             ]);
         }

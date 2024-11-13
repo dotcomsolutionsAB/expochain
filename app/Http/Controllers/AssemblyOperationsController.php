@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\AssemblyOperationModel;
 use App\Models\AssemblyOperationProductsModel;
 use App\Models\ProductsModel;
+use Carbon\Carbon;
 use Auth;
 
 class AssemblyOperationsController extends Controller
@@ -16,7 +17,6 @@ class AssemblyOperationsController extends Controller
     public function add_assembly_operations(Request $request)
     {
         $request->validate([
-            'assembly_operations_date' => 'required|date',
             'type' => 'required|in:assemble,de-assemble',
             'product_id' => 'required|integer',
             'product_name' => 'required|string',
@@ -34,11 +34,17 @@ class AssemblyOperationsController extends Controller
             'products.*.amount' => 'required|numeric',
         ]);
     
-        $assembly_operations_id = rand(1111111111,9999999999);
+        do{
+            $assembly_operations_id = rand(1111111111,9999999999);
+
+            $exists = AssemblyOperationModel::where('assembly_operations_id', $assembly_operations_id)->exists();
+        }while ($exists);
+
+        $currentDate = Carbon::now()->toDateString();
 
         $register_assembly_operations = AssemblyOperationModel::create([
             'assembly_operations_id' => $assembly_operations_id,
-            'assembly_operations_date' => $request->input('assembly_operations_date'),
+            'assembly_operations_date' => $currentDate,
             'company_id' => Auth::user()->company_id,
             'type' => $request->input('type'),
             'product_id' => $request->input('product_id'),
