@@ -63,14 +63,13 @@ class MastersController extends Controller
     }
 
     public function view_products()
-    {
-        $get_user_id = Auth::id();
-        
-        $get_user_details = User::select('id','name','email','mobile','address_line_1','address_line_2','city','pincode','gstin','state','country')->where('id', $get_user_id)->get();
+    {        
+        $get_products = ProductsModel::select('serial_number','company_id','name','alias','description','type','brand','category','sub_category','cost_price','sale_price', 'unit', 'hsn', 'tax')
+                                        ->get();
         
 
-        return isset($get_user_details) && $get_user_details !== null
-        ? response()->json(['Fetch data successfully!', 'data' => $get_user_details], 200)
+        return isset($get_products) && $get_products !== null
+        ? response()->json(['Fetch data successfully!', 'data' => $get_products], 200)
         : response()->json(['Failed to fetch data'], 404); 
     }
 
@@ -232,6 +231,20 @@ class MastersController extends Controller
             'errors' => $errors,
         ], 200);
 
+    }
+
+    public function get_product($id)
+    {
+        $get_user_company_id = Auth::user()->company_id;
+        
+        $get_product_details = ProductsModel::select('serial_number','name','alias','description','type','brand','category','sub_category','cost_price','sale_price', 'unit', 'hsn', 'tax')
+                                                ->where('company_id', $get_user_company_id)
+                                                ->get();
+
+
+        return isset($get_product_details) && $get_product_details !== null
+        ? response()->json(['Fetch data successfully!', 'data' => $get_product_details], 200)
+        : response()->json(['Failed to fetch data'], 404); 
     }
 
     // finacial year table
