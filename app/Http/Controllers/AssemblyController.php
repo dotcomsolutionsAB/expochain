@@ -241,8 +241,12 @@ class AssemblyController extends Controller
                 continue; // Skip this record if the composite product is not found
             }
 
-            // Generate a random assembly ID
-            $assembly_id = rand(1111111111, 9999999999);
+            do {
+                // Generate a random assembly ID
+                $assembly_id = rand(1111111111, 9999999999);
+                
+                $exists = AssemblyModel::where('assembly_id', $assembly_id)->exists();
+        } while ($exists);
 
             // Prepare Assembly data
             $assemblyData = [

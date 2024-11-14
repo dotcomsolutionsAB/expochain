@@ -40,7 +40,11 @@ class SuppliersController extends Controller
             return response()->json(['error' => 'The combination of name, GSTIN, and company ID must be unique.'], 422);
         }
 
-        $supplier_id = rand(1111111111,9999999999);
+        do {
+            $supplier_id = rand(1111111111,9999999999);
+
+            $exists = SuppliersModel::where('supplier_id', $supplier_id)->exists();
+        } while ($exists);
 
         $contacts = $request->input('contacts');
 
@@ -283,8 +287,12 @@ class SuppliersController extends Controller
                 continue;
             }
     
+            do {
             // Generate unique supplier ID
             $supplier_id = rand(1111111111, 9999999999);
+            
+            $exists = SuppliersModel::where('supplier_id', $supplier_id)->exists();
+        } while ($exists);
     
             // Insert supplier record
             try {

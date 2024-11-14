@@ -243,8 +243,13 @@ class AssemblyOperationsController extends Controller
         $errors = [];
 
         foreach ($data as $record) {
-            // Generate a random assembly_operations_id
-            $assembly_operations_id = rand(1111111111, 9999999999);
+
+            do {
+                // Generate a random assembly_operations_id
+                $assembly_operations_id = rand(1111111111, 9999999999);
+                
+                $exists = AssemblyOperationModel::where('assembly_operations_id', $assembly_operations_id)->exists();
+            } while ($exists);
 
             // Generate a static date for assembly_operations_date
             $assembly_operations_date = '2021-05-13';
