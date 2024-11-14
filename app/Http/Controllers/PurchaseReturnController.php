@@ -66,7 +66,9 @@ class PurchaseReturnController extends Controller
         // Iterate over the products array and insert each contact
         foreach ($products as $product) 
         {
-            $product_details = ProductsModel::find($product['product_id']);
+            $product_details = ProductsModel::where('id', $product['product_id'])
+                                            ->where('company_id', Auth::user()->company_id)
+                                            ->first();
             
             if ($product_details) 
             {
