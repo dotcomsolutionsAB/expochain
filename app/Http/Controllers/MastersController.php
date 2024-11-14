@@ -553,6 +553,18 @@ class MastersController extends Controller
         ], 200);
     }
 
+    public function get_pdf_template()
+    {        
+        $pdf_template = PdfTemplateModel::select('name','phone_number','mobile','email','address_line_1', 'address_line_2','city','pincode','state','country', 'gstin', 'bank_number', 'bank_account_name', 'bank_account_number', 'bank_ifsc','header', 'footer')
+                                            ->where('company_id', Auth::user()->company_id)
+                                            ->get();
+
+
+        return isset($pdf_template) && $pdf_template !== null
+        ? response()->json(['Fetch data successfully!', 'data' => $pdf_template, 'count' => count($pdf_template)], 200)
+        : response()->json(['Failed to fetch data'], 404); 
+    }
+
     // uploads setup table
     //create
     // public function add_pdf_template(Request $request)

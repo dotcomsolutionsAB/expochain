@@ -56,6 +56,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/products', [MastersController::class, 'view_products']);
     Route::post('/update_products/{id}', [MastersController::class, 'edit_products']);
     Route::delete('/products/{id}', [MastersController::class, 'delete_products']);
+
     Route::get('/get_products', [MastersController::class, 'get_product']);
 
     Route::get('products_migrate', [MastersController::class, 'importProducts']);
@@ -84,6 +85,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/brand', [MastersController::class, 'brand']);
     Route::post('/update_brand/{id?}', [MastersController::class, 'edit_brand']);
     Route::delete('/brand/{id?}', [MastersController::class, 'delete_brand']);
+
+    Route::get('/get_pdf_template', [MastersController::class, 'get_pdf_template']);
 
     Route::get('/pdf_template_migrate', [MastersController::class, 'importPdfTemplates']);
 
