@@ -26,7 +26,7 @@ return new class extends Migration
             $table->timestamps();
 
             // Add a composite unique index for name, gstin, and contact_id
-            $table->unique(['name', 'gstin', 'contact_id'], 'unique_supplier_name_gstin_company_id');
+            $table->unique(['name', 'gstin', 'company_id'], 'unique_supplier_name_gstin_company_id');
         });
     }
 
