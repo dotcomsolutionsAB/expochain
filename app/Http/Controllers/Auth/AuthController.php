@@ -137,7 +137,19 @@ class AuthController extends Controller
     
             else {
                 $request->validate([
-                    'email' => ['required', 'string', 'min:12', 'max:14'],
+                    // 'email' => ['required', 'string', 'min:9'],
+                    'email' => [
+                    'required',
+                    'string',
+                    'email',
+                    function ($attribute, $value, $fail) {
+                        // Check for custom email validation to include shortest domain like '.bit'
+                        $pattern = '/^[\w\.\-]+@[\w\-]+\.[a-zA-Z]{2,3}$/';
+                        if (!preg_match($pattern, $value)) {
+                            $fail($attribute . ' is not a valid email address.');
+                        }
+                    },
+                ],
                     'password' => 'required',
                     'company_id' => 'required'
                 ]);
