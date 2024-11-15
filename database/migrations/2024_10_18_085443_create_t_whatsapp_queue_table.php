@@ -13,8 +13,7 @@ return new class extends Migration
     {
         Schema::create('t_whatsapp_queue', function (Blueprint $table) {
             $table->id();
-            $table->integer('jamiat_id');
-            $table->integer('family_id');
+            $table->integer('company_id');
             $table->string('group_id')->nullable();
             $table->string('callback_url')->nullable();
             $table->string('to');

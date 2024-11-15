@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('t_pdf_template', function (Blueprint $table) {
             $table->id();
+            $table->integer('company_id');
             $table->string('name');
             $table->string('phone_number');
             $table->string('mobile');

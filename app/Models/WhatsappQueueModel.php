@@ -10,8 +10,7 @@ class WhatsappQueueModel extends Model
     protected $table = 't_whatsapp_queue';
 
     protected $fillable = [
-        'jamiat_id',
-        'family_id',
+        'company_id',
         'group_id',
         'callback_url',
         'to',
