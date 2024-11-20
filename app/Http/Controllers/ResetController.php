@@ -22,9 +22,9 @@ class ResetController extends Controller
         $get_year = $year . '-' . $next_year;
 
         $get_records = OpeningStockModel::select('product_id', 'quantity')
-                          ->where('year', $get_year)
-                          ->where('company_id', Auth::user()->company_id)
-                          ->get();
+                                        ->where('year', $get_year)
+                                        ->where('company_id', Auth::user()->company_id)
+                                        ->get();
 
         foreach($get_records as $records)
         {
@@ -37,8 +37,8 @@ class ResetController extends Controller
 
                                          
             ClosingStockModel::where('product_id', $records->product_id)
-                                ->where('company_id', Auth::user()->company_id)
-                                ->update(['quantity' => ($records->quantity -$get_sales_invoice->quantity)]);
+                              ->where('company_id', Auth::user()->company_id)
+                              ->update(['quantity' => ($records->quantity -$get_sales_invoice->quantity)]);
         }
     }
 }
