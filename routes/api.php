@@ -21,6 +21,7 @@ use App\Http\Controllers\StockTransferController;
 use App\Http\Controllers\AssemblyController;
 use App\Http\Controllers\AssemblyOperationsController;
 use App\Http\Controllers\FabricationController;
+use App\Http\Controllers\ResetController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -184,6 +185,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/fabrication', [FabricationController::class, 'view_fabrication']);
     Route::post('/update_fabrication/{id?}', [FabricationController::class, 'edit_fabrication']);
     Route::delete('/fabrication/{id?}', [FabricationController::class, 'delete_fabrication']);
+
+    Route::post('/opening_stock', [MastersController::class, 'add_opening_stock']);
+    Route::get('/opening_stock', [MastersController::class, 'view_opening_stock']);
+
+    Route::post('/closing_stock', [MastersController::class, 'add_closing_stock']);
+    Route::get('/closing_stock', [MastersController::class, 'view_closing_stock']);
+
+    Route::get('/reset_calculation', [ResetController::class, 'stock_calculation']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
 });

@@ -8,6 +8,7 @@ use App\Models\PurchaseInvoiceModel;
 use App\Models\PurchaseInvoiceProductsModel;
 use App\Models\SuppliersModel;
 use App\Models\ProductsModel;
+use App\Models\DiscountModel;
 use Carbon\Carbon;
 use Auth;
 
@@ -119,6 +120,7 @@ class PurchaseInvoiceController extends Controller
             'products' => 'required|array', // Validating array of products
             'products.*.product_id' => 'required|integer',
             'products.*.quantity' => 'required|integer',
+            'products.*.sold' => 'required|integer',
             'products.*.godown' => 'required|integer',
         ]);
 
@@ -218,6 +220,7 @@ class PurchaseInvoiceController extends Controller
                     'unit' => $product_details->unit,
                     'price' => $rate,
                     'discount' => $discount_amount,
+                    'sold' => $product['sold'],
                     'hsn' => $product_details->hsn,
                     'tax' => $product_details->tax,
                     'cgst' => $cgst,

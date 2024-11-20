@@ -31,7 +31,7 @@ class SuppliersController extends Controller
         $company_id = Auth::user()->company_id;
 
         // Check if the combination of name, gstin, and contact_id is unique
-        $exists = Client::where('name', $request->input('name'))
+        $exists = SuppliersModel::where('name', $request->input('name'))
                         ->where('gstin', $request->input('gstin'))
                         ->where('company_id', $company_id)
                         ->exists();

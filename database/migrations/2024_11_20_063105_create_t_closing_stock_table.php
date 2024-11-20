@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('t_closing_stock', function (Blueprint $table) {
             $table->id();
             $table->integer('company_id');
-            $table->integer('year');
+            $table->string('year');
             $table->integer('godown_id');
             $table->integer('product_id');
             $table->integer('quantity');

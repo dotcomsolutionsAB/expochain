@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('t_purchase_invoice_products', function (Blueprint $table) {
             $table->id();
+            $table->integer('company_id');
             $table->string('purchase_invoice_number');
             $table->integer('product_id');
             $table->string('product_name');

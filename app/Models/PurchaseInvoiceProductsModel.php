@@ -20,6 +20,7 @@ class PurchaseInvoiceProductsModel extends Model
         'unit',
         'price',
         'discount',
+        'sold',
         'hsn',
         'tax',
         'cgst',

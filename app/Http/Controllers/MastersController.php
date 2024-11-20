@@ -10,6 +10,8 @@ use App\Models\GodownModel;
 use App\Models\CategoryModel;
 use App\Models\SubCategoryModel;
 use App\Models\BrandModel;
+use App\Models\OpeningStockModel;
+use App\Models\ClosingStockModel;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Auth;
@@ -974,5 +976,92 @@ class MastersController extends Controller
         return isset($register_company) && $register_company !== null
         ? response()->json(['Company registered successfully!', 'data' => $register_company], 201)
         : response()->json(['Failed to register Products record'], 400);
+    }
+
+    // create
+    public function add_opening_stock(Request $request)
+    {
+        // Validate the request
+        $validatedData = $request->validate([
+            'company_id' => 'required|integer',
+            'year' => 'required|string',
+            'godown_id' => 'required|integer',
+            'product_id' => 'required|integer',
+            'quantity' => 'required|integer',
+            'value' => 'required|numeric',
+            'sold' => 'required|integer',
+        ]);
+
+        // Insert into the database
+        $register_opening_stock =  OpeningStockModel::create([
+            'company_id' => $validatedData['company_id'],
+            'year' => $validatedData['year'],
+            'godown_id' => $validatedData['godown_id'],
+            'product_id' => $validatedData['product_id'],
+            'quantity' => $validatedData['quantity'],
+            'value' => $validatedData['value'],
+            'sold' => $validatedData['sold'],
+        ]);
+
+        unset($register_opening_stock['id'], $register_opening_stock['created_at'], $register_opening_stock['updated_at']);
+
+        return isset($register_opening_stock) && $register_opening_stock !== null
+            ? response()->json(['message' => 'Opening Stock Record registered successfully!',  'data' => $register_opening_stock], 201)
+            : response()->json(['message' => 'Failed to register Opening Stock Record'], 400);
+    }
+
+    public function view_opening_stock()
+    {
+        // Fetch records with only the required columns
+        $get_opening_stock = OpeningStockModel::select('company_id', 'year', 'godown_id', 'product_id', 'quantity', 'value', 'sold')
+                                    ->get();
+
+        return isset($get_opening_stock) && $get_opening_stock->isNotEmpty()
+        ? response()->json(['Opening Stock data successfully!', 'data' => $get_opening_stock, 'count' => count($get_opening_stock)], 200)
+        : response()->json(['Failed to fetch data'], 404); 
+    }
+
+    
+    // create
+    public function add_closing_stock(Request $request)
+    {
+        // Validate the request
+        $validatedData = $request->validate([
+            'company_id' => 'required|integer',
+            'year' => 'required|string',
+            'godown_id' => 'required|integer',
+            'product_id' => 'required|integer',
+            'quantity' => 'required|integer',
+            'value' => 'required|numeric',
+            'sold' => 'required|integer',
+        ]);
+
+        // Insert into the database
+        $register_closing_stock =  ClosingStockModel::create([
+            'company_id' => $validatedData['company_id'],
+            'year' => $validatedData['year'],
+            'godown_id' => $validatedData['godown_id'],
+            'product_id' => $validatedData['product_id'],
+            'quantity' => $validatedData['quantity'],
+            'value' => $validatedData['value'],
+            'sold' => $validatedData['sold'],
+        ]);
+
+        unset($register_closing_stock['id'], $register_closing_stock['created_at'], $register_closing_stock['updated_at']);
+
+        return isset($register_closing_stock) && $register_closing_stock !== null
+            ? response()->json(['message' => 'Closing Stock Record registered successfully!',  'data' => $register_closing_stock], 201)
+            : response()->json(['message' => 'Failed to register Closing Stock Record'], 400);
+    }
+
+    public function view_closing_stock()
+    {
+        // Fetch records with only the required columns
+        $get_closing_stock = ClosingStockModel::select('company_id', 'year', 'godown_id', 'product_id', 'quantity', 'value', 'sold')
+                                    ->get();
+
+        return isset($get_closing_stock) && $get_closing_stock->isNotEmpty()
+        ? response()->json(['Closing Stock data successfully!', 'data' => $get_closing_stock, 'count' => count($get_closing_stock)], 200)
+        : response()->json(['Failed to fetch data'], 404); 
     }
 }

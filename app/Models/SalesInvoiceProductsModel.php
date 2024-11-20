@@ -20,6 +20,8 @@ class SalesInvoiceProductsModel extends Model
         'unit',
         'price',
         'discount',
+        'purchase_invoice_products_id',
+        'rate',
         'hsn',
         'tax',
         'cgst',
