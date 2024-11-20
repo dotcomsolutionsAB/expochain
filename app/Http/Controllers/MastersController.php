@@ -22,26 +22,26 @@ class MastersController extends Controller
     public function add_products(Request $request)
     {
         $request->validate([
-            'serial_number' => 'required',
-            'name' => 'required',
-            'alias	' => 'required|string',
+            'serial_number' => 'required|integer',
+            'name' => 'required|string',
+            'alias' => 'required|string',
             'description' => 'required|string',
             'type' => 'required|string',
             'brand' => 'required|string',
             'category' => 'required|string',
             'sub_category' => 'required|string',
-            'cost_price' => 'required',
-            'sale_price' => 'required',
-            'unit' => 'required',
+            'cost_price' => 'required|numeric',
+            'sale_price' => 'required|numeric',
+            'unit' => 'required|string',
             'hsn' => 'required|string',
-            'tax' => 'required',
+            'tax' => 'required|numeric',
         ]);
 
         $register_products = ProductsModel::create([
-            'serial_number' => $request->input('supplier_id'),
+            'serial_number' => $request->input('serial_number'),
             'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
-            'alias	' => $request->input('alias'),
+            'alias' => $request->input('alias'),
             'description' => $request->input('description'),
             'type' => $request->input('type'),
             'brand' => $request->input('brand'),
@@ -52,7 +52,6 @@ class MastersController extends Controller
             'unit' => $request->input('unit'),
             'hsn' => $request->input('hsn'),
             'tax' => $request->input('tax'),
-
         ]);
         
         unset($register_products['id'], $register_products['created_at'], $register_products['updated_at']);
@@ -68,35 +67,35 @@ class MastersController extends Controller
                                         ->get();
         
 
-        return isset($get_products) && $get_products !== null
+        return isset($get_products) && $get_products !== null && count($get_products) > 0
         ? response()->json(['Fetch data successfully!', 'data' => $get_products, 'count' => count($get_products)], 200)
-        : response()->json(['Failed to fetch data'], 404); 
+        : response()->json(['Sorry, No products found!'], 404); 
     }
 
     // update
     public function edit_products(Request $request, $id)
     {
         $request->validate([
-            'serial_number' => 'required',
-            'name' => 'required',
-            'alias	' => 'required|string',
+            'serial_number' => 'required|integer',
+            'name' => 'required|string',
+            'alias' => 'required|string',
             'description' => 'required|string',
             'type' => 'required|string',
             'brand' => 'required|string',
             'category' => 'required|string',
             'sub_category' => 'required|string',
-            'cost_price' => 'required',
-            'sale_price' => 'required',
-            'unit' => 'required',
+            'cost_price' => 'required|numeric',
+            'sale_price' => 'required|numeric',
+            'unit' => 'required||string',
             'hsn' => 'required|string',
-            'tax' => 'required',
+            'tax' => 'required|numeric',
         ]);
 
         $update_products = ProductsModel::where('id', $id)
         ->update([
-            'serial_number' => $request->input('supplier_id'),
+            'serial_number' => $request->input('serial_number'),
             'name' => $request->input('name'),
-            'alias	' => $request->input('alias'),
+            'alias' => $request->input('alias'),
             'description' => $request->input('description'),
             'type' => $request->input('type'),
             'brand' => $request->input('brand'),
