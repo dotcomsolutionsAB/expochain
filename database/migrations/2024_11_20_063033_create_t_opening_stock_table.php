@@ -16,6 +16,7 @@ return new class extends Migration
             $table->integer('company_id');
             $table->integer('year');
             $table->integer('godown_id');
+            $table->integer('product_id');
             $table->integer('quantity');
             $table->float('value');
             $table->integer('sold');
