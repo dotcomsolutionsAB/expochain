@@ -24,6 +24,8 @@ return new class extends Migration
             $table->string('unit');
             $table->float('price');
             $table->float('discount');
+            $table->integer('purchase_invoice_products_id');
+            $table->float('rate');
             $table->string('hsn');
             $table->float('tax');
             $table->float('cgst');

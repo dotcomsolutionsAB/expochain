@@ -18,6 +18,7 @@ return new class extends Migration
             $table->integer('godown_id');
             $table->integer('quantity');
             $table->float('value');
+            $table->integer('sold');
             $table->timestamps();
         });
     }

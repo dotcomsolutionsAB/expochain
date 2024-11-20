@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string('unit');
             $table->float('price');
             $table->float('discount');
+            $table->integer('sold');
             $table->string('hsn');
             $table->float('tax');
             $table->float('cgst');
