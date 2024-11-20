@@ -348,6 +348,8 @@ class QuotationsController extends Controller
             ]);
         }
     
+        unset($register_quotations['id'], $register_quotations['created_at'], $register_quotations['updated_at']);
+        
         // Return the response
         return response()->json([
             'message' => 'Quotations registered successfully!',

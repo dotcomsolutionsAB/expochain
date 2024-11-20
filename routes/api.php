@@ -91,7 +91,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/pdf_template_migrate', [MastersController::class, 'importPdfTemplates']);
 
     Route::post('/add_quotations', [QuotationsController::class, 'add_quotations']);
-    Route::get('/quotations', [QuotationsController::class, 'quotations']);
+    Route::get('/quotations', [QuotationsController::class, 'view_quotations']);
     Route::post('/update_quotations/{id?}', [QuotationsController::class, 'edit_quotations']);
     Route::delete('/quotations/{id?}', [QuotationsController::class, 'delete_quotations']);
 
