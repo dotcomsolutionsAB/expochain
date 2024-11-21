@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('t_reset_queue', function (Blueprint $table) {
             $table->id();
             $table->integer('company_id');
-            $table->integer('product');
+            $table->integer('product_id');
+            $table->enum('status', ['0', '1']);
             $table->timestamps();
         });
     }

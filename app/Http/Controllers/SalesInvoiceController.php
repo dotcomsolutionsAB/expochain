@@ -12,6 +12,7 @@ use App\Models\ClientsModel;
 use App\Models\ClientsContactsModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
+use App\Http\Controllers\ResetController;
 use Carbon\Carbon;
 use Auth;
 
@@ -137,11 +138,13 @@ class SalesInvoiceController extends Controller
             'status' => 'required|integer',
             'commission' => 'required|numeric',
             'cash' => 'required|numeric',
+            'products' => 'required|array',
             'products.*.product_id' => 'required|integer',
             'products.*.quantity' => 'required|integer',
             'products.*.godown' => 'required|string',
             'products.*.purchase_invoice_products_id' => 'required|integer',
             'products.*.rate' => 'required|numeric',
+            'addons' => 'required|array',
             'addons.*.name' => 'required|string',
             'addons.*.amount' => 'required|numeric',
             'addons.*.tax' => 'required|numeric',
@@ -149,7 +152,7 @@ class SalesInvoiceController extends Controller
             'addons.*.cgst' => 'required|numeric',
             'addons.*.sgst' => 'required|numeric',
             'addons.*.igst' => 'required|numeric'
-        ]);
+        ]);  
 
         // Fetch the client details using client_id
         $client = ClientsModel::find($request->input('client_id'));
@@ -261,6 +264,7 @@ class SalesInvoiceController extends Controller
                     'igst' => $igst,
                     'godown' => $product['godown'],
                 ]);
+
             }
             else{
                 return response()->json(['message' => 'Sorry, Products not found'], 404);
@@ -292,6 +296,26 @@ class SalesInvoiceController extends Controller
         }
 
         unset($register_sales_invoice['id'], $register_sales_invoice['created_at'], $register_sales_invoice['updated_at']);
+
+        $productIds = array_column($request->input('products'), 'product_id');
+
+        // add to `reset table`
+        foreach ($productIds as $reset_product) {
+            $get_reset_product = new ResetController();
+
+            $resetRequest = new \Illuminate\Http\Request([
+                'product_id' => $reset_product,
+            ]);
+
+            $reset_response = ($get_reset_product->make_reset_queue($resetRequest))->getData()->message;
+            
+            $stockCalculationResponse  = $get_reset_product->stock_calculation($resetRequest);
+        }
+
+        // call `reset-controller` for `reset-calculation`
+        $get_sells_record = new ResetController();
+        $get_sells_record->ResetController($product['product_id']);
+
 
         return response()->json([
             'message' => 'Sales Invoice registered successfully!',
