@@ -53,41 +53,50 @@ class ResetController extends Controller
 
         $get_year = $year . '-' . $next_year;
 
-        // $get_records = OpeningStockModel::select('product_id', 'quantity')
-        //                                 ->where('year', $get_year)
-        //                                 ->where('company_id', Auth::user()->company_id)
-        //                                 ->get();
+        // opening stock quantity
+        $opening_stock = OpeningStockModel::select('quantity')
+                          ->where('company_id', Auth::user()->company_id)
+                          ->where('product_id', $id)
+                          ->first();
+        
+        $opening_stock_quantity = $opening_stock ? $opening_stock->quantity : 0; // Safely handle null
+
+        // reset `opening stock`
         OpeningStockModel::where('year', $get_year)
                         ->where('company_id', Auth::user()->company_id)
                         ->where('product_id', $id)
                         ->update(['sold' => 0]);
-
-        // foreach($get_records as $records)
-        // {
+        
+        // reset sold items
         PurchaseInvoiceProductsModel::where('product_id', $id)->update(['sold' => 0]);
+        
+        // Fetch sold items
+        $sales = SalesInvoiceModel::select(DB::raw('SUM(quantity) as total_sold'))
+                                    ->where('company_id', Auth::user()->company_id)
+                                    ->groupBy('product_id', $id)
+                                    ->first();
 
-        $get_sales_invoice = SalesInvoiceProductsModel::select('quantity', 'purchase_invoice_products_id')
-                                                        ->where('product_id', $id)
-                                                        ->where('company_id', Auth::user()->company_id)
-                                                        ->first();
-
-                                        // o/s sold e add hobe quantity from SalesInvoiceProductsModel
+        $total_sold = $sales ? $sales->total_sold : 0; // Safely handle null
 
         // update records to `opening_stock` at `sold`
         OpeningStockModel::where('product_id', $id)
                             ->where('company_id', Auth::user()->company_id)
-                            ->update(['sold' => ($get_sales_invoice->quantity)]);
+                            ->update(['sold' => min($total_sold, $opening_stock_quantity)]);
 
-        $result = OpeningStockModel::where('product_id', $id)
+        // update records to `purchase_invoice_stock` at `sold`
+        PurchaseInvoiceProductsModel::where('product_id', $id)
                                     ->where('company_id', Auth::user()->company_id)
-                                    ->whereColumn('quantity', 'sold')
-                                    ->get();
+                                    ->update(['sold' => $total_sold]);
 
-        if($result != null)
-        {
-            PurchaseInvoiceProductsModel::where('product_id', $id)
-                                         ->where('company_id', Auth::user()->company_id) 
-                                         ->update(['sold' => ($get_sales_invoice->quantity)]);
+        // Check and update `closing_stock`
+        if ($sales->total_sold > $opening_stock_quantity) {
+
+            $left_sell_amount = ($total_sold) - ($opening_stock_quantity);
+
+            ClosingStockModel::where('year', $get_year)
+                        ->where('company_id', Auth::user()->company_id)
+                        ->where('product_id', $id)
+                        ->update(['sold' => $left_sell_amount]);
         }
     }
 }

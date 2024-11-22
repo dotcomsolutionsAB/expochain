@@ -308,14 +308,10 @@ class SalesInvoiceController extends Controller
             ]);
 
             $reset_response = ($get_reset_product->make_reset_queue($resetRequest))->getData()->message;
-            
-            $stockCalculationResponse  = $get_reset_product->stock_calculation($resetRequest);
+
+            // call `reset-controller` for `reset-calculation`
+            $stockCalculationResponse  = $get_reset_product->stock_calculation($reset_product);
         }
-
-        // call `reset-controller` for `reset-calculation`
-        $get_sells_record = new ResetController();
-        $get_sells_record->ResetController($product['product_id']);
-
 
         return response()->json([
             'message' => 'Sales Invoice registered successfully!',
