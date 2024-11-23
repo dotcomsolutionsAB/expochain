@@ -10,6 +10,7 @@ use App\Models\SalesInvoiceProductsModel;
 use App\Models\ResetQueueModel;
 use Carbon\Carbon;
 use Auth;
+use DB;
 
 class ResetController extends Controller
 {
