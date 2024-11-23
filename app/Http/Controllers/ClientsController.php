@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
-use App\Models\clientsModel;
+use App\Models\ClientsModel;
 use App\Models\ClientsContactsModel;
 use Illuminate\Support\Str;
 use Auth;
@@ -35,7 +35,7 @@ class ClientsController extends Controller
         $company_id = Auth::user()->company_id;
 
         // Check if the combination of name, gstin, and contact_id is unique
-        $exists = clientsModel::where('name', $request->input('name'))
+        $exists = ClientsModel::where('name', $request->input('name'))
                         ->where('gstin', $request->input('gstin'))
                         ->where('company_id', $company_id)
                         ->exists();
@@ -60,7 +60,7 @@ class ClientsController extends Controller
             ]);
         }
 
-        $register_clients = clientsModel::create([
+        $register_clients = ClientsModel::create([
             'name' => $request->input('name'),
             'company_id' => Auth::user()->company_id,
             'customer_id' => $customer_id,
