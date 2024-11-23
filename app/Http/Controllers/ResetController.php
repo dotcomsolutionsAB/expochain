@@ -71,7 +71,7 @@ class ResetController extends Controller
         PurchaseInvoiceProductsModel::where('product_id', $id)->update(['sold' => 0]);
         
         // Fetch sold items
-        $sales = SalesInvoiceModel::select(DB::raw('SUM(quantity) as total_sold'))
+        $sales = SalesInvoiceProductsModel::select(DB::raw('SUM(quantity) as total_sold'))
                                     ->where('company_id', Auth::user()->company_id)
                                     ->groupBy('product_id', $id)
                                     ->first();
