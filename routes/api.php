@@ -40,7 +40,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/users_migrate', [UsersController::class, 'get_migrate']);
 
     Route::post('/client', [ClientsController::class, 'add_clients']);
-    Route::get('/client', [ClientsController::class, 'view_clients']);
+    // Route::get('/client', [ClientsController::class, 'view_clients']);
+    Route::get('/client/{id?}', [ClientsController::class, 'view_clients']);
     Route::post('/update_client/{id}', [ClientsController::class, 'update_clients']);
     Route::delete('/client/{id}', [ClientsController::class, 'delete_clients']);
 

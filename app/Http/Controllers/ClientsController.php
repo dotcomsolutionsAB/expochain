@@ -85,21 +85,64 @@ class ClientsController extends Controller
     }
 
     // view
-    public function view_clients()
-    {        
-        $get_clients = ClientsModel::with(['contacts' => function ($query)
-        {
-            $query->select('customer_id','name','designation','mobile','email');
-        }])
-        ->select('name','customer_id','type','category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city','pincode','state','country', 'gstin')
-        ->where('company_id',Auth::user()->company_id) 
-        ->get();
+    // public function view_clients()
+    // {        
+    //     $get_clients = ClientsModel::with(['contacts' => function ($query)
+    //     {
+    //         $query->select('customer_id','name','designation','mobile','email');
+    //     }])
+    //     ->select('name','customer_id','type','category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city','pincode','state','country', 'gstin')
+    //     ->where('company_id',Auth::user()->company_id) 
+    //     ->get();
         
 
-        return isset($get_clients) && $get_clients !== null
-        ? response()->json(['Fetch data successfully!', 'data' => $get_clients], 200)
-        : response()->json(['Failed to fetch data'], 404); 
+    //     return isset($get_clients) && $get_clients !== null
+    //     ? response()->json(['Fetch data successfully!', 'data' => $get_clients], 200)
+    //     : response()->json(['Failed to fetch data'], 404); 
+    // }
+    public function view_clients($id = null)
+    {
+        if ($id) {
+            // Fetch a specific client
+            $client = ClientsModel::with(['contacts' => function ($query) {
+                $query->select('customer_id', 'name', 'designation', 'mobile', 'email');
+            }])
+            ->select('name', 'customer_id', 'type', 'category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'gstin')
+            ->where('company_id', Auth::user()->company_id)
+            ->find($id);
+
+            if ($client) {
+                return response()->json([
+                    'message' => 'Client fetched successfully',
+                    'data' => $client->makeHidden(['created_at', 'updated_at']),
+                    'count' => count($client)
+                ], 200);
+            }
+
+            return response()->json(['message' => 'Client not found'], 404);
+        } else {
+            // Fetch all clients
+            $clients = ClientsModel::with(['contacts' => function ($query) {
+                $query->select('customer_id', 'name', 'designation', 'mobile', 'email');
+            }])
+            ->select('name', 'customer_id', 'type', 'category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'gstin')
+            ->where('company_id', Auth::user()->company_id)
+            ->get();
+
+            $clients->each(function ($client) {
+                $client->makeHidden(['created_at', 'updated_at']);
+            });
+
+            return $clients->isNotEmpty()
+                ? response()->json([
+                    'message' => 'Clients fetched successfully',
+                    'data' => $clients,
+                    'count' => $clients->count()
+                ], 200)
+                : response()->json(['message' => 'No clients available'], 404);
+        }
     }
+
 
     // update
     public function update_clients(Request $request)
