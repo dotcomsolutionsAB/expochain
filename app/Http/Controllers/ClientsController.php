@@ -112,10 +112,12 @@ class ClientsController extends Controller
             ->find($id);
 
             if ($client) {
+                $contactCount = $client->contacts ? $client->contacts->count() : 0;
+
                 return response()->json([
                     'message' => 'Client fetched successfully',
                     'data' => $client->makeHidden(['id', 'created_at', 'updated_at']),
-                    'count' => count($client)
+                    'contact_count' => $contactCount,
                 ], 200);
             }
 
@@ -131,18 +133,19 @@ class ClientsController extends Controller
 
             $clients->each(function ($client) {
                 $client->makeHidden(['created_at', 'updated_at']);
+                $client->contact_count = $client->contacts->count(); // Add contact count to each client
             });
 
             return $clients->isNotEmpty()
                 ? response()->json([
                     'message' => 'Clients fetched successfully',
                     'data' => $clients,
-                    'count' => $clients->count()
+                    'total_contacts' => $clients->sum(fn($client) => $client->contacts->count()), // Sum all contacts
+                    'count' => $clients->count() // Total clients count
                 ], 200)
                 : response()->json(['message' => 'No clients available'], 404);
         }
     }
-
 
     // update
     public function update_clients(Request $request)
