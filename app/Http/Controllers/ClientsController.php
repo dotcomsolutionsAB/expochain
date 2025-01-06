@@ -107,14 +107,14 @@ class ClientsController extends Controller
             $client = ClientsModel::with(['contacts' => function ($query) {
                 $query->select('customer_id', 'name', 'designation', 'mobile', 'email');
             }])
-            ->select('name', 'customer_id', 'type', 'category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'gstin')
+            ->select('id', 'name', 'customer_id', 'type', 'category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'gstin')
             ->where('company_id', Auth::user()->company_id)
             ->find($id);
 
             if ($client) {
                 return response()->json([
                     'message' => 'Client fetched successfully',
-                    'data' => $client->makeHidden(['created_at', 'updated_at']),
+                    'data' => $client->makeHidden(['id', 'created_at', 'updated_at']),
                     'count' => count($client)
                 ], 200);
             }
