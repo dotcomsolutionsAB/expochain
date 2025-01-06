@@ -155,14 +155,14 @@ class QuotationsController extends Controller
     {
         // Validate the request data
         $request->validate([
-            'client_id' => 'required|integer',
-            'client_contact_id' => 'nullable|integer',
+            'client_id' => 'required|integer|exists:t_clients,id',
+            'client_contact_id' => 'nullable|integer|exists:t_clients_contacts,id',
             'enquiry_no' => 'required|string',
             'enquiry_date' => 'required|date',
-            'template' => 'required|integer',
+            'template' => 'required|integer|exists:t_pdf_template,id',
             'currency' => 'required|string',
             'products' => 'required|array',
-            'products.*.product_id' => 'required|integer',
+            'products.*.product_id' => 'required|integer|exists:t_products,id',
             'products.*.quantity' => 'required|integer',
             'products.*.unit' => 'required|string',
             'addons' => 'required|array',
