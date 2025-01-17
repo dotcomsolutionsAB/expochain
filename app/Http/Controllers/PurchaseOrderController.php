@@ -243,23 +243,76 @@ class PurchaseOrderController extends Controller
         unset($register_purchase_order['id'], $register_purchase_order['created_at'], $register_purchase_order['updated_at']);
     
         return isset($register_purchase_order) && $register_purchase_order !== null
-        ? response()->json(['Purchase Order registered successfully!', 'data' => $register_purchase_order, 'total_cgst' => $total_cgst, 'total_sgst' => $total_sgst, 'total_igst' => $total_igst, 'total_discount' => $total_discount, 'total_amount' => $total_amount], 201)
-        : response()->json(['Failed to register Purchase Order record'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'Purchase Order registered successfully!', 'data' => $register_purchase_order, 'total_cgst' => $total_cgst, 'total_sgst' => $total_sgst, 'total_igst' => $total_igst, 'total_discount' => $total_discount, 'total_amount' => $total_amount], 201)
+        : response()->json(['code' => 400,'success' => false, 'Failed to register Purchase Order record'], 400);
     }
 
     // view
-    public function view_purchase_order()
+    // public function view_purchase_order()
+    // {
+    //     $get_purchase_orders = PurchaseOrderModel::with(['products' => function ($query) {
+    //         $query->select('purchase_order_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
+    //     }])
+    //     ->select('id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'cgst', 'sgst', 'igst', 'currency', 'template', 'status')
+    //     ->where('company_id',Auth::user()->company_id)
+    //     ->get();
+
+    //     return isset($get_purchase_orders) && $get_purchase_orders->isNotEmpty()
+    //         ? response()->json(['Purchase Orders fetched successfully!', 'data' => $get_purchase_orders], 200)
+    //         : response()->json(['Failed to fetch Purchase Order data'], 404);
+    // }
+
+    public function view_purchase_order(Request $request)
     {
-        $get_purchase_orders = PurchaseOrderModel::with(['products' => function ($query) {
+        // Get filter inputs
+        $supplierId = $request->input('supplier_id');
+        $name = $request->input('name');
+        $purchaseOrderNo = $request->input('purchase_order_no');
+        $purchaseOrderDate = $request->input('purchase_order_date');
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = PurchaseOrderModel::with(['products' => function ($query) {
             $query->select('purchase_order_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
         }])
         ->select('id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'cgst', 'sgst', 'igst', 'currency', 'template', 'status')
-        ->where('company_id',Auth::user()->company_id)
-        ->get();
+        ->where('company_id', Auth::user()->company_id);
 
-        return isset($get_purchase_orders) && $get_purchase_orders->isNotEmpty()
-            ? response()->json(['Purchase Orders fetched successfully!', 'data' => $get_purchase_orders], 200)
-            : response()->json(['Failed to fetch Purchase Order data'], 404);
+        // Apply filters
+        if ($supplierId) {
+            $query->where('supplier_id', $supplierId);
+        }
+        if ($name) {
+            $query->where('name', 'LIKE', '%' . $name . '%');
+        }
+        if ($purchaseOrderNo) {
+            $query->where('purchase_order_no', 'LIKE', '%' . $purchaseOrderNo . '%');
+        }
+        if ($purchaseOrderDate) {
+            $query->whereDate('purchase_order_date', $purchaseOrderDate);
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Fetch data
+        $get_purchase_orders = $query->get();
+
+        // Return response
+        return $get_purchase_orders->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Purchase Orders fetched successfully!',
+                'data' => $get_purchase_orders,
+                'count' => $get_purchase_orders->count(),
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Purchase Orders found!',
+            ], 404);
     }
 
     // update
@@ -376,8 +429,8 @@ class PurchaseOrderController extends Controller
         unset($purchaseOrder['created_at'], $purchaseOrder['updated_at']);
 
         return ($purchaseOrderUpdated || $productsDeleted)
-            ? response()->json(['message' => 'Purchase Order and products updated successfully!', 'data' => $purchaseOrder], 200)
-            : response()->json(['message' => 'No changes detected.'], 304);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Purchase Order and products updated successfully!', 'data' => $purchaseOrder], 200)
+            : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
     }
 
     // delete
@@ -391,10 +444,10 @@ class PurchaseOrderController extends Controller
             $delete_purchase_order_products = PurchaseOrderProductsModel::where('purchase_order_number', $get_purchase_order_id->id)->delete();
 
             return $delete_purchase_order && $delete_purchase_order_products
-                ? response()->json(['message' => 'Purchase Order and associated products deleted successfully!'], 200)
-                : response()->json(['message' => 'Failed to delete Purchase Order or products.'], 400);
+                ? response()->json(['code' => 200,'success' => false, 'message' => 'Purchase Order and associated products deleted successfully!'], 200)
+                : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Purchase Order or products.'], 400);
         } else {
-            return response()->json(['message' => 'Purchase Order not found.'], 404);
+            return response()->json(['code' => 404,'success' => false, 'message' => 'Purchase Order not found.'], 404);
         }
     }
 
@@ -533,6 +586,8 @@ class PurchaseOrderController extends Controller
         }
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Data import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);

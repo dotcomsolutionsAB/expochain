@@ -60,26 +60,76 @@ class AssemblyController extends Controller
         unset($register_assembly['id'], $register_assembly['created_at'], $register_assembly['updated_at']);
     
         return isset($register_assembly) && $register_assembly !== null
-        ? response()->json(['Assembly records registered successfully!', 'data' => $register_assembly], 201)
-        : response()->json(['Failed to register Assembly records'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'Assembly records registered successfully!', 'data' => $register_assembly], 201)
+        : response()->json(['code' => 400,'success' => false, 'Failed to register Assembly records'], 400);
     }
 
     // view
-    public function view_assembly()
-    {        
-        $get_assembly = AssemblyModel::with(['products' => function ($query)
-        {
-            $query->select('assembly_id','product_id','product_name','quantity','log_user');
-        }])
-        ->select('assembly_id','product_id','product_name','quantity','log_user')
-        ->where('company_id',Auth::user()->company_id) 
-        ->get();
+    // public function view_assembly()
+    // {        
+    //     $get_assembly = AssemblyModel::with(['products' => function ($query)
+    //     {
+    //         $query->select('assembly_id','product_id','product_name','quantity','log_user');
+    //     }])
+    //     ->select('assembly_id','product_id','product_name','quantity','log_user')
+    //     ->where('company_id',Auth::user()->company_id) 
+    //     ->get();
         
 
-        return isset($get_assembly) && $get_assembly->isNotEmpty()
-        ? response()->json(['Assembly record fetch successfully!', 'data' => $get_assembly, 'count' => count($get_assembly)], 200)
-        : response()->json(['Failed to fetch data'], 404); 
+    //     return isset($get_assembly) && $get_assembly->isNotEmpty()
+    //     ? response()->json(['Assembly record fetch successfully!', 'data' => $get_assembly, 'count' => count($get_assembly)], 200)
+    //     : response()->json(['Failed to fetch data'], 404); 
+    // }
+
+    public function view_assembly(Request $request)
+    {
+        // Get filter inputs
+        $assemblyId = $request->input('assembly_id');
+        $productId = $request->input('product_id');
+        $productName = $request->input('product_name');
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = AssemblyModel::with(['products' => function ($query) {
+            $query->select('assembly_id', 'product_id', 'product_name', 'quantity', 'log_user');
+        }])
+        ->select('assembly_id', 'product_id', 'product_name', 'quantity', 'log_user')
+        ->where('company_id', Auth::user()->company_id);
+
+        // Apply filters
+        if ($assemblyId) {
+            $query->where('assembly_id', $assemblyId);
+        }
+        if ($productId) {
+            $query->where('product_id', $productId);
+        }
+        if ($productName) {
+            $query->where('product_name', 'LIKE', '%' . $productName . '%');
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Fetch data
+        $get_assembly = $query->get();
+
+        // Return response
+        return $get_assembly->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Assembly records fetched successfully!',
+                'data' => $get_assembly,
+                'count' => $get_assembly->count(),
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Assembly records found!',
+            ], 404);
     }
+
 
     // update
     public function edit_assembly(Request $request)
@@ -161,10 +211,10 @@ class AssemblyController extends Controller
             unset($assembly['created_at'], $assembly['updated_at']);
 
             return ($assemblyUpdated || $productsDeleted)
-                ? response()->json(['message' => 'Assembly and products updated successfully!', 'data' => $assembly], 200)
-                : response()->json(['message' => 'No changes detected.'], 304);
+                ? response()->json(['code' => 200,'success' => true, 'message' => 'Assembly and products updated successfully!', 'data' => $assembly], 200)
+                : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
         }
-        return response()->json(['message' => 'Sorry, record not available!.'], 404);
+        return response()->json(['code' => 404,'success' => false, 'message' => 'Sorry, record not available!.'], 404);
     }
 
 
@@ -188,14 +238,14 @@ class AssemblyController extends Controller
 
             // Return success response if deletion was successful
             return $delete_assembly && $delete_assembly_products
-            ? response()->json(['message' => 'Assembly and associated products deleted successfully!'], 200)
-            : response()->json(['message' => 'Failed to delete Assembly or products.'], 400);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Assembly and associated products deleted successfully!'], 200)
+            : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Assembly or products.'], 400);
 
         } 
         else 
         {
             // Return error response if client not found
-            return response()->json(['message' => 'Assembly not found.'], 404);
+            return response()->json(['code' => 404,'success' => false, 'message' => 'Assembly not found.'], 404);
         }
     }
 
@@ -311,6 +361,8 @@ class AssemblyController extends Controller
         }
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);

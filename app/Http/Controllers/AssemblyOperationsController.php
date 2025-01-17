@@ -76,25 +76,79 @@ class AssemblyOperationsController extends Controller
         unset($register_assembly_operations['id'], $register_assembly_operations['created_at'], $register_assembly_operations['updated_at']);
     
         return isset($register_assembly_operations) && $register_assembly_operations !== null
-        ? response()->json(['Assembly Operations records registered successfully!', 'data' => $register_assembly_operations], 201)
-        : response()->json(['Failed to register Assembly Operations records'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'Assembly Operations records registered successfully!', 'data' => $register_assembly_operations], 201)
+        : response()->json(['code' => 400,'success' => false, 'Failed to register Assembly Operations records'], 400);
     }
 
     // view
-    public function assembly_operations()
-    {        
-        $get_assembly_operations = AssemblyOperationModel::with(['products' => function ($query)
-        {
-            $query->select('assembly_operations_id','product_id','product_name','quantity','rate','godown','amount');
-        }])
-        ->select('assembly_operations_id','assembly_operations_date','type','product_id','product_name','quantity','godown','rate','amount')
-        ->where('company_id',Auth::user()->company_id) 
-        ->get();
+    // public function assembly_operations()
+    // {        
+    //     $get_assembly_operations = AssemblyOperationModel::with(['products' => function ($query)
+    //     {
+    //         $query->select('assembly_operations_id','product_id','product_name','quantity','rate','godown','amount');
+    //     }])
+    //     ->select('assembly_operations_id','assembly_operations_date','type','product_id','product_name','quantity','godown','rate','amount')
+    //     ->where('company_id',Auth::user()->company_id) 
+    //     ->get();
 
-        return isset($get_assembly_operations) && $get_assembly_operations->isNotEmpty()
-        ? response()->json(['Assembly Operations data successfully!', 'data' => $get_assembly_operations], 200)
-        : response()->json(['Failed to fetch data'], 404); 
+    //     return isset($get_assembly_operations) && $get_assembly_operations->isNotEmpty()
+    //     ? response()->json(['Assembly Operations data successfully!', 'data' => $get_assembly_operations], 200)
+    //     : response()->json(['Failed to fetch data'], 404); 
+    // }
+
+    public function assembly_operations(Request $request)
+    {
+        // Get filter inputs
+        $assemblyOperationsId = $request->input('assembly_operations_id');
+        $productId = $request->input('product_id');
+        $productName = $request->input('product_name');
+        $quantity = $request->input('quantity');
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = AssemblyOperationModel::with(['products' => function ($query) {
+            $query->select('assembly_operations_id', 'product_id', 'product_name', 'quantity', 'rate', 'godown', 'amount');
+        }])
+        ->select('assembly_operations_id', 'assembly_operations_date', 'type', 'product_id', 'product_name', 'quantity', 'godown', 'rate', 'amount')
+        ->where('company_id', Auth::user()->company_id);
+
+        // Apply filters
+        if ($assemblyOperationsId) {
+            $query->where('assembly_operations_id', $assemblyOperationsId);
+        }
+        if ($productId) {
+            $query->where('product_id', $productId);
+        }
+        if ($productName) {
+            $query->where('product_name', 'LIKE', '%' . $productName . '%');
+        }
+        if ($quantity) {
+            $query->where('quantity', $quantity);
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Fetch data
+        $get_assembly_operations = $query->get();
+
+        // Return response
+        return $get_assembly_operations->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Assembly Operations data fetched successfully!',
+                'data' => $get_assembly_operations,
+                'count' => $get_assembly_operations->count(),
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Assembly Operations data found!',
+            ], 404);
     }
+
 
     // update
     public function edit_assembly_operations(Request $request)
@@ -181,8 +235,8 @@ class AssemblyOperationsController extends Controller
             unset($assemblyOperation['created_at'], $assemblyOperation['updated_at']);
 
             return ($assemblyUpdated || $productsDeleted)
-                ? response()->json(['message' => 'Assembly operation and products updated successfully!', 'data' => $assemblyOperation], 200)
-                : response()->json(['message' => 'No changes detected.'], 304);
+                ? response()->json(['code' => 200,'success' => true, 'message' => 'Assembly operation and products updated successfully!', 'data' => $assemblyOperation], 200)
+                : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
     }
 
     // delete
@@ -205,14 +259,14 @@ class AssemblyOperationsController extends Controller
 
             // Return success response if deletion was successful
             return $delete_assembly_operations && $delete_assembly_operations_products
-            ? response()->json(['message' => 'Assembly Operations and associated products deleted successfully!'], 200)
-            : response()->json(['message' => 'Failed to delete Assembly Operations or products.'], 400);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Assembly Operations and associated products deleted successfully!'], 200)
+            : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Assembly Operations or products.'], 400);
 
         } 
         else 
         {
             // Return error response if client not found
-            return response()->json(['message' => 'Assembly Operations not found.'], 404);
+            return response()->json(['code' => 404,'success' => false, 'message' => 'Assembly Operations not found.'], 404);
         }
     }
 
@@ -353,6 +407,8 @@ class AssemblyOperationsController extends Controller
         }
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);

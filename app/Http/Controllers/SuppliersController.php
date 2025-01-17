@@ -76,8 +76,8 @@ class SuppliersController extends Controller
         unset($register_suppliers['id'], $register_suppliers['created_at'], $register_suppliers['updated_at']);
 
         return isset($register_suppliers) && $register_suppliers !== null
-        ? response()->json(['Suppliers registered successfully!', 'data' => $register_suppliers], 201)
-        : response()->json(['Failed to register Suppliers record'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'Suppliers registered successfully!', 'data' => $register_suppliers], 201)
+        : response()->json(['code' => 400,'success' => false,'Failed to register Suppliers record'], 400);
     }
 
     // view
@@ -234,8 +234,8 @@ class SuppliersController extends Controller
         unset($suppliers['id'], $suppliers['created_at'], $suppliers['updated_at']);
 
         return ($suppliersUpdated || $contactsUpdated || $contactsDeleted)
-        ? response()->json(['message' => 'Client and contacts updated successfully!', 'client' => $suppliers], 200)
-        : response()->json(['message' => 'No changes detected.'], 304);
+        ? response()->json(['code' => 200,'success' => true,'message' => 'Client and contacts updated successfully!', 'client' => $suppliers], 200)
+        : response()->json(['code' => 304,'success' => false,'message' => 'No changes detected.'], 304);
     }
 
     // delete
@@ -257,14 +257,14 @@ class SuppliersController extends Controller
 
             // Return success response if deletion was successful
             return $delete_supplier && $delete_contact_records
-            ? response()->json(['message' => 'Supplier and associated contacts deleted successfully!'], 200)
-            : response()->json(['message' => 'Failed to delete supplier or contacts.'], 400);
+            ? response()->json(['code' => 200,'success' => true,'message' => 'Supplier and associated contacts deleted successfully!'], 200)
+            : response()->json(['code' => 400,'success' => false,'message' => 'Failed to delete supplier or contacts.'], 400);
 
         } 
         else 
         {
             // Return error response if supplier not found
-            return response()->json(['message' => 'Supplier not found.'], 404);
+            return response()->json(['code' => 404,'success' => false,'message' => 'Supplier not found.'], 404);
         }
     }
 
@@ -378,6 +378,8 @@ class SuppliersController extends Controller
         }
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Data import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);

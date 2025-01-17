@@ -66,30 +66,79 @@ class TestCertificateController extends Controller
             }
 
             else{
-                return response()->json(['message' => 'Sorry, Products not found'], 404);
+                return response()->json(['code' => 404,'success' => false, 'message' => 'Sorry, Products not found'], 404);
             }
         }
 
         unset($register_test_certificate['id'], $register_test_certificate['created_at'], $register_test_certificate['updated_at']);
     
         return isset($register_test_certificate) && $register_test_certificate !== null
-        ? response()->json(['Credit Note registered successfully!', 'data' => $register_test_certificate], 201)
-        : response()->json(['Failed to register Credit Note record'], 400);
+        ? response()->json(['code' => 201,'success' => true,'Credit Note registered successfully!', 'data' => $register_test_certificate], 201)
+        : response()->json(['code' => 400,'success' => false,'Failed to register Credit Note record'], 400);
     }
 
     // view
-    public function view_test_certificate()
+    // public function view_test_certificate()
+    // {
+    //     $get_test_certificates = TestCertificateModel::with(['products' => function ($query) {
+    //         $query->select('tc_id', 'product_id', 'product_name', 'quantity', 'sales_invoice_no');
+    //     }])
+    //     ->select('id', 'client_id', 'sales_invoice_no', 'reference_no', 'tc_date', 'seller', 'client_flag', 'log_user')
+    //     ->where('company_id',Auth::user()->company_id)
+    //     ->get();
+
+    //     return isset($get_test_certificates) && $get_test_certificates !== null
+    //         ? response()->json(['Test Certificates fetched successfully!', 'data' => $get_test_certificates], 200)
+    //         : response()->json(['Failed to fetch Test Certificate data'], 404);
+    // }
+
+    public function view_test_certificate(Request $request)
     {
-        $get_test_certificates = TestCertificateModel::with(['products' => function ($query) {
+        // Get filter inputs
+        $clientId = $request->input('client_id'); // Filter by client ID
+        $salesInvoiceNo = $request->input('sales_invoice_no'); // Filter by sales invoice number
+        $referenceNo = $request->input('reference_no'); // Filter by reference number
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = TestCertificateModel::with(['products' => function ($query) {
             $query->select('tc_id', 'product_id', 'product_name', 'quantity', 'sales_invoice_no');
         }])
         ->select('id', 'client_id', 'sales_invoice_no', 'reference_no', 'tc_date', 'seller', 'client_flag', 'log_user')
-        ->where('company_id',Auth::user()->company_id)
-        ->get();
+        ->where('company_id', Auth::user()->company_id);
 
-        return isset($get_test_certificates) && $get_test_certificates !== null
-            ? response()->json(['Test Certificates fetched successfully!', 'data' => $get_test_certificates], 200)
-            : response()->json(['Failed to fetch Test Certificate data'], 404);
+        // Apply filters
+        if ($clientId) {
+            $query->where('client_id', $clientId);
+        }
+        if ($salesInvoiceNo) {
+            $query->where('sales_invoice_no', 'LIKE', '%' . $salesInvoiceNo . '%');
+        }
+        if ($referenceNo) {
+            $query->where('reference_no', 'LIKE', '%' . $referenceNo . '%');
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Fetch the data
+        $get_test_certificates = $query->get();
+
+        // Return the response
+        return $get_test_certificates->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Test Certificates fetched successfully!',
+                'data' => $get_test_certificates,
+                'count' => $get_test_certificates->count()
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Test Certificates found!',
+            ], 404);
     }
 
     // update
@@ -161,8 +210,8 @@ class TestCertificateController extends Controller
         unset($testCertificate['created_at'], $testCertificate['updated_at']);
 
         return ($testCertificateUpdated || $productsDeleted)
-            ? response()->json(['message' => 'Test Certificate and products updated successfully!', 'data' => $testCertificate], 200)
-            : response()->json(['message' => 'No changes detected.'], 304);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Test Certificate and products updated successfully!', 'data' => $testCertificate], 200)
+            : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
     }
 
     // delete
@@ -176,10 +225,10 @@ class TestCertificateController extends Controller
             $delete_test_certificate_products = TestCertificateProductsModel::where('tc_id', $get_test_certificate_id->id)->delete();
 
             return $delete_test_certificate && $delete_test_certificate_products
-                ? response()->json(['message' => 'Test Certificate and associated products deleted successfully!'], 200)
-                : response()->json(['message' => 'Failed to delete Test Certificate or products.'], 400);
+                ? response()->json(['code' => 200,'success' => true, 'message' => 'Test Certificate and associated products deleted successfully!'], 200)
+                : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Test Certificate or products.'], 400);
         } else {
-            return response()->json(['message' => 'Test Certificate not found.'], 404);
+            return response()->json(['code' => 404,'success' => false, 'message' => 'Test Certificate not found.'], 404);
         }
     }
 
@@ -289,6 +338,8 @@ class TestCertificateController extends Controller
         }
     
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Test certificates import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);

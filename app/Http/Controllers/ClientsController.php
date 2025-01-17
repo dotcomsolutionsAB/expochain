@@ -80,8 +80,8 @@ class ClientsController extends Controller
         unset($register_clients['id'], $register_clients['created_at'], $register_clients['updated_at']);
 
         return isset($register_clients) && $register_clients !== null
-        ? response()->json(['Client registered successfully!', 'data' => $register_clients], 201)
-        : response()->json(['Failed to register client record'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'Client registered successfully!', 'data' => $register_clients], 201)
+        : response()->json(['code' => 400,'success' => false,'Failed to register client record'], 400);
     }
 
     // view
@@ -326,8 +326,8 @@ class ClientsController extends Controller
         unset($client['id'], $client['created_at'], $client['updated_at']);
 
         return ($clientUpdated || $contactsUpdated || $contactsDeleted)
-        ? response()->json(['message' => 'Client and contacts updated successfully!', 'client' => $client], 200)
-        : response()->json(['message' => 'No changes detected.'], 304);
+        ? response()->json(['code' => 200,'success' => true, 'message' => 'Client and contacts updated successfully!', 'client' => $client], 200)
+        : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
     }
 
     // delete
@@ -350,14 +350,14 @@ class ClientsController extends Controller
 
             // Return success response if deletion was successful
             return $delete_clients && $delete_contact_records
-            ? response()->json(['message' => 'Client and associated contacts deleted successfully!'], 200)
-            : response()->json(['message' => 'Failed to delete client or contacts.'], 400);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Client and associated contacts deleted successfully!'], 200)
+            : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete client or contacts.'], 400);
 
         } 
         else 
         {
             // Return error response if client not found
-            return response()->json(['message' => 'Client not found.'], 404);
+            return response()->json(['code' => 404,'success' => false, 'message' => 'Client not found.'], 404);
         }
     }
 
@@ -512,6 +512,8 @@ class ClientsController extends Controller
         }
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Data import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);

@@ -75,25 +75,77 @@ class StockTransferController extends Controller
         unset($register_stock_transfer['id'], $register_stock_transfer['created_at'], $register_stock_transfer['updated_at']);
     
         return isset($register_stock_transfer) && $register_stock_transfer !== null
-        ? response()->json(['Stock Transfer registered successfully!', 'data' => $register_stock_transfer], 201)
-        : response()->json(['Failed to register Stock Transfer record'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'Stock Transfer registered successfully!', 'data' => $register_stock_transfer], 201)
+        : response()->json(['code' => 400,'success' => false, 'Failed to register Stock Transfer record'], 400);
     }
 
     // view
-    public function view_stock_transfer()
+    // public function view_stock_transfer()
+    // {
+    //     $get_stock_transfers = StockTransferModel::with(['products' => function ($query)
+    //     {
+    //         $query->select('transfer_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'status');
+    //     }])
+    //     ->select('transfer_id', 'godown_from', 'godown_to', 'transfer_date', 'status', 'log_user')
+    //     ->where('company_id',Auth::user()->company_id)
+    //     ->get();
+
+    //     return isset($get_stock_transfers) && $get_stock_transfers->isNotEmpty()
+    //         ? response()->json(['code' => 200,'success' => true, 'Stock Transfers fetched successfully!', 'data' => $get_stock_transfers], 200)
+    //         : response()->json(['code' => 404,'success' => false, 'Failed to fetch Stock Transfers data'], 404);
+    // }
+
+    public function view_stock_transfer(Request $request)
     {
-        $get_stock_transfers = StockTransferModel::with(['products' => function ($query)
-        {
+        // Get filter inputs
+        $transferId = $request->input('transfer_id'); // Filter by transfer ID
+        $productId = $request->input('product_id'); // Filter by product ID
+        $productName = $request->input('product_name'); // Filter by product name
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = StockTransferModel::with(['products' => function ($query) use ($productId, $productName) {
             $query->select('transfer_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'status');
+            
+            // Apply product-related filters
+            if ($productId) {
+                $query->where('product_id', $productId);
+            }
+            if ($productName) {
+                $query->where('product_name', 'LIKE', '%' . $productName . '%');
+            }
         }])
         ->select('transfer_id', 'godown_from', 'godown_to', 'transfer_date', 'status', 'log_user')
-        ->where('company_id',Auth::user()->company_id)
-        ->get();
+        ->where('company_id', Auth::user()->company_id);
 
-        return isset($get_stock_transfers) && $get_stock_transfers->isNotEmpty()
-            ? response()->json(['Stock Transfers fetched successfully!', 'data' => $get_stock_transfers], 200)
-            : response()->json(['Failed to fetch Stock Transfers data'], 404);
+        // Apply transfer_id filter
+        if ($transferId) {
+            $query->where('transfer_id', $transferId);
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Fetch the data
+        $get_stock_transfers = $query->get();
+
+        // Return the response
+        return $get_stock_transfers->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Stock Transfers fetched successfully!',
+                'data' => $get_stock_transfers,
+                'count' => $get_stock_transfers->count(),
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Stock Transfers found!',
+            ], 404);
     }
+
 
     // update
     public function edit_stock_transfer(Request $request, $id)
@@ -172,8 +224,8 @@ class StockTransferController extends Controller
         unset($stockTransfer['created_at'], $stockTransfer['updated_at']);
 
         return ($stockTransferUpdated || $productsDeleted)
-            ? response()->json(['message' => 'Stock Transfer updated successfully!', 'data' => $stockTransfer], 200)
-            : response()->json(['message' => 'No changes detected.'], 304);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Stock Transfer updated successfully!', 'data' => $stockTransfer], 200)
+            : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
     }
 
     public function delete_stock_transfer($id)
@@ -192,11 +244,11 @@ class StockTransferController extends Controller
 
             // Return success response if deletion was successful
             return $delete_stock_transfer && $delete_stock_transfer_products
-                ? response()->json(['message' => 'Stock Transfer and associated products deleted successfully!'], 200)
-                : response()->json(['message' => 'Failed to delete Stock Transfer or products.'], 400);
+                ? response()->json(['code' => 200,'success' => true, 'message' => 'Stock Transfer and associated products deleted successfully!'], 200)
+                : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Stock Transfer or products.'], 400);
         } else {
             // Return error response if the stock transfer not found
-            return response()->json(['message' => 'Stock Transfer not found.'], 404);
+            return response()->json(['code' => 404,'success' => false, 'message' => 'Stock Transfer not found.'], 404);
         }
     }
 
@@ -307,6 +359,8 @@ class StockTransferController extends Controller
         }
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);

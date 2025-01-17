@@ -133,7 +133,7 @@ class PurchaseReturnController extends Controller
             }
 
             else{
-                return response()->json(['message' => 'Sorry, Products not found'], 404);
+                return response()->json(['code' => 404,'success' => false, 'message' => 'Sorry, Products not found'], 404);
             }
 
             // Update the total amount and tax values in the sales invoice record
@@ -153,19 +153,77 @@ class PurchaseReturnController extends Controller
     }
 
     // view
-    public function view_purchase_return()
+    // public function view_purchase_return()
+    // {
+    //     $get_purchase_returns = PurchaseReturnModel::with(['products' => function ($query) {
+    //         $query->select('purchase_return_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
+    //     }])
+    //     ->select('id', 'supplier_id', 'name', 'purchase_return_no', 'purchase_return_date', 'purchase_invoice_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
+    //     ->where('company_id',Auth::user()->company_id)
+    //     ->get();
+
+    //     return isset($get_purchase_returns) && $get_purchase_returns->isNotEmpty()
+    //         ? response()->json(['Purchase Returns fetched successfully!', 'data' => $get_purchase_returns], 200)
+    //         : response()->json(['Failed to fetch Purchase Return data'], 404);
+    // }
+
+    public function view_purchase_return(Request $request)
     {
-        $get_purchase_returns = PurchaseReturnModel::with(['products' => function ($query) {
+        // Get filter inputs
+        $supplierId = $request->input('supplier_id');
+        $name = $request->input('name');
+        $purchaseReturnNo = $request->input('purchase_return_no');
+        $purchaseReturnDate = $request->input('purchase_return_date');
+        $purchaseInvoiceNo = $request->input('purchase_invoice_no');
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = PurchaseReturnModel::with(['products' => function ($query) {
             $query->select('purchase_return_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
         }])
         ->select('id', 'supplier_id', 'name', 'purchase_return_no', 'purchase_return_date', 'purchase_invoice_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
-        ->where('company_id',Auth::user()->company_id)
-        ->get();
+        ->where('company_id', Auth::user()->company_id);
 
-        return isset($get_purchase_returns) && $get_purchase_returns->isNotEmpty()
-            ? response()->json(['Purchase Returns fetched successfully!', 'data' => $get_purchase_returns], 200)
-            : response()->json(['Failed to fetch Purchase Return data'], 404);
+        // Apply filters
+        if ($supplierId) {
+            $query->where('supplier_id', $supplierId);
+        }
+        if ($name) {
+            $query->where('name', 'LIKE', '%' . $name . '%');
+        }
+        if ($purchaseReturnNo) {
+            $query->where('purchase_return_no', 'LIKE', '%' . $purchaseReturnNo . '%');
+        }
+        if ($purchaseReturnDate) {
+            $query->whereDate('purchase_return_date', $purchaseReturnDate);
+        }
+        if ($purchaseInvoiceNo) {
+            $query->where('purchase_invoice_no', 'LIKE', '%' . $purchaseInvoiceNo . '%');
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Fetch data
+        $get_purchase_returns = $query->get();
+
+        // Return response
+        return $get_purchase_returns->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Purchase Returns fetched successfully!',
+                'data' => $get_purchase_returns,
+                'count' => $get_purchase_returns->count(),
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Purchase Returns found!',
+            ], 404);
     }
+
 
     // update
     public function edit_purchase_return(Request $request, $id)
@@ -273,8 +331,8 @@ class PurchaseReturnController extends Controller
         unset($purchaseReturn['created_at'], $purchaseReturn['updated_at']);
 
         return ($purchaseReturnUpdated || $productsDeleted)
-            ? response()->json(['message' => 'Purchase Return and products updated successfully!', 'data' => $purchaseReturn], 200)
-            : response()->json(['message' => 'No changes detected.'], 304);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Purchase Return and products updated successfully!', 'data' => $purchaseReturn], 200)
+            : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
     }
 
     // delete
@@ -288,10 +346,10 @@ class PurchaseReturnController extends Controller
             $delete_purchase_return_products = PurchaseReturnProductsModel::where('purchase_return_number', $get_purchase_return_id->id)->delete();
 
             return $delete_purchase_return && $delete_purchase_return_products
-                ? response()->json(['message' => 'Purchase Return and associated products deleted successfully!'], 200)
-                : response()->json(['message' => 'Failed to delete Purchase Return or products.'], 400);
+                ? response()->json(['code' => 200,'success' => true, 'message' => 'Purchase Return and associated products deleted successfully!'], 200)
+                : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Purchase Return or products.'], 400);
         } else {
-            return response()->json(['message' => 'Purchase Return not found.'], 404);
+            return response()->json(['code' => 404,'success' => false, 'message' => 'Purchase Return not found.'], 404);
         }
     }
 
@@ -430,6 +488,8 @@ class PurchaseReturnController extends Controller
         }
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Purchase returns import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);

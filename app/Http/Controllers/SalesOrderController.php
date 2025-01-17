@@ -273,6 +273,8 @@ class SalesOrderController extends Controller
         unset($register_sales_order['id'], $register_sales_order['created_at'], $register_sales_order['updated_at']);
 
         return response()->json([
+            'code' => 201,
+            'success' => true,
             'message' => 'Sales Order registered successfully!',
             'data' => $register_sales_order,
             'total_cgst' => $total_cgst,
@@ -285,21 +287,96 @@ class SalesOrderController extends Controller
 
 
     // View Sales Orders
-    public function view_sales_order()
+    // public function view_sales_order()
+    // {
+    //     $get_sales_orders = SalesOrderModel::with(['products' => function ($query) {
+    //         $query->select('sales_order_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
+    //     }, 'addons' => function ($query) {
+    //         $query->select('sales_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
+    //     }])
+    //     ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'sales_order_no', 'sales_order_date', 'quotation_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
+    //     ->where('company_id',Auth::user()->company_id)
+    //     ->get();
+
+    //     return isset($get_sales_orders) && $get_sales_orders !== null
+    //         ? response()->json(['Sales Orders fetched successfully!', 'data' => $get_sales_orders], 200)
+    //         : response()->json(['Failed to fetch Sales Order data'], 404);
+    // }
+    public function view_sales_order(Request $request)
     {
-        $get_sales_orders = SalesOrderModel::with(['products' => function ($query) {
+        // Get filter inputs
+        $clientId = $request->input('client_id');
+        $clientContactId = $request->input('client_contact_id');
+        $name = $request->input('name');
+        $city = $request->input('city');
+        $pincode = $request->input('pincode');
+        $state = $request->input('state');
+        $country = $request->input('country');
+        $salesOrderNo = $request->input('sales_order_no');
+        $salesOrderDate = $request->input('sales_order_date');
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = SalesOrderModel::with(['products' => function ($query) {
             $query->select('sales_order_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
         }, 'addons' => function ($query) {
             $query->select('sales_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
         }])
         ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'sales_order_no', 'sales_order_date', 'quotation_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
-        ->where('company_id',Auth::user()->company_id)
-        ->get();
+        ->where('company_id', Auth::user()->company_id);
 
-        return isset($get_sales_orders) && $get_sales_orders !== null
-            ? response()->json(['Sales Orders fetched successfully!', 'data' => $get_sales_orders], 200)
-            : response()->json(['Failed to fetch Sales Order data'], 404);
+        // Apply filters
+        if ($clientId) {
+            $query->where('client_id', $clientId);
+        }
+        if ($clientContactId) {
+            $query->where('client_contact_id', $clientContactId);
+        }
+        if ($name) {
+            $query->where('name', 'LIKE', '%' . $name . '%');
+        }
+        if ($city) {
+            $query->where('city', 'LIKE', '%' . $city . '%');
+        }
+        if ($pincode) {
+            $query->where('pincode', $pincode);
+        }
+        if ($state) {
+            $query->where('state', 'LIKE', '%' . $state . '%');
+        }
+        if ($country) {
+            $query->where('country', 'LIKE', '%' . $country . '%');
+        }
+        if ($salesOrderNo) {
+            $query->where('sales_order_no', 'LIKE', '%' . $salesOrderNo . '%');
+        }
+        if ($salesOrderDate) {
+            $query->whereDate('sales_order_date', $salesOrderDate);
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Fetch data
+        $get_sales_orders = $query->get();
+
+        // Return response
+        return $get_sales_orders->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Sales Orders fetched successfully!',
+                'data' => $get_sales_orders,
+                'count' => $get_sales_orders->count(),
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Sales Orders found!',
+            ], 404);
     }
+
 
     // Update Sales Order
     public function edit_sales_order(Request $request, $id)
@@ -467,8 +544,8 @@ class SalesOrderController extends Controller
                                             ->delete();
 
         return ($salesOrderUpdated || $productsDeleted || $addonsDeleted)
-            ? response()->json(['message' => 'Sales Order, products, and addons updated successfully!', 'data' => $salesOrder], 200)
-            : response()->json(['message' => 'No changes detected.'], 304);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Order, products, and addons updated successfully!', 'data' => $salesOrder], 200)
+            : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
     }
 
     // Delete Sales Order
@@ -487,8 +564,8 @@ class SalesOrderController extends Controller
                                                             ->delete();
 
         return $delete_sales_order && $delete_sales_order_products && $delete_sales_order_addons
-            ? response()->json(['message' => 'Sales Order and associated products/addons deleted successfully!'], 200)
-            : response()->json(['message' => 'Sales Order not found.'], 404);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Order and associated products/addons deleted successfully!'], 200)
+            : response()->json(['code' => 404,'success' => false, 'message' => 'Sales Order not found.'], 404);
     }
 
     // migrate
@@ -663,6 +740,8 @@ class SalesOrderController extends Controller
         }
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Sales orders import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);

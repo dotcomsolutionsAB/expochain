@@ -216,7 +216,7 @@ class SalesReturnController extends Controller
             }
 
             else{
-                return response()->json(['message' => 'Sorry, Products not found'], 404);
+                return response()->json(['code' => 404,'success' => false, 'message' => 'Sorry, Products not found'], 404);
             }
 
             // Update the total amount and tax values in the sales invoice record
@@ -231,24 +231,76 @@ class SalesReturnController extends Controller
         unset($register_sales_return['id'], $register_sales_return['created_at'], $register_sales_return['updated_at']);
     
         return isset($register_sales_return) && $register_sales_return !== null
-        ? response()->json(['Sales Retrun registered successfully!', 'data' => $register_sales_return, 'total_cgst' => $total_cgst, 'total_sgst' => $total_sgst, 'total_igst' => $total_igst, 'total_discount' => $total_discount, 'total_amount' => $total_amount], 201)
-        : response()->json(['Failed to register Sales Return record'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'Sales Retrun registered successfully!', 'data' => $register_sales_return, 'total_cgst' => $total_cgst, 'total_sgst' => $total_sgst, 'total_igst' => $total_igst, 'total_discount' => $total_discount, 'total_amount' => $total_amount], 201)
+        : response()->json(['code' => 400,'success' => false, 'Failed to register Sales Return record'], 400);
     }
 
     // view
-    public function view_sales_return()
+    // public function view_sales_return()
+    // {
+    //     $get_sales_returns = SalesReturnModel::with(['products' => function ($query) {
+    //         $query->select('sales_return_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
+    //     }])
+    //     ->select('id', 'client_id', 'name', 'sales_return_no', 'sales_return_date', 'sales_invoice_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
+    //     ->where('company_id',Auth::user()->company_id)
+    //     ->get();
+
+    //     return isset($get_sales_returns) && $get_sales_returns !== null
+    //         ? response()->json(['Sales Returns fetched successfully!', 'data' => $get_sales_returns], 200)
+    //         : response()->json(['Failed to fetch Sales Return data'], 404);
+    // }
+
+    public function view_sales_return(Request $request)
     {
-        $get_sales_returns = SalesReturnModel::with(['products' => function ($query) {
+        // Get filter inputs
+        $salesReturnId = $request->input('sales_return_id'); // Filter by sales return ID
+        $productId = $request->input('product_id'); // Filter by product ID
+        $productName = $request->input('product_name'); // Filter by product name
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = SalesReturnModel::with(['products' => function ($query) use ($productId, $productName) {
             $query->select('sales_return_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
+            
+            // Apply product-related filters
+            if ($productId) {
+                $query->where('product_id', $productId);
+            }
+            if ($productName) {
+                $query->where('product_name', 'LIKE', '%' . $productName . '%');
+            }
         }])
         ->select('id', 'client_id', 'name', 'sales_return_no', 'sales_return_date', 'sales_invoice_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
-        ->where('company_id',Auth::user()->company_id)
-        ->get();
+        ->where('company_id', Auth::user()->company_id);
 
-        return isset($get_sales_returns) && $get_sales_returns !== null
-            ? response()->json(['Sales Returns fetched successfully!', 'data' => $get_sales_returns], 200)
-            : response()->json(['Failed to fetch Sales Return data'], 404);
+        // Apply sales_return_id filter
+        if ($salesReturnId) {
+            $query->where('id', $salesReturnId);
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Fetch the data
+        $get_sales_returns = $query->get();
+
+        // Return the response
+        return $get_sales_returns->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Sales Returns fetched successfully!',
+                'data' => $get_sales_returns,
+                'count' => $get_sales_returns->count(),
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Sales Returns found!',
+            ], 404);
     }
+
 
     // update
     public function edit_sales_return(Request $request, $id)
@@ -359,8 +411,8 @@ class SalesReturnController extends Controller
         unset($salesReturn['created_at'], $salesReturn['updated_at']);
         
         return ($salesReturnUpdated || $productsDeleted)
-            ? response()->json(['message' => 'Sales Return and products updated successfully!', 'data' => $salesReturn], 200)
-            : response()->json(['message' => 'No changes detected.'], 304);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Return and products updated successfully!', 'data' => $salesReturn], 200)
+            : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
     }
 
     // delete
@@ -375,8 +427,8 @@ class SalesReturnController extends Controller
                                                                 ->delete();
 
         return $delete_sales_return && $delete_sales_return_products
-            ? response()->json(['message' => 'Sales Return and associated products deleted successfully!'], 200)
-            : response()->json(['message' => 'Sales Return not found.'], 404);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Return and associated products deleted successfully!'], 200)
+            : response()->json(['code' => 404,'success' => false, 'message' => 'Sales Return not found.'], 404);
     }
 
     // migration
@@ -506,6 +558,8 @@ class SalesReturnController extends Controller
         }
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Data import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);

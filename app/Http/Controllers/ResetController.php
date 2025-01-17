@@ -41,6 +41,8 @@ class ResetController extends Controller
         ]);
 
         return response()->json([
+            'code' => 201,
+            'success' => true,
             'message' => 'Product added to the reset queue successfully!',
             'reset_queue' => $newQueue,
         ], 201);

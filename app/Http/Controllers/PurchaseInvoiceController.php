@@ -246,23 +246,81 @@ class PurchaseInvoiceController extends Controller
         unset($register_purchase_invoice['id'], $register_purchase_invoice['created_at'], $register_purchase_invoice['updated_at']);
     
         return isset($register_purchase_invoice) && $register_purchase_invoice !== null
-        ? response()->json(['Purchase Invoice registered successfully!', 'data' => $register_purchase_invoice, 'total_cgst' => $total_cgst, 'total_sgst' => $total_sgst, 'total_igst' => $total_igst, 'total_discount' => $total_discount, 'total_amount' => $total_amount], 201)
-        : response()->json(['Failed to register Purchase Invoice record'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'Purchase Invoice registered successfully!', 'data' => $register_purchase_invoice, 'total_cgst' => $total_cgst, 'total_sgst' => $total_sgst, 'total_igst' => $total_igst, 'total_discount' => $total_discount, 'total_amount' => $total_amount], 201)
+        : response()->json(['code' => 400,'success' => false, 'Failed to register Purchase Invoice record'], 400);
     }
 
-    public function view_purchase_invoice()
+    // public function view_purchase_invoice()
+    // {
+    //     $get_purchase_invoices = PurchaseInvoiceModel::with(['products' => function ($query) {
+    //         $query->select('purchase_invoice_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
+    //     }])
+    //     ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 'purchase_invoice_date', 'purchase_order_no', 'cgst', 'sgst', 'igst', 'currency', 'template', 'status')
+    //     ->where('company_id',Auth::user()->company_id)
+    //     ->get();
+
+    //     return isset($get_purchase_invoices) && $get_purchase_invoices->isNotEmpty()
+    //         ? response()->json(['Purchase Invoices fetched successfully!', 'data' => $get_purchase_invoices, 'count' => count($get_purchase_invoices)], 200)
+    //         : response()->json(['Failed to fetch Purchase Invoice data'], 404);
+    // }
+
+    public function view_purchase_invoice(Request $request)
     {
-        $get_purchase_invoices = PurchaseInvoiceModel::with(['products' => function ($query) {
+        // Get filter inputs
+        $supplierId = $request->input('supplier_id');
+        $name = $request->input('name');
+        $purchaseInvoiceNo = $request->input('purchase_invoice_no');
+        $purchaseInvoiceDate = $request->input('purchase_invoice_date');
+        $purchaseOrderNo = $request->input('purchase_order_no');
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = PurchaseInvoiceModel::with(['products' => function ($query) {
             $query->select('purchase_invoice_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
         }])
         ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 'purchase_invoice_date', 'purchase_order_no', 'cgst', 'sgst', 'igst', 'currency', 'template', 'status')
-        ->where('company_id',Auth::user()->company_id)
-        ->get();
+        ->where('company_id', Auth::user()->company_id);
 
-        return isset($get_purchase_invoices) && $get_purchase_invoices->isNotEmpty()
-            ? response()->json(['Purchase Invoices fetched successfully!', 'data' => $get_purchase_invoices, 'count' => count($get_purchase_invoices)], 200)
-            : response()->json(['Failed to fetch Purchase Invoice data'], 404);
+        // Apply filters
+        if ($supplierId) {
+            $query->where('supplier_id', $supplierId);
+        }
+        if ($name) {
+            $query->where('name', 'LIKE', '%' . $name . '%');
+        }
+        if ($purchaseInvoiceNo) {
+            $query->where('purchase_invoice_no', 'LIKE', '%' . $purchaseInvoiceNo . '%');
+        }
+        if ($purchaseInvoiceDate) {
+            $query->whereDate('purchase_invoice_date', $purchaseInvoiceDate);
+        }
+        if ($purchaseOrderNo) {
+            $query->where('purchase_order_no', 'LIKE', '%' . $purchaseOrderNo . '%');
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Fetch data
+        $get_purchase_invoices = $query->get();
+
+        // Return response
+        return $get_purchase_invoices->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Purchase Invoices fetched successfully!',
+                'data' => $get_purchase_invoices,
+                'count' => $get_purchase_invoices->count(),
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Purchase Invoices found!',
+            ], 404);
     }
+
 
     public function edit_purchase_invoice(Request $request, $id)
     {
@@ -381,8 +439,8 @@ class PurchaseInvoiceController extends Controller
         unset($purchaseInvoice['created_at'], $purchaseInvoice['updated_at']);
 
         return ($purchaseInvoiceUpdated || $productsDeleted)
-            ? response()->json(['message' => 'Purchase Invoice and products updated successfully!', 'data' => $purchaseInvoice], 200)
-            : response()->json(['message' => 'No changes detected.'], 304);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Purchase Invoice and products updated successfully!', 'data' => $purchaseInvoice], 200)
+            : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
     }
 
     public function delete_purchase_invoice($id)
@@ -400,8 +458,8 @@ class PurchaseInvoiceController extends Controller
         $purchase_invoice_deleted = $purchase_invoice->delete();
 
         return ($products_deleted && $purchase_invoice_deleted)
-            ? response()->json(['message' => 'Purchase Invoice and related products deleted successfully!'], 200)
-            : response()->json(['message' => 'Failed to delete Purchase Invoice.'], 400);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Purchase Invoice and related products deleted successfully!'], 200)
+            : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Purchase Invoice.'], 400);
     }
 
     public function importPurchaseInvoices()
@@ -542,6 +600,8 @@ class PurchaseInvoiceController extends Controller
         }
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Purchase invoices import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);

@@ -310,7 +310,7 @@ class QuotationsController extends Controller
             }
 
             else{
-                return response()->json(['message' => 'Sorry, Products not found'], 404);
+                return response()->json(['code' => 404,'success' => false, 'message' => 'Sorry, Products not found'], 404);
             }
         }
     
@@ -354,6 +354,8 @@ class QuotationsController extends Controller
         
         // Return the response
         return response()->json([
+            'code' => 201,
+            'success' => true,
             'message' => 'Quotations registered successfully!',
             'data' => $register_quotations,
             'total_cgst' => $total_cgst,
@@ -366,9 +368,39 @@ class QuotationsController extends Controller
 
 
     // View Quotations
-    public function view_quotations()
+    // public function view_quotations()
+    // {
+    //     $get_quotations = QuotationsModel::with(['products' => function ($query) {
+    //         $query->select('quotation_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
+    //     }, 'addons' => function ($query) {
+    //         $query->select('quotation_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
+    //     }, 'terms' => function ($query) {
+    //         $query->select('quotation_id', 'name', 'value');
+    //     }])
+    //     ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'quotation_no', 'quotation_date', 'enquiry_no', 'enquiry_date', 'sales_person', 'sales_contact', 'sales_email', 'discount', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template')
+    //     ->where('company_id',Auth::user()->company_id)
+    //     ->get();
+
+    //     return isset($get_quotations) && $get_quotations !== null
+    //         ? response()->json(['Quotations fetched successfully!', 'data' => $get_quotations], 200)
+    //         : response()->json(['Failed to fetch quotations data'], 404);
+    // }
+
+    public function view_quotations(Request $request)
     {
-        $get_quotations = QuotationsModel::with(['products' => function ($query) {
+        // Get filter inputs
+        $clientId = $request->input('client_id');
+        $clientContactId = $request->input('client_contact_id');
+        $name = $request->input('name');
+        $quotationNo = $request->input('quotation_no');
+        $quotationDate = $request->input('quotation_date');
+        $enquiryNo = $request->input('enquiry_no');
+        $enquiryDate = $request->input('enquiry_date');
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = QuotationsModel::with(['products' => function ($query) {
             $query->select('quotation_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
         }, 'addons' => function ($query) {
             $query->select('quotation_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
@@ -376,13 +408,53 @@ class QuotationsController extends Controller
             $query->select('quotation_id', 'name', 'value');
         }])
         ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'quotation_no', 'quotation_date', 'enquiry_no', 'enquiry_date', 'sales_person', 'sales_contact', 'sales_email', 'discount', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template')
-        ->where('company_id',Auth::user()->company_id)
-        ->get();
+        ->where('company_id', Auth::user()->company_id);
 
-        return isset($get_quotations) && $get_quotations !== null
-            ? response()->json(['Quotations fetched successfully!', 'data' => $get_quotations], 200)
-            : response()->json(['Failed to fetch quotations data'], 404);
+        // Apply filters
+        if ($clientId) {
+            $query->where('client_id', $clientId);
+        }
+        if ($clientContactId) {
+            $query->where('client_contact_id', $clientContactId);
+        }
+        if ($name) {
+            $query->where('name', 'LIKE', '%' . $name . '%');
+        }
+        if ($quotationNo) {
+            $query->where('quotation_no', 'LIKE', '%' . $quotationNo . '%');
+        }
+        if ($quotationDate) {
+            $query->whereDate('quotation_date', $quotationDate);
+        }
+        if ($enquiryNo) {
+            $query->where('enquiry_no', 'LIKE', '%' . $enquiryNo . '%');
+        }
+        if ($enquiryDate) {
+            $query->whereDate('enquiry_date', $enquiryDate);
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Fetch data
+        $get_quotations = $query->get();
+
+        // Return response
+        return $get_quotations->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Quotations fetched successfully!',
+                'data' => $get_quotations,
+                'count' => $get_quotations->count(),
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Quotations found!',
+            ], 404);
     }
+
 
     // Update Quotations
     public function update_quotations(Request $request)
@@ -581,8 +653,8 @@ class QuotationsController extends Controller
                         ->delete();
 
         return ($quotationUpdated)
-            ? response()->json(['message' => 'Quotation, products, addons, and terms updated successfully!', 'data' => $quotation], 200)
-            : response()->json(['message' => 'No changes detected.'], 304);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Quotation, products, addons, and terms updated successfully!', 'data' => $quotation], 200)
+            : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
     }
 
     // Delete Quotations
@@ -602,8 +674,8 @@ class QuotationsController extends Controller
                                                        ->delete();
 
         return $delete_quotation && $delete_quotation_products && $delete_quotation_addons && $delete_quotation_terms
-            ? response()->json(['message' => 'Quotation and associated data deleted successfully!'], 200)
-            : response()->json(['message' => 'Failed to delete quotation or associated data.'], 400);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Quotation and associated data deleted successfully!'], 200)
+            : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete quotation or associated data.'], 400);
     }
 
     // migrate data
@@ -790,6 +862,8 @@ class QuotationsController extends Controller
         }
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Quotations import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);

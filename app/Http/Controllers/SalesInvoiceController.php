@@ -267,7 +267,7 @@ class SalesInvoiceController extends Controller
 
             }
             else{
-                return response()->json(['message' => 'Sorry, Products not found'], 404);
+                return response()->json(['code' => 404,'success' => false, 'message' => 'Sorry, Products not found'], 404);
             }
         }
 
@@ -314,6 +314,8 @@ class SalesInvoiceController extends Controller
         }
 
         return response()->json([
+            'code' => 201,
+            'success' => true,
             'message' => 'Sales Invoice registered successfully!',
             'data' => $register_sales_invoice,
             'total_cgst' => $total_cgst,
@@ -326,21 +328,85 @@ class SalesInvoiceController extends Controller
 
 
     // View Sales Invoices
-    public function view_sales_invoice()
+    // public function view_sales_invoice()
+    // {
+    //     $get_sales_invoices = SalesInvoiceModel::with(['products' => function ($query) {
+    //         $query->select('sales_invoice_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
+    //     }, 'addons' => function ($query) {
+    //         $query->select('sales_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
+    //     }])
+    //     ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_no', 'quotation_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status', 'commission', 'cash')
+    //     ->where('company_id',Auth::user()->company_id)
+    //     ->get();
+
+    //     return isset($get_sales_invoices) && $get_sales_invoices->isNotEmpty()
+    //         ? response()->json(['Sales Invoices fetched successfully!', 'data' => $get_sales_invoices], 200)
+    //         : response()->json(['Failed to fetch Sales Invoice data'], 404);
+    // }
+
+    public function view_sales_invoice(Request $request)
     {
-        $get_sales_invoices = SalesInvoiceModel::with(['products' => function ($query) {
+        // Get filter inputs
+        $clientId = $request->input('client_id');
+        $clientContactId = $request->input('client_contact_id');
+        $name = $request->input('name');
+        $salesInvoiceNo = $request->input('sales_invoice_no');
+        $salesInvoiceDate = $request->input('sales_invoice_date');
+        $salesOrderNo = $request->input('sales_order_no');
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = SalesInvoiceModel::with(['products' => function ($query) {
             $query->select('sales_invoice_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
         }, 'addons' => function ($query) {
             $query->select('sales_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
         }])
         ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_no', 'quotation_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status', 'commission', 'cash')
-        ->where('company_id',Auth::user()->company_id)
-        ->get();
+        ->where('company_id', Auth::user()->company_id);
 
-        return isset($get_sales_invoices) && $get_sales_invoices->isNotEmpty()
-            ? response()->json(['Sales Invoices fetched successfully!', 'data' => $get_sales_invoices], 200)
-            : response()->json(['Failed to fetch Sales Invoice data'], 404);
+        // Apply filters
+        if ($clientId) {
+            $query->where('client_id', $clientId);
+        }
+        if ($clientContactId) {
+            $query->where('client_contact_id', $clientContactId);
+        }
+        if ($name) {
+            $query->where('name', 'LIKE', '%' . $name . '%');
+        }
+        if ($salesInvoiceNo) {
+            $query->where('sales_invoice_no', 'LIKE', '%' . $salesInvoiceNo . '%');
+        }
+        if ($salesInvoiceDate) {
+            $query->whereDate('sales_invoice_date', $salesInvoiceDate);
+        }
+        if ($salesOrderNo) {
+            $query->where('sales_order_no', 'LIKE', '%' . $salesOrderNo . '%');
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Fetch data
+        $get_sales_invoices = $query->get();
+
+        // Return response
+        return $get_sales_invoices->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Sales Invoices fetched successfully!',
+                'data' => $get_sales_invoices,
+                'count' => $get_sales_invoices->count(),
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Sales Invoices found!',
+            ], 404);
     }
+
 
     // Update Sales Invoice
     public function edit_sales_invoice(Request $request, $id)
@@ -520,8 +586,8 @@ class SalesInvoiceController extends Controller
         unset($salesInvoice['created_at'], $salesInvoice['updated_at']);
 
         return ($salesInvoiceUpdated || $productsDeleted || $addonsDeleted)
-            ? response()->json(['message' => 'Sales Invoice, products, and addons updated successfully!', 'data' => $salesInvoice], 200)
-            : response()->json(['message' => 'No changes detected.'], 304);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Invoice, products, and addons updated successfully!', 'data' => $salesInvoice], 200)
+            : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
     }
 
     // Delete Sales Invoice
@@ -540,8 +606,8 @@ class SalesInvoiceController extends Controller
                                                                 ->delete();
 
         return $delete_sales_invoice && $delete_sales_invoice_products && $delete_sales_invoice_addons
-            ? response()->json(['message' => 'Sales Invoice and associated products/addons deleted successfully!'], 200)
-            : response()->json(['message' => 'Sales Invoice not found.'], 404);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Invoice and associated products/addons deleted successfully!'], 200)
+            : response()->json(['code' => 404,'success' => false, 'message' => 'Sales Invoice not found.'], 404);
     }
 
     // public function importSalesInvoices()
@@ -909,6 +975,8 @@ class SalesInvoiceController extends Controller
         }
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Sales invoices import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);

@@ -42,20 +42,70 @@ class FabricationController extends Controller
         unset($register_fabrication['id'], $register_fabrication['created_at'], $register_fabrication['updated_at']);
 
         return isset($register_fabrication) && $register_fabrication !== null
-        ? response()->json(['Fabrication registered successfully!', 'data' => $register_fabrication], 201)
-        : response()->json(['Failed to register Fabrication record'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'Fabrication registered successfully!', 'data' => $register_fabrication], 201)
+        : response()->json(['code' => 400,'success' => false, 'Failed to register Fabrication record'], 400);
     }
 
-    public function view_fabrication()
-    {        
-        $get_fabrication = FabricationModel::select('id', 'fabrication_date','product_id', 'product_name','type', 'quantity', 'godown', 'rate', 'amount', 'description', 'log_user')
-        ->where('company_id',Auth::user()->company_id)
-        ->get();
+    // public function view_fabrication()
+    // {        
+    //     $get_fabrication = FabricationModel::select('id', 'fabrication_date','product_id', 'product_name','type', 'quantity', 'godown', 'rate', 'amount', 'description', 'log_user')
+    //     ->where('company_id',Auth::user()->company_id)
+    //     ->get();
         
 
-        return isset($get_fabrication) && $get_fabrication->isNotEmpty()
-        ? response()->json(['Fetch data successfully!', 'data' => $get_fabrication], 200)
-        : response()->json(['Failed to fetch data'], 404); 
+    //     return isset($get_fabrication) && $get_fabrication->isNotEmpty()
+    //     ? response()->json(['Fetch data successfully!', 'data' => $get_fabrication], 200)
+    //     : response()->json(['Failed to fetch data'], 404); 
+    // }
+
+    public function view_fabrication(Request $request)
+    {
+        // Get filter inputs
+        $fabricationDate = $request->input('fabrication_date');
+        $productId = $request->input('product_id');
+        $productName = $request->input('product_name');
+        $type = $request->input('type');
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = FabricationModel::select('id', 'fabrication_date', 'product_id', 'product_name', 'type', 'quantity', 'godown', 'rate', 'amount', 'description', 'log_user')
+            ->where('company_id', Auth::user()->company_id);
+
+        // Apply filters
+        if ($fabricationDate) {
+            $query->whereDate('fabrication_date', $fabricationDate);
+        }
+        if ($productId) {
+            $query->where('product_id', $productId);
+        }
+        if ($productName) {
+            $query->where('product_name', 'LIKE', '%' . $productName . '%');
+        }
+        if ($type) {
+            $query->where('type', $type);
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Fetch data
+        $get_fabrication = $query->get();
+
+        // Return response
+        return $get_fabrication->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Fabrication data fetched successfully!',
+                'data' => $get_fabrication,
+                'count' => $get_fabrication->count(),
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Fabrication data found!',
+            ], 404);
     }
 
     // update
@@ -89,8 +139,8 @@ class FabricationController extends Controller
         ]);
         
         return $update_fabrication
-        ? response()->json(['Fabrication updated successfully!', 'data' => $update_fabrication], 201)
-        : response()->json(['No changes detected'], 204);
+        ? response()->json(['code' => 201,'success' => true, 'Fabrication updated successfully!', 'data' => $update_fabrication], 201)
+        : response()->json(['code' => 204,'success' => false, 'No changes detected'], 204);
     }
 
     // delete
@@ -103,7 +153,7 @@ class FabricationController extends Controller
 
         // Return success response if deletion was successful
         return $delete_fabrication
-        ? response()->json(['message' => 'Delete Fabrication successfully!'], 204)
-        : response()->json(['message' => 'Sorry, Fabrication not found'], 400);
+        ? response()->json(['code' => 204,'success' => true,'message' => 'Delete Fabrication successfully!'], 204)
+        : response()->json(['code' => 400,'success' => false,'message' => 'Sorry, Fabrication not found'], 400);
     }
 }

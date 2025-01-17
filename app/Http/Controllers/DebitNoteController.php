@@ -223,23 +223,76 @@ class DebitNoteController extends Controller
         unset($register_debit_note['id'], $register_debit_note['created_at'], $register_debit_note['updated_at']);
     
         return isset($register_debit_note) && $register_debit_note !== null
-        ? response()->json(['Debit Note registered successfully!', 'data' => $register_debit_note], 201)
-        : response()->json(['Failed to register Debit Note record'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'Debit Note registered successfully!', 'data' => $register_debit_note], 201)
+        : response()->json(['code' => 400,'success' => false, 'Failed to register Debit Note record'], 400);
     }
     
     // view
-    public function view_debit_note()
+    // public function view_debit_note()
+    // {
+    //     $get_debit_notes = DebitNoteModel::with(['products' => function ($query) {
+    //         $query->select('debit_note_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
+    //     }])
+    //     ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
+    //     ->where('company_id',Auth::user()->company_id)
+    //     ->get();
+
+    //     return isset($get_debit_notes) && $get_debit_notes->isNotEmpty()
+    //         ? response()->json(['Debit Notes fetched successfully!', 'data' => $get_debit_notes], 200)
+    //         : response()->json(['Failed to fetch Debit Notes data'], 404);
+    // }
+
+    public function view_debit_note(Request $request)
     {
-        $get_debit_notes = DebitNoteModel::with(['products' => function ($query) {
+        // Get filter inputs
+        $supplierId = $request->input('supplier_id');
+        $name = $request->input('name');
+        $debitNoteNo = $request->input('debit_note_no');
+        $debitNoteDate = $request->input('debit_note_date');
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = DebitNoteModel::with(['products' => function ($query) {
             $query->select('debit_note_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
         }])
         ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
-        ->where('company_id',Auth::user()->company_id)
-        ->get();
+        ->where('company_id', Auth::user()->company_id);
 
-        return isset($get_debit_notes) && $get_debit_notes->isNotEmpty()
-            ? response()->json(['Debit Notes fetched successfully!', 'data' => $get_debit_notes], 200)
-            : response()->json(['Failed to fetch Debit Notes data'], 404);
+        // Apply filters
+        if ($supplierId) {
+            $query->where('supplier_id', $supplierId);
+        }
+        if ($name) {
+            $query->where('name', 'LIKE', '%' . $name . '%');
+        }
+        if ($debitNoteNo) {
+            $query->where('debit_note_no', 'LIKE', '%' . $debitNoteNo . '%');
+        }
+        if ($debitNoteDate) {
+            $query->whereDate('debit_note_date', $debitNoteDate);
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Fetch data
+        $get_debit_notes = $query->get();
+
+        // Return response
+        return $get_debit_notes->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Debit Notes fetched successfully!',
+                'data' => $get_debit_notes,
+                'count' => $get_debit_notes->count(),
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Debit Notes found!',
+            ], 404);
     }
 
     // update
@@ -353,8 +406,8 @@ class DebitNoteController extends Controller
         unset($debitNote['created_at'], $debitNote['updated_at']);
 
         return ($debitNoteUpdated || $productsDeleted)
-            ? response()->json(['message' => 'Debit Note and products updated successfully!', 'data' => $debitNote], 200)
-            : response()->json(['message' => 'No changes detected.'], 304);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Debit Note and products updated successfully!', 'data' => $debitNote], 200)
+            : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
     }
 
     // delete
@@ -374,11 +427,11 @@ class DebitNoteController extends Controller
 
             // Return success response if deletion was successful
             return $delete_debit_note && $delete_debit_note_products
-                ? response()->json(['message' => 'Debit Note and associated products deleted successfully!'], 200)
-                : response()->json(['message' => 'Failed to delete Debit Note or products.'], 400);
+                ? response()->json(['code' => 200,'success' => true, 'message' => 'Debit Note and associated products deleted successfully!'], 200)
+                : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Debit Note or products.'], 400);
         } else {
             // Return error response if the debit note is not found
-            return response()->json(['message' => 'Debit Note not found.'], 404);
+            return response()->json(['code' => 404,'success' => false, 'message' => 'Debit Note not found.'], 404);
         }
     }
 
@@ -510,6 +563,8 @@ class DebitNoteController extends Controller
         }
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Debit notes import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);

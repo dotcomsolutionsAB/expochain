@@ -47,8 +47,8 @@ class UsersController extends Controller
         unset($register_user['id'], $register_user['created_at'], $register_user['updated_at']);
 
         return isset($register_user) && $register_user !== null
-        ? response()->json(['User registered successfully!', 'data' => $register_user], 201)
-        : response()->json(['Failed to register user'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'User registered successfully!', 'data' => $register_user], 201)
+        : response()->json(['code' => 400,'success' => false, 'Failed to register user'], 400);
     }
 
     //view
@@ -72,21 +72,71 @@ class UsersController extends Controller
         
 
         return isset($get_user_records) && $get_user_records !== null
-        ? response()->json(['Fetch data successfully!', 'data' => $get_user_records], 200)
-        : response()->json(['Failed to fetch data'], 404); 
+        ? response()->json(['code' => 200,'success' => true, 'Fetch data successfully!', 'data' => $get_user_records], 200)
+        : response()->json(['code' => 404,'success' => false, 'Failed to fetch data'], 404); 
     }
 
     // view user's record
-    public function view_user()
-    {     
-        $get_records = User::select('name','email', 'mobile', 'role')
-                            ->where('id', Auth::id())
-                            ->get();
+    // public function view_user()
+    // {     
+    //     $get_records = User::select('name','email', 'mobile', 'role')
+    //                         ->where('id', Auth::id())
+    //                         ->get();
 
-        return isset($get_records) && $get_records !== null
-        ? response()->json(['Fetch data successfully!', 'data' => $get_records], 200)
-        : response()->json(['Failed to fetch data'], 404); 
+    //     return isset($get_records) && $get_records !== null
+    //     ? response()->json(['Fetch data successfully!', 'data' => $get_records], 200)
+    //     : response()->json(['Failed to fetch data'], 404); 
+    // }
+    public function view_user(Request $request)
+    {
+        // Get filter inputs
+        $name = $request->input('name'); // Filter by name
+        $email = $request->input('email'); // Filter by email
+        $mobile = $request->input('mobile'); // Filter by mobile
+        $role = $request->input('role'); // Filter by role
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = User::select('name', 'email', 'mobile', 'role')
+            ->where('id', Auth::id()); // Ensure the user is authorized
+
+        // Apply filters
+        if ($name) {
+            $query->where('name', 'LIKE', '%' . $name . '%');
+        }
+        if ($email) {
+            $query->where('email', 'LIKE', '%' . $email . '%');
+        }
+        if ($mobile) {
+            $query->where('mobile', 'LIKE', '%' . $mobile . '%');
+        }
+        if ($role) {
+            $query->where('role', $role);
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Execute the query
+        $get_records = $query->get();
+
+        // Return the response
+        return $get_records->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Fetch data successfully!',
+                'data' => $get_records,
+                'count' => $get_records->count(),
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No records found!',
+            ], 404);
     }
+
 
     // update
     public function update(Request $request, $id)
@@ -106,8 +156,8 @@ class UsersController extends Controller
         ]);
         
         return $update_user
-        ? response()->json(['User record updated successfully!', 'data' => $update_user], 200)
-        : response()->json(['No changes detected'], 204);
+        ? response()->json(['code' => 200,'success' => true, 'User record updated successfully!', 'data' => $update_user], 200)
+        : response()->json(['code' => 204,'success' => false, 'No changes detected'], 204);
     }
 
     // delete
@@ -118,8 +168,8 @@ class UsersController extends Controller
 
         // Return success response if deletion was successful
         return $delete_user
-        ? response()->json(['message' => 'Delete User record successfully!'], 204)
-        : response()->json(['message' => 'Sorry, User record not found'], 400);
+        ? response()->json(['code' => 204,'success' => true, 'message' => 'Delete User record successfully!'], 204)
+        : response()->json(['code' => 400,'success' => false, 'message' => 'Sorry, User record not found'], 400);
     }
 
     // migrate from old
@@ -193,6 +243,8 @@ class UsersController extends Controller
         }
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);

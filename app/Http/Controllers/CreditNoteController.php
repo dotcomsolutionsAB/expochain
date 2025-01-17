@@ -229,19 +229,73 @@ class CreditNoteController extends Controller
     }
 
     // view
-    public function view_credit_note()
+    // public function view_credit_note()
+    // {
+    //     $get_credit_notes = CreditNoteModel::with(['products' => function ($query) {
+    //         $query->select('credit_note_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
+    //     }])
+    //     ->select('id', 'client_id', 'name', 'credit_note_no', 'credit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
+    //     ->where('company_id',Auth::user()->company_id)
+    //     ->get();
+
+    //     return isset($get_credit_notes) && $get_credit_notes !== null
+    //         ? response()->json(['Credit Notes fetched successfully!', 'data' => $get_credit_notes], 200)
+    //         : response()->json(['Failed to fetch Credit Note data'], 404);
+    // }
+
+    public function view_credit_note(Request $request)
     {
-        $get_credit_notes = CreditNoteModel::with(['products' => function ($query) {
+        // Get filter inputs
+        $clientId = $request->input('client_id');
+        $name = $request->input('name');
+        $creditNoteNo = $request->input('credit_note_no');
+        $creditNoteDate = $request->input('credit_note_date');
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = CreditNoteModel::with(['products' => function ($query) {
             $query->select('credit_note_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
         }])
         ->select('id', 'client_id', 'name', 'credit_note_no', 'credit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
-        ->where('company_id',Auth::user()->company_id)
-        ->get();
+        ->where('company_id', Auth::user()->company_id);
 
-        return isset($get_credit_notes) && $get_credit_notes !== null
-            ? response()->json(['Credit Notes fetched successfully!', 'data' => $get_credit_notes], 200)
-            : response()->json(['Failed to fetch Credit Note data'], 404);
+        // Apply filters
+        if ($clientId) {
+            $query->where('client_id', $clientId);
+        }
+        if ($name) {
+            $query->where('name', 'LIKE', '%' . $name . '%');
+        }
+        if ($creditNoteNo) {
+            $query->where('credit_note_no', 'LIKE', '%' . $creditNoteNo . '%');
+        }
+        if ($creditNoteDate) {
+            $query->whereDate('credit_note_date', $creditNoteDate);
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Fetch data
+        $get_credit_notes = $query->get();
+
+        // Return response
+        return $get_credit_notes->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Credit Notes fetched successfully!',
+                'data' => $get_credit_notes,
+                'count' => $get_credit_notes->count(),
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Credit Notes found!',
+            ], 404);
     }
+
 
     // update
     public function edit_credit_note(Request $request, $id)
@@ -349,8 +403,8 @@ class CreditNoteController extends Controller
         unset($creditNote['created_at'], $creditNote['updated_at']);
 
         return ($creditNoteUpdated || $productsDeleted)
-            ? response()->json(['message' => 'Credit Note and products updated successfully!', 'data' => $creditNote], 200)
-            : response()->json(['message' => 'No changes detected.'], 304);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Credit Note and products updated successfully!', 'data' => $creditNote], 200)
+            : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
     }
 
     // Delete Credit Note
@@ -365,8 +419,8 @@ class CreditNoteController extends Controller
                                                                 ->delete();
 
         return $delete_credit_note && $delete_credit_note_products
-            ? response()->json(['message' => 'Credit Note and associated products deleted successfully!'], 200)
-            : response()->json(['message' => 'Credit Note not found.'], 404);
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Credit Note and associated products deleted successfully!'], 200)
+            : response()->json(['code' => 404,'success' => false, 'message' => 'Credit Note not found.'], 404);
     }
 
     public function importCreditNotes()
@@ -497,6 +551,8 @@ class CreditNoteController extends Controller
         }
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Credit notes import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);
