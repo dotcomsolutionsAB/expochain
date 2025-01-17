@@ -41,21 +41,21 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/client', [ClientsController::class, 'add_clients']);
     // Route::get('/client', [ClientsController::class, 'view_clients']);
-    Route::get('/client/{id?}', [ClientsController::class, 'view_clients']);
+    Route::post('/get_client/{id?}', [ClientsController::class, 'view_clients']);
     Route::post('/update_client/{id}', [ClientsController::class, 'update_clients']);
     Route::delete('/client/{id}', [ClientsController::class, 'delete_clients']);
 
     Route::get('/client_migrate', [ClientsController::class, 'importClientsData']);
 
     Route::post('/suppliers', [SuppliersController::class, 'add_suppliers']);
-    Route::get('/suppliers', [SuppliersController::class, 'view_suppliers']);
+    Route::post('/get_suppliers', [SuppliersController::class, 'view_suppliers']);
     Route::post('/update_suppliers/{id}', [SuppliersController::class, 'update_suppliers']);
     Route::delete('/suppliers/{id}', [SuppliersController::class, 'delete_supplier']);
 
     Route::get('/suppliers_migrate', [SuppliersController::class, 'importSuppliersData']);
 
     Route::post('/products', [MastersController::class, 'add_products']);
-    Route::get('/products', [MastersController::class, 'view_products']);
+    Route::post('/get_products', [MastersController::class, 'view_products']);
     Route::post('/update_products/{id}', [MastersController::class, 'edit_products']);
     Route::delete('/products/{id}', [MastersController::class, 'delete_products']);
 

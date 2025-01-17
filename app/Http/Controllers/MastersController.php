@@ -63,16 +63,67 @@ class MastersController extends Controller
         : response()->json(['Failed to register Products record'], 400);
     }
 
-    public function view_products()
-    {        
-        $get_products = ProductsModel::select('serial_number','company_id','name','alias','description','type','brand','category','sub_category','cost_price','sale_price', 'unit', 'hsn', 'tax')
-                                        ->get();
+    // public function view_products()
+    // {        
+    //     $get_products = ProductsModel::select('serial_number','company_id','name','alias','description','type','brand','category','sub_category','cost_price','sale_price', 'unit', 'hsn', 'tax')
+    //                                     ->get();
         
 
-        return isset($get_products) && $get_products !== null && count($get_products) > 0
-        ? response()->json(['Fetch data successfully!', 'data' => $get_products, 'count' => count($get_products)], 200)
-        : response()->json(['Sorry, No products found!'], 404); 
+    //     return isset($get_products) && $get_products !== null && count($get_products) > 0
+    //     ? response()->json(['Fetch data successfully!', 'data' => $get_products, 'count' => count($get_products)], 200)
+    //     : response()->json(['Sorry, No products found!'], 404); 
+    // }
+
+    public function view_products(Request $request)
+    {
+        // Get the input parameters
+        $offset = $request->input('offset', 0); // Default to 0 if not provided
+        $limit = $request->input('limit', 10); // Default to 10 if not provided
+        $productName = $request->input('product_name'); // Optional product name
+        $brand = $request->input('brand') ? explode(',', $request->input('brand')) : null; // Comma-separated brands
+        $category = $request->input('category') ? explode(',', $request->input('category')) : null; // Comma-separated categories
+        $subCategory = $request->input('sub_category') ? explode(',', $request->input('sub_category')) : null; // Comma-separated subcategories
+
+        // Build the query
+        $query = ProductsModel::select('serial_number','company_id','name','alias','description','type','brand','category','sub_category','cost_price','sale_price', 'unit', 'hsn', 'tax');
+        
+        // Apply filters
+        if ($productName) {
+            $query->where('name', 'LIKE', '%' . $productName . '%');
+        }
+        if ($brand) {
+            $query->whereIn('brand', $brand);
+        }
+        if ($category) {
+            $query->whereIn('category', $category);
+        }
+        if ($subCategory) {
+            $query->whereIn('sub_category', $subCategory);
+        }
+
+        // Apply offset and limit
+        $query->offset($offset)->limit($limit);
+
+        // Fetch the products
+        $get_products = $query->get();
+
+        // Return the response
+        return $get_products->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Fetch data successfully!',
+                'data' => $get_products,
+                'count' => $get_products->count(),
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'Sorry, No products found!',
+            ], 404);
     }
+
+
 
     // update
     public function edit_products(Request $request, $id)

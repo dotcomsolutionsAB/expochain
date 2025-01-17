@@ -81,21 +81,71 @@ class SuppliersController extends Controller
     }
 
     // view
-    public function view_suppliers()
-    {        
-        $get_suppliers = SuppliersModel::with(['contact' => function ($query)
-        {
-            $query->select('supplier_id','name','designation','mobile','email');
-        }])
-        ->select('supplier_id','name','address_line_1','address_line_2', 'city', 'pincode', 'state', 'country','gstin')
-        ->where('company_id',Auth::user()->company_id)
-        ->get();
+    // public function view_suppliers()
+    // {        
+    //     $get_suppliers = SuppliersModel::with(['contact' => function ($query)
+    //     {
+    //         $query->select('supplier_id','name','designation','mobile','email');
+    //     }])
+    //     ->select('supplier_id','name','address_line_1','address_line_2', 'city', 'pincode', 'state', 'country','gstin')
+    //     ->where('company_id',Auth::user()->company_id)
+    //     ->get();
         
 
-        return isset($get_suppliers) && $get_suppliers !== null
-        ? response()->json(['Fetch record successfully!', 'data' => $get_suppliers], 200)
-        : response()->json(['Failed to fetch data'], 404); 
+    //     return isset($get_suppliers) && $get_suppliers !== null
+    //     ? response()->json(['Fetch record successfully!', 'data' => $get_suppliers], 200)
+    //     : response()->json(['Failed to fetch data'], 404); 
+    // }
+
+    public function view_suppliers(Request $request)
+    {
+        // Get filter inputs
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+        $name = $request->input('name'); // Optional name filter
+        $gstin = $request->input('gstin'); // Optional GSTIN filter
+        $mobile = $request->input('mobile'); // Optional mobile filter
+
+        // Build the query
+        $query = SuppliersModel::with(['contact' => function ($query) use ($mobile) {
+            $query->select('supplier_id', 'name', 'designation', 'mobile', 'email');
+            if ($mobile) {
+                $query->where('mobile', 'LIKE', '%' . $mobile . '%');
+            }
+        }])
+        ->select('supplier_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'gstin')
+        ->where('company_id', Auth::user()->company_id);
+
+        // Apply filters
+        if ($name) {
+            $query->where('name', 'LIKE', '%' . $name . '%');
+        }
+        if ($gstin) {
+            $query->where('gstin', 'LIKE', '%' . $gstin . '%');
+        }
+
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Execute the query
+        $get_suppliers = $query->get();
+
+        // Return the response
+        return $get_suppliers->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Fetch record successfully!',
+                'data' => $get_suppliers,
+                'count' => $get_suppliers->count()
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No suppliers found!',
+            ], 404);
     }
+
 
     // update
     public function update_suppliers(Request $request)

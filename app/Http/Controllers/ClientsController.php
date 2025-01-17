@@ -100,7 +100,54 @@ class ClientsController extends Controller
     //     ? response()->json(['Fetch data successfully!', 'data' => $get_clients], 200)
     //     : response()->json(['Failed to fetch data'], 404); 
     // }
-    public function view_clients($id = null)
+    // public function view_clients($id = null)
+    // {
+    //     if ($id) {
+    //         // Fetch a specific client
+    //         $client = ClientsModel::with(['contacts' => function ($query) {
+    //             $query->select('customer_id', 'name', 'designation', 'mobile', 'email');
+    //         }])
+    //         ->select('id', 'name', 'customer_id', 'type', 'category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'gstin')
+    //         ->where('company_id', Auth::user()->company_id)
+    //         ->find($id);
+
+    //         if ($client) {
+    //             $contactCount = $client->contacts ? $client->contacts->count() : 0;
+
+    //             return response()->json([
+    //                 'message' => 'Client fetched successfully',
+    //                 'data' => $client->makeHidden(['id', 'created_at', 'updated_at']),
+    //                 'contact_count' => $contactCount,
+    //             ], 200);
+    //         }
+
+    //         return response()->json(['message' => 'Client not found'], 404);
+    //     } else {
+    //         // Fetch all clients
+    //         $clients = ClientsModel::with(['contacts' => function ($query) {
+    //             $query->select('customer_id', 'name', 'designation', 'mobile', 'email');
+    //         }])
+    //         ->select('id', 'name', 'customer_id', 'type', 'category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'gstin')
+    //         ->where('company_id', Auth::user()->company_id)
+    //         ->get();
+
+    //         $clients->each(function ($client) {
+    //             $client->makeHidden(['created_at', 'updated_at']);
+    //             $client->contact_count = $client->contacts->count(); // Add contact count to each client
+    //         });
+
+    //         return $clients->isNotEmpty()
+    //             ? response()->json([
+    //                 'message' => 'Clients fetched successfully',
+    //                 'data' => $clients,
+    //                 'total_contacts' => $clients->sum(fn($client) => $client->contacts->count()), // Sum all contacts
+    //                 'count' => $clients->count() // Total clients count
+    //             ], 200)
+    //             : response()->json(['message' => 'No clients available'], 404);
+    //     }
+    // }
+
+    public function view_clients(Request $request, $id = null)
     {
         if ($id) {
             // Fetch a specific client
@@ -115,20 +162,52 @@ class ClientsController extends Controller
                 $contactCount = $client->contacts ? $client->contacts->count() : 0;
 
                 return response()->json([
+                    'code' => 200,
+                    'success' => true,
                     'message' => 'Client fetched successfully',
                     'data' => $client->makeHidden(['id', 'created_at', 'updated_at']),
                     'contact_count' => $contactCount,
                 ], 200);
             }
 
-            return response()->json(['message' => 'Client not found'], 404);
+            return response()->json(['code' => 404, 'success' => false, 'message' => 'Client not found'], 404);
         } else {
-            // Fetch all clients
-            $clients = ClientsModel::with(['contacts' => function ($query) {
+            // Fetch all clients with optional search parameters
+            $name = $request->input('name');
+            $type = $request->input('type');
+            $category = $request->input('category');
+            $division = $request->input('division');
+            $gstin = $request->input('gstin');
+            $mobile = $request->input('mobile'); // Search mobile under contacts
+            $limit = $request->input('limit', 10); // Default limit to 10
+            $offset = $request->input('offset', 0); // Default offset to 0
+
+            $clients = ClientsModel::with(['contacts' => function ($query) use ($mobile) {
                 $query->select('customer_id', 'name', 'designation', 'mobile', 'email');
+
+                if ($mobile) {
+                    $query->where('mobile', 'LIKE', '%' . $mobile . '%');
+                }
             }])
             ->select('id', 'name', 'customer_id', 'type', 'category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'gstin')
             ->where('company_id', Auth::user()->company_id)
+            ->when($name, function ($query, $name) {
+                $query->where('name', 'LIKE', '%' . $name . '%');
+            })
+            ->when($type, function ($query, $type) {
+                $query->where('type', $type);
+            })
+            ->when($category, function ($query, $category) {
+                $query->where('category', $category);
+            })
+            ->when($division, function ($query, $division) {
+                $query->where('division', $division);
+            })
+            ->when($gstin, function ($query, $gstin) {
+                $query->where('gstin', 'LIKE', '%' . $gstin . '%');
+            })
+            ->offset($offset) // Apply offset
+            ->limit($limit) // Apply limit
             ->get();
 
             $clients->each(function ($client) {
@@ -138,14 +217,17 @@ class ClientsController extends Controller
 
             return $clients->isNotEmpty()
                 ? response()->json([
+                    'code' => 200,
+                    'success' => true,
                     'message' => 'Clients fetched successfully',
                     'data' => $clients,
                     'total_contacts' => $clients->sum(fn($client) => $client->contacts->count()), // Sum all contacts
                     'count' => $clients->count() // Total clients count
                 ], 200)
-                : response()->json(['message' => 'No clients available'], 404);
+                : response()->json(['code' => 404, 'success' => false, 'message' => 'No clients available'], 404);
         }
     }
+
 
     // update
     public function update_clients(Request $request)
