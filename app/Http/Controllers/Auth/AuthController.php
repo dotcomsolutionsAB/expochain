@@ -16,6 +16,7 @@ class AuthController extends Controller
         {
             $request->validate([
                 'mobile' => ['required', 'string', 'min:12', 'max:14'],
+                'company_id' => 'required'
             ]);
     
             $mobile = $request->input('mobile');
@@ -39,7 +40,7 @@ class AuthController extends Controller
                 if($store_otp)
                 {
                     $templateParams = [
-                        'name' => 'ace_otp', // Replace with your WhatsApp template name
+                        'name' => 'login_otp', // Replace with your WhatsApp template name
                         'language' => ['code' => 'en'],
                         'components' => [
                             [
@@ -89,10 +90,12 @@ class AuthController extends Controller
             {
                 $request->validate([
                     'mobile' => ['required', 'string', 'size:13'],
+                    'company_id' => 'required',
                 ]);
                 
                 $otpRecord = User::select('otp', 'expires_at')
                 ->where('mobile', $request->mobile)
+                ->where('company_id', $request->company_id) // Add condition for company_id
                 ->first();
     
                 if($otpRecord)
@@ -138,23 +141,24 @@ class AuthController extends Controller
             else {
                 $request->validate([
                     // 'email' => ['required', 'string', 'min:9'],
-                    'email' => [
-                    'required',
-                    'string',
-                    'email',
-                    function ($attribute, $value, $fail) {
-                        // Check for custom email validation to include shortest domain like '.bit'
-                        $pattern = '/^[\w\.\-]+@[\w\-]+\.[a-zA-Z]{2,3}$/';
-                        if (!preg_match($pattern, $value)) {
-                            $fail($attribute . ' is not a valid email address.');
-                        }
-                    },
-                ],
+                //     'email' => [
+                //     'required',
+                //     'string',
+                //     'email',
+                //     function ($attribute, $value, $fail) {
+                //         // Check for custom email validation to include shortest domain like '.bit'
+                //         $pattern = '/^[\w\.\-]+@[\w\-]+\.[a-zA-Z]{2,3}$/';
+                //         if (!preg_match($pattern, $value)) {
+                //             $fail($attribute . ' is not a valid email address.');
+                //         }
+                //     },
+                // ],
+                    'username' => 'required',
                     'password' => 'required',
                     'company_id' => 'required'
                 ]);
 
-                if(Auth::attempt(['email' => $request->email, 'password' => $request->password, 'company_id' => $request->company_id]))
+                if(Auth::attempt(['username' => $request->username, 'password' => $request->password, 'company_id' => $request->company_id]))
                 {
                     $user = Auth::user();
     
@@ -199,5 +203,50 @@ class AuthController extends Controller
                 'success' => true,
                 'message' => 'Logged out successfully!',
             ], 204);
+        }
+
+        public function forgetPassword(Request $request)
+        {
+            // Validate the incoming request
+            $request->validate([
+                'username' => 'required|string|exists:users,username'
+            ]);
+
+            try {
+                // Retrieve the user by username
+                $user = User::where('username', $request->username)->first();
+
+                if (!$user) {
+                    return response()->json([
+                        'code' => 404,
+                        'success' => false,
+                        'message' => 'User not found.',
+                    ], 404);
+                }
+
+                // Hardcoded new password
+                $newPassword = 'EGSM1234'; // Replace with your desired hardcoded password
+
+                // Update the password in the users table
+                $user->update([
+                    'password' => Hash::make($newPassword)
+                ]);
+
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'Password has been reset successfully!',
+                    'username' => $user->username,
+                    'new_password' => $newPassword // Send the new password to the user
+                ], 200);
+
+            } catch (\Exception $e) {
+                return response()->json([
+                    'code' => 500,
+                    'success' => false,
+                    'message' => 'An error occurred while resetting the password.',
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
         }
 }

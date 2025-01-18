@@ -28,7 +28,9 @@ use App\Http\Controllers\ResetController;
 // })->middleware('auth:sanctum');
 Route::post('/register', [UsersController::class, 'register']);
 
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login/{otp?}', [AuthController::class, 'login']);
+
+Route::post('/get_otp', [AuthController::class, 'generate_otp']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
 

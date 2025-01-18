@@ -12,6 +12,7 @@ class SubCategoryModel extends Model
     protected $fillable = [
         'serial_number',
         'company_id',
+        'category_id',
         'name',
         'logo',
     ];

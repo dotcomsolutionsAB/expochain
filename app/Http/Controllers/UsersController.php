@@ -32,9 +32,29 @@ class UsersController extends Controller
                     }
                 },
             ],
-            'mobile' => 'required|string',
+            // 'mobile' => 'required|string',
+            'mobile' => [
+                'required',
+                'string',
+                'regex:/^\d{13,20}$/',
+            ],
             'password' => 'required|string',
+            'username' => [
+                'nullable',
+                'string',
+                function ($attribute, $value, $fail) use ($request) {
+                    $exists = \App\Models\User::where('username', $value)
+                        ->where('company_id', $request->input('company_id'))
+                        ->exists();
+                    if ($exists) {
+                        $fail('The combination of username and company ID must be unique.');
+                    }
+                },
+            ], // Allow username to be nullable
         ]);
+
+         // If username is null, set email as the username
+        $username = $request->input('username') ?? strtolower($request->input('email'));
 
         $register_user = User::create([
             'name' => $request->input('name'),
@@ -42,6 +62,7 @@ class UsersController extends Controller
             'password' => bcrypt($request->input('password')),
             'mobile' => $request->input('mobile'),
             'company_id' => $request->input('company_id'),
+            'username' => $username,
         ]);
         
         unset($register_user['id'], $register_user['created_at'], $register_user['updated_at']);

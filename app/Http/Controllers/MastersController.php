@@ -179,15 +179,274 @@ class MastersController extends Controller
     }
 
     // migrate
+    // public function importProducts()
+    // {
+    //     ProductsModel::truncate();
+
+    //     // Define the external URL
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
+
+    //     // Fetch data from the external URL
+    //     try {
+    //         $response = Http::get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
+    //     }
+
+    //     $data = $response->json('data');
+
+    //     if (empty($data)) {
+    //         return response()->json(['message' => 'No data found'], 404);
+    //     }
+
+    //     $successfulInserts = 0;
+    //     $errors = [];
+
+    //     foreach ($data as $record) {
+
+    //         // Generate a random 5-digit ID for the category if it doesn't exist
+    //         $category = CategoryModel::firstOrCreate(
+    //             [
+    //                 'name' => $record['category'],
+    //                 'company_id' => Auth::user()->company_id // Ensure this is part of the matching attributes
+    //             ],
+    //             [
+    //                 'serial_number' => random_int(10000, 99999)
+    //             ]
+    //         );
+
+    //         // Generate a random 5-digit ID for the sub-category if it doesn't exist
+    //         $subCategory = SubCategoryModel::firstOrCreate(
+    //             [
+    //                 'name' => $record['sub_category'],
+    //                 'category_id' => $category->id,
+    //             ],
+    //             [
+    //                 'company_id' => Auth::user()->company_id, // Ensure this is part of the matching attributes
+    //                 'serial_number' => random_int(10000, 99999)
+    //             ]
+    //         );
+
+    //          // Generate a random 5-digit ID for the sub-category if it doesn't exist
+    //          $brand = BrandModel::firstOrCreate(
+    //             [
+    //                 'name' => $record['group_name'],
+    //                 'company_id' => Auth::user()->company_id // Ensure this is part of the matching attributes
+    //             ],
+    //             [
+    //                 'serial_number' => random_int(10000, 99999),
+    //                 'logo' => random_int(10000, 99999)
+    //             ]
+    //         );
+
+    //         // Prepare purchase order data
+    //         $purchaseData = [
+    //             'serial_number' => $record['sn'],
+    //             'company_id' => Auth::user()->company_id,
+    //             'name' => $record['name'],
+    //             'alias' => $record['alias'], 
+    //             'description' => $record['description'] ?? 'No description available',
+    //             'type' => $record['type'],
+    //             'brand' => $brand->id,
+    //             'category' => $category->id,
+    //             'sub_category' => $subCategory->id,
+    //             'cost_price' => $record['cost_price'],
+    //             'sale_price' => !empty($record['sale_price']) ? $record['sale_price'] : 0,
+    //             'unit' => !empty($record['unit']) ? $record['unit'] : 'N/A',
+    //             'hsn' => !empty($record['hsn']) ? $record['hsn'] : 'N/A',
+    //             'tax' => $record['tax'],
+    //         ];
+
+    //         // Validate record data
+    //         $validator = Validator::make($purchaseData, [
+    //             'serial_number' => 'required|integer',
+    //             'company_id' => 'required|integer',
+    //             'name' => 'required|string',
+    //             'alias' => 'required|string',
+    //             'description' => 'nullable|string',
+    //             'type' => 'required|string',
+    //             'brand' => 'required|integer|exists:t_brand,id',
+    //             'category' => 'required|integer|exists:t_category,id',
+    //             'sub_category' => 'required|integer|exists:t_sub_category,id',
+    //             'cost_price' => 'required|numeric',
+    //             'sale_price' => 'required|numeric',
+    //             'unit' => 'required|string',
+    //             'hsn' => 'required|string',
+    //             'tax' => 'required|integer',
+    //         ]);
+
+    //         if ($validator->fails()) {
+    //             $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+    //             continue;
+    //         }
+
+    //         // Insert Product
+    //         try {
+    //             ProductsModel::create($purchaseData);
+    //             $successfulInserts++;
+    //         } catch (\Exception $e) {
+    //             $errors[] = ['record' => $record, 'error' => 'Failed to insert product: ' . $e->getMessage()];
+    //         }
+    //     }
+
+    //     // Return summary of the operation
+    //     return response()->json([
+    //         'message' => "Product data import completed. Successful inserts: $successfulInserts.",
+    //         'errors' => $errors,
+    //     ], 200);
+
+    // }
+
+    // public function importProducts()
+    // {
+    //     ini_set('max_execution_time', 300); // Increase execution time
+    //     ini_set('memory_limit', '1024M');   // Increase memory limit
+
+    //     // Truncate the products table before import
+    //     ProductsModel::truncate();
+    //     CategoryModel::truncate();
+    //     BrandModel::truncate();
+    //     BrandModel::truncate();
+
+    //     // Define the external URL
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
+
+    //     try {
+    //         // Fetch data from the external URL
+    //         $response = Http::get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
+    //     }
+
+    //     $data = $response->json('data');
+    //     if (empty($data)) {
+    //         return response()->json(['message' => 'No data found'], 404);
+    //     }
+
+    //     $batchSize = 1000; // Batch size for processing
+    //     $batchData = [];
+    //     $successfulInserts = 0;
+    //     $errors = [];
+
+    //     foreach ($data as $record) {
+    //         try {
+    //             // Handle blank `category`, `sub_category`, or `brand_name`
+    //             $categoryName = $record['category'] ?? null;
+    //             $subCategoryName = $record['sub_category'] ?? null;
+    //             $brandName = $record['group_name'] ?? null;
+
+    //             $category = $categoryName 
+    //                 ? CategoryModel::firstOrCreate(
+    //                     [
+    //                         'name' => $categoryName,
+    //                         'company_id' => Auth::user()->company_id
+    //                     ],
+    //                     [
+    //                         'serial_number' => random_int(10000, 99999)
+    //                     ]
+    //                 )
+    //                 : null;
+
+    //             $subCategory = $subCategoryName 
+    //                 ? SubCategoryModel::firstOrCreate(
+    //                     [
+    //                         'name' => $subCategoryName,
+    //                         'category_id' => $category ? $category->id : null,
+    //                         'company_id' => Auth::user()->company_id
+    //                     ],
+    //                     [
+    //                         'serial_number' => random_int(10000, 99999)
+    //                     ]
+    //                 )
+    //                 : null;
+
+    //             $brand = $brandName 
+    //                 ? BrandModel::firstOrCreate(
+    //                     [
+    //                         'name' => $brandName,
+    //                         'company_id' => Auth::user()->company_id
+    //                     ],
+    //                     [
+    //                         'serial_number' => random_int(10000, 99999),
+    //                         'logo' => random_int(10000, 99999)
+    //                     ]
+    //                 )
+    //                 : null;
+
+    //             // Prepare product data
+    //             $purchaseData = [
+    //                 'serial_number' => $record['sn'],
+    //                 'company_id' => Auth::user()->company_id,
+    //                 'name' => $record['name'],
+    //                 'alias' => $record['alias'],
+    //                 'description' => $record['description'] ?? 'No description available',
+    //                 'type' => $record['type'],
+    //                 'brand' => $brand ? $brand->id : null,
+    //                 'category' => $category ? $category->id : null,
+    //                 'sub_category' => $subCategory ? $subCategory->id : null,
+    //                 'cost_price' => $record['cost_price'],
+    //                 'sale_price' => $record['sale_price'] ?? 0,
+    //                 'unit' => $record['unit'] ?? 'N/A',
+    //                 'hsn' => $record['hsn'] ?? 'N/A',
+    //                 'tax' => $record['tax'],
+    //                 'created_at' => now(),
+    //                 'updated_at' => now(),
+    //             ];
+
+    //             // Add to batch
+    //             $batchData[] = $purchaseData;
+
+    //             // Insert in batches
+    //             if (count($batchData) >= $batchSize) {
+    //                 ProductsModel::insert($batchData);
+    //                 $successfulInserts += count($batchData);
+    //                 $batchData = []; // Reset batch
+    //             }
+    //         } catch (\Exception $e) {
+    //             $errors[] = [
+    //                 'record' => $record,
+    //                 'error' => 'Error: ' . $e->getMessage()
+    //             ];
+    //         }
+    //     }
+
+    //     // Insert remaining records
+    //     if (count($batchData) > 0) {
+    //         ProductsModel::insert($batchData);
+    //         $successfulInserts += count($batchData);
+    //     }
+
+    //     // Return response
+    //     return response()->json([
+    //         'message' => "Product data import completed. Successful inserts: $successfulInserts.",
+    //         'errors' => $errors,
+    //     ], 200);
+    // }
+
     public function importProducts()
     {
+        ini_set('max_execution_time', 600); // Increase execution time
+        ini_set('memory_limit', '2048M');   // Increase memory limit
+
+        // Truncate the products table before import
         ProductsModel::truncate();
+        CategoryModel::truncate();
+        SubCategoryModel::truncate();
+        BrandModel::truncate();
 
         // Define the external URL
         $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
 
-        // Fetch data from the external URL
         try {
+            // Fetch data from the external URL
             $response = Http::get($url);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
@@ -198,92 +457,239 @@ class MastersController extends Controller
         }
 
         $data = $response->json('data');
-
         if (empty($data)) {
             return response()->json(['message' => 'No data found'], 404);
         }
 
+        $batchSize = 500; // Batch size for processing
+        $batchData = [];
         $successfulInserts = 0;
         $errors = [];
 
+        // Preload existing categories, subcategories, and brands
+        $existingCategories = CategoryModel::pluck('id', 'name')->toArray();
+        $existingSubCategories = SubCategoryModel::pluck('id', 'name')->toArray();
+        $existingBrands = BrandModel::pluck('id', 'name')->toArray();
+
         foreach ($data as $record) {
-
-            // Generate a random 5-digit ID for the category if it doesn't exist
-            $category = CategoryModel::firstOrCreate(
-                ['name' => $record['category']],
-                ['serial_number' => random_int(10000, 99999)]
-            );
-
-            // Generate a random 5-digit ID for the sub-category if it doesn't exist
-            $subCategory = SubCategoryModel::firstOrCreate(
-                ['name' => $record['sub_category']],
-                ['serial_number' => random_int(10000, 99999)]
-            );
-
-             // Generate a random 5-digit ID for the sub-category if it doesn't exist
-             $brand = BrandModel::firstOrCreate(
-                ['name' => $record['group_name']],
-                [
-                    'serial_number' => random_int(10000, 99999),
-                    'logo' => random_int(10000, 99999)
-                ]
-            );
-
-            // Prepare purchase order data
-            $purchaseData = [
-                'serial_number' => $record['sn'],
-                'name' => $record['name'],
-                'alias' => $record['alias'], 
-                'description' => $record['description'] ?? 'No description available',
-                'type' => $record['type'],
-                'brand' => $brand->id,
-                'category' => $category->id,
-                'sub_category' => $subCategory->id,
-                'cost_price' => $record['cost_price'],
-                'sale_price' => !empty($record['sale_price']) ? $record['sale_price'] : 0,
-                'unit' => !empty($record['unit']) ? $record['unit'] : 'N/A',
-                'hsn' => !empty($record['hsn']) ? $record['hsn'] : 'N/A',
-                'tax' => $record['tax'],
-            ];
-
-            // Validate record data
-            $validator = Validator::make($purchaseData, [
-                'serial_number' => 'required|integer',
-                'name' => 'required|string',
-                'alias' => 'required|string',
-                'description' => 'nullable|string',
-                'type' => 'required|string',
-                'brand' => 'required|integer|exists:t_brand,id',
-                'category' => 'required|integer|exists:t_category,id',
-                'sub_category' => 'required|integer|exists:t_sub_category,id',
-                'cost_price' => 'required|numeric',
-                'sale_price' => 'required|numeric',
-                'unit' => 'required|string',
-                'hsn' => 'required|string',
-                'tax' => 'required|integer',
-            ]);
-
-            if ($validator->fails()) {
-                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
-                continue;
-            }
-
-            // Insert Product
             try {
-                ProductsModel::create($purchaseData);
-                $successfulInserts++;
+                // Handle blank `category`, `sub_category`, or `brand_name`
+                $categoryId = null;
+                if (!empty($record['category'])) {
+                    $categoryId = $existingCategories[$record['category']] ?? null;
+
+                    if (!$categoryId) {
+                        $category = CategoryModel::create([
+                            'name' => $record['category'],
+                            'company_id' => Auth::user()->company_id,
+                            'serial_number' => random_int(10000, 99999)
+                        ]);
+                        $existingCategories[$record['category']] = $category->id;
+                        $categoryId = $category->id;
+                    }
+                }
+
+                $subCategoryId = null;
+                if (!empty($record['sub_category'])) {
+                    $subCategoryId = $existingSubCategories[$record['sub_category']] ?? null;
+
+                    if (!$subCategoryId) {
+                        $subCategory = SubCategoryModel::create([
+                            'name' => $record['sub_category'],
+                            'category_id' => $categoryId,
+                            'company_id' => Auth::user()->company_id,
+                            'serial_number' => random_int(10000, 99999)
+                        ]);
+                        $existingSubCategories[$record['sub_category']] = $subCategory->id;
+                        $subCategoryId = $subCategory->id;
+                    }
+                }
+
+                $brandId = null;
+                if (!empty($record['group_name'])) {
+                    $brandId = $existingBrands[$record['group_name']] ?? null;
+
+                    if (!$brandId) {
+                        $brand = BrandModel::create([
+                            'name' => $record['group_name'],
+                            'company_id' => Auth::user()->company_id,
+                            'serial_number' => random_int(10000, 99999),
+                            'logo' => random_int(10000, 99999)
+                        ]);
+                        $existingBrands[$record['group_name']] = $brand->id;
+                        $brandId = $brand->id;
+                    }
+                }
+
+                // Sanitize numeric fields to prevent invalid values
+                $costPrice = is_numeric($record['cost_price']) ? $record['cost_price'] : 0;
+                $salePrice = is_numeric($record['sale_price']) ? $record['sale_price'] : 0;
+                $tax = is_numeric($record['tax']) ? $record['tax'] : 0;
+
+                // Prepare product data
+                $purchaseData = [
+                    'serial_number' => $record['sn'],
+                    'company_id' => Auth::user()->company_id,
+                    'name' => $record['name'],
+                    'alias' => $record['alias'],
+                    'description' => $record['description'] ?? 'No description available',
+                    'type' => $record['type'],
+                    'brand' => $brandId,
+                    'category' => $categoryId,
+                    'sub_category' => $subCategoryId,
+                    'cost_price' => $costPrice,
+                    'sale_price' => $salePrice,
+                    'unit' => $record['unit'] ?? 'N/A',
+                    'hsn' => $record['hsn'] ?? 'N/A',
+                    'tax' => $record['tax'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+
+                // Add to batch
+                $batchData[] = $purchaseData;
+
+                // Insert in batches
+                if (count($batchData) >= $batchSize) {
+                    ProductsModel::insert($batchData);
+                    $successfulInserts += count($batchData);
+                    $batchData = []; // Reset batch
+                }
             } catch (\Exception $e) {
-                $errors[] = ['record' => $record, 'error' => 'Failed to insert product: ' . $e->getMessage()];
+                $errors[] = [
+                    'record' => $record,
+                    'error' => 'Error: ' . $e->getMessage()
+                ];
             }
         }
 
-        // Return summary of the operation
+        // Insert remaining records
+        if (count($batchData) > 0) {
+            ProductsModel::insert($batchData);
+            $successfulInserts += count($batchData);
+        }
+
+        // Return response
         return response()->json([
             'message' => "Product data import completed. Successful inserts: $successfulInserts.",
             'errors' => $errors,
         ], 200);
-
     }
+
+
+    // public function importProducts(Request $request)
+    // {
+    //     ini_set('max_execution_time', 600); // Extend execution time
+    //     ini_set('memory_limit', '2048M');   // Increase memory limit
+
+    //     $limit = 500; // Number of products to import in one request
+    //     $offset = $request->input('offset', 0); // Starting point for the batch
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
+
+    //     try {
+    //         // Fetch data from the external API
+    //         $response = Http::get($url);
+
+    //         if ($response->failed()) {
+    //             return response()->json(['error' => 'Failed to fetch data.'], 500);
+    //         }
+
+    //         $data = $response->json('data');
+
+    //         if (empty($data)) {
+    //             return response()->json(['message' => 'No data found.'], 404);
+    //         }
+
+    //         // Apply limit and offset
+    //         $batchData = array_slice($data, $offset, $limit);
+
+    //         if (empty($batchData)) {
+    //             return response()->json([
+    //                 'message' => 'No more products to import.',
+    //                 'next_offset' => null,
+    //             ], 200);
+    //         }
+
+    //         $successfulInserts = 0;
+    //         $errors = [];
+
+    //         foreach ($batchData as $record) {
+    //             try {
+    //                 // Handle blank category, sub_category, or brand
+    //                 $category = !empty($record['category'])
+    //                     ? CategoryModel::firstOrCreate(
+    //                         ['name' => $record['category'],
+    //                         'company_id' => Auth::user()->company_id],
+    //                         ['serial_number' => random_int(10000, 99999)]
+    //                     )
+    //                     : null;
+
+    //                 $subCategory = !empty($record['sub_category'])
+    //                     ? SubCategoryModel::firstOrCreate(
+    //                         ['name' => $record['sub_category'], 'category_id' => $category ? $category->id : null],
+    //                         ['company_id' => Auth::user()->company_id,
+    //                         'serial_number' => random_int(10000, 99999)]
+    //                     )
+    //                     : null;
+
+    //                 $brand = !empty($record['group_name'])
+    //                     ? BrandModel::firstOrCreate(
+    //                         ['name' => $record['group_name'],
+    //                         'company_id' => Auth::user()->company_id],
+    //                         ['serial_number' => random_int(10000, 99999), 'logo' => random_int(10000, 99999)]
+    //                     )
+    //                     : null;
+
+    //                 // Sanitize numeric fields to prevent invalid values
+    //                 $costPrice = is_numeric($record['cost_price']) ? $record['cost_price'] : 0;
+    //                 $salePrice = is_numeric($record['sale_price']) ? $record['sale_price'] : 0;
+    //                 $tax = is_numeric($record['tax']) ? $record['tax'] : 0;
+
+    //                 // Prepare product data
+    //                 $productData = [
+    //                     'serial_number' => $record['sn'],
+    //                     'company_id' => Auth::user()->company_id,
+    //                     'name' => $record['name'],
+    //                     'alias' => $record['alias'],
+    //                     'description' => $record['description'] ?? 'No description available',
+    //                     'type' => $record['type'],
+    //                     'brand' => $brand ? $brand->id : null,
+    //                     'category' => $category ? $category->id : null,
+    //                     'sub_category' => $subCategory ? $subCategory->id : null,
+    //                     'cost_price' => $costPrice,
+    //                     'sale_price' => $salePrice,
+    //                     'unit' => $record['unit'] ?? 'N/A',
+    //                     'hsn' => $record['hsn'] ?? 'N/A',
+    //                     'tax' => $record['tax'],
+    //                     'created_at' => now(),
+    //                     'updated_at' => now(),
+    //                 ];
+
+    //                 // Insert the product
+    //                 ProductsModel::create($productData);
+    //                 $successfulInserts++;
+    //             } catch (\Exception $e) {
+    //                 $errors[] = [
+    //                     'record' => $record,
+    //                     'error' => $e->getMessage(),
+    //                 ];
+    //             }
+    //         }
+
+    //         // Calculate the next offset
+    //         $nextOffset = $offset + $limit;
+
+    //         return response()->json([
+    //             'message' => "Imported $successfulInserts products successfully.",
+    //             'errors' => $errors,
+    //             'next_offset' => $nextOffset,
+    //         ], 200);
+
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => $e->getMessage()], 500);
+    //     }
+    // }
+
 
     public function get_product()
     {
@@ -887,12 +1293,14 @@ class MastersController extends Controller
             'serial_number' => 'required|string',
             'name' => 'required|string',
             'logo' => 'required|string',
+            'category_id' => 'required|exists:t_category,id'
         ]);
 
         $register_sub_category = SubCategoryModel::create([
             'serial_number' => $request->input('serial_number'),
             'name' => $request->input('name'),
             'logo' => $request->input('logo'),
+            'category_id' => $request->input('category_id')
         ]);
         
         unset($register_sub_categoryy['id'], $register_sub_category['created_at'], $register_category['updated_at']);

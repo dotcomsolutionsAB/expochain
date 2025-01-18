@@ -20,6 +20,7 @@ return new class extends Migration
             $table->integer('company_id')->after('role');
             $table->dropUnique('users_email_unique');
             $table->unique(['email', 'company_id'], 'unique_email_contact_id');
+            $table->unique(['username', 'company_id'], 'users_username_company_id_unique');
         });
     }
 
