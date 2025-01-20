@@ -15,76 +15,6 @@ class ClientsController extends Controller
     //
     // clients table
     // create
-    // public function add_clients(Request $request)
-    // {
-    //     $request->validate([
-    //         'name' => 'required|string|unique:t_clients,name',
-    //         'type' => 'required|string',
-    //         'category' => 'required|string',
-    //         'division' => 'required|string',
-    //         'plant' => 'required|string',
-    //         'address_line_1' => 'required|string',
-    //         'address_line_2' => 'required|string',
-    //         'city' => 'required|string',
-    //         'pincode' => 'required|string',
-    //         'state' => 'required|string',
-    //         'country' => 'required|string',
-    //         'gstin' => 'required|string|unique:t_clients,gstin',
-    //         'contacts' => 'required',
-    //     ]);
-
-    //     $company_id = Auth::user()->company_id;
-
-    //     // Check if the combination of name, gstin, and contact_id is unique
-    //     $exists = ClientsModel::where('name', $request->input('name'))
-    //                     ->where('gstin', $request->input('gstin'))
-    //                     ->where('company_id', $company_id)
-    //                     ->exists();
-
-    //     if ($exists) {
-    //         return response()->json(['error' => 'The combination of name, GSTIN, and company ID must be unique.'], 422);
-    //     }
-
-    //     $customer_id = rand(1111111111,9999999999);
-
-    //     $contacts = $request->input('contacts');
-
-    //     // Iterate over the contacts array and insert each contact
-    //     foreach ($contacts as $contact) {
-    //         ClientContactsModel::create([
-    //         'customer_id' => $customer_id,
-    //         'company_id' => $company_id,
-    //         'name' => $contact['name'],
-    //         'designation' => $contact['designation'],
-    //         'mobile' => $contact['mobile'],
-    //         'email' => $contact['email'],
-    //         ]);
-    //     }
-
-    //     $register_clients = ClientsModel::create([
-    //         'name' => $request->input('name'),
-    //         'company_id' => Auth::user()->company_id,
-    //         'customer_id' => $customer_id,
-    //         'type' => $request->input('type'),
-    //         'category' => $request->input('category'),
-    //         'division' => $request->input('division'),
-    //         'plant' => $request->input('plant'),
-    //         'address_line_1' => $request->input('address_line_1'),
-    //         'address_line_2' => $request->input('address_line_2'),
-    //         'city' => $request->input('city'),
-    //         'pincode' => $request->input('pincode'),
-    //         'state' => $request->input('state'),
-    //         'country' => $request->input('country'),
-    //         'gstin' => $request->input('gstin'),
-    //     ]);
-        
-    //     unset($register_clients['id'], $register_clients['created_at'], $register_clients['updated_at']);
-
-    //     return isset($register_clients) && $register_clients !== null
-    //     ? response()->json(['code' => 201,'success' => true, 'Client registered successfully!', 'data' => $register_clients], 201)
-    //     : response()->json(['code' => 400,'success' => false,'Failed to register client record'], 400);
-    // }
-
     public function add_clients(Request $request)
     {
         $request->validate([
@@ -176,68 +106,6 @@ class ClientsController extends Controller
 
 
     // view
-    // public function view_clients()
-    // {        
-    //     $get_clients = ClientsModel::with(['contacts' => function ($query)
-    //     {
-    //         $query->select('customer_id','name','designation','mobile','email');
-    //     }])
-    //     ->select('name','customer_id','type','category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city','pincode','state','country', 'gstin')
-    //     ->where('company_id',Auth::user()->company_id) 
-    //     ->get();
-        
-
-    //     return isset($get_clients) && $get_clients !== null
-    //     ? response()->json(['Fetch data successfully!', 'data' => $get_clients], 200)
-    //     : response()->json(['Failed to fetch data'], 404); 
-    // }
-    // public function view_clients($id = null)
-    // {
-    //     if ($id) {
-    //         // Fetch a specific client
-    //         $client = ClientsModel::with(['contacts' => function ($query) {
-    //             $query->select('customer_id', 'name', 'designation', 'mobile', 'email');
-    //         }])
-    //         ->select('id', 'name', 'customer_id', 'type', 'category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'gstin')
-    //         ->where('company_id', Auth::user()->company_id)
-    //         ->find($id);
-
-    //         if ($client) {
-    //             $contactCount = $client->contacts ? $client->contacts->count() : 0;
-
-    //             return response()->json([
-    //                 'message' => 'Client fetched successfully',
-    //                 'data' => $client->makeHidden(['id', 'created_at', 'updated_at']),
-    //                 'contact_count' => $contactCount,
-    //             ], 200);
-    //         }
-
-    //         return response()->json(['message' => 'Client not found'], 404);
-    //     } else {
-    //         // Fetch all clients
-    //         $clients = ClientsModel::with(['contacts' => function ($query) {
-    //             $query->select('customer_id', 'name', 'designation', 'mobile', 'email');
-    //         }])
-    //         ->select('id', 'name', 'customer_id', 'type', 'category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'gstin')
-    //         ->where('company_id', Auth::user()->company_id)
-    //         ->get();
-
-    //         $clients->each(function ($client) {
-    //             $client->makeHidden(['created_at', 'updated_at']);
-    //             $client->contact_count = $client->contacts->count(); // Add contact count to each client
-    //         });
-
-    //         return $clients->isNotEmpty()
-    //             ? response()->json([
-    //                 'message' => 'Clients fetched successfully',
-    //                 'data' => $clients,
-    //                 'total_contacts' => $clients->sum(fn($client) => $client->contacts->count()), // Sum all contacts
-    //                 'count' => $clients->count() // Total clients count
-    //             ], 200)
-    //             : response()->json(['message' => 'No clients available'], 404);
-    //     }
-    // }
-
     public function view_clients(Request $request, $id = null)
     {
         if ($id) {
@@ -336,8 +204,6 @@ class ClientsController extends Controller
                 : response()->json(['code' => 404, 'success' => false, 'message' => 'No clients available'], 404);
         }
     }
-
-
 
     // update
     public function update_clients(Request $request, $id)
