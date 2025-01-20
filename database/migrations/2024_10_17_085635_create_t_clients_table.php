@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('division');
             $table->string('plant');
             $table->string('gstin');
+            $table->unsignedBigInteger('default_contact');
             $table->timestamps();
 
             // Add a composite unique index for name, gstin, and contact_id

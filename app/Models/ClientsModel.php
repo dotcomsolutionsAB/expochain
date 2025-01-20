@@ -18,6 +18,7 @@ class ClientsModel extends Model
         'division',
         'plant',
         'gstin',
+        'default_contact',
     ];
 
     // One client has many contacts

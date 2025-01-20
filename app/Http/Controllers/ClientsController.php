@@ -299,7 +299,7 @@ class ClientsController extends Controller
         foreach ($addresses as $addressData) {
             $addressTypes[] = $addressData['type'];
 
-            $address = ClientAddressModel::where('customer_id', $client->id)
+            $address = ClientAddressModel::where('customer_id', $client->customer_id)
                 ->where('type', $addressData['type'])
                 ->first();
 
