@@ -17,12 +17,6 @@ class ClientsModel extends Model
         'category',
         'division',
         'plant',
-        'address_line_1',
-        'address_line_2',
-        'city',
-        'pincode',
-        'state',
-        'country',
         'gstin',
     ];
 
@@ -30,6 +24,11 @@ class ClientsModel extends Model
     // public functions constacts
     public function contacts()
     {
-        return $this->hasMany(ClientsContactsModel::class, 'customer_id', 'customer_id');
+        return $this->hasMany(ClientContactsModel::class, 'customer_id', 'customer_id');
+    }
+
+    public function addresses()
+    {
+        return $this->hasMany(ClientAddressModel::class, 'customer_id', 'customer_id');
     }
 }

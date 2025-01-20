@@ -20,12 +20,6 @@ return new class extends Migration
             $table->string('category');
             $table->string('division');
             $table->string('plant');
-            $table->string('address_line_1');
-            $table->string('address_line_2');
-            $table->string('city');
-            $table->string('pincode');
-            $table->string('state');
-            $table->string('country');
             $table->string('gstin');
             $table->timestamps();
 

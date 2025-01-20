@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->integer('company_id')->unsigned();
             $table->enum('type', ['billing', 'shipping'])->default('billing'); // Billing or Shipping
-            $table->integer('client_id')->unsigned();
+            $table->unsignedBigInteger('customer_id');
             $table->string('country');
             $table->string('address_line_1');
             $table->string('address_line_2')->nullable();

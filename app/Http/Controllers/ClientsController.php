@@ -5,7 +5,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\ClientsModel;
-use App\Models\ClientsContactsModel;
+use App\Models\ClientContactsModel;
+use App\Models\ClientAddressModel;
 use Illuminate\Support\Str;
 use Auth;
 
@@ -50,7 +51,7 @@ class ClientsController extends Controller
 
     //     // Iterate over the contacts array and insert each contact
     //     foreach ($contacts as $contact) {
-    //         ClientsContactsModel::create([
+    //         ClientContactsModel::create([
     //         'customer_id' => $customer_id,
     //         'company_id' => $company_id,
     //         'name' => $contact['name'],
@@ -123,7 +124,7 @@ class ClientsController extends Controller
         $defaultContactId = null;
 
         foreach ($contacts as $index => $contact) {
-            $newContact = ClientsContactsModel::create([
+            $newContact = ClientContactsModel::create([
                 'customer_id' => $customer_id,
                 'company_id' => $company_id,
                 'name' => $contact['name'],
@@ -156,7 +157,7 @@ class ClientsController extends Controller
             ClientAddressModel::create([
                 'company_id' => $company_id,
                 'type' => $address['type'], // Billing or Shipping
-                'client_id' => $customer_id, // Mapping client ID
+                'customer_id' => $customer_id, // Mapping client ID
                 'country' => $address['country'],
                 'address_line_1' => $address['address_line_1'],
                 'address_line_2' => $address['address_line_2'],
@@ -241,45 +242,59 @@ class ClientsController extends Controller
     {
         if ($id) {
             // Fetch a specific client
-            $client = ClientsModel::with(['contacts' => function ($query) {
-                $query->select('customer_id', 'name', 'designation', 'mobile', 'email');
-            }])
-            ->select('id', 'name', 'customer_id', 'type', 'category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'gstin')
+            $client = ClientsModel::with([
+                'contacts' => function ($query) {
+                    $query->select('customer_id', 'name', 'designation', 'mobile', 'email');
+                },
+                'addresses' => function ($query) {
+                    $query->select('customer_id', 'type', 'country', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode');
+                },
+            ])
+            ->select('customer_id', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
             ->where('company_id', Auth::user()->company_id)
-            ->find($id);
+            ->where('customer_id', $id)
+            ->first();
 
             if ($client) {
-                $contactCount = $client->contacts ? $client->contacts->count() : 0;
+                $contactCount = $client->contacts->count();
+
+            // Trim unnecessary fields from contacts
+            $client->contacts->each(function ($contact) {
+                $contact->makeHidden(['id', 'created_at', 'updated_at']);
+            });
 
                 return response()->json([
                     'code' => 200,
                     'success' => true,
                     'message' => 'Client fetched successfully',
-                    'data' => $client->makeHidden(['id', 'created_at', 'updated_at']),
+                    'data' => $client,
                     'contact_count' => $contactCount,
                 ], 200);
             }
 
             return response()->json(['code' => 404, 'success' => false, 'message' => 'Client not found'], 404);
         } else {
-            // Fetch all clients with optional search parameters
+            // Fetch all clients with optional filters
             $name = $request->input('name');
             $type = $request->input('type');
             $category = $request->input('category');
             $division = $request->input('division');
             $gstin = $request->input('gstin');
-            $mobile = $request->input('mobile'); // Search mobile under contacts
-            $limit = $request->input('limit', 10); // Default limit to 10
-            $offset = $request->input('offset', 0); // Default offset to 0
+            $mobile = $request->input('mobile');
+            $limit = $request->input('limit', 10);
+            $offset = $request->input('offset', 0);
 
-            $clients = ClientsModel::with(['contacts' => function ($query) use ($mobile) {
-                $query->select('customer_id', 'name', 'designation', 'mobile', 'email');
-
-                if ($mobile) {
-                    $query->where('mobile', 'LIKE', '%' . $mobile . '%');
-                }
-            }])
-            ->select('id', 'name', 'customer_id', 'type', 'category', 'division', 'plant', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'gstin')
+            $clients = ClientsModel::with([
+                'contacts' => function ($query) use ($mobile) {
+                    if ($mobile) {
+                        $query->where('mobile', 'LIKE', '%' . $mobile . '%');
+                    }
+                },
+                'addresses' => function ($query) {
+                    $query->select('customer_id', 'type', 'country', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode');
+                },
+            ])
+            ->select('name', 'customer_id', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
             ->where('company_id', Auth::user()->company_id)
             ->when($name, function ($query, $name) {
                 $query->where('name', 'LIKE', '%' . $name . '%');
@@ -296,13 +311,17 @@ class ClientsController extends Controller
             ->when($gstin, function ($query, $gstin) {
                 $query->where('gstin', 'LIKE', '%' . $gstin . '%');
             })
-            ->offset($offset) // Apply offset
-            ->limit($limit) // Apply limit
+            ->offset($offset)
+            ->limit($limit)
             ->get();
 
             $clients->each(function ($client) {
-                $client->makeHidden(['created_at', 'updated_at']);
-                $client->contact_count = $client->contacts->count(); // Add contact count to each client
+                $client->contact_count = $client->contacts->count(); // Add contact count
+
+                // Trim unnecessary fields from contacts
+                $client->contacts->each(function ($contact) {
+                    $contact->makeHidden(['id', 'created_at', 'updated_at']);
+                });
             });
 
             return $clients->isNotEmpty()
@@ -312,119 +331,20 @@ class ClientsController extends Controller
                     'message' => 'Clients fetched successfully',
                     'data' => $clients,
                     'total_contacts' => $clients->sum(fn($client) => $client->contacts->count()), // Sum all contacts
-                    'count' => $clients->count() // Total clients count
+                    'count' => $clients->count(), // Total clients count
                 ], 200)
                 : response()->json(['code' => 404, 'success' => false, 'message' => 'No clients available'], 404);
         }
     }
 
 
+
     // update
-    // public function update_clients(Request $request)
-    // {
-    //     $request->validate([
-    //         'name' => 'required|string',
-    //         'customer_id' => 'required',
-    //         'type' => 'required|string',
-    //         'category' => 'required|string',
-    //         'division' => 'required|string',
-    //         'plant' => 'required|string',
-    //         'address_line_1' => 'required|string',
-    //         'address_line_2' => 'required|string',
-    //         'city' => 'required|string',
-    //         'pincode' => 'required|string',
-    //         'state' => 'required|string',
-    //         'country' => 'required|string',
-    //         'gstin' => 'required|string',
-    //         'contacts' => 'required|array',
-    //         'contacts.*.name' => 'required|string',
-    //         'contacts.*.designation' => 'required|string',
-    //         'contacts.*.mobile' => 'required|string',
-    //         'contacts.*.email' => 'required|email',
-    //     ]);
-
-    //     // get the client
-    //     $client = ClientsModel::where('customer_id', $request->input('customer_id'))->first();
-
-    //     // Update the client information
-    //     $clientUpdated = $client->update([
-    //         'name' => $request->input('name'),
-    //         // 'customer_id' => $customer_id,
-    //         'type' => $request->input('type'),
-    //         'category' => $request->input('category'),
-    //         'division' => $request->input('division'),
-    //         'plant' => $request->input('plant'),
-    //         'address_line_1' => $request->input('address_line_1'),
-    //         'address_line_2' => $request->input('address_line_2'),
-    //         'city' => $request->input('city'),
-    //         'pincode' => $request->input('pincode'),
-    //         'state' => $request->input('state'),
-    //         'country' => $request->input('country'),
-    //         'gstin' => $request->input('gstin'),
-    //     ]);
-
-    //     // Get the list of contacts from the request
-    //     $contacts = $request->input('contacts');
-
-    //     // Collect names of contacts that are in the request
-    //     $requestContactNames = [];
-
-    //     $contactsUpdated = false;
-
-    //     foreach ($contacts as $contactData) 
-    //     {
-    //         $requestContactNames[] = $contactData['name'];
-
-
-    //         // Check if the contact exists by customer_id and name
-    //         $contact = ClientsContactsModel::where('customer_id', $contactData['customer_id'])
-    //                                         ->where('name',$contactData['name'])
-    //                                         ->first();
-
-    //         if ($contact) 
-    //         {
-    //             // Update the existing contact
-    //             $contactsUpdated = $contact->update([
-    //                 'designation' => $contactData['designation'],
-    //                 'mobile' => $contactData['mobile'],
-    //                 'email' => $contactData['email'],
-    //             ]);
-    //         }
-    //         else
-    //         {
-    //             // Create a new contact since it doesn't exist
-    //             $newContact = ClientsContactsModel::create([
-    //                 'customer_id' => $client->customer_id,
-    //                 'company_id' => Auth::user()->company_id,
-    //                 'name' => $contactData['name'],
-    //                 'designation' => $contactData['designation'],
-    //                 'mobile' => $contactData['mobile'],
-    //                 'email' => $contactData['email'],
-    //             ]);
-
-    //             if ($newContact) {
-    //                 $contactsUpdated = true; // New contact created successfully
-    //             }
-    //         }
-    //     }
-
-    //     // Delete contacts that are not present in the request but exist in the database for this customer_id
-    //     $contactsDeleted = ClientsContactsModel::where('customer_id', $client->customer_id)
-    //     ->whereNotIn('name', $requestContactNames)  // Delete if name is not in the request
-    //     ->delete();
-
-    //     unset($client['id'], $client['created_at'], $client['updated_at']);
-
-    //     return ($clientUpdated || $contactsUpdated || $contactsDeleted)
-    //     ? response()->json(['code' => 200,'success' => true, 'message' => 'Client and contacts updated successfully!', 'client' => $client], 200)
-    //     : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
-    // }
-
-    public function update_clients(Request $request)
+    public function update_clients(Request $request, $id)
     {
+        // Validate the request input
         $request->validate([
             'name' => 'required|string',
-            'customer_id' => 'required',
             'type' => 'required|string',
             'category' => 'required|string',
             'division' => 'required|string',
@@ -445,8 +365,10 @@ class ClientsController extends Controller
             'addresses.*.country' => 'required|string',
         ]);
 
-        // Fetch the client
-        $client = ClientsModel::where('customer_id', $request->input('customer_id'))->first();
+        // Validate and fetch the client by ID
+        $client = ClientsModel::where('id', $id)
+            ->where('company_id', Auth::user()->company_id)
+            ->first();
 
         if (!$client) {
             return response()->json(['code' => 404, 'success' => false, 'message' => 'Client not found.'], 404);
@@ -470,9 +392,9 @@ class ClientsController extends Controller
         foreach ($contacts as $contactData) {
             $contactNames[] = $contactData['name'];
 
-            $contact = ClientsContactsModel::where('customer_id', $client->customer_id)
-                                        ->where('name', $contactData['name'])
-                                        ->first();
+            $contact = ClientContactsModel::where('customer_id', $client->customer_id)
+                ->where('name', $contactData['name'])
+                ->first();
 
             if ($contact) {
                 // Update existing contact
@@ -483,7 +405,7 @@ class ClientsController extends Controller
                 ]);
             } else {
                 // Create a new contact
-                $newContact = ClientsContactsModel::create([
+                $newContact = ClientContactsModel::create([
                     'customer_id' => $client->customer_id,
                     'company_id' => Auth::user()->company_id,
                     'name' => $contactData['name'],
@@ -499,19 +421,21 @@ class ClientsController extends Controller
         }
 
         // Remove contacts not in the request
-        $contactsDeleted = ClientsContactsModel::where('customer_id', $client->customer_id)
-                                            ->whereNotIn('name', $contactNames)
-                                            ->delete();
+        $contactsDeleted = ClientContactsModel::where('customer_id', $client->id)
+            ->whereNotIn('name', $contactNames)
+            ->delete();
 
         // Update addresses
         $addresses = $request->input('addresses');
-        $addressIds = [];
+        $addressTypes = [];
         $addressesUpdated = false;
 
         foreach ($addresses as $addressData) {
-            $address = ClientAddressModel::where('client_id', $client->customer_id)
-                                        ->where('type', $addressData['type'])
-                                        ->first();
+            $addressTypes[] = $addressData['type'];
+
+            $address = ClientAddressModel::where('customer_id', $client->id)
+                ->where('type', $addressData['type'])
+                ->first();
 
             if ($address) {
                 // Update existing address
@@ -528,7 +452,7 @@ class ClientsController extends Controller
                 $newAddress = ClientAddressModel::create([
                     'company_id' => Auth::user()->company_id,
                     'type' => $addressData['type'],
-                    'client_id' => $client->customer_id,
+                    'customer_id' => $client->customer_id,
                     'address_line_1' => $addressData['address_line_1'],
                     'address_line_2' => $addressData['address_line_2'],
                     'city' => $addressData['city'],
@@ -544,15 +468,15 @@ class ClientsController extends Controller
         }
 
         // Remove addresses not in the request
-        $addressTypes = array_column($addresses, 'type');
-        $addressesDeleted = ClientAddressModel::where('client_id', $client->customer_id)
-                                            ->whereNotIn('type', $addressTypes)
-                                            ->delete();
+        $addressesDeleted = ClientAddressModel::where('customer_id', $client->customer_id)
+            ->whereNotIn('type', $addressTypes)
+            ->delete();
 
         return ($clientUpdated || $contactsUpdated || $contactsDeleted || $addressesUpdated || $addressesDeleted)
             ? response()->json(['code' => 200, 'success' => true, 'message' => 'Client, contacts, and addresses updated successfully!', 'client' => $client], 200)
             : response()->json(['code' => 304, 'success' => false, 'message' => 'No changes detected.'], 304);
     }
+
 
 
     // delete
@@ -571,7 +495,7 @@ class ClientsController extends Controller
             $delete_clients = ClientsModel::where('id', $id)->delete();
 
             // Delete associated contacts by customer_id
-            $delete_contact_records = ClientsContactsModel::where('customer_id', $get_client_id->customer_id)->delete();
+            $delete_contact_records = ClientContactsModel::where('customer_id', $get_client_id->customer_id)->delete();
 
             // Return success response if deletion was successful
             return $delete_clients && $delete_contact_records
@@ -591,7 +515,7 @@ class ClientsController extends Controller
     {
         ClientsModel::truncate();  
         
-        ClientsContactsModel::truncate();  
+        ClientContactsModel::truncate();  
 
         // Define the external URL
         $url = 'https://expo.egsm.in/assets/custom/migrate/clients.php'; // Replace with the actual URL
@@ -701,9 +625,9 @@ class ClientsController extends Controller
             // Generate unique customer ID
             $customer_id = rand(1111111111, 9999999999);
 
-            // Save contacts to `ClientsContactsModel`
+            // Save contacts to `ClientContactsModel`
             foreach ($validationData['contacts'] as $contact) {
-                ClientsContactsModel::create([
+                ClientContactsModel::create([
                     'customer_id' => $customer_id,
                     'name' => $contact['name'],
                     // 'designation' => $contact['designation'],
