@@ -1249,7 +1249,7 @@ class MastersController extends Controller
         
 
         return isset($get_category) && $get_category !== null
-        ? response()->json(['code' => 200, 'success' => true, 'Fetch data successfully!', 'data' => $get_category], 200)
+        ? response()->json(['code' => 200, 'success' => true, 'Fetch data successfully!', 'data' => $get_category, 'count' => count($get_category)], 200)
         : response()->json(['code' => 404, 'success' => false, 'Failed to fetch data'], 404); 
     }
 
@@ -1319,7 +1319,7 @@ class MastersController extends Controller
         
 
         return isset($get_sub_category) && $get_sub_category !== null
-        ? response()->json(['code' => 200, 'success' => true, 'Fetch data successfully!', 'data' => $get_sub_category], 200)
+        ? response()->json(['code' => 200, 'success' => true, 'Fetch data successfully!', 'data' => $get_sub_category, 'count' => count($get_sub_category)], 200)
         : response()->json(['code' => 404, 'success' => false, 'Failed to fetch data'], 404); 
     }
 
@@ -1386,7 +1386,7 @@ class MastersController extends Controller
         $get_brand = BrandModel::select('serial_number','name','logo')->get();
 
         return isset($get_brand) && $get_brand!== null
-        ? response()->json(['code' => 200, 'success' => true, 'Fetch data successfully!', 'data' => $get_brand], 200)
+        ? response()->json(['code' => 200, 'success' => true, 'Fetch data successfully!', 'data' => $get_brand, 'count' => count($get_brand)], 200)
         : response()->json(['code' => 404, 'success' => false, 'Failed to fetch data'], 404); 
     }
 
