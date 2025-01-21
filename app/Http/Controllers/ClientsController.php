@@ -104,7 +104,6 @@ class ClientsController extends Controller
             : response()->json(['code' => 400, 'success' => false, 'message' => 'Failed to register client record'], 400);
     }
 
-
     // view
     public function view_clients(Request $request, $id = null)
     {
@@ -343,8 +342,6 @@ class ClientsController extends Controller
             : response()->json(['code' => 304, 'success' => false, 'message' => 'No changes detected.'], 304);
     }
 
-
-
     // delete
     public function delete_clients($id)
     {
@@ -363,9 +360,12 @@ class ClientsController extends Controller
             // Delete associated contacts by customer_id
             $delete_contact_records = ClientContactsModel::where('customer_id', $get_client_id->customer_id)->delete();
 
+            // Delete associated address by customer_id
+            $delete_address_records = ClientAddressModel::where('customer_id', $get_client_id->customer_id)->delete();
+
             // Return success response if deletion was successful
-            return $delete_clients && $delete_contact_records
-            ? response()->json(['code' => 200,'success' => true, 'message' => 'Client and associated contacts deleted successfully!'], 200)
+            return $delete_clients && $delete_contact_records && $delete_address_records
+            ? response()->json(['code' => 200,'success' => true, 'message' => 'Client and associated contacts and addresses deleted successfully!'], 200)
             : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete client or contacts.'], 400);
 
         } 

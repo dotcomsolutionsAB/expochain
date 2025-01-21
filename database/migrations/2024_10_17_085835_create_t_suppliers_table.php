@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string('state');
             $table->string('country');
             $table->string('gstin');
+            $table->unsignedBigInteger('default_contact');
             $table->timestamps();
 
             // Add a composite unique index for name, gstin, and contact_id

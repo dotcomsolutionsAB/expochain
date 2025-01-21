@@ -18,8 +18,8 @@ class SuppliersContactsModel extends Model
         'email',
     ];
 
-    // Define the inverse relationship back to the Suppliers
-    public function suppliers()
+    // Relationship with suppliers
+    public function supplier()
     {
         return $this->belongsTo(SuppliersModel::class, 'supplier_id', 'supplier_id');
     }

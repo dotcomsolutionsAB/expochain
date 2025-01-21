@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\SuppliersModel;
 use App\Models\SuppliersContactsModel;
+use App\Models\SupplierAddressModel;
 use Illuminate\Support\Str;
 use Auth;
 
@@ -80,10 +81,93 @@ class SuppliersController extends Controller
     //     : response()->json(['code' => 400,'success' => false,'Failed to register Suppliers record'], 400);
     // }
 
+    // public function add_suppliers(Request $request)
+    // {
+    //     $request->validate([
+    //         'name' => 'required|unique:t_suppliers,name',
+    //         'gstin' => 'required|string|unique:t_suppliers,gstin',
+    //         'contacts' => 'required|array|min:1',
+    //         'contacts.*.name' => 'required|string',
+    //         'contacts.*.designation' => 'required|string',
+    //         'contacts.*.mobile' => 'required|string',
+    //         'contacts.*.email' => 'required|email',
+    //         'addresses' => 'required|array|min:1',
+    //         'addresses.*.type' => 'required|in:billing,shipping',
+    //         'addresses.*.address_line_1' => 'required|string',
+    //         'addresses.*.address_line_2' => 'nullable|string',
+    //         'addresses.*.city' => 'required|string',
+    //         'addresses.*.state' => 'required|string',
+    //         'addresses.*.pincode' => 'required|string',
+    //         'addresses.*.country' => 'required|string',
+    //     ]);
+
+    //     $company_id = Auth::user()->company_id;
+
+    //     // Check if the combination of name and GSTIN is unique
+    //     $exists = SuppliersModel::where('name', $request->input('name'))
+    //         ->where('gstin', $request->input('gstin'))
+    //         ->where('company_id', $company_id)
+    //         ->exists();
+
+    //     if ($exists) {
+    //         return response()->json(['error' => 'The combination of name, GSTIN, and company ID must be unique.'], 422);
+    //     }
+
+    //     // Generate unique supplier_id
+    //     do {
+    //         $supplier_id = rand(1111111111, 9999999999);
+    //         $exists = SuppliersModel::where('supplier_id', $supplier_id)->exists();
+    //     } while ($exists);
+
+    //     // Save supplier details
+    //     $register_suppliers = SuppliersModel::create([
+    //         'supplier_id' => $supplier_id,
+    //         'company_id' => $company_id,
+    //         'name' => $request->input('name'),
+    //         'gstin' => $request->input('gstin'),
+    //     ]);
+
+    //     // Save contacts
+    //     $contacts = $request->input('contacts');
+    //     foreach ($contacts as $contact) {
+    //         SuppliersContactsModel::create([
+    //             'supplier_id' => $supplier_id,
+    //             'company_id' => $company_id,
+    //             'name' => $contact['name'],
+    //             'designation' => $contact['designation'],
+    //             'mobile' => $contact['mobile'],
+    //             'email' => $contact['email'],
+    //         ]);
+    //     }
+
+    //     // Save addresses
+    //     $addresses = $request->input('addresses');
+    //     foreach ($addresses as $address) {
+    //         SupplierAddressModel::create([
+    //             'company_id' => $company_id,
+    //             'supplier_id' => $supplier_id,
+    //             'type' => $address['type'], // Billing or Shipping
+    //             'address_line_1' => $address['address_line_1'],
+    //             'address_line_2' => $address['address_line_2'],
+    //             'city' => $address['city'],
+    //             'state' => $address['state'],
+    //             'pincode' => $address['pincode'],
+    //             'country' => $address['country'],
+    //         ]);
+    //     }
+
+    //     return response()->json([
+    //         'code' => 201,
+    //         'success' => true,
+    //         'message' => 'Supplier registered successfully!',
+    //         'data' => $register_suppliers,
+    //     ], 201);
+    // }
+
     public function add_suppliers(Request $request)
     {
         $request->validate([
-            'name' => 'required|unique:t_suppliers,name',
+            'name' => 'required|string|unique:t_suppliers,name',
             'gstin' => 'required|string|unique:t_suppliers,gstin',
             'contacts' => 'required|array|min:1',
             'contacts.*.name' => 'required|string',
@@ -102,7 +186,7 @@ class SuppliersController extends Controller
 
         $company_id = Auth::user()->company_id;
 
-        // Check if the combination of name and GSTIN is unique
+        // Check if the combination of name, GSTIN, and company_id is unique
         $exists = SuppliersModel::where('name', $request->input('name'))
             ->where('gstin', $request->input('gstin'))
             ->where('company_id', $company_id)
@@ -113,23 +197,14 @@ class SuppliersController extends Controller
         }
 
         // Generate unique supplier_id
-        do {
-            $supplier_id = rand(1111111111, 9999999999);
-            $exists = SuppliersModel::where('supplier_id', $supplier_id)->exists();
-        } while ($exists);
-
-        // Save supplier details
-        $register_suppliers = SuppliersModel::create([
-            'supplier_id' => $supplier_id,
-            'company_id' => $company_id,
-            'name' => $request->input('name'),
-            'gstin' => $request->input('gstin'),
-        ]);
+        $supplier_id = rand(1111111111, 9999999999);
 
         // Save contacts
         $contacts = $request->input('contacts');
-        foreach ($contacts as $contact) {
-            SuppliersContactsModel::create([
+        $defaultContactId = null;
+
+        foreach ($contacts as $index => $contact) {
+            $newContact = SuppliersContactsModel::create([
                 'supplier_id' => $supplier_id,
                 'company_id' => $company_id,
                 'name' => $contact['name'],
@@ -137,11 +212,24 @@ class SuppliersController extends Controller
                 'mobile' => $contact['mobile'],
                 'email' => $contact['email'],
             ]);
+
+            // Set the first contact as the default if no default is specified
+            if ($index === 0) {
+                $defaultContactId = $newContact->id;
+            }
         }
 
+        // Save supplier details
+        $register_suppliers = SuppliersModel::create([
+            'supplier_id' => $supplier_id,
+            'company_id' => $company_id,
+            'name' => $request->input('name'),
+            'gstin' => $request->input('gstin'),
+            'default_contact' => $defaultContactId,
+        ]);
+
         // Save addresses
-        $addresses = $request->input('addresses');
-        foreach ($addresses as $address) {
+        foreach ($request->input('addresses') as $address) {
             SupplierAddressModel::create([
                 'company_id' => $company_id,
                 'supplier_id' => $supplier_id,
@@ -155,12 +243,16 @@ class SuppliersController extends Controller
             ]);
         }
 
-        return response()->json([
-            'code' => 201,
-            'success' => true,
-            'message' => 'Supplier registered successfully!',
-            'data' => $register_suppliers,
-        ], 201);
+        unset($register_suppliers['created_at'], $register_suppliers['updated_at']);
+
+        return isset($register_suppliers) && $register_suppliers !== null
+            ? response()->json([
+                'code' => 201,
+                'success' => true,
+                'message' => 'Supplier registered successfully!',
+                'data' => $register_suppliers,
+            ], 201)
+            : response()->json(['code' => 400, 'success' => false, 'message' => 'Failed to register supplier record.'], 400);
     }
 
 
@@ -181,6 +273,55 @@ class SuppliersController extends Controller
     //     : response()->json(['Failed to fetch data'], 404); 
     // }
 
+    // public function view_suppliers(Request $request)
+    // {
+    //     // Get filter inputs
+    //     $limit = $request->input('limit', 10); // Default limit to 10
+    //     $offset = $request->input('offset', 0); // Default offset to 0
+    //     $name = $request->input('name'); // Optional name filter
+    //     $gstin = $request->input('gstin'); // Optional GSTIN filter
+    //     $mobile = $request->input('mobile'); // Optional mobile filter
+
+    //     // Build the query
+    //     $query = SuppliersModel::with(['contact' => function ($query) use ($mobile) {
+    //         $query->select('supplier_id', 'name', 'designation', 'mobile', 'email');
+    //         if ($mobile) {
+    //             $query->where('mobile', 'LIKE', '%' . $mobile . '%');
+    //         }
+    //     }])
+    //     ->select('supplier_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'gstin')
+    //     ->where('company_id', Auth::user()->company_id);
+
+    //     // Apply filters
+    //     if ($name) {
+    //         $query->where('name', 'LIKE', '%' . $name . '%');
+    //     }
+    //     if ($gstin) {
+    //         $query->where('gstin', 'LIKE', '%' . $gstin . '%');
+    //     }
+
+    //     // Apply limit and offset
+    //     $query->offset($offset)->limit($limit);
+
+    //     // Execute the query
+    //     $get_suppliers = $query->get();
+
+    //     // Return the response
+    //     return $get_suppliers->isNotEmpty()
+    //         ? response()->json([
+    //             'code' => 200,
+    //             'success' => true,
+    //             'message' => 'Fetch record successfully!',
+    //             'data' => $get_suppliers,
+    //             'count' => $get_suppliers->count()
+    //         ], 200)
+    //         : response()->json([
+    //             'code' => 404,
+    //             'success' => false,
+    //             'message' => 'No suppliers found!',
+    //         ], 404);
+    // }
+
     public function view_suppliers(Request $request)
     {
         // Get filter inputs
@@ -191,14 +332,19 @@ class SuppliersController extends Controller
         $mobile = $request->input('mobile'); // Optional mobile filter
 
         // Build the query
-        $query = SuppliersModel::with(['contact' => function ($query) use ($mobile) {
-            $query->select('supplier_id', 'name', 'designation', 'mobile', 'email');
-            if ($mobile) {
-                $query->where('mobile', 'LIKE', '%' . $mobile . '%');
-            }
-        }])
-        ->select('supplier_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'gstin')
-        ->where('company_id', Auth::user()->company_id);
+        $query = SuppliersModel::query()
+            ->with([
+                'contacts' => function ($query) use ($mobile) {
+                    $query->select('supplier_id', 'name', 'designation', 'mobile', 'email');
+                    if ($mobile) {
+                        $query->where('mobile', 'LIKE', '%' . $mobile . '%');
+                    }
+                },
+                'addresses' => function ($query) {
+                    $query->select('supplier_id', 'type', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode', 'country');
+                }
+            ])
+            ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
         if ($name) {
@@ -211,15 +357,15 @@ class SuppliersController extends Controller
         // Apply limit and offset
         $query->offset($offset)->limit($limit);
 
-        // Execute the query
-        $get_suppliers = $query->get();
+        // Execute the query and hide `created_at` and `updated_at`
+        $get_suppliers = $query->get()->makeHidden(['created_at', 'updated_at']);
 
         // Return the response
         return $get_suppliers->isNotEmpty()
             ? response()->json([
                 'code' => 200,
                 'success' => true,
-                'message' => 'Fetch record successfully!',
+                'message' => 'Suppliers fetched successfully!',
                 'data' => $get_suppliers,
                 'count' => $get_suppliers->count()
             ], 200)
@@ -229,6 +375,7 @@ class SuppliersController extends Controller
                 'message' => 'No suppliers found!',
             ], 404);
     }
+
 
 
     // update
@@ -322,11 +469,137 @@ class SuppliersController extends Controller
     //     : response()->json(['code' => 304,'success' => false,'message' => 'No changes detected.'], 304);
     // }
 
-    public function update_suppliers(Request $request)
+    // public function update_suppliers(Request $request)
+    // {
+    //     $request->validate([
+    //         'name' => 'required|string',
+    //         'supplier_id' => 'required',
+    //         'gstin' => 'required|string',
+    //         'contacts' => 'required|array|min:1',
+    //         'contacts.*.name' => 'required|string',
+    //         'contacts.*.designation' => 'required|string',
+    //         'contacts.*.mobile' => 'required|string',
+    //         'contacts.*.email' => 'required|email',
+    //         'addresses' => 'required|array|min:1',
+    //         'addresses.*.type' => 'required|in:billing,shipping',
+    //         'addresses.*.address_line_1' => 'required|string',
+    //         'addresses.*.address_line_2' => 'nullable|string',
+    //         'addresses.*.city' => 'required|string',
+    //         'addresses.*.state' => 'required|string',
+    //         'addresses.*.pincode' => 'required|string',
+    //         'addresses.*.country' => 'required|string',
+    //     ]);
+
+    //     // Get the supplier record
+    //     $supplier = SuppliersModel::where('supplier_id', $request->input('supplier_id'))->first();
+
+    //     if (!$supplier) {
+    //         return response()->json(['code' => 404, 'success' => false, 'message' => 'Supplier not found.'], 404);
+    //     }
+
+    //     // Update supplier details
+    //     $supplierUpdated = $supplier->update([
+    //         'name' => $request->input('name'),
+    //         'gstin' => $request->input('gstin'),
+    //     ]);
+
+    //     // Update contacts
+    //     $contacts = $request->input('contacts');
+    //     $contactNames = [];
+    //     $contactsUpdated = false;
+
+    //     foreach ($contacts as $contactData) {
+    //         $contactNames[] = $contactData['name'];
+
+    //         $contact = SuppliersContactsModel::where('supplier_id', $supplier->supplier_id)
+    //                                         ->where('name', $contactData['name'])
+    //                                         ->first();
+
+    //         if ($contact) {
+    //             // Update existing contact
+    //             $contactsUpdated = $contact->update([
+    //                 'designation' => $contactData['designation'],
+    //                 'mobile' => $contactData['mobile'],
+    //                 'email' => $contactData['email'],
+    //             ]);
+    //         } else {
+    //             // Create a new contact
+    //             $newContact = SuppliersContactsModel::create([
+    //                 'supplier_id' => $supplier->supplier_id,
+    //                 'company_id' => Auth::user()->company_id,
+    //                 'name' => $contactData['name'],
+    //                 'designation' => $contactData['designation'],
+    //                 'mobile' => $contactData['mobile'],
+    //                 'email' => $contactData['email'],
+    //             ]);
+
+    //             if ($newContact) {
+    //                 $contactsUpdated = true;
+    //             }
+    //         }
+    //     }
+
+    //     // Delete contacts not in the request
+    //     $contactsDeleted = SuppliersContactsModel::where('supplier_id', $supplier->supplier_id)
+    //                                             ->whereNotIn('name', $contactNames)
+    //                                             ->delete();
+
+    //     // Update addresses
+    //     $addresses = $request->input('addresses');
+    //     $addressTypes = [];
+    //     $addressesUpdated = false;
+
+    //     foreach ($addresses as $addressData) {
+    //         $addressTypes[] = $addressData['type'];
+
+    //         $address = SupplierAddressModel::where('supplier_id', $supplier->supplier_id)
+    //                                     ->where('type', $addressData['type'])
+    //                                     ->first();
+
+    //         if ($address) {
+    //             // Update existing address
+    //             $addressesUpdated = $address->update([
+    //                 'address_line_1' => $addressData['address_line_1'],
+    //                 'address_line_2' => $addressData['address_line_2'],
+    //                 'city' => $addressData['city'],
+    //                 'state' => $addressData['state'],
+    //                 'pincode' => $addressData['pincode'],
+    //                 'country' => $addressData['country'],
+    //             ]);
+    //         } else {
+    //             // Create a new address
+    //             $newAddress = SupplierAddressModel::create([
+    //                 'company_id' => Auth::user()->company_id,
+    //                 'supplier_id' => $supplier->supplier_id,
+    //                 'type' => $addressData['type'],
+    //                 'address_line_1' => $addressData['address_line_1'],
+    //                 'address_line_2' => $addressData['address_line_2'],
+    //                 'city' => $addressData['city'],
+    //                 'state' => $addressData['state'],
+    //                 'pincode' => $addressData['pincode'],
+    //                 'country' => $addressData['country'],
+    //             ]);
+
+    //             if ($newAddress) {
+    //                 $addressesUpdated = true;
+    //             }
+    //         }
+    //     }
+
+    //     // Delete addresses not in the request
+    //     $addressesDeleted = SupplierAddressModel::where('supplier_id', $supplier->supplier_id)
+    //                                             ->whereNotIn('type', $addressTypes)
+    //                                             ->delete();
+
+    //     return ($supplierUpdated || $contactsUpdated || $contactsDeleted || $addressesUpdated || $addressesDeleted)
+    //         ? response()->json(['code' => 200, 'success' => true, 'message' => 'Supplier, contacts, and addresses updated successfully!', 'supplier' => $supplier], 200)
+    //         : response()->json(['code' => 304, 'success' => false, 'message' => 'No changes detected.'], 304);
+    // }
+
+    public function update_suppliers(Request $request, $id)
     {
         $request->validate([
             'name' => 'required|string',
-            'supplier_id' => 'required',
             'gstin' => 'required|string',
             'contacts' => 'required|array|min:1',
             'contacts.*.name' => 'required|string',
@@ -343,8 +616,10 @@ class SuppliersController extends Controller
             'addresses.*.country' => 'required|string',
         ]);
 
-        // Get the supplier record
-        $supplier = SuppliersModel::where('supplier_id', $request->input('supplier_id'))->first();
+        // Fetch the supplier by ID
+        $supplier = SuppliersModel::where('id', $id)
+            ->where('company_id', Auth::user()->company_id)
+            ->first();
 
         if (!$supplier) {
             return response()->json(['code' => 404, 'success' => false, 'message' => 'Supplier not found.'], 404);
@@ -365,8 +640,8 @@ class SuppliersController extends Controller
             $contactNames[] = $contactData['name'];
 
             $contact = SuppliersContactsModel::where('supplier_id', $supplier->supplier_id)
-                                            ->where('name', $contactData['name'])
-                                            ->first();
+                ->where('name', $contactData['name'])
+                ->first();
 
             if ($contact) {
                 // Update existing contact
@@ -394,8 +669,8 @@ class SuppliersController extends Controller
 
         // Delete contacts not in the request
         $contactsDeleted = SuppliersContactsModel::where('supplier_id', $supplier->supplier_id)
-                                                ->whereNotIn('name', $contactNames)
-                                                ->delete();
+            ->whereNotIn('name', $contactNames)
+            ->delete();
 
         // Update addresses
         $addresses = $request->input('addresses');
@@ -406,8 +681,8 @@ class SuppliersController extends Controller
             $addressTypes[] = $addressData['type'];
 
             $address = SupplierAddressModel::where('supplier_id', $supplier->supplier_id)
-                                        ->where('type', $addressData['type'])
-                                        ->first();
+                ->where('type', $addressData['type'])
+                ->first();
 
             if ($address) {
                 // Update existing address
@@ -441,14 +716,13 @@ class SuppliersController extends Controller
 
         // Delete addresses not in the request
         $addressesDeleted = SupplierAddressModel::where('supplier_id', $supplier->supplier_id)
-                                                ->whereNotIn('type', $addressTypes)
-                                                ->delete();
+            ->whereNotIn('type', $addressTypes)
+            ->delete();
 
         return ($supplierUpdated || $contactsUpdated || $contactsDeleted || $addressesUpdated || $addressesDeleted)
             ? response()->json(['code' => 200, 'success' => true, 'message' => 'Supplier, contacts, and addresses updated successfully!', 'supplier' => $supplier], 200)
             : response()->json(['code' => 304, 'success' => false, 'message' => 'No changes detected.'], 304);
     }
-
 
     // delete
     public function delete_supplier($id)
@@ -467,9 +741,12 @@ class SuppliersController extends Controller
             // Delete associated contacts by customer_id
             $delete_contact_records = SuppliersContactsModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
 
+            // Delete associated address by customer_id
+            $delete_address_records = SupplierAddressModel::where('customer_id', $get_supplier_id->supplier_id)->delete();
+
             // Return success response if deletion was successful
-            return $delete_supplier && $delete_contact_records
-            ? response()->json(['code' => 200,'success' => true,'message' => 'Supplier and associated contacts deleted successfully!'], 200)
+            return $delete_supplier && $delete_contact_records && $delete_address_records
+            ? response()->json(['code' => 200,'success' => true,'message' => 'Supplier and associated contacts and addresses deleted successfully!'], 200)
             : response()->json(['code' => 400,'success' => false,'message' => 'Failed to delete supplier or contacts.'], 400);
 
         } 

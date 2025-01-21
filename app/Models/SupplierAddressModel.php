@@ -10,6 +10,12 @@ class SupplierAddressModel extends Model
     protected $table = 't_supplier_addresses';
 
     protected $fillable = [
-        'company_id', 'type', 'client_id', 'country', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode'
+        'company_id', 'type', 'supplier_id', 'country', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode'
     ];
+
+    // Relationship with suppliers
+    public function supplier()
+    {
+        return $this->belongsTo(SuppliersModel::class, 'supplier_id', 'supplier_id');
+    }
 }

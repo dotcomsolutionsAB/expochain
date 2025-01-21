@@ -13,18 +13,19 @@ class SuppliersModel extends Model
         'supplier_id',
         'company_id',
         'name',
-        'address_line_1',
-        'address_line_2',
-        'city',
-        'pincode',
-        'state',
-        'country',
         'gstin',
+        'default_contact',
     ];
 
-    // One client has many contacts
-    public function contact()
+    // Relationship with contacts
+    public function contacts()
     {
         return $this->hasMany(SuppliersContactsModel::class, 'supplier_id', 'supplier_id');
+    }
+
+    // Relationship with addresses
+    public function addresses()
+    {
+        return $this->hasMany(SupplierAddressModel::class, 'supplier_id', 'supplier_id');
     }
 }

@@ -22,6 +22,7 @@ use App\Http\Controllers\AssemblyController;
 use App\Http\Controllers\AssemblyOperationsController;
 use App\Http\Controllers\FabricationController;
 use App\Http\Controllers\ResetController;
+use App\Http\Controllers\CounterController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -188,6 +189,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/fabrication', [FabricationController::class, 'view_fabrication']);
     Route::post('/update_fabrication/{id?}', [FabricationController::class, 'edit_fabrication']);
     Route::delete('/fabrication/{id?}', [FabricationController::class, 'delete_fabrication']);
+
+    Route::post('/add_counter', [CounterController::class, 'add_counter']);
+    Route::post('/counter/{id?}', [CounterController::class, 'view_counter']);
+    Route::post('/update_counter/{id?}', [CounterController::class, 'edit_counter']);
+    Route::delete('/counter/{id?}', [CounterController::class, 'delete_counter']);
 
     Route::post('/opening_stock', [MastersController::class, 'add_opening_stock']);
     Route::get('/opening_stock', [MastersController::class, 'view_opening_stock']);
