@@ -1366,17 +1366,17 @@ class MastersController extends Controller
             'logo' => 'required|string',
         ]);
 
-        $register_category = BrandModel::create([
+        $register_brand = BrandModel::create([
             'serial_number' => $request->input('serial_number'),
             'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'logo' => $request->input('logo'),
         ]);
         
-        unset($register_category['id'], $register_category['created_at'], $register_category['updated_at']);
+        unset($register_brand['id'], $register_brand['created_at'], $register_brand['updated_at']);
 
-        return isset($register_category) && $register_category !== null
-        ? response()->json(['Category registered successfully!', 'data' => $register_products], 201)
+        return isset($register_brand) && $register_brand !== null
+        ? response()->json(['Category registered successfully!', 'data' => $register_brand], 201)
         : response()->json(['Failed to register Category record'], 400);
     }
 
