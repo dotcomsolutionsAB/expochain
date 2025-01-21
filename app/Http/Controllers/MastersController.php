@@ -1230,6 +1230,7 @@ class MastersController extends Controller
 
         $register_category = CategoryModel::create([
             'serial_number' => $request->input('serial_number'),
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'logo' => $request->input('logo'),
         ]);
@@ -1298,6 +1299,7 @@ class MastersController extends Controller
 
         $register_sub_category = SubCategoryModel::create([
             'serial_number' => $request->input('serial_number'),
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'logo' => $request->input('logo'),
             'category_id' => $request->input('category_id')
@@ -1366,6 +1368,7 @@ class MastersController extends Controller
 
         $register_category = BrandModel::create([
             'serial_number' => $request->input('serial_number'),
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'logo' => $request->input('logo'),
         ]);
