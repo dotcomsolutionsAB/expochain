@@ -1238,7 +1238,7 @@ class MastersController extends Controller
         unset($register_category['id'], $register_category['created_at'], $register_category['updated_at']);
 
         return isset($register_category) && $register_category !== null
-        ? response()->json(['code' => 201, 'success' => true, 'Category registered successfully!', 'data' => $register_products], 201)
+        ? response()->json(['code' => 201, 'success' => true, 'Category registered successfully!', 'data' => $register_category], 201)
         : response()->json(['code' => 400, 'success' => false, 'Failed to register Category record'], 400);
     }
 
