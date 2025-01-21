@@ -1238,8 +1238,8 @@ class MastersController extends Controller
         unset($register_category['id'], $register_category['created_at'], $register_category['updated_at']);
 
         return isset($register_category) && $register_category !== null
-        ? response()->json(['Category registered successfully!', 'data' => $register_products], 201)
-        : response()->json(['Failed to register Category record'], 400);
+        ? response()->json(['code' => 201, 'success' => true, 'Category registered successfully!', 'data' => $register_products], 201)
+        : response()->json(['code' => 400, 'success' => false, 'Failed to register Category record'], 400);
     }
 
     //view
@@ -1249,8 +1249,8 @@ class MastersController extends Controller
         
 
         return isset($get_category) && $get_category !== null
-        ? response()->json(['Fetch data successfully!', 'data' => $get_category], 200)
-        : response()->json(['Failed to fetch data'], 404); 
+        ? response()->json(['code' => 200, 'success' => true, 'Fetch data successfully!', 'data' => $get_category], 200)
+        : response()->json(['code' => 404, 'success' => false, 'Failed to fetch data'], 404); 
     }
 
     // update
@@ -1270,8 +1270,8 @@ class MastersController extends Controller
         ]);
         
         return $update_category
-        ? response()->json(['Category updated successfully!', 'data' => $update_category], 200)
-        : response()->json(['No changes detected'], 204);
+        ? response()->json(['code' => 200, 'success' => true, 'Category updated successfully!', 'data' => $update_category], 200)
+        : response()->json(['code' => 204, 'success' => false, 'No changes detected'], 204);
     }
 
     // delete
@@ -1282,8 +1282,8 @@ class MastersController extends Controller
 
         // Return success response if deletion was successful
         return $delete_category
-        ? response()->json(['message' => 'Delete category successfully!'], 204)
-        : response()->json(['message' => 'Sorry, category not found'], 400);
+        ? response()->json(['code' => 204, 'success' => true,'message' => 'Delete category successfully!'], 204) 
+        : response()->json(['code' => 400, 'success' => false, 'message' => 'Sorry, category not found'], 400);
     }
 
     // sub-category table
@@ -1308,8 +1308,8 @@ class MastersController extends Controller
         unset($register_sub_categoryy['id'], $register_sub_category['created_at'], $register_category['updated_at']);
 
         return isset($register_sub_category) && $register_sub_category !== null
-        ? response()->json(['Sub Category registered successfully!', 'data' => $register_sub_category], 201)
-        : response()->json(['Failed to register Sub Category record'], 400);
+        ? response()->json(['code' => 201, 'success' => true, 'Sub Category registered successfully!', 'data' => $register_sub_category], 201)
+        : response()->json(['code' => 400, 'success' => false, 'Failed to register Sub Category record'], 400);
     }
 
     //view
@@ -1319,8 +1319,8 @@ class MastersController extends Controller
         
 
         return isset($get_sub_category) && $get_sub_category !== null
-        ? response()->json(['Fetch data successfully!', 'data' => $get_sub_category], 200)
-        : response()->json(['Failed to fetch data'], 404); 
+        ? response()->json(['code' => 200, 'success' => true, 'Fetch data successfully!', 'data' => $get_sub_category], 200)
+        : response()->json(['code' => 404, 'success' => false, 'Failed to fetch data'], 404); 
     }
 
     // update
@@ -1340,8 +1340,8 @@ class MastersController extends Controller
         ]);
         
         return $update_sub_category
-        ? response()->json(['Sub-Category updated successfully!', 'data' => $update_sub_category], 200)
-        : response()->json(['No changes detected'], 204);
+        ? response()->json(['code' => 200, 'success' => true, 'Sub-Category updated successfully!', 'data' => $update_sub_category], 200)
+        : response()->json(['code' => 204, 'success' => false, 'No changes detected'], 204);
     }
 
     // delete
@@ -1352,8 +1352,8 @@ class MastersController extends Controller
 
         // Return success response if deletion was successful
         return $delete_category
-        ? response()->json(['message' => 'Delete sub-category successfully!'], 204)
-        : response()->json(['message' => 'Sorry, sub-category not found'], 400);
+        ? response()->json(['code' => 204, 'success' => true, 'message' => 'Delete sub-category successfully!'], 204)
+        : response()->json(['code' => 400, 'success' => false, 'message' => 'Sorry, sub-category not found'], 400);
     }
 
     // Brand table
@@ -1376,8 +1376,8 @@ class MastersController extends Controller
         unset($register_brand['id'], $register_brand['created_at'], $register_brand['updated_at']);
 
         return isset($register_brand) && $register_brand !== null
-        ? response()->json(['Category registered successfully!', 'data' => $register_brand], 201)
-        : response()->json(['Failed to register Category record'], 400);
+        ? response()->json(['code' => 201, 'success' => true, 'Category registered successfully!', 'data' => $register_brand], 201)
+        : response()->json(['code' => 400, 'success' => false, 'Failed to register Category record'], 400);
     }
 
     //view
@@ -1386,8 +1386,8 @@ class MastersController extends Controller
         $get_brand = BrandModel::select('serial_number','name','logo')->get();
 
         return isset($get_brand) && $get_brand!== null
-        ? response()->json(['Fetch data successfully!', 'data' => $get_brand], 200)
-        : response()->json(['Failed to fetch data'], 404); 
+        ? response()->json(['code' => 200, 'success' => true, 'Fetch data successfully!', 'data' => $get_brand], 200)
+        : response()->json(['code' => 404, 'success' => false, 'Failed to fetch data'], 404); 
     }
 
     // update
@@ -1407,8 +1407,8 @@ class MastersController extends Controller
         ]);
         
         return $update_brand
-        ? response()->json(['Brand updated successfully!', 'data' => $update_brand], 200)
-        : response()->json(['No changes detected'], 204);
+        ? response()->json(['code' => 200, 'success' => true, 'Brand updated successfully!', 'data' => $update_brand], 200)
+        : response()->json(['code' => 204, 'success' => false, 'No changes detected'], 204);
     }
 
     // delete
@@ -1419,8 +1419,8 @@ class MastersController extends Controller
 
         // Return success response if deletion was successful
         return $delete_brand
-        ? response()->json(['message' => 'Delete brand successfully!'], 204)
-        : response()->json(['message' => 'Sorry, category not found'], 400);
+        ? response()->json(['code' => 204, 'success' => true, 'message' => 'Delete brand successfully!'], 204)
+        : response()->json(['code' => 400, 'success' => false, 'message' => 'Sorry, category not found'], 400);
     }
 
     public function add_company(Request $request)
