@@ -87,7 +87,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/sub_category/{id?}', [MastersController::class, 'delete_sub_category']);
 
     Route::post('/brand', [MastersController::class, 'add_brand']);
-    Route::get('/brand', [MastersController::class, 'register_brand']);
+    Route::get('/brand', [MastersController::class, 'view_brand']);
     Route::post('/update_brand/{id?}', [MastersController::class, 'edit_brand']);
     Route::delete('/brand/{id?}', [MastersController::class, 'delete_brand']);
 
