@@ -742,7 +742,7 @@ class SuppliersController extends Controller
             $delete_contact_records = SuppliersContactsModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
 
             // Delete associated address by customer_id
-            $delete_address_records = SupplierAddressModel::where('customer_id', $get_supplier_id->supplier_id)->delete();
+            $delete_address_records = SupplierAddressModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
 
             // Return success response if deletion was successful
             return $delete_supplier && $delete_contact_records && $delete_address_records
