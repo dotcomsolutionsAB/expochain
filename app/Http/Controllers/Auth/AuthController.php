@@ -74,7 +74,7 @@ class AuthController extends Controller
     
                     return response()->json([
                         'message' => 'Otp send successfully!',
-                        'data' => $store_otp
+                        'response' => $response
                     ], 200);
                 }
             }
