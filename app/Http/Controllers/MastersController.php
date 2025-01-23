@@ -49,8 +49,8 @@ class MastersController extends Controller
         unset($register_products['id'], $register_products['created_at'], $register_products['updated_at']);
 
         return isset($register_products) && $register_products !== null
-        ? response()->json(['Products registered successfully!', 'data' => $register_products], 201)
-        : response()->json(['Failed to register Products record'], 400);
+        ? response()->json(['code' => 200, 'status' => true, 'message' => 'Products registered successfully!', 'data' => $register_products], 200)
+        : response()->json(['code' => 200, 'status' => false, 'message' => 'Failed to register Products record'], 200);
     }
 
     public function view_products(Request $request)
