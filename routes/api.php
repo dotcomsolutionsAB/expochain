@@ -82,7 +82,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/category/{id?}', [MastersController::class, 'delete_category']);
 
     Route::post('/sub_category', [MastersController::class, 'add_sub_category']);
-    Route::get('/sub_category', [MastersController::class, 'sub_category']);
+    Route::get('/sub_category', [MastersController::class, 'view_sub_category']);
     Route::post('/update_sub_category/{id?}', [MastersController::class, 'edit_sub_category']);
     Route::delete('/sub_category/{id?}', [MastersController::class, 'delete_sub_category']);
 

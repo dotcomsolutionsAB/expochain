@@ -805,8 +805,8 @@ class MastersController extends Controller
         unset($register_sub_categoryy['id'], $register_sub_category['created_at'], $register_category['updated_at']);
 
         return isset($register_sub_category) && $register_sub_category !== null
-        ? response()->json(['code' => 201, 'success' => true, 'Sub Category registered successfully!', 'data' => $register_sub_category], 201)
-        : response()->json(['code' => 400, 'success' => false, 'Failed to register Sub Category record'], 400);
+        ? response()->json(['code' => 201, 'success' => true, 'message' => 'Sub Category registered successfully!', 'data' => $register_sub_category], 201)
+        : response()->json(['code' => 400, 'success' => false, 'message' => 'Failed to register Sub Category record'], 400);
     }
 
     //view
@@ -908,8 +908,8 @@ class MastersController extends Controller
         $get_brand = BrandModel::select('id','name')->get();
 
         return isset($get_brand) && $get_brand!== null
-        ? response()->json(['code' => 200, 'success' => true, 'Fetch data successfully!', 'data' => $get_brand, 'count' => count($get_brand)], 200)
-        : response()->json(['code' => 200, 'success' => false, 'Failed to fetch data'], 200); 
+        ? response()->json(['code' => 200, 'success' => true, 'message' => 'Fetch data successfully!', 'data' => $get_brand, 'count' => count($get_brand)], 200)
+        : response()->json(['code' => 200, 'success' => false, 'message' => 'Failed to fetch data'], 200); 
     }
 
     // update
