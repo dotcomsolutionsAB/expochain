@@ -15,16 +15,18 @@ class AuthController extends Controller
         public function generate_otp(Request $request)
         {
             $request->validate([
-                'mobile' => ['required', 'string', 'min:12', 'max:14'],
+                'username' => 'required',
                 'company_id' => 'required'
             ]);
     
-            $mobile = $request->input('mobile');
-    
-            $get_user = User::select('id')
-                            ->where('mobile', $mobile)
-                            ->first();
-    
+            $username = $request->input('username');
+            
+            $get_user = User::select('id', 'mobile')
+                ->where('username', $username)
+                ->first();
+
+            $mobile = $get_user->mobile;
+            
             if(!$get_user == null)
             {
                 $six_digit_otp = random_int(100000, 999999);
@@ -79,7 +81,7 @@ class AuthController extends Controller
             else {
                 return response()->json([
                     'message' => 'User has not registered!',
-                ], 404);
+                ], 200);
             }
         }
     
@@ -89,12 +91,12 @@ class AuthController extends Controller
             if($otp)
             {
                 $request->validate([
-                    'mobile' => ['required', 'string', 'size:13'],
-                    'company_id' => 'required',
+                    'username' => 'required',
+                    'company_id' => 'required'
                 ]);
                 
                 $otpRecord = User::select('otp', 'expires_at')
-                ->where('mobile', $request->mobile)
+                ->where('username', $request->username)
                 ->where('company_id', $request->company_id) // Add condition for company_id
                 ->first();
     
@@ -110,10 +112,10 @@ class AuthController extends Controller
     
                     else {
                         // Remove OTP record after successful validation
-                        User::select('otp')->where('mobile', $request->mobile)->update(['otp' => null, 'expires_at' => null]);
+                        User::select('otp')->where('username', $request->username)->update(['otp' => null, 'expires_at' => null]);
     
                         // Retrieve the use
-                        $user = User::where('mobile', $request->mobile)->first();
+                        $user = User::where('username', $request->username)->first();
     
                         // Generate a sanctrum token
                         $generated_token = $user->createToken('API TOKEN')->plainTextToken;
@@ -123,7 +125,7 @@ class AuthController extends Controller
                             'data' => [
                                 'token' => $generated_token,
                                 'name' => $user->name,
-                                // 'role' => $user->role,
+                                'role' => $user->role,
                             ],
                             'message' => 'User logged in successfully!',
                         ], 200);
@@ -134,28 +136,15 @@ class AuthController extends Controller
                         return response()->json([
                             'success' => false,
                             'message' => 'User not register.',
-                        ], 401);
+                        ], 200);
                 }
             }
     
             else {
                 $request->validate([
-                    // 'email' => ['required', 'string', 'min:9'],
-                //     'email' => [
-                //     'required',
-                //     'string',
-                //     'email',
-                //     function ($attribute, $value, $fail) {
-                //         // Check for custom email validation to include shortest domain like '.bit'
-                //         $pattern = '/^[\w\.\-]+@[\w\-]+\.[a-zA-Z]{2,3}$/';
-                //         if (!preg_match($pattern, $value)) {
-                //             $fail($attribute . ' is not a valid email address.');
-                //         }
-                //     },
-                // ],
+                    'company_id' => 'required',
                     'username' => 'required',
-                    'password' => 'required',
-                    'company_id' => 'required'
+                    'password' => 'required'
                 ]);
 
                 if(Auth::attempt(['username' => $request->username, 'password' => $request->password, 'company_id' => $request->company_id]))
@@ -170,7 +159,7 @@ class AuthController extends Controller
                         'data' => [
                             'token' => $generated_token,
                             'name' => $user->name,
-                            // 'role' => $user->role,
+                            'role' => $user->role,
                         ],
                         'message' => 'User logged in successfully!',
                     ], 200);
@@ -180,7 +169,7 @@ class AuthController extends Controller
                     return response()->json([
                         'success' => false,
                         'message' => 'User not register.',
-                    ], 401);
+                    ], 200);
                 }
             }
         }
