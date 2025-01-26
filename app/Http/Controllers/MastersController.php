@@ -59,9 +59,9 @@ class MastersController extends Controller
         $offset = $request->input('offset', 0); // Default to 0 if not provided
         $limit = $request->input('limit', 10); // Default to 10 if not provided
         $productName = $request->input('product_name'); // Optional product name
-        $group = $request->input('group') ? explode(',', $request->input('group')) : null; // Comma-separated groups
-        $category = $request->input('category') ? explode(',', $request->input('category')) : null; // Comma-separated categories
-        $subCategory = $request->input('sub_category') ? explode(',', $request->input('sub_category')) : null; // Comma-separated subcategories
+        $group = $request->input('group_id') ? explode(',', $request->input('group_id')) : null; // Comma-separated groups
+        $category = $request->input('category_id') ? explode(',', $request->input('category_id')) : null; // Comma-separated categories
+        $subCategory = $request->input('sub_category_id') ? explode(',', $request->input('sub_category_id')) : null; // Comma-separated subcategories
 
         // Build the query
         $query = ProductsModel::select('serial_number','company_id','name','alias','description','type','group','category','sub_category','cost_price','sale_price', 'unit', 'hsn', 'tax');
