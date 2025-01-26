@@ -16,7 +16,7 @@ class ProductsModel extends Model
         'alias',
         'description',
         'type',
-        'brand',
+        'group',
         'category',
         'sub_category',
         'cost_price',
