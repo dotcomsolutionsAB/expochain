@@ -929,8 +929,8 @@ class MastersController extends Controller
             // Fetch categories associated with products in the given group(s)
             $get_category = CategoryModel::select('id', 'name')
                 ->whereIn('id', function ($query) use ($groupIdsArray) {
-                    $query->select('category_id')
-                        ->from('products')
+                    $query->select('category')
+                        ->from('t_products')
                         ->whereIn('group', $groupIdsArray);
                 })
                 ->orderBy('serial_number', 'asc') // Sort by serial_number
@@ -1031,8 +1031,8 @@ class MastersController extends Controller
             // Fetch subcategories filtered by category_id and group_id
             $get_sub_category = SubCategoryModel::where('category_id', $categoryId)
                 ->whereIn('id', function ($query) use ($groupIdsArray) {
-                    $query->select('sub_category_id')
-                        ->from('products')
+                    $query->select('sub_category')
+                        ->from('t_products')
                         ->whereIn('group', $groupIdsArray);
                 })
                 ->select('id', 'name')
