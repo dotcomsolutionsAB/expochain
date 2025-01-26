@@ -1014,10 +1014,11 @@ class MastersController extends Controller
         $categoryId = $request->input('category_id');
         if (!$categoryId) {
             return response()->json([
-                'code' => 400,
+                'code' => 200,
                 'success' => false,
+                'data' => [],
                 'message' => 'category_id is required'
-            ], 400);
+            ], 200);
         }
 
         // Check if group_id is provided
