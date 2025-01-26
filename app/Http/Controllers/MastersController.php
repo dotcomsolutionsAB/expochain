@@ -106,6 +106,13 @@ class MastersController extends Controller
         // Fetch the products
         $get_products = $query->get();
 
+        // Append stock_details to each product
+        $stockDetails = "Opening Stock as on 01-04-2024 : Office - 30 SETS | Kushtia - 10 SETS | ANK - 25 SETS";
+        $get_products->transform(function ($product) use ($stockDetails) {
+            $product->stock_details = $stockDetails;
+            return $product;
+        });
+        
         // Return the response
         return $get_products->isNotEmpty()
             ? response()->json([
