@@ -184,13 +184,13 @@ class MastersController extends Controller
         ? response()->json([
             'code' => 200,
             'status' => true,
-            'message' => 'Products updated successfully!',
+            'message' => 'Products were updated successfully!',
             'data' => $update_products
         ], 200)
         : response()->json([
             'code' => 200,
             'status' => true,
-            'message' => 'No changes detected',
+            'message' => 'No changes detected.',
             'data' => []
         ], 200);
     }
@@ -206,12 +206,12 @@ class MastersController extends Controller
         ? response()->json([
             'code' => 200,
             'status' => true,
-            'message' => 'Delete Product successfully!'
+            'message' => 'Deleted Product successfully!'
         ], 200)
         : response()->json([
             'code' => 200,
             'status' => true,
-            'message' => 'Sorry, products not found.'
+            'message' => 'Sorry, product not found.'
         ], 200);
     }
 
