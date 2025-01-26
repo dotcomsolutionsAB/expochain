@@ -203,8 +203,16 @@ class MastersController extends Controller
 
         // Return success response if deletion was successful
         return $delete_products
-        ? response()->json(['message' => 'Delete Product successfully!'], 204)
-        : response()->json(['message' => 'Sorry, products not found'], 400);
+        ? response()->json([
+            'code' => 200,
+            'status' => true,
+            'message' => 'Delete Product successfully!'
+        ], 200)
+        : response()->json([
+            'code' => 200,
+            'status' => true,
+            'message' => 'Sorry, products not found.'
+        ], 200);
     }
 
     // public function importProducts()
