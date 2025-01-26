@@ -158,16 +158,9 @@ class MastersController extends Controller
             'serial_number' => 'required|integer',
             'name' => 'required|string',
             'alias' => 'required|string',
-            'description' => 'required|string',
-            'type' => 'required|string',
             'group' => 'required|string',
             'category' => 'required|string',
             'sub_category' => 'required|string',
-            'cost_price' => 'required|numeric',
-            'sale_price' => 'required|numeric',
-            'unit' => 'required||string',
-            'hsn' => 'required|string',
-            'tax' => 'required|numeric',
         ]);
 
         $update_products = ProductsModel::where('id', $id)
@@ -188,8 +181,18 @@ class MastersController extends Controller
         ]);
         
         return $update_products
-        ? response()->json(['Products updated successfully!', 'data' => $update_products], 201)
-        : response()->json(['No changes detected'], 204);
+        ? response()->json([
+            'code' => 200,
+            'status' => true,
+            'message' => 'Products updated successfully!',
+            'data' => $update_products
+        ], 200)
+        : response()->json([
+            'code' => 200,
+            'status' => true,
+            'message' => 'No changes detected',
+            'data' => []
+        ], 200);
     }
 
     // delete
