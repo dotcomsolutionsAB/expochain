@@ -4,10 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class BrandModel extends Model
+class GroupModel extends Model
 {
     //
-    protected $table = 't_brand';
+    protected $table = 't_group';
 
     protected $fillable = [
         'serial_number',

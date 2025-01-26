@@ -9,7 +9,7 @@ use App\Models\PdfTemplateModel;
 use App\Models\GodownModel;
 use App\Models\CategoryModel;
 use App\Models\SubCategoryModel;
-use App\Models\BrandModel;
+use App\Models\GroupModel;
 use App\Models\OpeningStockModel;
 use App\Models\ClosingStockModel;
 use Illuminate\Support\Facades\Http;
@@ -25,7 +25,7 @@ class MastersController extends Controller
     {
         $request->validate([
             'name' => 'required|string',
-            'brand' => 'required|string',
+            'group' => 'required|string',
             'category' => 'required|string',
         ]);
 
@@ -36,7 +36,7 @@ class MastersController extends Controller
             'alias' => $request->input('alias'),
             'description' => $request->input('description'),
             'type' => $request->input('type'),
-            'brand' => $request->input('brand'),
+            'group' => $request->input('group'),
             'category' => $request->input('category'),
             'sub_category' => $request->input('sub_category'),
             'cost_price' => $request->input('cost_price'),
@@ -59,19 +59,19 @@ class MastersController extends Controller
         $offset = $request->input('offset', 0); // Default to 0 if not provided
         $limit = $request->input('limit', 10); // Default to 10 if not provided
         $productName = $request->input('product_name'); // Optional product name
-        $brand = $request->input('brand') ? explode(',', $request->input('brand')) : null; // Comma-separated brands
+        $group = $request->input('group') ? explode(',', $request->input('group')) : null; // Comma-separated groups
         $category = $request->input('category') ? explode(',', $request->input('category')) : null; // Comma-separated categories
         $subCategory = $request->input('sub_category') ? explode(',', $request->input('sub_category')) : null; // Comma-separated subcategories
 
         // Build the query
-        $query = ProductsModel::select('serial_number','company_id','name','alias','description','type','brand','category','sub_category','cost_price','sale_price', 'unit', 'hsn', 'tax');
+        $query = ProductsModel::select('serial_number','company_id','name','alias','description','type','group','category','sub_category','cost_price','sale_price', 'unit', 'hsn', 'tax');
         
         // Apply filters
         if ($productName) {
             $query->where('name', 'LIKE', '%' . $productName . '%');
         }
-        if ($brand) {
-            $query->whereIn('brand', $brand);
+        if ($group) {
+            $query->whereIn('group', $group);
         }
         if ($category) {
             $query->whereIn('category', $category);
@@ -138,7 +138,7 @@ class MastersController extends Controller
             'alias' => 'required|string',
             'description' => 'required|string',
             'type' => 'required|string',
-            'brand' => 'required|string',
+            'group' => 'required|string',
             'category' => 'required|string',
             'sub_category' => 'required|string',
             'cost_price' => 'required|numeric',
@@ -155,7 +155,7 @@ class MastersController extends Controller
             'alias' => $request->input('alias'),
             'description' => $request->input('description'),
             'type' => $request->input('type'),
-            'brand' => $request->input('brand'),
+            'group' => $request->input('group'),
             'category' => $request->input('category'),
             'sub_category' => $request->input('sub_category'),
             'cost_price' => $request->input('cost_price'),
@@ -191,7 +191,7 @@ class MastersController extends Controller
         ProductsModel::truncate();
         CategoryModel::truncate();
         SubCategoryModel::truncate();
-        BrandModel::truncate();
+        GroupModel::truncate();
 
         // Define the external URL
         $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
@@ -217,14 +217,14 @@ class MastersController extends Controller
         $successfulInserts = 0;
         $errors = [];
 
-        // Preload existing categories, subcategories, and brands
+        // Preload existing categories, subcategories, and groups
         $existingCategories = CategoryModel::pluck('id', 'name')->toArray();
         $existingSubCategories = SubCategoryModel::pluck('id', 'name')->toArray();
-        $existingBrands = BrandModel::pluck('id', 'name')->toArray();
+        $existingGroups = GroupModel::pluck('id', 'name')->toArray();
 
         foreach ($data as $record) {
             try {
-                // Handle blank `category`, `sub_category`, or `brand_name`
+                // Handle blank `category`, `sub_category`, or `group_name`
                 $categoryId = null;
                 if (!empty($record['category'])) {
                     $categoryId = $existingCategories[$record['category']] ?? null;
@@ -256,19 +256,19 @@ class MastersController extends Controller
                     }
                 }
 
-                $brandId = null;
+                $groupId = null;
                 if (!empty($record['group_name'])) {
-                    $brandId = $existingBrands[$record['group_name']] ?? null;
+                    $groupId = $existingGroups[$record['group_name']] ?? null;
 
-                    if (!$brandId) {
-                        $brand = BrandModel::create([
+                    if (!$groupId) {
+                        $group = GroupModel::create([
                             'name' => $record['group_name'],
                             'company_id' => Auth::user()->company_id,
                             'serial_number' => random_int(10000, 99999),
                             'logo' => random_int(10000, 99999)
                         ]);
-                        $existingBrands[$record['group_name']] = $brand->id;
-                        $brandId = $brand->id;
+                        $existingGroups[$record['group_name']] = $group->id;
+                        $groupId = $group->id;
                     }
                 }
 
@@ -285,7 +285,7 @@ class MastersController extends Controller
                     'alias' => $record['alias'],
                     'description' => $record['description'] ?? 'No description available',
                     'type' => $record['type'],
-                    'brand' => $brandId,
+                    'group' => $groupId,
                     'category' => $categoryId,
                     'sub_category' => $subCategoryId,
                     'cost_price' => $costPrice,
@@ -331,7 +331,7 @@ class MastersController extends Controller
     {
         $get_user_company_id = Auth::user()->company_id;
         
-        $get_product_details = ProductsModel::select('serial_number','name','alias','description','type','brand','category','sub_category','cost_price','sale_price', 'unit', 'hsn', 'tax')
+        $get_product_details = ProductsModel::select('serial_number','name','alias','description','type','group','category','sub_category','cost_price','sale_price', 'unit', 'hsn', 'tax')
                                                 ->where('company_id', $get_user_company_id)
                                                 ->get();
 
@@ -895,9 +895,9 @@ class MastersController extends Controller
         : response()->json(['code' => 400, 'success' => false, 'message' => 'Sorry, sub-category not found'], 400);
     }
 
-    // Brand table
+    // Group table
     //create
-    public function add_brand(Request $request)
+    public function add_group(Request $request)
     {
         $request->validate([
             'serial_number' => 'required|string',
@@ -905,32 +905,32 @@ class MastersController extends Controller
             'logo' => 'required|string',
         ]);
 
-        $register_brand = BrandModel::create([
+        $register_group = GroupModel::create([
             'serial_number' => $request->input('serial_number'),
             'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'logo' => $request->input('logo'),
         ]);
         
-        unset($register_brand['id'], $register_brand['created_at'], $register_brand['updated_at']);
+        unset($register_group['id'], $register_group['created_at'], $register_group['updated_at']);
 
-        return isset($register_brand) && $register_brand !== null
-        ? response()->json(['code' => 201, 'success' => true, 'Category registered successfully!', 'data' => $register_brand], 201)
+        return isset($register_group) && $register_group !== null
+        ? response()->json(['code' => 201, 'success' => true, 'Category registered successfully!', 'data' => $register_group], 201)
         : response()->json(['code' => 400, 'success' => false, 'Failed to register Category record'], 400);
     }
 
     //view
-    public function view_brand()
+    public function view_group()
     {        
-        $get_brand = BrandModel::select('id','name')->get();
+        $get_group = GroupModel::select('id','name')->get();
 
-        return isset($get_brand) && $get_brand!== null
-        ? response()->json(['code' => 200, 'success' => true, 'message' => 'Fetch data successfully!', 'data' => $get_brand, 'count' => count($get_brand)], 200)
+        return isset($get_group) && $get_group!== null
+        ? response()->json(['code' => 200, 'success' => true, 'message' => 'Fetch data successfully!', 'data' => $get_group, 'count' => count($get_group)], 200)
         : response()->json(['code' => 200, 'success' => false, 'message' => 'Failed to fetch data'], 200); 
     }
 
     // update
-    public function edit_brand(Request $request, $id)
+    public function edit_group(Request $request, $id)
     {
         $request->validate([
             'serial_number' => 'required|string',
@@ -938,27 +938,27 @@ class MastersController extends Controller
             'logo' => 'required|string',
         ]);
 
-        $update_brand = BrandModel::where('id', $id)
+        $update_group = GroupModel::where('id', $id)
         ->update([
             'serial_number' => $request->input('serial_number'),
             'name' => $request->input('name'),
             'logo' => $request->input('logo'),
         ]);
         
-        return $update_brand
-        ? response()->json(['code' => 200, 'success' => true, 'Brand updated successfully!', 'data' => $update_brand], 200)
+        return $update_group
+        ? response()->json(['code' => 200, 'success' => true, 'Group updated successfully!', 'data' => $update_group], 200)
         : response()->json(['code' => 204, 'success' => false, 'No changes detected'], 204);
     }
 
     // delete
-    public function delete_brand($id)
+    public function delete_group($id)
     {
         // Delete the client
-        $delete_brand = BrandModel::where('id', $id)->delete();
+        $delete_group = GroupModel::where('id', $id)->delete();
 
         // Return success response if deletion was successful
-        return $delete_brand
-        ? response()->json(['code' => 204, 'success' => true, 'message' => 'Delete brand successfully!'], 204)
+        return $delete_group
+        ? response()->json(['code' => 204, 'success' => true, 'message' => 'Delete group successfully!'], 204)
         : response()->json(['code' => 400, 'success' => false, 'message' => 'Sorry, category not found'], 400);
     }
 

@@ -89,10 +89,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_sub_category/{id?}', [MastersController::class, 'edit_sub_category']);
     Route::delete('/sub_category/{id?}', [MastersController::class, 'delete_sub_category']);
 
-    Route::post('/brand', [MastersController::class, 'add_brand']);
-    Route::get('/brand', [MastersController::class, 'view_brand']);
-    Route::post('/update_brand/{id?}', [MastersController::class, 'edit_brand']);
-    Route::delete('/brand/{id?}', [MastersController::class, 'delete_brand']);
+    Route::post('/group', [MastersController::class, 'add_group']);
+    Route::get('/group', [MastersController::class, 'view_group']);
+    Route::post('/update_group/{id?}', [MastersController::class, 'edit_group']);
+    Route::delete('/group/{id?}', [MastersController::class, 'delete_group']);
 
     Route::get('/get_pdf_template', [MastersController::class, 'get_pdf_template']);
 
