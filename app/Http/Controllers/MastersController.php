@@ -68,20 +68,24 @@ class MastersController extends Controller
         
         // Apply filters
         if ($productName) {
-            // Normalize the input by removing special characters and converting to lowercase
-            $normalizedInput = preg_replace('/[^a-zA-Z0-9]/', '', strtolower($productName));
+            // Normalize the search query
+            $normalizedInput = strtolower(preg_replace('/[^a-zA-Z0-9]/', ' ', $productName)); // Remove special chars
+            $tokens = preg_split('/\s+/', $normalizedInput); // Split into tokens
         
-            // Tokenize the normalized input into individual words
-            $tokens = preg_split('/\s+/', $normalizedInput);
-        
-            // Apply dynamic where clause to match tokens in any order
+            // Apply the search condition
             $query->where(function ($q) use ($tokens) {
                 foreach ($tokens as $token) {
-                    // Search each token within the normalized product name
-                    $q->whereRaw(
-                        "REPLACE(REPLACE(REPLACE(LOWER(name), ' ', ''), '-', ''), 'x', '') LIKE ?", 
-                        ['%' . $token . '%']
-                    );
+                    // Search within 'name' and 'alias' columns
+                    $q->where(function ($subQuery) use ($token) {
+                        $subQuery->whereRaw(
+                            "LOWER(REPLACE(REPLACE(REPLACE(name, ' ', ''), '-', ''), 'x', '')) LIKE ?", 
+                            ['%' . $token . '%']
+                        )
+                        ->orWhereRaw(
+                            "LOWER(REPLACE(REPLACE(REPLACE(alias, ' ', ''), '-', ''), 'x', '')) LIKE ?", 
+                            ['%' . $token . '%']
+                        );
+                    });
                 }
             });
         }
