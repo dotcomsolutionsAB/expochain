@@ -918,16 +918,36 @@ class MastersController extends Controller
     }
 
     //view
-    public function view_category()
-    {        
-        $get_category = CategoryModel::select('id', 'name')
-        ->orderBy('serial_number', 'asc') // Sort by serial_number in ascending order
-        ->get();
+    public function view_category(Request $request)
+    {
+        $groupIds = $request->input('group_id'); // Accept group_id parameter
 
-        return isset($get_category) && $get_category !== null
-        ? response()->json(['code' => 200, 'success' => true, 'Fetch data successfully!', 'data' => $get_category, 'count' => count($get_category)], 200)
-        : response()->json(['code' => 200, 'success' => false, 'Failed to fetch data'], 200); 
+        if ($groupIds) {
+            // Convert group_id to an array if it is a comma-separated string
+            $groupIdsArray = explode(',', $groupIds);
+
+            // Fetch categories associated with products in the given group(s)
+            $get_category = CategoryModel::select('id', 'name')
+                ->whereIn('id', function ($query) use ($groupIdsArray) {
+                    $query->select('category_id')
+                        ->from('products')
+                        ->whereIn('group', $groupIdsArray);
+                })
+                ->orderBy('serial_number', 'asc') // Sort by serial_number
+                ->get();
+        } else {
+            // Fetch all categories if no group_id is passed
+            $get_category = CategoryModel::select('id', 'name')
+                ->orderBy('serial_number', 'asc') // Sort by serial_number
+                ->get();
+        }
+
+        // Return the response
+        return isset($get_category) && !$get_category->isEmpty()
+            ? response()->json(['code' => 200, 'success' => true, 'message' => 'Fetch data successfully!', 'data' => $get_category, 'count' => $get_category->count()], 200)
+            : response()->json(['code' => 200, 'success' => false, 'message' => 'Failed to fetch data'], 200);
     }
+
 
     // update
     public function edit_category(Request $request, $id)
@@ -988,7 +1008,6 @@ class MastersController extends Controller
         : response()->json(['code' => 400, 'success' => false, 'message' => 'Failed to register Sub Category record'], 400);
     }
 
-    //view
     public function view_sub_category(Request $request)
     {
         // Check if category_id is provided
@@ -1001,11 +1020,30 @@ class MastersController extends Controller
             ], 400);
         }
 
-        // Fetch subcategories for the given category_id, ordered by serial_number
-        $get_sub_category = SubCategoryModel::where('category_id', $categoryId)
-            ->select('id', 'name')
-            ->orderBy('serial_number', 'asc')
-            ->get();
+        // Check if group_id is provided
+        $groupIds = $request->input('group_id');
+
+        if ($groupIds) {
+            // Convert group_id to an array if it is a comma-separated string
+            $groupIdsArray = explode(',', $groupIds);
+
+            // Fetch subcategories filtered by category_id and group_id
+            $get_sub_category = SubCategoryModel::where('category_id', $categoryId)
+                ->whereIn('id', function ($query) use ($groupIdsArray) {
+                    $query->select('sub_category_id')
+                        ->from('products')
+                        ->whereIn('group', $groupIdsArray);
+                })
+                ->select('id', 'name')
+                ->orderBy('serial_number', 'asc')
+                ->get();
+        } else {
+            // Fetch subcategories filtered only by category_id
+            $get_sub_category = SubCategoryModel::where('category_id', $categoryId)
+                ->select('id', 'name')
+                ->orderBy('serial_number', 'asc')
+                ->get();
+        }
 
         // Return the response
         return $get_sub_category->isNotEmpty()
@@ -1019,9 +1057,10 @@ class MastersController extends Controller
             : response()->json([
                 'code' => 200,
                 'success' => false,
-                'message' => 'No subcategories found for the given category_id'
+                'message' => 'No subcategories found for the given criteria'
             ], 200);
     }
+
 
 
     // update
