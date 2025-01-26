@@ -68,19 +68,24 @@ class MastersController extends Controller
         
         // Apply filters
         if ($productName) {
-            // Normalize the input by removing spaces and special characters
+            // Normalize the input by removing special characters and converting to lowercase
             $normalizedInput = preg_replace('/[^a-zA-Z0-9]/', '', strtolower($productName));
         
-            // Tokenize the normalized input into words
+            // Tokenize the normalized input into individual words
             $tokens = preg_split('/\s+/', $normalizedInput);
         
-            // Apply a dynamic where clause for each token
+            // Apply dynamic where clause to match tokens in any order
             $query->where(function ($q) use ($tokens) {
                 foreach ($tokens as $token) {
-                    $q->whereRaw("REPLACE(REPLACE(LOWER(name), ' ', ''), '-', '') LIKE ?", ['%' . $token . '%']);
+                    // Search each token within the normalized product name
+                    $q->whereRaw(
+                        "REPLACE(REPLACE(REPLACE(LOWER(name), ' ', ''), '-', ''), 'x', '') LIKE ?", 
+                        ['%' . $token . '%']
+                    );
                 }
             });
         }
+
         if ($group) {
             $query->whereIn('group', $group);
         }
@@ -107,10 +112,12 @@ class MastersController extends Controller
                 'count' => $get_products->count(),
             ], 200)
             : response()->json([
-                'code' => 404,
+                'code' => 200,
                 'success' => false,
+                'data' => [],
                 'message' => 'Sorry, No products found!',
-            ], 404);
+                'count' => 0
+            ], 200);
     }
 
     /**
