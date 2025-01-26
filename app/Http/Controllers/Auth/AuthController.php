@@ -73,16 +73,15 @@ class AuthController extends Controller
     
                     return response()->json([
                         'code' => 200,
-                        'status' => true,
-                        'message' => 'Otp send successfully!',
-                        'response' => $response
+                        'success' => true,
+                        'message' => 'Otp sent successfully!'
                     ], 200);
                 }
             }
             else {
                 return response()->json([
                     'code' => 200,
-                    'status' => true,
+                    'success' => true,
                     'message' => 'User has not registered!',
                 ], 200);
             }
@@ -125,7 +124,7 @@ class AuthController extends Controller
     
                         return response()->json([
                             'code' => 200,
-                            'status' => true,
+                            'success' => true,
                             'message' => 'User logged in successfully!',
                             'data' => [
                                 'token' => $generated_token,
@@ -161,7 +160,7 @@ class AuthController extends Controller
     
                     return response()->json([
                         'code' => 200,
-                        'status' => true,
+                        'success' => true,
                         'message' => 'User logged in successfully!',
                         'data' => [
                             'token' => $generated_token,
@@ -174,7 +173,7 @@ class AuthController extends Controller
                 else {
                     return response()->json([
                         'code' => 200,
-                        'status' => false,
+                        'success' => false,
                         'message' => 'User not register.',
                     ], 200);
                 }
@@ -188,7 +187,7 @@ class AuthController extends Controller
             if(!$request->user()) {
                 return response()->json([
                     'code' => 200,
-                    'status'=> false,
+                    'success'=> false,
                     'message'=>'Sorry, no user is logged in now!',
                 ], 200);
             }
@@ -198,7 +197,7 @@ class AuthController extends Controller
     
             return response()->json([
                 'code' => 200,
-                'status' => true,
+                'success' => true,
                 'message' => 'Logged out successfully!',
             ], 200);
         }
@@ -217,7 +216,7 @@ class AuthController extends Controller
                 if (!$user) {
                     return response()->json([
                         'code' => 200,
-                        'status' => false,
+                        'success' => false,
                         'message' => 'User not found.',
                     ], 200);
                 }
@@ -232,16 +231,15 @@ class AuthController extends Controller
 
                 return response()->json([
                     'code' => 200,
-                    'status' => true,
+                    'success' => true,
                     'message' => 'Password has been reset successfully!',
-                    'username' => $user->username,
-                    'new_password' => $newPassword // Send the new password to the user
+                    'username' => $user->username
                 ], 200);
 
             } catch (\Exception $e) {
                 return response()->json([
                     'code' => 500,
-                    'status' => false,
+                    'success' => false,
                     'message' => 'An error occurred while resetting the password.',
                     'error' => $e->getMessage(),
                 ], 500);
