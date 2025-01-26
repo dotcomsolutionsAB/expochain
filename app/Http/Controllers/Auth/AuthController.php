@@ -124,19 +124,21 @@ class AuthController extends Controller
                         $generated_token = $user->createToken('API TOKEN')->plainTextToken;
     
                         return response()->json([
-                            'success' => true,
+                            'code' => 200,
+                            'status' => true,
+                            'message' => 'User logged in successfully!',
                             'data' => [
                                 'token' => $generated_token,
                                 'name' => $user->name,
                                 'role' => $user->role,
                             ],
-                            'message' => 'User logged in successfully!',
                         ], 200);
                     }
                 }
     
                 else {
                         return response()->json([
+                            'code' => 200,
                             'success' => false,
                             'message' => 'User not register.',
                         ], 200);
@@ -158,19 +160,21 @@ class AuthController extends Controller
                     $generated_token = $user->createToken('API TOKEN')->plainTextToken;
     
                     return response()->json([
-                        'success' => true,
+                        'code' => 200,
+                        'status' => true,
+                        'message' => 'User logged in successfully!',
                         'data' => [
                             'token' => $generated_token,
                             'name' => $user->name,
                             'role' => $user->role,
                         ],
-                        'message' => 'User logged in successfully!',
                     ], 200);
                 }
     
                 else {
                     return response()->json([
-                        'success' => false,
+                        'code' => 200,
+                        'status' => false,
                         'message' => 'User not register.',
                     ], 200);
                 }
@@ -183,18 +187,20 @@ class AuthController extends Controller
             // Check if the user is authenticated
             if(!$request->user()) {
                 return response()->json([
-                    'success'=> false,
+                    'code' => 200,
+                    'status'=> false,
                     'message'=>'Sorry, no user is logged in now!',
-                ], 401);
+                ], 200);
             }
     
             // Revoke the token that was used to authenticate the current request
             $request->user()->currentAccessToken()->delete();
     
             return response()->json([
-                'success' => true,
+                'code' => 200,
+                'status' => true,
                 'message' => 'Logged out successfully!',
-            ], 204);
+            ], 200);
         }
 
         public function forgetPassword(Request $request)
@@ -210,10 +216,10 @@ class AuthController extends Controller
 
                 if (!$user) {
                     return response()->json([
-                        'code' => 404,
-                        'success' => false,
+                        'code' => 200,
+                        'status' => false,
                         'message' => 'User not found.',
-                    ], 404);
+                    ], 200);
                 }
 
                 // Hardcoded new password
@@ -226,7 +232,7 @@ class AuthController extends Controller
 
                 return response()->json([
                     'code' => 200,
-                    'success' => true,
+                    'status' => true,
                     'message' => 'Password has been reset successfully!',
                     'username' => $user->username,
                     'new_password' => $newPassword // Send the new password to the user
@@ -235,7 +241,7 @@ class AuthController extends Controller
             } catch (\Exception $e) {
                 return response()->json([
                     'code' => 500,
-                    'success' => false,
+                    'status' => false,
                     'message' => 'An error occurred while resetting the password.',
                     'error' => $e->getMessage(),
                 ], 500);
