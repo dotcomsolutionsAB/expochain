@@ -10,7 +10,6 @@ use App\Models\User;
 
 class AuthController extends Controller
 {
-    //    
         // genearate otp and send to `whatsapp`
         public function generate_otp(Request $request)
         {
