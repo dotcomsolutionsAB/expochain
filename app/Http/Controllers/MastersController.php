@@ -68,7 +68,18 @@ class MastersController extends Controller
         
         // Apply filters
         if ($productName) {
-            $query->where('name', 'LIKE', '%' . $productName . '%');
+            // Normalize the input by removing spaces and special characters
+            $normalizedInput = preg_replace('/[^a-zA-Z0-9]/', '', strtolower($productName));
+        
+            // Tokenize the normalized input into words
+            $tokens = preg_split('/\s+/', $normalizedInput);
+        
+            // Apply a dynamic where clause for each token
+            $query->where(function ($q) use ($tokens) {
+                foreach ($tokens as $token) {
+                    $q->whereRaw("REPLACE(REPLACE(LOWER(name), ' ', ''), '-', '') LIKE ?", ['%' . $token . '%']);
+                }
+            });
         }
         if ($group) {
             $query->whereIn('group', $group);
