@@ -102,6 +102,33 @@ class MastersController extends Controller
             ], 404);
     }
 
+    /**
+     * Get an array of tax values
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function get_tax()
+    {
+        $taxValues = [0, 5, 12, 18, 28];
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Tax array fetched successfully!',
+            'data' => $taxValues,
+        ], 200);
+    }
+
+    public function get_unit()
+    {
+        $unitValues = ['NOS', 'PCS', 'SETS', 'KGS'];
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Tax array fetched successfully!',
+            'data' => $unitValues,
+        ], 200);
+    }
+
     // update
     public function edit_products(Request $request, $id)
     {

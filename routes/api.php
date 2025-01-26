@@ -62,6 +62,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_products/{id}', [MastersController::class, 'edit_products']);
     Route::delete('/products/{id}', [MastersController::class, 'delete_products']);
 
+    Route::post('/get_tax', [MastersController::class, 'get_tax']);
+    Route::post('/get_unit', [MastersController::class, 'get_unit']);
+
     Route::get('/get_products', [MastersController::class, 'get_product']);
 
     Route::get('products_migrate', [MastersController::class, 'importProducts']);
