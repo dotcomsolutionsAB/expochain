@@ -24,11 +24,11 @@ class AuthController extends Controller
             $get_user = User::select('id', 'mobile')
                 ->where('username', $username)
                 ->first();
-
-            $mobile = $get_user->mobile;
             
             if(!$get_user == null)
             {
+                $mobile = $get_user->mobile;
+
                 $six_digit_otp = random_int(100000, 999999);
     
                 $expiresAt = now()->addMinutes(10);
@@ -73,6 +73,8 @@ class AuthController extends Controller
                     $response = $whatsappUtility->sendWhatsApp($mobile, $templateParams, $mobile, 'OTP Campaign');
     
                     return response()->json([
+                        'code' => 200,
+                        'status' => true,
                         'message' => 'Otp send successfully!',
                         'response' => $response
                     ], 200);
@@ -80,6 +82,8 @@ class AuthController extends Controller
             }
             else {
                 return response()->json([
+                    'code' => 200,
+                    'status' => true,
                     'message' => 'User has not registered!',
                 ], 200);
             }
