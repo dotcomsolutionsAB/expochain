@@ -670,6 +670,8 @@ class SuppliersController extends Controller
         $request->validate([
             'name' => 'required|string',
             'gstin' => 'required|string',
+            'mobile' => 'required|string|size:13',
+            'email' => 'required|email',
             'contacts' => 'required|array|min:1',
             'contacts.*.name' => 'required|string',
             'contacts.*.designation' => 'required|string',
@@ -698,6 +700,8 @@ class SuppliersController extends Controller
         $supplierUpdated = $supplier->update([
             'name' => $request->input('name'),
             'gstin' => $request->input('gstin'),
+            'mobile' => $request->input('mobile'),
+            'email' => $request->input('email'),
         ]);
 
         // Update contacts

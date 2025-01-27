@@ -316,6 +316,10 @@ class ClientsController extends Controller
         // Validate the request input
         $request->validate([
             'name' => 'required|string',
+            'mobile' => 'required|string|size:13',
+            'email' => 'required|email',
+            'mobile' => $request->input('mobile'),
+            'email' => $request->input('email'),
             'type' => 'required|string',
             'category' => 'required|string',
             'division' => 'required|string',
