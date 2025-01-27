@@ -326,52 +326,115 @@ class SuppliersController extends Controller
     //         ], 404);
     // }
 
+    // public function view_suppliers(Request $request)
+    // {
+    //     // Get filter inputs
+    //     $limit = $request->input('limit', 10); // Default limit to 10
+    //     $offset = $request->input('offset', 0); // Default offset to 0
+    //     $name = $request->input('name'); // Optional name filter
+    //     $gstin = $request->input('gstin'); // Optional GSTIN filter
+    //     $mobile = $request->input('mobile'); // Optional mobile filter
+
+    //     // Build the query
+    //     $query = SuppliersModel::query()
+    //         ->with([
+    //             'contacts' => function ($query) use ($mobile) {
+    //                 $query->select('supplier_id', 'name', 'designation', 'mobile', 'email');
+    //                 if ($mobile) {
+    //                     $query->where('mobile', 'LIKE', '%' . $mobile . '%');
+    //                 }
+    //             },
+    //             'addresses' => function ($query) {
+    //                 $query->select('supplier_id', 'type', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode', 'country');
+    //             }
+    //         ])
+    //         ->where('company_id', Auth::user()->company_id);
+
+    //     // Apply filters
+    //     if ($name) {
+    //         $query->where('name', 'LIKE', '%' . $name . '%');
+    //     }
+    //     if ($gstin) {
+    //         $query->where('gstin', 'LIKE', '%' . $gstin . '%');
+    //     }
+
+    //     // Apply limit and offset
+    //     $query->offset($offset)->limit($limit);
+
+    //     // Execute the query and hide `created_at` and `updated_at`
+    //     $get_suppliers = $query->get()->makeHidden(['created_at', 'updated_at']);
+
+    //     // Return the response
+    //     return $get_suppliers->isNotEmpty()
+    //         ? response()->json([
+    //             'code' => 200,
+    //             'success' => true,
+    //             'message' => 'Suppliers fetched successfully!',
+    //             'data' => $get_suppliers,
+    //             'count' => $get_suppliers->count()
+    //         ], 200)
+    //         : response()->json([
+    //             'code' => 404,
+    //             'success' => false,
+    //             'message' => 'No suppliers found!',
+    //         ], 404);
+    // }
     public function view_suppliers(Request $request)
     {
         // Get filter inputs
+        $search = $request->input('search'); // Search across multiple fields
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
-        $name = $request->input('name'); // Optional name filter
-        $gstin = $request->input('gstin'); // Optional GSTIN filter
-        $mobile = $request->input('mobile'); // Optional mobile filter
 
         // Build the query
-        $query = SuppliersModel::query()
-            ->with([
-                'contacts' => function ($query) use ($mobile) {
-                    $query->select('supplier_id', 'name', 'designation', 'mobile', 'email');
-                    if ($mobile) {
-                        $query->where('mobile', 'LIKE', '%' . $mobile . '%');
-                    }
-                },
-                'addresses' => function ($query) {
-                    $query->select('supplier_id', 'type', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode', 'country');
+        $suppliersQuery = SuppliersModel::with([
+            'contacts' => function ($query) use ($search) {
+                if ($search) {
+                    $query->where('mobile', 'LIKE', '%' . $search . '%');
                 }
-            ])
-            ->where('company_id', Auth::user()->company_id);
+                $query->select('supplier_id', 'name', 'designation', 'mobile', 'email');
+            },
+            'addresses' => function ($query) {
+                $query->select('supplier_id', 'type', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode', 'country');
+            },
+        ])
+        ->select('supplier_id', 'name', 'gstin', 'company_id')
+        ->where('company_id', Auth::user()->company_id);
 
-        // Apply filters
-        if ($name) {
-            $query->where('name', 'LIKE', '%' . $name . '%');
-        }
-        if ($gstin) {
-            $query->where('gstin', 'LIKE', '%' . $gstin . '%');
+        // Apply search filter
+        if ($search) {
+            $suppliersQuery->where(function ($query) use ($search) {
+                $query->where('name', 'LIKE', '%' . $search . '%')
+                    ->orWhere('gstin', 'LIKE', '%' . $search . '%')
+                    ->orWhereHas('contacts', function ($q) use ($search) {
+                        $q->where('mobile', 'LIKE', '%' . $search . '%');
+                    });
+            });
         }
 
         // Apply limit and offset
-        $query->offset($offset)->limit($limit);
+        $suppliersQuery->offset($offset)->limit($limit);
 
-        // Execute the query and hide `created_at` and `updated_at`
-        $get_suppliers = $query->get()->makeHidden(['created_at', 'updated_at']);
+        // Execute the query
+        $suppliers = $suppliersQuery->get();
+
+        // Add contact counts and hide unnecessary fields
+        $suppliers->each(function ($supplier) {
+            $supplier->contact_count = $supplier->contacts->count(); // Add contact count
+            $supplier->contacts->each(function ($contact) {
+                $contact->makeHidden(['created_at', 'updated_at']);
+            });
+        });
 
         // Return the response
-        return $get_suppliers->isNotEmpty()
+        return $suppliers->isNotEmpty()
             ? response()->json([
                 'code' => 200,
                 'success' => true,
                 'message' => 'Suppliers fetched successfully!',
-                'data' => $get_suppliers,
-                'count' => $get_suppliers->count()
+                'data' => $suppliers,
+                'total_contacts' => $suppliers->sum(fn($supplier) => $supplier->contacts->count()), // Total contact count
+                'count' => $suppliers->count(), // Total suppliers count
             ], 200)
             : response()->json([
                 'code' => 404,
@@ -379,6 +442,7 @@ class SuppliersController extends Controller
                 'message' => 'No suppliers found!',
             ], 404);
     }
+
 
 
 
@@ -1163,151 +1227,151 @@ class SuppliersController extends Controller
 //     ], 200);
 // }
 
-public function importSuppliersData()
-{
-    SuppliersModel::truncate();
-    SuppliersContactsModel::truncate();
-    SupplierAddressModel::truncate();
+    public function importSuppliersData()
+    {
+        SuppliersModel::truncate();
+        SuppliersContactsModel::truncate();
+        SupplierAddressModel::truncate();
 
-    $url = 'https://expo.egsm.in/assets/custom/migrate/suppliers.php';
+        $url = 'https://expo.egsm.in/assets/custom/migrate/suppliers.php';
 
-    try {
-        $response = Http::get($url);
-    } catch (\Exception $e) {
-        return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
-    }
-
-    if ($response->failed()) {
-        return response()->json(['error' => 'Failed to fetch data.'], 500);
-    }
-
-    $data = $response->json('data');
-
-    if (empty($data)) {
-        return response()->json(['message' => 'No data found'], 404);
-    }
-
-    $successfulInserts = 0;
-    $errors = [];
-    $company_id = Auth::user()->company_id;
-
-    foreach ($data as $record) {
-        $existingSuppliers = SuppliersModel::where('name', $record['name'])->first();
-        if ($existingSuppliers) {
-            continue; // Skip if supplier already exists
-        }
-
-        $addressData = json_decode($record['address'], true) ?? [];
-
-        // Process and normalize mobile numbers
-        $rawMobileData = $record['mobile'] ?? '';
-        $mobileList = $this->processMobileNumbers($rawMobileData); // Use helper function to process numbers
-        $primaryMobile = $mobileList[0] ?? '0000000000'; // First number as the primary mobile
-
-        $primaryEmail = filter_var(trim($record['email'] ?? ''), FILTER_VALIDATE_EMAIL)
-            ? trim($record['email'])
-            : 'placeholder_' . now()->timestamp . '@example.com';
-
-        // Generate unique supplier ID
-        do {
-            $supplier_id = rand(1111111111, 9999999999);
-            $exists = SuppliersModel::where('supplier_id', $supplier_id)->exists();
-        } while ($exists);
-
-        // Insert supplier record
         try {
-            $register_supplier = SuppliersModel::create([
-                'supplier_id' => $supplier_id,
-                'company_id' => $company_id,
-                'name' => $record['name'],
-                'gstin' => $record['GSTIN'] ?? 'Random GSTIN' . now()->timestamp . '_' . Str::random(5),
-                'contacts' => json_encode(['mobile' => $rawMobileData, 'email' => $record['email']]), // Store raw contact details as JSON
-                'mobile' => $primaryMobile, // Store the first parsed mobile number
-                'email' => $primaryEmail,
-            ]);
-            $successfulInserts++;
+            $response = Http::get($url);
         } catch (\Exception $e) {
-            $errors[] = ['record' => $record, 'error' => 'Failed to insert supplier: ' . $e->getMessage()];
-            continue;
+            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
         }
 
-        // Insert address into SupplierAddressModel
-        try {
-            SupplierAddressModel::create([
-                'company_id' => $company_id,
-                'supplier_id' => $register_supplier->supplier_id,
-                'address_line_1' => $addressData['address1'] ?? 'Default Address Line 1',
-                'address_line_2' => $addressData['address2'] ?? 'Default Address Line 2',
-                'city' => $addressData['city'] ?? 'Default City',
-                'pincode' => $addressData['pincode'] ?? '000000',
-                'state' => $record['state'] ?? 'Unknown State',
-                'country' => $record['country'] ?? 'India',
-            ]);
-        } catch (\Exception $e) {
-            $errors[] = ['record' => $record, 'error' => 'Failed to insert address: ' . $e->getMessage()];
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch data.'], 500);
         }
 
-        // Insert all parsed mobile numbers into SuppliersContactsModel
-        foreach ($mobileList as $mobile) {
+        $data = $response->json('data');
+
+        if (empty($data)) {
+            return response()->json(['message' => 'No data found'], 404);
+        }
+
+        $successfulInserts = 0;
+        $errors = [];
+        $company_id = Auth::user()->company_id;
+
+        foreach ($data as $record) {
+            $existingSuppliers = SuppliersModel::where('name', $record['name'])->first();
+            if ($existingSuppliers) {
+                continue; // Skip if supplier already exists
+            }
+
+            $addressData = json_decode($record['address'], true) ?? [];
+
+            // Process and normalize mobile numbers
+            $rawMobileData = $record['mobile'] ?? '';
+            $mobileList = $this->processMobileNumbers($rawMobileData); // Use helper function to process numbers
+            $primaryMobile = $mobileList[0] ?? '0000000000'; // First number as the primary mobile
+
+            $primaryEmail = filter_var(trim($record['email'] ?? ''), FILTER_VALIDATE_EMAIL)
+                ? trim($record['email'])
+                : 'placeholder_' . now()->timestamp . '@example.com';
+
+            // Generate unique supplier ID
+            do {
+                $supplier_id = rand(1111111111, 9999999999);
+                $exists = SuppliersModel::where('supplier_id', $supplier_id)->exists();
+            } while ($exists);
+
+            // Insert supplier record
             try {
-                SuppliersContactsModel::create([
-                    'supplier_id' => $register_supplier->supplier_id,
+                $register_supplier = SuppliersModel::create([
+                    'supplier_id' => $supplier_id,
                     'company_id' => $company_id,
-                    'name' => $record['name'], // Use supplier name as the default contact name
-                    'designation' => 'Default Designation', // Default designation
-                    'mobile' => $mobile, // Store each parsed mobile number
-                    'email' => $primaryEmail, // Use primary email for contacts
+                    'name' => $record['name'],
+                    'gstin' => $record['GSTIN'] ?? 'Random GSTIN' . now()->timestamp . '_' . Str::random(5),
+                    'contacts' => json_encode(['mobile' => $rawMobileData, 'email' => $record['email']]), // Store raw contact details as JSON
+                    'mobile' => $primaryMobile, // Store the first parsed mobile number
+                    'email' => $primaryEmail,
+                ]);
+                $successfulInserts++;
+            } catch (\Exception $e) {
+                $errors[] = ['record' => $record, 'error' => 'Failed to insert supplier: ' . $e->getMessage()];
+                continue;
+            }
+
+            // Insert address into SupplierAddressModel
+            try {
+                SupplierAddressModel::create([
+                    'company_id' => $company_id,
+                    'supplier_id' => $register_supplier->supplier_id,
+                    'address_line_1' => $addressData['address1'] ?? 'Default Address Line 1',
+                    'address_line_2' => $addressData['address2'] ?? 'Default Address Line 2',
+                    'city' => $addressData['city'] ?? 'Default City',
+                    'pincode' => $addressData['pincode'] ?? '000000',
+                    'state' => $record['state'] ?? 'Unknown State',
+                    'country' => $record['country'] ?? 'India',
                 ]);
             } catch (\Exception $e) {
-                $errors[] = ['record' => $mobile, 'error' => 'Failed to insert contact: ' . $e->getMessage()];
+                $errors[] = ['record' => $record, 'error' => 'Failed to insert address: ' . $e->getMessage()];
+            }
+
+            // Insert all parsed mobile numbers into SuppliersContactsModel
+            foreach ($mobileList as $mobile) {
+                try {
+                    SuppliersContactsModel::create([
+                        'supplier_id' => $register_supplier->supplier_id,
+                        'company_id' => $company_id,
+                        'name' => $record['name'], // Use supplier name as the default contact name
+                        'designation' => 'Default Designation', // Default designation
+                        'mobile' => $mobile, // Store each parsed mobile number
+                        'email' => $primaryEmail, // Use primary email for contacts
+                    ]);
+                } catch (\Exception $e) {
+                    $errors[] = ['record' => $mobile, 'error' => 'Failed to insert contact: ' . $e->getMessage()];
+                }
             }
         }
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => "Data import completed with $successfulInserts successful inserts.",
+            'errors' => $errors,
+        ], 200);
     }
 
-    return response()->json([
-        'code' => 200,
-        'success' => true,
-        'message' => "Data import completed with $successfulInserts successful inserts.",
-        'errors' => $errors,
-    ], 200);
-}
+    // Helper function to process and normalize mobile numbers
+    private function processMobileNumbers($rawMobileData)
+    {
+        $mobileList = [];
+        $areaCode = ''; // Variable to track the last detected area code
 
-// Helper function to process and normalize mobile numbers
-private function processMobileNumbers($rawMobileData)
-{
-    $mobileList = [];
-    $areaCode = ''; // Variable to track the last detected area code
+        if (!empty($rawMobileData)) {
+            // Split the input by commas and slashes
+            $mobileParts = explode(',', $rawMobileData);
 
-    if (!empty($rawMobileData)) {
-        // Split the input by commas and slashes
-        $mobileParts = explode(',', $rawMobileData);
+            foreach ($mobileParts as $group) {
+                $group = trim($group);
+                $subParts = explode('/', $group);
 
-        foreach ($mobileParts as $group) {
-            $group = trim($group);
-            $subParts = explode('/', $group);
+                foreach ($subParts as $part) {
+                    $part = trim($part);
 
-            foreach ($subParts as $part) {
-                $part = trim($part);
-
-                // If the part contains an area code (e.g., "033 22489216")
-                if (preg_match('/^\d{2,4}\s\d+$/', $part)) {
-                    $mobileList[] = $part; // Add full number with area code
-                    $areaCode = explode(' ', $part)[0]; // Extract the area code for future use
-                } elseif (preg_match('/^\d+$/', $part)) {
-                    // If the part is a number without an area code
-                    if (!empty($areaCode)) {
-                        $mobileList[] = $areaCode . ' ' . $part; // Prepend the last known area code
-                    } else {
-                        $mobileList[] = $part; // Add as is if no area code is available
+                    // If the part contains an area code (e.g., "033 22489216")
+                    if (preg_match('/^\d{2,4}\s\d+$/', $part)) {
+                        $mobileList[] = $part; // Add full number with area code
+                        $areaCode = explode(' ', $part)[0]; // Extract the area code for future use
+                    } elseif (preg_match('/^\d+$/', $part)) {
+                        // If the part is a number without an area code
+                        if (!empty($areaCode)) {
+                            $mobileList[] = $areaCode . ' ' . $part; // Prepend the last known area code
+                        } else {
+                            $mobileList[] = $part; // Add as is if no area code is available
+                        }
                     }
                 }
             }
         }
-    }
 
-    // Remove duplicates and ensure clean numbers
-    return array_unique(array_map('trim', $mobileList));
-}
+        // Remove duplicates and ensure clean numbers
+        return array_unique(array_map('trim', $mobileList));
+    }
 
 
 }
