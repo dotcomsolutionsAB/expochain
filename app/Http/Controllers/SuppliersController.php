@@ -1027,7 +1027,7 @@ class SuppliersController extends Controller
                 'Supplier ID' => $supplier->supplier_id,
                 'Name' => $supplier->name,
                 'GSTIN' => $supplier->gstin,
-                'Contacts' => $supplier->contacts->map(fn($contact) => "{$contact->name} ({$contact->mobile})")->join(', '),
+                // 'Contacts' => $supplier->contacts->map(fn($contact) => "{$contact->name} ({$contact->mobile})")->join(', '),
                 'Address' => $supplier->addresses->map(fn($address) => "{$address->address_line_1}, {$address->city}, {$address->state}, {$address->pincode}, {$address->country}")->join('; '),
             ];
         })->toArray();
@@ -1056,7 +1056,7 @@ class SuppliersController extends Controller
                     'Supplier ID',
                     'Name',
                     'GSTIN',
-                    'Contacts',
+                    // 'Contacts',
                     'Address',
                 ];
             }
@@ -1065,7 +1065,7 @@ class SuppliersController extends Controller
         // Get file details
         $fileUrl = asset('storage/' . $filePath);
         $fileSize = Storage::disk('public')->size($filePath);
-        $contentType = Storage::disk('public')->mimeType($filePath);
+        // $contentType = Storage::disk('public')->mimeType($filePath);
 
         // Return response with file details
         return response()->json([
@@ -1076,7 +1076,8 @@ class SuppliersController extends Controller
                 'file_url' => $fileUrl,
                 'file_name' => $fileName,
                 'file_size' => $fileSize,
-                'content_type' => $contentType,
+                // 'content_type' => $contentType,
+                'content_type' => "Excel",
             ],
         ], 200);
     }
