@@ -10,6 +10,8 @@ use App\Models\SupplierAddressModel;
 use Illuminate\Support\Str;
 use Auth;
 use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 
 class SuppliersController extends Controller
 {
@@ -1443,11 +1445,18 @@ class SuppliersController extends Controller
                 $this->data = collect($data);
             }
 
-            public function collection()
-            {
-                return $this->data;
-            }
-        }, $fileName);
-    }
+            public function headings(): array
+        {
+            return [
+                'Supplier ID',
+                'Name',
+                'GSTIN',
+                'Contact Count',
+                'Contacts',
+                'Address',
+            ];
+        }
+    }, $fileName);
+}
 
 }
