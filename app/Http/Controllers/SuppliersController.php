@@ -762,119 +762,552 @@ class SuppliersController extends Controller
     }
 
     // migrate
-    public function importSuppliersData()
-    {
-        SuppliersModel::truncate();  
+    // public function importSuppliersData()
+    // {
+    //     // SuppliersModel::truncate();  
         
-        SuppliersContactsModel::truncate();  
+    //     // SuppliersContactsModel::truncate();  
 
-        // Define the external URL
-        $url = 'https://expo.egsm.in/assets/custom/migrate/suppliers.php'; // Replace with the actual URL
+    //     // Define the external URL
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/suppliers.php'; // Replace with the actual URL
 
-        try {
-            $response = Http::get($url);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
-        }
+    //     try {
+    //         $response = Http::get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+    //     }
     
-        if ($response->failed()) {
-            return response()->json(['error' => 'Failed to fetch data.'], 500);
-        }
+    //     if ($response->failed()) {
+    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
+    //     }
     
-        $data = $response->json('data');
+    //     $data = $response->json('data');
     
-        if (empty($data)) {
-            return response()->json(['message' => 'No data found'], 404);
-        }
+    //     if (empty($data)) {
+    //         return response()->json(['message' => 'No data found'], 404);
+    //     }
     
-        $successfulInserts = 0;
-        $errors = [];
+    //     $successfulInserts = 0;
+    //     $errors = [];
     
-        foreach ($data as $record) {
-            $existingSuppliers = SuppliersModel::where('name', $record['name'])->first();
-            if ($existingSuppliers) {
-                continue; // Skip if supplier already exists
-            }
+    //     foreach ($data as $record) {
+    //         $existingSuppliers = SuppliersModel::where('name', $record['name'])->first();
+    //         if ($existingSuppliers) {
+    //             continue; // Skip if supplier already exists
+    //         }
 
-             // Decode JSON-encoded fields if they are not empty
-            $addressData = json_decode($record['address'], true) ?? [];
+    //          // Decode JSON-encoded fields if they are not empty
+    //         $addressData = json_decode($record['address'], true) ?? [];
 
-            // Set default values for address fields if missing
-            $validationData = [
-                'name' => $record['name'],
-                'address_line_1' => !empty($addressData['address1']) ? $addressData['address1'] : 'Default Address Line 1',
-                'address_line_2' => !empty($addressData['address2']) ? $addressData['address2'] : 'Default Address Line 2',
-                'city' => !empty($addressData['city']) ? $addressData['city'] : 'Default City',
-                'pincode' =>  !empty($addressData['pincode']) ? $addressData['pincode'] : '000000',
-                'state' => !empty($record['state']) ? $record['state'] : 'Unknown State',
-                'country' => !empty($record['country']) ? $record['country'] : 'India',
-                'gstin' => !empty($record['GSTIN']) ? $record['GSTIN'] : 'Random GSTIN' . now()->timestamp . '_' . Str::random(5),
-                'contacts' => [['name' => $record['name'], 'mobile' => $record['mobile'], 'email' => $record['email']]],
-            ];    
-    
-            // Validate the record
-            $validator = Validator::make($validationData, [
-                'name' => 'required|string|unique:t_suppliers,name',
-                'address_line_1' => 'required|string',
-                'address_line_2' => 'required|string',
-                'city' => 'required|string',
-                'pincode' => 'required|string',
-                'state' => 'required|string',
-                'country' => 'required|string',
-                'gstin' => 'required|string|unique:t_suppliers,gstin',
-                'contacts' => 'required|array',
-            ]);
-    
-            if ($validator->fails()) {
-                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
-                continue;
-            }
-    
-            do {
-            // Generate unique supplier ID
-            $supplier_id = rand(1111111111, 9999999999);
+    //         // Set default values for address fields if missing
+    //         $validationData = [
+    //             'name' => $record['name'],
+    //             'address_line_1' => !empty($addressData['address1']) ? $addressData['address1'] : 'Default Address Line 1',
+    //             'address_line_2' => !empty($addressData['address2']) ? $addressData['address2'] : 'Default Address Line 2',
+    //             'city' => !empty($addressData['city']) ? $addressData['city'] : 'Default City',
+    //             'pincode' =>  !empty($addressData['pincode']) ? $addressData['pincode'] : '000000',
+    //             'state' => !empty($record['state']) ? $record['state'] : 'Unknown State',
+    //             'country' => !empty($record['country']) ? $record['country'] : 'India',
+    //             'gstin' => !empty($record['GSTIN']) ? $record['GSTIN'] : 'Random GSTIN' . now()->timestamp . '_' . Str::random(5),
+    //             'contacts' => [['name' => $record['name'], 'mobile' => $record['mobile'], 'email' => $record['email']]],
+    //         ];   
             
+    //         dd($validationData);
+    
+    //         // Validate the record
+    //         $validator = Validator::make($validationData, [
+    //             'name' => 'required|string|unique:t_suppliers,name',
+    //             'address_line_1' => 'required|string',
+    //             'address_line_2' => 'required|string',
+    //             'city' => 'required|string',
+    //             'pincode' => 'required|string',
+    //             'state' => 'required|string',
+    //             'country' => 'required|string',
+    //             'gstin' => 'required|string|unique:t_suppliers,gstin',
+    //             'contacts' => 'required|array',
+    //         ]);
+    
+    //         if ($validator->fails()) {
+    //             $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+    //             continue;
+    //         }
+    
+    //         do {
+    //         // Generate unique supplier ID
+    //         $supplier_id = rand(1111111111, 9999999999);
+            
+    //         $exists = SuppliersModel::where('supplier_id', $supplier_id)->exists();
+    //     } while ($exists);
+    
+    //         // Insert supplier record
+    //         try {
+    //             $register_supplier = SuppliersModel::create([
+    //                 'supplier_id' => $supplier_id,
+    //                 'name' => $validationData['name'],
+    //                 'address_line_1' => $validationData['address_line_1'],
+    //                 'address_line_2' => $validationData['address_line_2'],
+    //                 'city' => $validationData['city'],
+    //                 'pincode' => $validationData['pincode'],
+    //                 'state' => $validationData['state'],
+    //                 'country' => $validationData['country'],
+    //                 'gstin' => $validationData['gstin'],
+    //             ]);
+    //             $successfulInserts++;
+    //         } catch (\Exception $e) {
+    //             $errors[] = ['record' => $record, 'error' => 'Failed to insert supplier: ' . $e->getMessage()];
+    //             continue;
+    //         }
+
+    //        // Insert contact record using data from the supplier record itself
+    //         try {
+    //             SuppliersContactsModel::create([
+    //                 'supplier_id' => $register_supplier->supplier_id,
+    //                 'name' => $record['name'],
+    //                 'designation' => 'Default Designation',
+    //                 'mobile' => $record['mobile'] ?? '0000000000',
+    //                 'email' => filter_var($record['email'], FILTER_VALIDATE_EMAIL) ? $record['email'] : 'placeholder_' . now()->timestamp . '@example.com',
+    //             ]);
+    //         } catch (\Exception $e) {
+    //             $errors[] = ['record' => $record, 'error' => 'Failed to insert contact: ' . $e->getMessage()];
+    //         }
+    //     }
+
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => "Data import completed with $successfulInserts successful inserts.",
+    //         'errors' => $errors,
+    //     ], 200);
+    // }
+
+    // public function importSuppliersData()
+    // {
+    //     SuppliersModel::truncate();
+    //     SuppliersContactsModel::truncate();
+    //     SupplierAddressModel::truncate();
+
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/suppliers.php';
+
+    //     try {
+    //         $response = Http::get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
+    //     }
+
+    //     $data = $response->json('data');
+
+    //     if (empty($data)) {
+    //         return response()->json(['message' => 'No data found'], 404);
+    //     }
+
+    //     $successfulInserts = 0;
+    //     $errors = [];
+
+    //     $company_id = Auth::user()->company_id;
+
+    //     foreach ($data as $record) {
+    //         $existingSuppliers = SuppliersModel::where('name', $record['name'])->first();
+    //         if ($existingSuppliers) {
+    //             continue; // Skip if supplier already exists
+    //         }
+
+    //         $addressData = json_decode($record['address'], true) ?? [];
+
+    //         // Extract first mobile and email for SupplierModel
+    //         // $mobileList = explode(',', $record['mobile'] ?? '');
+    //         $emailList = explode(',', $record['email'] ?? '');
+
+    //         $mobileList = [];
+    //         $rawMobileData = $record['mobile'] ?? '';
+    //         $areaCode = ''; // Initialize an empty area code variable
+
+    //         // Parse the raw mobile data
+    //         if (!empty($rawMobileData)) {
+    //             $rawMobileParts = explode('/', $rawMobileData); // Split by '/'
+    //             foreach ($rawMobileParts as $part) {
+    //                 $part = trim($part);
+            
+    //                 // If the part contains an area code (e.g., "022 28367314")
+    //                 if (preg_match('/^\d{2,4}\s\d+$/', $part)) {
+    //                     $mobileList[] = $part; // Add full number with area code
+    //                     $areaCode = explode(' ', $part)[0]; // Extract area code for future use
+    //                 } elseif (preg_match('/^\d+$/', $part)) {
+    //                     // If the part is a number without an area code
+    //                     if (!empty($areaCode)) {
+    //                         $mobileList[] = $areaCode . ' ' . $part; // Prepend the last known area code
+    //                     } else {
+    //                         $mobileList[] = $part; // Add as is if no area code is available
+    //                     }
+    //                 } elseif (preg_match('/^\d+\/\d+$/', $part)) {
+    //                     // Handle numbers like "28367312/13"
+    //                     $baseNumber = explode('/', $part)[0];
+    //                     $lastDigits = explode('/', $part)[1];
+            
+    //                     // Generate full numbers for each digit in the range
+    //                     if (!empty($areaCode)) {
+    //                         $mobileList[] = $areaCode . ' ' . $baseNumber; // Add the base number with area code
+    //                         $mobileList[] = $areaCode . ' ' . substr($baseNumber, 0, -strlen($lastDigits)) . $lastDigits; // Add the derived number
+    //                     } else {
+    //                         $mobileList[] = $baseNumber; // Add the base number
+    //                         $mobileList[] = substr($baseNumber, 0, -strlen($lastDigits)) . $lastDigits; // Add the derived number
+    //                     }
+    //                 }
+    //             }
+    //         }
+
+    //         // Remove duplicates and ensure clean numbers
+    //         $mobileList = array_unique(array_map('trim', $mobileList));
+
+    //         // Get the primary mobile number (first in the list)
+    //         $primaryMobile = $mobileList[0] ?? '0000000000';
+
+
+    //         // $primaryMobile = trim($mobileList[0] ?? '0000000000');
+    //         // $primaryMobile = $mobileList[0] ?? '0000000000';
+    //         $primaryEmail = filter_var(trim($emailList[0] ?? ''), FILTER_VALIDATE_EMAIL)
+    //             ? trim($emailList[0])
+    //             : 'placeholder_' . now()->timestamp . '@example.com';
+
+    //         // Generate unique supplier ID
+    //         do {
+    //             $supplier_id = rand(1111111111, 9999999999);
+    //             $exists = SuppliersModel::where('supplier_id', $supplier_id)->exists();
+    //         } while ($exists);
+
+    //         // Insert supplier record
+    //         try {
+    //             $register_supplier = SuppliersModel::create([
+    //                 'supplier_id' => $supplier_id,
+    //                 'company_id' => $company_id,
+    //                 'name' => $record['name'],
+    //                 'gstin' => $record['GSTIN'] ?? 'Random GSTIN' . now()->timestamp . '_' . Str::random(5),
+    //                 'contacts' => json_encode(['mobile' => $record['mobile'], 'email' => $record['email']]), // Store full contact details as JSON
+    //                 'mobile' => $primaryMobile,
+    //                 'email' => $primaryEmail,
+    //             ]);
+    //             $successfulInserts++;
+    //         } catch (\Exception $e) {
+    //             $errors[] = ['record' => $record, 'error' => 'Failed to insert supplier: ' . $e->getMessage()];
+    //             continue;
+    //         }
+
+    //         // Insert address into SupplierAddressModel
+    //         try {
+    //             SupplierAddressModel::create([
+    //                 'company_id' => $company_id,
+    //                 'supplier_id' => $register_supplier->supplier_id,
+    //                 'address_line_1' => $addressData['address1'] ?? 'Default Address Line 1',
+    //                 'address_line_2' => $addressData['address2'] ?? 'Default Address Line 2',
+    //                 'city' => $addressData['city'] ?? 'Default City',
+    //                 'pincode' => $addressData['pincode'] ?? '000000',
+    //                 'state' => $record['state'] ?? 'Unknown State',
+    //                 'country' => $record['country'] ?? 'India',
+    //             ]);
+    //         } catch (\Exception $e) {
+    //             $errors[] = ['record' => $record, 'error' => 'Failed to insert address: ' . $e->getMessage()];
+    //         }
+
+    //         // Insert all contacts into SuppliersContactsModel
+    //         $contacts = json_decode($record['contacts'], true) ?? [];
+    //         foreach ($contacts as $contact) {
+    //             try {
+    //                 SuppliersContactsModel::create([
+    //                     'supplier_id' => $register_supplier->supplier_id,
+    //                     'company_id' => $company_id,
+    //                     'name' => $contact['name'] ?? 'Unknown Contact',
+    //                     'designation' => $contact['designation'] ?? 'Default Designation',
+    //                     'mobile' => $contact['mobile'] ?? '0000000000',
+    //                     'email' => filter_var($contact['email'] ?? '', FILTER_VALIDATE_EMAIL)
+    //                         ? $contact['email']
+    //                         : 'placeholder_' . now()->timestamp . '@example.com',
+    //                 ]);
+    //             } catch (\Exception $e) {
+    //                 $errors[] = ['record' => $contact, 'error' => 'Failed to insert contact: ' . $e->getMessage()];
+    //             }
+    //         }
+    //     }
+
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => "Data import completed with $successfulInserts successful inserts.",
+    //         'errors' => $errors,
+    //     ], 200);
+    // }
+
+//     public function importSuppliersData()
+// {
+//     SuppliersModel::truncate();
+//     SuppliersContactsModel::truncate();
+//     SupplierAddressModel::truncate();
+
+//     $url = 'https://expo.egsm.in/assets/custom/migrate/suppliers.php';
+
+//     try {
+//         $response = Http::get($url);
+//     } catch (\Exception $e) {
+//         return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+//     }
+
+//     if ($response->failed()) {
+//         return response()->json(['error' => 'Failed to fetch data.'], 500);
+//     }
+
+//     $data = $response->json('data');
+
+//     if (empty($data)) {
+//         return response()->json(['message' => 'No data found'], 404);
+//     }
+
+//     $successfulInserts = 0;
+//     $errors = [];
+
+//     $company_id = Auth::user()->company_id;
+
+//     foreach ($data as $record) {
+//         $existingSuppliers = SuppliersModel::where('name', $record['name'])->first();
+//         if ($existingSuppliers) {
+//             continue; // Skip if supplier already exists
+//         }
+
+//         $addressData = json_decode($record['address'], true) ?? [];
+
+//         // Handle mobile and email for SuppliersModel
+//         $primaryMobile = $record['mobile'] ?? '0000000000';
+//         $primaryEmail = filter_var(trim($record['email'] ?? ''), FILTER_VALIDATE_EMAIL)
+//             ? trim($record['email'])
+//             : 'placeholder_' . now()->timestamp . '@example.com';
+
+//         // Generate unique supplier ID
+//         do {
+//             $supplier_id = rand(1111111111, 9999999999);
+//             $exists = SuppliersModel::where('supplier_id', $supplier_id)->exists();
+//         } while ($exists);
+
+//         // Insert supplier record
+//         try {
+//             $register_supplier = SuppliersModel::create([
+//                 'supplier_id' => $supplier_id,
+//                 'company_id' => $company_id,
+//                 'name' => $record['name'],
+//                 'gstin' => $record['GSTIN'] ?? 'Random GSTIN' . now()->timestamp . '_' . Str::random(5),
+//                 'contacts' => json_encode(['mobile' => $record['mobile'], 'email' => $record['email']]), // Store raw contact details as JSON
+//                 'mobile' => $primaryMobile, // Only this mobile is stored
+//                 'email' => $primaryEmail,  // Only this email is stored
+//             ]);
+//             $successfulInserts++;
+//         } catch (\Exception $e) {
+//             $errors[] = ['record' => $record, 'error' => 'Failed to insert supplier: ' . $e->getMessage()];
+//             continue;
+//         }
+
+//         // Insert address into SupplierAddressModel
+//         try {
+//             SupplierAddressModel::create([
+//                 'company_id' => $company_id,
+//                 'supplier_id' => $register_supplier->supplier_id,
+//                 'address_line_1' => $addressData['address1'] ?? 'Default Address Line 1',
+//                 'address_line_2' => $addressData['address2'] ?? 'Default Address Line 2',
+//                 'city' => $addressData['city'] ?? 'Default City',
+//                 'pincode' => $addressData['pincode'] ?? '000000',
+//                 'state' => $record['state'] ?? 'Unknown State',
+//                 'country' => $record['country'] ?? 'India',
+//             ]);
+//         } catch (\Exception $e) {
+//             $errors[] = ['record' => $record, 'error' => 'Failed to insert address: ' . $e->getMessage()];
+//         }
+
+//         // Handle contacts for SuppliersContactsModel only if contacts exist
+//         if (!empty($record['contacts'])) {
+//             $contacts = json_decode($record['contacts'], true);
+
+//             // Ensure contacts fields are arrays
+//             $names = $contacts['name'] ?? [];
+//             $designations = $contacts['designation'] ?? [];
+//             $mobiles = $contacts['mobile'] ?? [];
+//             $emails = $contacts['email'] ?? [];
+
+//             $maxCount = max(count($names), count($designations), count($mobiles), count($emails));
+
+//             for ($i = 0; $i < $maxCount; $i++) {
+//                 try {
+//                     SuppliersContactsModel::create([
+//                         'supplier_id' => $register_supplier->supplier_id,
+//                         'company_id' => $company_id,
+//                         'name' => $names[$i] ?? 'Unknown Contact',
+//                         'designation' => $designations[$i] ?? 'Default Designation',
+//                         'mobile' => $mobiles[$i] ?? '0000000000',
+//                         'email' => filter_var($emails[$i] ?? '', FILTER_VALIDATE_EMAIL)
+//                             ? $emails[$i]
+//                             : 'placeholder_' . now()->timestamp . "@example.com",
+//                     ]);
+//                 } catch (\Exception $e) {
+//                     $errors[] = [
+//                         'record' => $contacts,
+//                         'error' => 'Failed to insert contact: ' . $e->getMessage(),
+//                     ];
+//                 }
+//             }
+//         }
+//     }
+
+//     return response()->json([
+//         'code' => 200,
+//         'success' => true,
+//         'message' => "Data import completed with $successfulInserts successful inserts.",
+//         'errors' => $errors,
+//     ], 200);
+// }
+
+public function importSuppliersData()
+{
+    SuppliersModel::truncate();
+    SuppliersContactsModel::truncate();
+    SupplierAddressModel::truncate();
+
+    $url = 'https://expo.egsm.in/assets/custom/migrate/suppliers.php';
+
+    try {
+        $response = Http::get($url);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+    }
+
+    if ($response->failed()) {
+        return response()->json(['error' => 'Failed to fetch data.'], 500);
+    }
+
+    $data = $response->json('data');
+
+    if (empty($data)) {
+        return response()->json(['message' => 'No data found'], 404);
+    }
+
+    $successfulInserts = 0;
+    $errors = [];
+    $company_id = Auth::user()->company_id;
+
+    foreach ($data as $record) {
+        $existingSuppliers = SuppliersModel::where('name', $record['name'])->first();
+        if ($existingSuppliers) {
+            continue; // Skip if supplier already exists
+        }
+
+        $addressData = json_decode($record['address'], true) ?? [];
+
+        // Process and normalize mobile numbers
+        $rawMobileData = $record['mobile'] ?? '';
+        $mobileList = $this->processMobileNumbers($rawMobileData); // Use helper function to process numbers
+        $primaryMobile = $mobileList[0] ?? '0000000000'; // First number as the primary mobile
+
+        $primaryEmail = filter_var(trim($record['email'] ?? ''), FILTER_VALIDATE_EMAIL)
+            ? trim($record['email'])
+            : 'placeholder_' . now()->timestamp . '@example.com';
+
+        // Generate unique supplier ID
+        do {
+            $supplier_id = rand(1111111111, 9999999999);
             $exists = SuppliersModel::where('supplier_id', $supplier_id)->exists();
         } while ($exists);
-    
-            // Insert supplier record
-            try {
-                $register_supplier = SuppliersModel::create([
-                    'supplier_id' => $supplier_id,
-                    'name' => $validationData['name'],
-                    'address_line_1' => $validationData['address_line_1'],
-                    'address_line_2' => $validationData['address_line_2'],
-                    'city' => $validationData['city'],
-                    'pincode' => $validationData['pincode'],
-                    'state' => $validationData['state'],
-                    'country' => $validationData['country'],
-                    'gstin' => $validationData['gstin'],
-                ]);
-                $successfulInserts++;
-            } catch (\Exception $e) {
-                $errors[] = ['record' => $record, 'error' => 'Failed to insert supplier: ' . $e->getMessage()];
-                continue;
-            }
 
-           // Insert contact record using data from the supplier record itself
+        // Insert supplier record
+        try {
+            $register_supplier = SuppliersModel::create([
+                'supplier_id' => $supplier_id,
+                'company_id' => $company_id,
+                'name' => $record['name'],
+                'gstin' => $record['GSTIN'] ?? 'Random GSTIN' . now()->timestamp . '_' . Str::random(5),
+                'contacts' => json_encode(['mobile' => $rawMobileData, 'email' => $record['email']]), // Store raw contact details as JSON
+                'mobile' => $primaryMobile, // Store the first parsed mobile number
+                'email' => $primaryEmail,
+            ]);
+            $successfulInserts++;
+        } catch (\Exception $e) {
+            $errors[] = ['record' => $record, 'error' => 'Failed to insert supplier: ' . $e->getMessage()];
+            continue;
+        }
+
+        // Insert address into SupplierAddressModel
+        try {
+            SupplierAddressModel::create([
+                'company_id' => $company_id,
+                'supplier_id' => $register_supplier->supplier_id,
+                'address_line_1' => $addressData['address1'] ?? 'Default Address Line 1',
+                'address_line_2' => $addressData['address2'] ?? 'Default Address Line 2',
+                'city' => $addressData['city'] ?? 'Default City',
+                'pincode' => $addressData['pincode'] ?? '000000',
+                'state' => $record['state'] ?? 'Unknown State',
+                'country' => $record['country'] ?? 'India',
+            ]);
+        } catch (\Exception $e) {
+            $errors[] = ['record' => $record, 'error' => 'Failed to insert address: ' . $e->getMessage()];
+        }
+
+        // Insert all parsed mobile numbers into SuppliersContactsModel
+        foreach ($mobileList as $mobile) {
             try {
                 SuppliersContactsModel::create([
                     'supplier_id' => $register_supplier->supplier_id,
-                    'name' => $record['name'],
-                    'designation' => 'Default Designation',
-                    'mobile' => $record['mobile'] ?? '0000000000',
-                    'email' => filter_var($record['email'], FILTER_VALIDATE_EMAIL) ? $record['email'] : 'placeholder_' . now()->timestamp . '@example.com',
+                    'company_id' => $company_id,
+                    'name' => $record['name'], // Use supplier name as the default contact name
+                    'designation' => 'Default Designation', // Default designation
+                    'mobile' => $mobile, // Store each parsed mobile number
+                    'email' => $primaryEmail, // Use primary email for contacts
                 ]);
             } catch (\Exception $e) {
-                $errors[] = ['record' => $record, 'error' => 'Failed to insert contact: ' . $e->getMessage()];
+                $errors[] = ['record' => $mobile, 'error' => 'Failed to insert contact: ' . $e->getMessage()];
             }
         }
-
-        return response()->json([
-            'code' => 200,
-            'success' => true,
-            'message' => "Data import completed with $successfulInserts successful inserts.",
-            'errors' => $errors,
-        ], 200);
     }
+
+    return response()->json([
+        'code' => 200,
+        'success' => true,
+        'message' => "Data import completed with $successfulInserts successful inserts.",
+        'errors' => $errors,
+    ], 200);
+}
+
+// Helper function to process and normalize mobile numbers
+private function processMobileNumbers($rawMobileData)
+{
+    $mobileList = [];
+    $areaCode = ''; // Variable to track the last detected area code
+
+    if (!empty($rawMobileData)) {
+        // Split the input by commas and slashes
+        $mobileParts = explode(',', $rawMobileData);
+
+        foreach ($mobileParts as $group) {
+            $group = trim($group);
+            $subParts = explode('/', $group);
+
+            foreach ($subParts as $part) {
+                $part = trim($part);
+
+                // If the part contains an area code (e.g., "033 22489216")
+                if (preg_match('/^\d{2,4}\s\d+$/', $part)) {
+                    $mobileList[] = $part; // Add full number with area code
+                    $areaCode = explode(' ', $part)[0]; // Extract the area code for future use
+                } elseif (preg_match('/^\d+$/', $part)) {
+                    // If the part is a number without an area code
+                    if (!empty($areaCode)) {
+                        $mobileList[] = $areaCode . ' ' . $part; // Prepend the last known area code
+                    } else {
+                        $mobileList[] = $part; // Add as is if no area code is available
+                    }
+                }
+            }
+        }
+    }
+
+    // Remove duplicates and ensure clean numbers
+    return array_unique(array_map('trim', $mobileList));
+}
+
+
 }

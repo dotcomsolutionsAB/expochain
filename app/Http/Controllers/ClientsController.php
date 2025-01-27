@@ -244,20 +244,17 @@ class ClientsController extends Controller
 
             return response()->json(['code' => 404, 'success' => false, 'message' => 'Client not found'], 404);
         } else {
-            // Fetch all clients with optional filters
-            $name = $request->input('name');
-            $type = $request->input('type');
-            $category = $request->input('category');
-            $division = $request->input('division');
-            $gstin = $request->input('gstin');
-            $mobile = $request->input('mobile');
+           // Fetch all clients with optional filters
+            $search = $request->input('search');
+            $type = $request->input('type') ? explode(',', $request->input('type')) : null;
+            $category = $request->input('category') ? explode(',', $request->input('category')) : null;
             $limit = $request->input('limit', 10);
             $offset = $request->input('offset', 0);
 
-            $clients = ClientsModel::with([
-                'contacts' => function ($query) use ($mobile) {
-                    if ($mobile) {
-                        $query->where('mobile', 'LIKE', '%' . $mobile . '%');
+            $clientsQuery = ClientsModel::with([
+                'contacts' => function ($query) use ($search) {
+                    if ($search) {
+                        $query->where('mobile', 'LIKE', '%' . $search . '%');
                     }
                 },
                 'addresses' => function ($query) {
@@ -265,28 +262,33 @@ class ClientsController extends Controller
                 },
             ])
             ->select('name', 'customer_id', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
-            ->where('company_id', Auth::user()->company_id)
-            ->when($name, function ($query, $name) {
-                $query->where('name', 'LIKE', '%' . $name . '%');
-            })
-            ->when($type, function ($query, $type) {
-                $query->where('type', $type);
-            })
-            ->when($category, function ($query, $category) {
-                $query->where('category', $category);
-            })
-            ->when($division, function ($query, $division) {
-                $query->where('division', $division);
-            })
-            ->when($gstin, function ($query, $gstin) {
-                $query->where('gstin', 'LIKE', '%' . $gstin . '%');
-            })
-            ->offset($offset)
-            ->limit($limit)
-            ->get();
+            ->where('company_id', Auth::user()->company_id);
+
+            // Apply search filter
+            if ($search) {
+                $clientsQuery->where(function ($query) use ($search) {
+                    $query->where('name', 'LIKE', '%' . $search . '%')
+                        ->orWhere('gstin', 'LIKE', '%' . $search . '%')
+                        ->orWhereHas('contacts', function ($q) use ($search) {
+                            $q->where('mobile', 'LIKE', '%' . $search . '%');
+                        });
+                });
+            }
+
+            // Apply type filter
+            if ($type) {
+                $clientsQuery->whereIn('type', $type);
+            }
+
+            // Apply category filter
+            if ($category) {
+                $clientsQuery->whereIn('category', $category);
+            }
+
+            $clients = $clientsQuery->offset($offset)->limit($limit)->get();
 
             $clients->each(function ($client) {
-                $client->contact_count = $client->contacts->count(); // Add contact count
+                $client->contact_count = $client->contacts->count();
 
                 // Trim unnecessary fields from contacts
                 $client->contacts->each(function ($contact) {
@@ -294,16 +296,17 @@ class ClientsController extends Controller
                 });
             });
 
-            return $clients->isNotEmpty()
-                ? response()->json([
-                    'code' => 200,
-                    'success' => true,
-                    'message' => 'Clients fetched successfully',
-                    'data' => $clients,
-                    'total_contacts' => $clients->sum(fn($client) => $client->contacts->count()), // Sum all contacts
-                    'count' => $clients->count(), // Total clients count
-                ], 200)
-                : response()->json(['code' => 404, 'success' => false, 'message' => 'No clients available'], 404);
+        return $clients->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Clients fetched successfully',
+                'data' => $clients,
+                'total_contacts' => $clients->sum(fn($client) => $client->contacts->count()), // Sum all contacts
+                'count' => $clients->count(), // Total clients count
+            ], 200)
+            : response()->json(['code' => 404, 'success' => false, 'message' => 'No clients available'], 404);
+
         }
     }
 
