@@ -483,155 +483,488 @@ class ClientsController extends Controller
     }
 
     // migrate
+    // public function importClientsData()
+    // {
+    //     ClientsModel::truncate();  
+        
+    //     ClientContactsModel::truncate();  
+
+    //     // Define the external URL
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/clients.php'; // Replace with the actual URL
+
+    //     // Fetch data from the external URL
+    //     try {
+    //         $response = Http::get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
+    //     }
+
+    //     // Decode the JSON response
+    //     $data = $response->json('data');
+
+    //     if (empty($data)) {
+    //         return response()->json(['message' => 'No data found'], 404);
+    //     }
+
+    //     $successfulInserts = 0;
+    //     $errors = [];
+    //     $company_id = Auth::user()->company_id;
+
+    //     foreach ($data as $record) {
+
+    //         // Check if the client already exists by `name`, and skip if it does
+    //         $existingClient = ClientsModel::where('name', $record['Name'])->first();
+    //         if ($existingClient) {
+    //             // Skip processing if client already exists
+    //             continue;
+    //         }
+
+    //         // Assign default values if fields are missing
+    //         $record['Type'] = !empty($record['Type']) ? $record['Type'] : 'Random Type_' . now()->timestamp . '_' . Str::random(5);
+    //         $record['Category'] = !empty($record['Category']) ? $record['Category'] : 'Random Category_' . now()->timestamp . '_' . Str::random(5);
+    //         $record['Division'] = !empty($record['Division']) ? $record['Division'] : 'Random Division_' . now()->timestamp . '_' . Str::random(5);
+    //         $record['Plant'] = !empty($record['Plant']) ? $record['Plant'] : 'Random Plant_' . now()->timestamp . '_' . Str::random(5);
+    //         $record['Address1'] = !empty($record['Address1']) ? $record['Address1'] : 'Random Address1' . now()->timestamp . '_' . Str::random(5); 
+    //         $record['Address2'] = !empty($record['Address2']) ? $record['Address2'] : 'Random Address2' . now()->timestamp . '_' . Str::random(5); 
+    //         $record['City'] = !empty($record['City']) ? $record['City'] : 'Random City' . now()->timestamp . '_' . Str::random(5); 
+    //         $record['Pincode'] = !empty($record['Pincode']) ? $record['Pincode'] : 'Random Pincode' . now()->timestamp . '_' . Str::random(5); 
+    //         $record['State'] = !empty($record['State']) ? $record['State'] : 'Random State' . now()->timestamp . '_' . Str::random(5);
+    //         $record['GSTIN'] = !empty($record['GSTIN']) ? $record['GSTIN'] : 'Random GSTIN' . now()->timestamp . '_' . Str::random(5);
+    //         $record['Country'] = !empty($record['Country']) ? $record['Country'] : 'India';
+
+    //         // Generate placeholder email if the email is missing or invalid
+    //         $record['Email'] = filter_var($record['Email'], FILTER_VALIDATE_EMAIL) ? $record['Email'] : 'placeholder_' . now()->timestamp . '@example.com';
+
+    //         // Create validation data structure to match your request validation rules
+    //         $validationData = [
+    //             'name' => $record['Name'] ,
+    //             'type' => $record['Type'] ,
+    //             'category' => $record['Category'] ,
+    //             'division' => $record['Division'] ,
+    //             'plant' => $record['Plant'] ,
+    //             'address_line_1' => $record['Address1'] ,
+    //             'address_line_2' => $record['Address2'] ,
+    //             'city' => $record['City'],
+    //             'pincode' => $record['Pincode'] ,
+    //             'state' => $record['State'] ,
+    //             'country' => $record['Country'] ,
+    //             'gstin' => $record['GSTIN'] ,
+    //             'contacts' => [['name' => $record['Name'], 'mobile' => $record['Mobile'], 'email' => $record['Email']]],
+    //         ];
+
+    //         // Validate each record
+    //         $validator = Validator::make($validationData, [
+    //             'name' => 'required|string|unique:t_clients,name',
+    //             'type' => 'required|string',
+    //             'category' => 'required|string',
+    //             'division' => 'required|string',
+    //             'plant' => 'required|string',
+    //             'address_line_1' => 'required|string',
+    //             'address_line_2' => 'required|string',
+    //             'city' => 'required|string',
+    //             'pincode' => 'required|string',
+    //             'state' => 'required|string',
+    //             'country' => 'required|string',
+    //             'gstin' => 'required|string|unique:t_clients,gstin',
+    //             'contacts' => 'required|array',
+    //             'contacts.*.name' => 'required|string',
+    //             'contacts.*.mobile' => 'nullable|string',
+    //             'contacts.*.email' => 'nullable|email',
+    //         ]);
+
+    //         // dd($validator);
+
+    //         if ($validator->fails()) {
+    //             // If validation fails due to duplicate GSTIN, modify it
+    //             if ($validator->errors()->has('gstin')) {
+    //                 $record['GSTIN'] = 'Dup GSTIN_' . now()->timestamp . '_' . Str::random(5);
+    //                 $validationData['gstin'] = $record['GSTIN'];
+    //                 $validator = Validator::make($validationData, [
+    //                     'gstin' => 'required|string|unique:t_clients,gstin',
+    //                 ]);
+    //             }
+        
+    //             // Recheck validation with updated GSTIN
+    //             if ($validator->fails()) {
+    //                 $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+    //                 continue;
+    //             }
+    //         }
+
+    //         // Generate unique customer ID
+    //         $customer_id = rand(1111111111, 9999999999);
+
+    //         // Save contacts to `ClientContactsModel`
+    //         foreach ($validationData['contacts'] as $contact) {
+    //             ClientContactsModel::create([
+    //                 'customer_id' => $customer_id,
+    //                 'company_id' => $company_id,
+    //                 'name' => $contact['name'],
+    //                 // 'designation' => $contact['designation'],
+    //                 'designation' => 'Random Designation'. now()->timestamp,
+    //                 'mobile' => $contact['mobile'],
+    //                 'email' => $contact['email'] ,
+    //             ]);
+    //         }
+
+    //         // Save client to `ClientsModel`
+    //         try {
+    //             ClientsModel::create([
+    //                 'name' => $validationData['name'],
+    //                 'customer_id' => $customer_id,
+    //                 'company_id' => $company_id,
+    //                 'type' => $validationData['type'],
+    //                 'category' => $validationData['category'],
+    //                 'division' => $validationData['division'],
+    //                 'plant' => $validationData['plant'],
+    //                 'address_line_1' => $validationData['address_line_1'],
+    //                 'address_line_2' => $validationData['address_line_2'],
+    //                 'city' => $validationData['city'],
+    //                 'pincode' => $validationData['pincode'],
+    //                 'state' => $validationData['state'],
+    //                 'country' => $validationData['country'],
+    //                 'gstin' => $validationData['gstin'],
+    //             ]);
+    //             $successfulInserts++;
+    //         } catch (\Exception $e) {
+    //             $errors[] = ['record' => $record, 'error' => 'Failed to insert record: ' . $e->getMessage()];
+    //         }
+    //     }
+
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => "Data import completed with $successfulInserts successful inserts.",
+    //         'errors' => $errors,
+    //     ], 200);
+    // }
+
+    // public function importClientsData()
+    // {
+    //     ClientsModel::truncate();
+    //     ClientContactsModel::truncate();
+    //     ClientAddressModel::truncate();
+
+    //     // Define the external URL
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/clients.php';
+
+    //     // Fetch data from the external URL
+    //     try {
+    //         $response = Http::get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
+    //     }
+
+    //     // Decode the JSON response
+    //     $data = $response->json('data');
+
+    //     if (empty($data)) {
+    //         return response()->json(['message' => 'No data found'], 404);
+    //     }
+
+    //     $successfulInserts = 0;
+    //     $errors = [];
+    //     $company_id = Auth::user()->company_id;
+
+    //     foreach ($data as $record) {
+    //         // Check if the client already exists by `name`, and skip if it does
+    //         $existingClient = ClientsModel::where('name', $record['Name'])->first();
+    //         if ($existingClient) {
+    //             continue; // Skip processing if client already exists
+    //         }
+
+    //         // Assign default values if fields are missing
+    //         $record['Type'] = $record['Type'] ?? 'Random Type_' . now()->timestamp . '_' . Str::random(5);
+    //         $record['Category'] = $record['Category'] ?? 'Random Category_' . now()->timestamp . '_' . Str::random(5);
+    //         $record['Division'] = $record['Division'] ?? 'Random Division_' . now()->timestamp . '_' . Str::random(5);
+    //         $record['Plant'] = $record['Plant'] ?? 'Random Plant_' . now()->timestamp . '_' . Str::random(5);
+    //         $record['Address1'] = $record['Address1'] ?? 'Random Address1_' . now()->timestamp . '_' . Str::random(5);
+    //         $record['Address2'] = $record['Address2'] ?? 'Random Address2_' . now()->timestamp . '_' . Str::random(5);
+    //         $record['City'] = $record['City'] ?? 'Random City_' . now()->timestamp . '_' . Str::random(5);
+    //         $record['Pincode'] = $record['Pincode'] ?? 'Random Pincode_' . now()->timestamp . '_' . Str::random(5);
+    //         $record['State'] = $record['State'] ?? 'Random State_' . now()->timestamp . '_' . Str::random(5);
+    //         $record['GSTIN'] = $record['GSTIN'] ?? 'Random GSTIN_' . now()->timestamp . '_' . Str::random(5);
+    //         $record['Country'] = $record['Country'] ?? 'India';
+
+    //         // Process mobile and email
+    //         $mobileList = explode(',', $record['Mobile'] ?? '');
+    //         $primaryMobile = $mobileList[0] ?? '0000000000'; // First number as the primary mobile
+
+    //         $primaryEmail = filter_var(trim($record['Email'] ?? ''), FILTER_VALIDATE_EMAIL)
+    //             ? trim($record['Email'])
+    //             : 'placeholder_' . now()->timestamp . '@example.com';
+
+    //         // Validate each record
+    //         $validationData = [
+    //             'name' => $record['Name'],
+    //             'type' => $record['Type'],
+    //             'category' => $record['Category'],
+    //             'division' => $record['Division'],
+    //             'plant' => $record['Plant'],
+    //             'address_line_1' => $record['Address1'],
+    //             'address_line_2' => $record['Address2'],
+    //             'city' => $record['City'],
+    //             'pincode' => $record['Pincode'],
+    //             'state' => $record['State'],
+    //             'country' => $record['Country'],
+    //             'gstin' => $record['GSTIN'],
+    //             'mobile' => $primaryMobile,
+    //             'email' => $primaryEmail,
+    //             'contacts' => [['name' => $record['Name'], 'mobile' => $primaryMobile, 'email' => $primaryEmail]],
+    //         ];
+
+    //         $validator = Validator::make($validationData, [
+    //             'name' => 'required|string|unique:t_clients,name',
+    //             'type' => 'required|string',
+    //             'category' => 'required|string',
+    //             'division' => 'required|string',
+    //             'plant' => 'required|string',
+    //             'address_line_1' => 'required|string',
+    //             'address_line_2' => 'required|string',
+    //             'city' => 'required|string',
+    //             'pincode' => 'required|string',
+    //             'state' => 'required|string',
+    //             'country' => 'required|string',
+    //             'gstin' => 'required|string|unique:t_clients,gstin',
+    //             'mobile' => 'required|string',
+    //             'email' => 'required|email',
+    //             'contacts' => 'required|array',
+    //         ]);
+
+    //         if ($validator->fails()) {
+    //             $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+    //             continue;
+    //         }
+
+    //         // Generate unique customer ID
+    //         $customer_id = rand(1111111111, 9999999999);
+
+    //         // Save contacts to `ClientContactsModel`
+    //         foreach ($validationData['contacts'] as $contact) {
+    //             ClientContactsModel::create([
+    //                 'customer_id' => $customer_id,
+    //                 'company_id' => $company_id,
+    //                 'name' => $contact['name'],
+    //                 'designation' => 'Default Designation',
+    //                 'mobile' => $contact['mobile'],
+    //                 'email' => $contact['email'],
+    //             ]);
+    //         }
+
+    //         // Save client address to `ClientAddressModel`
+    //         ClientAddressModel::create([
+    //             'customer_id' => $customer_id,
+    //             'company_id' => $company_id,
+    //             'address_line_1' => $validationData['address_line_1'],
+    //             'address_line_2' => $validationData['address_line_2'],
+    //             'city' => $validationData['city'],
+    //             'pincode' => $validationData['pincode'],
+    //             'state' => $validationData['state'],
+    //             'country' => $validationData['country'],
+    //         ]);
+
+    //         // Save client to `ClientsModel`
+    //         try {
+    //             ClientsModel::create([
+    //                 'name' => $validationData['name'],
+    //                 'customer_id' => $customer_id,
+    //                 'company_id' => $company_id,
+    //                 'type' => $validationData['type'],
+    //                 'category' => $validationData['category'],
+    //                 'division' => $validationData['division'],
+    //                 'plant' => $validationData['plant'],
+    //                 'gstin' => $validationData['gstin'],
+    //                 'mobile' => $validationData['mobile'], // Store mobile in ClientsModel
+    //                 'email' => $validationData['email'], // Store email in ClientsModel
+    //             ]);
+    //             $successfulInserts++;
+    //         } catch (\Exception $e) {
+    //             $errors[] = ['record' => $record, 'error' => 'Failed to insert record: ' . $e->getMessage()];
+    //         }
+    //     }
+
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => "Data import completed with $successfulInserts successful inserts.",
+    //         'errors' => $errors,
+    //     ], 200);
+    // }
+
     public function importClientsData()
     {
-        ClientsModel::truncate();  
-        
-        ClientContactsModel::truncate();  
-
+        ClientsModel::truncate();
+        ClientContactsModel::truncate();
+        ClientAddressModel::truncate();
+    
         // Define the external URL
-        $url = 'https://expo.egsm.in/assets/custom/migrate/clients.php'; // Replace with the actual URL
+        $url = 'https://expo.egsm.in/assets/custom/migrate/clients.php';
 
+           // Increase memory limit and max execution time
+            ini_set('memory_limit', '512M');
+            ini_set('max_execution_time', 300); // Set to 5 minutes
+    
         // Fetch data from the external URL
         try {
             $response = Http::get($url);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
         }
-
+    
         if ($response->failed()) {
             return response()->json(['error' => 'Failed to fetch data.'], 500);
         }
-
+    
         // Decode the JSON response
         $data = $response->json('data');
-
+    
         if (empty($data)) {
             return response()->json(['message' => 'No data found'], 404);
         }
-
+    
         $successfulInserts = 0;
         $errors = [];
+        $company_id = Auth::user()->company_id;
 
+        // Prepare batch arrays
+        $clientsBatch = [];
+        $contactsBatch = [];
+        $addressesBatch = [];
+        $batchSize = 100; // Set batch size
+    
         foreach ($data as $record) {
-
             // Check if the client already exists by `name`, and skip if it does
             $existingClient = ClientsModel::where('name', $record['Name'])->first();
             if ($existingClient) {
-                // Skip processing if client already exists
-                continue;
+                continue; // Skip processing if client already exists
             }
-
+    
             // Assign default values if fields are missing
-            $record['Type'] = !empty($record['Type']) ? $record['Type'] : 'Random Type_' . now()->timestamp . '_' . Str::random(5);
-            $record['Category'] = !empty($record['Category']) ? $record['Category'] : 'Random Category_' . now()->timestamp . '_' . Str::random(5);
-            $record['Division'] = !empty($record['Division']) ? $record['Division'] : 'Random Division_' . now()->timestamp . '_' . Str::random(5);
-            $record['Plant'] = !empty($record['Plant']) ? $record['Plant'] : 'Random Plant_' . now()->timestamp . '_' . Str::random(5);
-            $record['Address1'] = !empty($record['Address1']) ? $record['Address1'] : 'Random Address1' . now()->timestamp . '_' . Str::random(5); 
-            $record['Address2'] = !empty($record['Address2']) ? $record['Address2'] : 'Random Address2' . now()->timestamp . '_' . Str::random(5); 
-            $record['City'] = !empty($record['City']) ? $record['City'] : 'Random City' . now()->timestamp . '_' . Str::random(5); 
-            $record['Pincode'] = !empty($record['Pincode']) ? $record['Pincode'] : 'Random Pincode' . now()->timestamp . '_' . Str::random(5); 
-            $record['State'] = !empty($record['State']) ? $record['State'] : 'Random State' . now()->timestamp . '_' . Str::random(5);
-            $record['GSTIN'] = !empty($record['GSTIN']) ? $record['GSTIN'] : 'Random GSTIN' . now()->timestamp . '_' . Str::random(5);
-            $record['Country'] = !empty($record['Country']) ? $record['Country'] : 'India';
+            $record['Type'] = $record['Type'] ?? null;
+            $record['Category'] = $record['Category'] ?? null;
+            $record['Division'] = $record['Division'] ?? null;
+            $record['Plant'] = $record['Plant'] ?? null;
+            $record['Address1'] = $record['Address1'] ?? null;
+            $record['Address2'] = $record['Address2'] ?? null;
+            $record['City'] = $record['City'] ?? null;
+            $record['Pincode'] = $record['Pincode'] ?? null;
+            $record['State'] = $record['State'] ?? null;
+            $record['GSTIN'] = $record['GSTIN'] ?? null;
+            $record['Country'] = $record['Country'] ?? null;
 
-            // Generate placeholder email if the email is missing or invalid
-            $record['Email'] = filter_var($record['Email'], FILTER_VALIDATE_EMAIL) ? $record['Email'] : 'placeholder_' . now()->timestamp . '@example.com';
-
-            // Create validation data structure to match your request validation rules
+            // process GSTIN
+            while (ClientsModel::where('gstin', $record['GSTIN'])->exists()) {
+                $record['GSTIN'] = '-' . $record['GSTIN']; // Prepend `-` if GSTIN already exists
+            }
+    
+            // Process mobile and email
+            $mobileList = array_filter(explode(',', $record['Mobile'] ?? '')); // Filter out empty values
+            $primaryMobile = $mobileList[0] ?? '0000000000'; // Use the first mobile number, or default
+    
+            $primaryEmail = filter_var(trim($record['Email'] ?? ''), FILTER_VALIDATE_EMAIL)
+                ? trim($record['Email'])
+                : 'placeholder_' . now()->timestamp . '@example.com';
+    
+            // Prepare validation data
             $validationData = [
-                'name' => $record['Name'] ,
-                'type' => $record['Type'] ,
-                'category' => $record['Category'] ,
-                'division' => $record['Division'] ,
-                'plant' => $record['Plant'] ,
-                'address_line_1' => $record['Address1'] ,
-                'address_line_2' => $record['Address2'] ,
+                'name' => $record['Name'],
+                'type' => $record['Type'],
+                'category' => $record['Category'],
+                'division' => $record['Division'],
+                'plant' => $record['Plant'],
+                'address_line_1' => $record['Address1'],
+                'address_line_2' => $record['Address2'],
                 'city' => $record['City'],
-                'pincode' => $record['Pincode'] ,
-                'state' => $record['State'] ,
-                'country' => $record['Country'] ,
-                'gstin' => $record['GSTIN'] ,
-                'contacts' => [['name' => $record['Name'], 'mobile' => $record['Mobile'], 'email' => $record['Email']]],
+                'pincode' => $record['Pincode'],
+                'state' => $record['State'],
+                'country' => $record['Country'],
+                'gstin' => $record['GSTIN'],
+                'mobile' => $primaryMobile,
+                'email' => $primaryEmail,
+                'contacts' => [['name' => $record['Name'], 'mobile' => $primaryMobile, 'email' => $primaryEmail]],
             ];
-
-            // Validate each record
+    
+            // Validate data
             $validator = Validator::make($validationData, [
                 'name' => 'required|string|unique:t_clients,name',
-                'type' => 'required|string',
-                'category' => 'required|string',
-                'division' => 'required|string',
-                'plant' => 'required|string',
-                'address_line_1' => 'required|string',
-                'address_line_2' => 'required|string',
-                'city' => 'required|string',
-                'pincode' => 'required|string',
-                'state' => 'required|string',
-                'country' => 'required|string',
-                'gstin' => 'required|string|unique:t_clients,gstin',
+                'type' => 'nullable|string',
+                'category' => 'nullable|string',
+                'division' => 'nullable|string',
+                'plant' => 'nullable|string',
+                'address_line_1' => 'nullable|string',
+                'address_line_2' => 'nullable|string',
+                'city' => 'nullable|string',
+                'pincode' => 'nullable|string',
+                'state' => 'nullable|string',
+                'country' => 'nullable|string',
+                'gstin' => 'nullable|string|unique:t_clients,gstin',
+                'mobile' => 'required|string',
+                'email' => 'required|email',
                 'contacts' => 'required|array',
-                'contacts.*.name' => 'required|string',
-                'contacts.*.mobile' => 'nullable|string',
-                'contacts.*.email' => 'nullable|email',
             ]);
-
-            // dd($validator);
-
+    
             if ($validator->fails()) {
-                // If validation fails due to duplicate GSTIN, modify it
-                if ($validator->errors()->has('gstin')) {
-                    $record['GSTIN'] = 'Dup GSTIN_' . now()->timestamp . '_' . Str::random(5);
-                    $validationData['gstin'] = $record['GSTIN'];
-                    $validator = Validator::make($validationData, [
-                        'gstin' => 'required|string|unique:t_clients,gstin',
-                    ]);
-                }
-        
-                // Recheck validation with updated GSTIN
-                if ($validator->fails()) {
-                    $errors[] = ['record' => $record, 'errors' => $validator->errors()];
-                    continue;
-                }
+                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+                continue;
             }
-
+    
             // Generate unique customer ID
             $customer_id = rand(1111111111, 9999999999);
-
+    
             // Save contacts to `ClientContactsModel`
             foreach ($validationData['contacts'] as $contact) {
                 ClientContactsModel::create([
                     'customer_id' => $customer_id,
+                    'company_id' => $company_id,
                     'name' => $contact['name'],
-                    // 'designation' => $contact['designation'],
-                    'designation' => 'Random Designation'. now()->timestamp,
+                    'designation' => 'Default Designation',
                     'mobile' => $contact['mobile'],
-                    'email' => $contact['email'] ,
+                    'email' => $contact['email'],
                 ]);
             }
-
-            // Save client to `ClientsModel`
-            try {
-                ClientsModel::create([
-                    'name' => $validationData['name'],
+    
+            // Save client address to `ClientAddressModel` only if address fields exist
+            if (!empty($validationData['address_line_1']) || !empty($validationData['city']) || !empty($validationData['pincode'])) {
+                ClientAddressModel::create([
                     'customer_id' => $customer_id,
-                    'type' => $validationData['type'],
-                    'category' => $validationData['category'],
-                    'division' => $validationData['division'],
-                    'plant' => $validationData['plant'],
+                    'company_id' => $company_id,
                     'address_line_1' => $validationData['address_line_1'],
                     'address_line_2' => $validationData['address_line_2'],
                     'city' => $validationData['city'],
                     'pincode' => $validationData['pincode'],
                     'state' => $validationData['state'],
                     'country' => $validationData['country'],
+                ]);
+            }
+    
+            // Save client to `ClientsModel`
+            try {
+                ClientsModel::create([
+                    'name' => $validationData['name'],
+                    'customer_id' => $customer_id,
+                    'company_id' => $company_id,
+                    'type' => $validationData['type'],
+                    'category' => $validationData['category'],
+                    'division' => $validationData['division'],
+                    'plant' => $validationData['plant'],
                     'gstin' => $validationData['gstin'],
+                    'mobile' => $validationData['mobile'], // Store mobile in ClientsModel
+                    'email' => $validationData['email'], // Store email in ClientsModel
                 ]);
                 $successfulInserts++;
             } catch (\Exception $e) {
                 $errors[] = ['record' => $record, 'error' => 'Failed to insert record: ' . $e->getMessage()];
             }
         }
-
+    
         return response()->json([
             'code' => 200,
             'success' => true,
@@ -639,4 +972,160 @@ class ClientsController extends Controller
             'errors' => $errors,
         ], 200);
     }
+    
+    // public function importClientsData()
+    // {
+    //     ClientsModel::truncate();
+    //     ClientContactsModel::truncate();
+    //     ClientAddressModel::truncate();
+
+    //     // Define the external URL
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/clients.php';
+
+    //     // Increase memory limit and max execution time
+    //     ini_set('memory_limit', '512M');
+    //     ini_set('max_execution_time', 300); // Set to 5 minutes
+
+    //     // Fetch data from the external URL
+    //     try {
+    //         $response = Http::get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
+    //     }
+
+    //     // Decode the JSON response
+    //     $data = $response->json('data');
+
+    //     if (empty($data)) {
+    //         return response()->json(['message' => 'No data found'], 404);
+    //     }
+
+    //     $successfulInserts = 0;
+    //     $errors = [];
+    //     $company_id = Auth::user()->company_id;
+
+    //     // Prepare batch arrays
+    //     $clientsBatch = [];
+    //     $contactsBatch = [];
+    //     $addressesBatch = [];
+    //     $batchSize = 100; // Set batch size
+
+    //     foreach ($data as $record) {
+    //         // Check if the client already exists by `name`, and skip if it does
+    //         $existingClient = ClientsModel::where('name', $record['Name'])->exists();
+    //         if ($existingClient) {
+    //             continue; // Skip processing if client already exists
+    //         }
+
+    //         // Assign default values if fields are missing
+    //         $record['Type'] = $record['Type'] ?? null;
+    //         $record['Category'] = $record['Category'] ?? null;
+    //         $record['Division'] = $record['Division'] ?? null;
+    //         $record['Plant'] = $record['Plant'] ?? null;
+    //         $record['Address1'] = $record['Address1'] ?? null;
+    //         $record['Address2'] = $record['Address2'] ?? null;
+    //         $record['City'] = $record['City'] ?? null;
+    //         $record['Pincode'] = $record['Pincode'] ?? null;
+    //         $record['State'] = $record['State'] ?? null;
+    //         $record['Country'] = $record['Country'] ?? null;
+
+    //         // Process GSTIN
+    //         $record['GSTIN'] = $record['GSTIN'] ?? null;
+    //         while ($record['GSTIN'] && ClientsModel::where('gstin', $record['GSTIN'])->exists()) {
+    //             $record['GSTIN'] = '-' . $record['GSTIN']; // Prepend `-` if GSTIN already exists
+    //         }
+
+    //         // Process mobile and email
+    //         $mobileList = array_filter(explode(',', $record['Mobile'] ?? '')); // Filter out empty values
+    //         $primaryMobile = $mobileList[0] ?? '0000000000'; // Use the first mobile number, or default
+
+    //         $primaryEmail = filter_var(trim($record['Email'] ?? ''), FILTER_VALIDATE_EMAIL)
+    //             ? trim($record['Email'])
+    //             : 'placeholder_' . now()->timestamp . '@example.com';
+
+    //         // Generate unique customer ID
+    //         $customer_id = rand(1111111111, 9999999999);
+
+    //         // Add to clients batch
+    //         $clientsBatch[] = [
+    //             'name' => $record['Name'],
+    //             'customer_id' => $customer_id,
+    //             'company_id' => $company_id,
+    //             'type' => $record['Type'],
+    //             'category' => $record['Category'],
+    //             'division' => $record['Division'],
+    //             'plant' => $record['Plant'],
+    //             'gstin' => $record['GSTIN'],
+    //             'mobile' => $primaryMobile,
+    //             'email' => $primaryEmail,
+    //             'created_at' => now(),
+    //             'updated_at' => now(),
+    //         ];
+
+    //         // Add to contacts batch
+    //         $contactsBatch[] = [
+    //             'customer_id' => $customer_id,
+    //             'company_id' => $company_id,
+    //             'name' => $record['Name'],
+    //             'designation' => 'Default Designation',
+    //             'mobile' => $primaryMobile,
+    //             'email' => $primaryEmail,
+    //             'created_at' => now(),
+    //             'updated_at' => now(),
+    //         ];
+
+    //         // Add to addresses batch if address fields exist
+    //         if (!empty($record['Address1']) || !empty($record['City']) || !empty($record['Pincode'])) {
+    //             $addressesBatch[] = [
+    //                 'customer_id' => $customer_id,
+    //                 'company_id' => $company_id,
+    //                 'address_line_1' => $record['Address1'],
+    //                 'address_line_2' => $record['Address2'],
+    //                 'city' => $record['City'],
+    //                 'pincode' => $record['Pincode'],
+    //                 'state' => $record['State'],
+    //                 'country' => $record['Country'],
+    //                 'created_at' => now(),
+    //                 'updated_at' => now(),
+    //             ];
+    //         }
+
+    //         // Perform batch insert when batch size is reached
+    //         if (count($clientsBatch) >= $batchSize) {
+    //             ClientsModel::insert($clientsBatch);
+    //             ClientContactsModel::insert($contactsBatch);
+    //             ClientAddressModel::insert($addressesBatch);
+
+    //             // Reset batches
+    //             $clientsBatch = [];
+    //             $contactsBatch = [];
+    //             $addressesBatch = [];
+    //         }
+    //     }
+
+    //     // Insert remaining records in the last batch
+    //     if (!empty($clientsBatch)) {
+    //         ClientsModel::insert($clientsBatch);
+    //     }
+    //     if (!empty($contactsBatch)) {
+    //         ClientContactsModel::insert($contactsBatch);
+    //     }
+    //     if (!empty($addressesBatch)) {
+    //         ClientAddressModel::insert($addressesBatch);
+    //     }
+
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => "Data import completed successfully.",
+    //         'errors' => $errors,
+    //     ], 200);
+    // }
+
+
+
 }

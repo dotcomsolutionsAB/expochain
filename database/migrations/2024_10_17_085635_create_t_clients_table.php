@@ -16,13 +16,13 @@ return new class extends Migration
             $table->string('name');
             $table->unsignedBigInteger('customer_id');
             $table->integer('company_id');
-            $table->string('mobile', 13);
+            $table->string('mobile', 100);
             $table->string('email');
-            $table->string('type');
-            $table->string('category');
-            $table->string('division');
-            $table->string('plant');
-            $table->string('gstin');
+            $table->string('type')->nullable();
+            $table->string('category')->nullable();
+            $table->string('division')->nullable();
+            $table->string('plant')->nullable();
+            $table->string('gstin')->nullable();
             $table->unsignedBigInteger('default_contact');
             $table->timestamps();
 
