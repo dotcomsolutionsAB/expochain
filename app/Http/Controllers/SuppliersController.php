@@ -12,6 +12,7 @@ use Auth;
 use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Illuminate\Support\Facades\Storage;
 
 class SuppliersController extends Controller
 {
@@ -998,7 +999,7 @@ class SuppliersController extends Controller
 
         // If IDs are provided, prioritize them
         if ($ids) {
-            $suppliersQuery->whereIn('id', $ids);
+            $suppliersQuery->whereIn('supplier_id', $ids);
         } elseif ($search) {
             // Apply search filter if IDs are not provided
             $suppliersQuery->where(function ($query) use ($search) {
@@ -1026,16 +1027,17 @@ class SuppliersController extends Controller
                 'Supplier ID' => $supplier->supplier_id,
                 'Name' => $supplier->name,
                 'GSTIN' => $supplier->gstin,
-                'Contact Count' => $supplier->contacts->count(),
                 'Contacts' => $supplier->contacts->map(fn($contact) => "{$contact->name} ({$contact->mobile})")->join(', '),
                 'Address' => $supplier->addresses->map(fn($address) => "{$address->address_line_1}, {$address->city}, {$address->state}, {$address->pincode}, {$address->country}")->join('; '),
             ];
         })->toArray();
 
-        // Generate Excel file using Laravel Excel
+        // Generate the file path
         $fileName = 'suppliers_export_' . now()->format('Ymd_His') . '.xlsx';
+        $filePath = 'uploads/suppliers_excel/' . $fileName;
 
-        return Excel::download(new class($exportData) implements FromCollection, WithHeadings {
+        // Save Excel to storage
+        Excel::store(new class($exportData) implements FromCollection, WithHeadings {
             private $data;
 
             public function __construct(array $data)
@@ -1054,13 +1056,28 @@ class SuppliersController extends Controller
                     'Supplier ID',
                     'Name',
                     'GSTIN',
-                    'Contact Count',
                     'Contacts',
                     'Address',
                 ];
             }
-        }, $fileName);
+        }, $filePath, 'public');
+
+        // Get file details
+        $fileUrl = asset('storage/' . $filePath);
+        $fileSize = Storage::disk('public')->size($filePath);
+        $contentType = Storage::disk('public')->mimeType($filePath);
+
+        // Return response with file details
+        return response()->json([
+            'code' => 200,
+            'status' => true,
+            'message' => 'File available for download',
+            'data' => [
+                'file_url' => $fileUrl,
+                'file_name' => $fileName,
+                'file_size' => $fileSize,
+                'content_type' => $contentType,
+            ],
+        ], 200);
     }
-
-
 }
