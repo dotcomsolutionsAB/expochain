@@ -50,6 +50,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/client_migrate', [ClientsController::class, 'importClientsData']);
 
+    Route::post('/export_suppliers', [ClientsController::class, 'export_suppliers']);
+
     Route::post('/suppliers', [SuppliersController::class, 'add_suppliers']);
     Route::post('/get_suppliers', [SuppliersController::class, 'view_suppliers']);
     Route::post('/update_suppliers/{id}', [SuppliersController::class, 'update_suppliers']);
