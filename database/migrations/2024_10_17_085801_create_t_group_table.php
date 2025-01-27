@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('t_brand', function (Blueprint $table) {
+        Schema::create('t_group', function (Blueprint $table) {
             $table->id();
             $table->integer('serial_number');
             $table->integer('company_id');
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('t_brand');
+        Schema::dropIfExists('t_group');
     }
 };

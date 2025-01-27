@@ -13,6 +13,8 @@ class ClientsModel extends Model
         'name',
         'company_id',
         'customer_id',
+        'mobile',
+        'email',
         'type',
         'category',
         'division',

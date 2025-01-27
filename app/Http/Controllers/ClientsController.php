@@ -19,6 +19,8 @@ class ClientsController extends Controller
     {
         $request->validate([
             'name' => 'required|string|unique:t_clients,name',
+            'mobile' => 'required|string|size:13',
+            'email' => 'required|email',
             'type' => 'required|string',
             'category' => 'required|string',
             'division' => 'required|string',
@@ -74,6 +76,8 @@ class ClientsController extends Controller
             'name' => $request->input('name'),
             'company_id' => $company_id,
             'customer_id' => $customer_id,
+            'mobile' => $request->input('mobile'),
+            'email' => $request->input('email'),
             'type' => $request->input('type'),
             'category' => $request->input('category'),
             'division' => $request->input('division'),
@@ -105,6 +109,105 @@ class ClientsController extends Controller
     }
 
     // view
+    // public function view_clients(Request $request, $id = null)
+    // {
+    //     if ($id) {
+    //         // Fetch a specific client
+    //         $client = ClientsModel::with([
+    //             'contacts' => function ($query) {
+    //                 $query->select('customer_id', 'name', 'designation', 'mobile', 'email');
+    //             },
+    //             'addresses' => function ($query) {
+    //                 $query->select('customer_id', 'type', 'country', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode');
+    //             },
+    //         ])
+    //         ->select('customer_id', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
+    //         ->where('company_id', Auth::user()->company_id)
+    //         ->where('customer_id', $id)
+    //         ->first();
+
+    //         if ($client) {
+    //             $contactCount = $client->contacts->count();
+
+    //         // Trim unnecessary fields from contacts
+    //         $client->contacts->each(function ($contact) {
+    //             $contact->makeHidden(['id', 'created_at', 'updated_at']);
+    //         });
+
+    //             return response()->json([
+    //                 'code' => 200,
+    //                 'success' => true,
+    //                 'message' => 'Client fetched successfully',
+    //                 'data' => $client,
+    //                 'contact_count' => $contactCount,
+    //             ], 200);
+    //         }
+
+    //         return response()->json(['code' => 404, 'success' => false, 'message' => 'Client not found'], 404);
+    //     } else {
+    //         // Fetch all clients with optional filters
+    //         $name = $request->input('name');
+    //         $type = $request->input('type');
+    //         $category = $request->input('category');
+    //         $division = $request->input('division');
+    //         $gstin = $request->input('gstin');
+    //         $mobile = $request->input('mobile');
+    //         $limit = $request->input('limit', 10);
+    //         $offset = $request->input('offset', 0);
+
+    //         $clients = ClientsModel::with([
+    //             'contacts' => function ($query) use ($mobile) {
+    //                 if ($mobile) {
+    //                     $query->where('mobile', 'LIKE', '%' . $mobile . '%');
+    //                 }
+    //             },
+    //             'addresses' => function ($query) {
+    //                 $query->select('customer_id', 'type', 'country', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode');
+    //             },
+    //         ])
+    //         ->select('name', 'customer_id', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
+    //         ->where('company_id', Auth::user()->company_id)
+    //         ->when($name, function ($query, $name) {
+    //             $query->where('name', 'LIKE', '%' . $name . '%');
+    //         })
+    //         ->when($type, function ($query, $type) {
+    //             $query->where('type', $type);
+    //         })
+    //         ->when($category, function ($query, $category) {
+    //             $query->where('category', $category);
+    //         })
+    //         ->when($division, function ($query, $division) {
+    //             $query->where('division', $division);
+    //         })
+    //         ->when($gstin, function ($query, $gstin) {
+    //             $query->where('gstin', 'LIKE', '%' . $gstin . '%');
+    //         })
+    //         ->offset($offset)
+    //         ->limit($limit)
+    //         ->get();
+
+    //         $clients->each(function ($client) {
+    //             $client->contact_count = $client->contacts->count(); // Add contact count
+
+    //             // Trim unnecessary fields from contacts
+    //             $client->contacts->each(function ($contact) {
+    //                 $contact->makeHidden(['id', 'created_at', 'updated_at']);
+    //             });
+    //         });
+
+    //         return $clients->isNotEmpty()
+    //             ? response()->json([
+    //                 'code' => 200,
+    //                 'success' => true,
+    //                 'message' => 'Clients fetched successfully',
+    //                 'data' => $clients,
+    //                 'total_contacts' => $clients->sum(fn($client) => $client->contacts->count()), // Sum all contacts
+    //                 'count' => $clients->count(), // Total clients count
+    //             ], 200)
+    //             : response()->json(['code' => 404, 'success' => false, 'message' => 'No clients available'], 404);
+    //     }
+    // }
+
     public function view_clients(Request $request, $id = null)
     {
         if ($id) {

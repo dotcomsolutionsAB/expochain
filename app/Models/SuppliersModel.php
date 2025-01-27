@@ -14,6 +14,8 @@ class SuppliersModel extends Model
         'company_id',
         'name',
         'gstin',
+        'mobile',
+        'email',
         'default_contact',
     ];
 

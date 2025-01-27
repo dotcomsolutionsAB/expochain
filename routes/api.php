@@ -207,6 +207,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/reset_calculation', [ResetController::class, 'stock_calculation']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    Route::get('/client_type', [MastersController::class, 'getClientsTypes']);
+
+    Route::get('/client_category', [MastersController::class, 'getClientsCategories']);
 });
 
 Route::get('/sales_invoice_migrate', [SalesInvoiceController::class, 'importSalesInvoices']);

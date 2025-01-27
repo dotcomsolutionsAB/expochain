@@ -1285,4 +1285,63 @@ class MastersController extends Controller
         ? response()->json(['Closing Stock data successfully!', 'data' => $get_closing_stock, 'count' => count($get_closing_stock)], 200)
         : response()->json(['Failed to fetch data'], 404); 
     }
+
+    public function getClientsTypes()
+    {
+        $clietsTypes = [
+            'END USER',
+            'OEM',
+            'TRADER',
+            'PROJECT',
+        ];
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Clients types fetched successfully.',
+            'data' => $clietsTypes,
+        ], 200);
+    }
+
+    public function getClientsCategories()
+    {
+        $clietsCategories = [
+           'AIR HANDLING UNIT',
+            'COMPRESSOR',
+            'CEMENT',
+            'CERAMIC',
+            'CHEMICAL',
+            'CRUSHER - MINES',
+            'CRUSHER - INFRA',
+            'FOOD & AGRO',
+            'FOOD & AGRICULTURE',
+            'FOUNDRY',
+            'INFRA',
+            'MATERIAL HANDELING EQUIPMENT',
+            'MINING',
+            'OIL & GAS',
+            'PACKAGING',
+            'PHARMACEUTICALS',
+            'PAPER INDUSTRY',
+            'PLASTIC',
+            'POWER PLANTS',
+            'PROJECTS DIVISION',
+            'PUMP',
+            'RAILWAY',
+            'STEEL',
+            'STEEL & POWER',
+            'SUGAR INDUSTRIES',
+            'TEXTILE',
+            'JUTE MILL',
+            'TRADER A',
+            'TRADER B',
+        ];
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Clients categories fetched successfully.',
+            'data' => $clietsCategories,
+        ], 200);
+    }
 }

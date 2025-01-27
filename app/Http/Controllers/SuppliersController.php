@@ -169,6 +169,8 @@ class SuppliersController extends Controller
         $request->validate([
             'name' => 'required|string|unique:t_suppliers,name',
             'gstin' => 'required|string|unique:t_suppliers,gstin',
+            'mobile' => 'required|string|size:13',
+            'email' => 'required|email',
             'contacts' => 'required|array|min:1',
             'contacts.*.name' => 'required|string',
             'contacts.*.designation' => 'required|string',
@@ -225,6 +227,8 @@ class SuppliersController extends Controller
             'company_id' => $company_id,
             'name' => $request->input('name'),
             'gstin' => $request->input('gstin'),
+            'mobile' => $request->input('mobile'),
+            'email' => $request->input('email'),
             'default_contact' => $defaultContactId,
         ]);
 

@@ -16,6 +16,8 @@ return new class extends Migration
             $table->string('name');
             $table->unsignedBigInteger('customer_id');
             $table->integer('company_id');
+            $table->string('mobile', 13);
+            $table->string('email');
             $table->string('type');
             $table->string('category');
             $table->string('division');
