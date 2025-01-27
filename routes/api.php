@@ -50,14 +50,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/client_migrate', [ClientsController::class, 'importClientsData']);
 
-    Route::post('/export_suppliers', [ClientsController::class, 'export_suppliers']);
-
     Route::post('/suppliers', [SuppliersController::class, 'add_suppliers']);
     Route::post('/get_suppliers', [SuppliersController::class, 'view_suppliers']);
     Route::post('/update_suppliers/{id}', [SuppliersController::class, 'update_suppliers']);
     Route::delete('/suppliers/{id}', [SuppliersController::class, 'delete_supplier']);
 
     Route::get('/suppliers_migrate', [SuppliersController::class, 'importSuppliersData']);
+
+    Route::post('/export_suppliers', [ClientsController::class, 'export_suppliers']);
 
     Route::post('/products', [MastersController::class, 'add_products']);
     Route::post('/get_products', [MastersController::class, 'view_products']);

@@ -1376,74 +1376,74 @@ class SuppliersController extends Controller
 
 
     public function export_suppliers(Request $request)
-{
-    // Check for comma-separated IDs
-    $ids = $request->input('id') ? explode(',', $request->input('id')) : null;
-    $search = $request->input('search'); // Optional search input
+    {
+        // Check for comma-separated IDs
+        $ids = $request->input('id') ? explode(',', $request->input('id')) : null;
+        $search = $request->input('search'); // Optional search input
 
-    $suppliersQuery = SuppliersModel::with([
-        'contacts' => function ($query) {
-            $query->select('supplier_id', 'name', 'designation', 'mobile', 'email');
-        },
-        'addresses' => function ($query) {
-            $query->select('supplier_id', 'type', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode', 'country');
-        },
-    ])
-    ->select('supplier_id', 'name', 'gstin', 'company_id')
-    ->where('company_id', Auth::user()->company_id);
+        $suppliersQuery = SuppliersModel::with([
+            'contacts' => function ($query) {
+                $query->select('supplier_id', 'name', 'designation', 'mobile', 'email');
+            },
+            'addresses' => function ($query) {
+                $query->select('supplier_id', 'type', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode', 'country');
+            },
+        ])
+        ->select('supplier_id', 'name', 'gstin', 'company_id')
+        ->where('company_id', Auth::user()->company_id);
 
-    // If IDs are provided, prioritize them
-    if ($ids) {
-        $suppliersQuery->whereIn('supplier_id', $ids);
-    } elseif ($search) {
-        // Apply search filter if IDs are not provided
-        $suppliersQuery->where(function ($query) use ($search) {
-            $query->where('name', 'LIKE', '%' . $search . '%')
-                ->orWhere('gstin', 'LIKE', '%' . $search . '%')
-                ->orWhereHas('contacts', function ($q) use ($search) {
-                    $q->where('mobile', 'LIKE', '%' . $search . '%');
-                });
-        });
-    }
-
-    $suppliers = $suppliersQuery->get();
-
-    if ($suppliers->isEmpty()) {
-        return response()->json([
-            'code' => 404,
-            'success' => false,
-            'message' => 'No suppliers found to export!',
-        ], 404);
-    }
-
-    // Format data for Excel
-    $exportData = $suppliers->map(function ($supplier) {
-        return [
-            'Supplier ID' => $supplier->supplier_id,
-            'Name' => $supplier->name,
-            'GSTIN' => $supplier->gstin,
-            'Contact Count' => $supplier->contacts->count(),
-            'Contacts' => $supplier->contacts->map(fn($contact) => "{$contact->name} ({$contact->mobile})")->join(', '),
-            'Address' => $supplier->addresses->map(fn($address) => "{$address->address_line_1}, {$address->city}, {$address->state}, {$address->pincode}, {$address->country}")->join('; '),
-        ];
-    })->toArray();
-
-    // Generate Excel file using Laravel Excel
-    $fileName = 'suppliers_export_' . now()->format('Ymd_His') . '.xlsx';
-
-    return Excel::download(new class($exportData) implements \Maatwebsite\Excel\Concerns\FromCollection {
-        private $data;
-
-        public function __construct(array $data)
-        {
-            $this->data = collect($data);
+        // If IDs are provided, prioritize them
+        if ($ids) {
+            $suppliersQuery->whereIn('supplier_id', $ids);
+        } elseif ($search) {
+            // Apply search filter if IDs are not provided
+            $suppliersQuery->where(function ($query) use ($search) {
+                $query->where('name', 'LIKE', '%' . $search . '%')
+                    ->orWhere('gstin', 'LIKE', '%' . $search . '%')
+                    ->orWhereHas('contacts', function ($q) use ($search) {
+                        $q->where('mobile', 'LIKE', '%' . $search . '%');
+                    });
+            });
         }
 
-        public function collection()
-        {
-            return $this->data;
+        $suppliers = $suppliersQuery->get();
+
+        if ($suppliers->isEmpty()) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No suppliers found to export!',
+            ], 404);
         }
-    }, $fileName);
-}
+
+        // Format data for Excel
+        $exportData = $suppliers->map(function ($supplier) {
+            return [
+                'Supplier ID' => $supplier->supplier_id,
+                'Name' => $supplier->name,
+                'GSTIN' => $supplier->gstin,
+                'Contact Count' => $supplier->contacts->count(),
+                'Contacts' => $supplier->contacts->map(fn($contact) => "{$contact->name} ({$contact->mobile})")->join(', '),
+                'Address' => $supplier->addresses->map(fn($address) => "{$address->address_line_1}, {$address->city}, {$address->state}, {$address->pincode}, {$address->country}")->join('; '),
+            ];
+        })->toArray();
+
+        // Generate Excel file using Laravel Excel
+        $fileName = 'suppliers_export_' . now()->format('Ymd_His') . '.xlsx';
+
+        return Excel::download(new class($exportData) implements \Maatwebsite\Excel\Concerns\FromCollection {
+            private $data;
+
+            public function __construct(array $data)
+            {
+                $this->data = collect($data);
+            }
+
+            public function collection()
+            {
+                return $this->data;
+            }
+        }, $fileName);
+    }
 
 }
