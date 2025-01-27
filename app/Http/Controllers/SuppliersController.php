@@ -399,7 +399,7 @@ class SuppliersController extends Controller
                 $query->select('supplier_id', 'type', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode', 'country');
             },
         ])
-        ->select('supplier_id', 'name', 'gstin', 'company_id')
+        ->select('id', 'supplier_id', 'name', 'gstin', 'company_id')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply search filter
