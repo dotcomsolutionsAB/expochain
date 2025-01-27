@@ -1394,7 +1394,7 @@ class SuppliersController extends Controller
 
         // If IDs are provided, prioritize them
         if ($ids) {
-            $suppliersQuery->whereIn('supplier_id', $ids);
+            $suppliersQuery->whereIn('id', $ids);
         } elseif ($search) {
             // Apply search filter if IDs are not provided
             $suppliersQuery->where(function ($query) use ($search) {
