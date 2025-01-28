@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->integer('company_id');
             $table->integer('client_id');
-            $table->integer('client_contact_id');
+            $table->integer('client_contact_id')->nullable();
             $table->string('name');
             $table->string('address_line_1');
             $table->string('address_line_2');
@@ -37,6 +37,7 @@ return new class extends Migration
             $table->float('total');
             $table->string('currency');
             $table->integer('template');
+            $table->integer('contact_person');
             $table->timestamps();
         });
     }
