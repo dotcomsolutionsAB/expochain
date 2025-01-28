@@ -1070,7 +1070,7 @@ class SuppliersController extends Controller
         // Return response with file details
         return response()->json([
             'code' => 200,
-            'status' => true,
+            'success' => true,
             'message' => 'File available for download',
             'data' => [
                 'file_url' => $fileUrl,
