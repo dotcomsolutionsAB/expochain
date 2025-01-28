@@ -23,6 +23,9 @@ use App\Http\Controllers\AssemblyOperationsController;
 use App\Http\Controllers\FabricationController;
 use App\Http\Controllers\ResetController;
 use App\Http\Controllers\CounterController;
+use App\Http\Controllers\CountryController;
+use App\Http\Controllers\StateController;
+use App\Http\Controllers\QuotationTermMasterController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -215,6 +218,20 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/client_type', [MastersController::class, 'getClientsTypes']);
 
     Route::get('/client_category', [MastersController::class, 'getClientsCategories']);
+
+    Route::post('/add_country', [CountryController::class, 'registerCountries']);
+    Route::get('/country', [CountryController::class, 'viewCountries']);
+    Route::post('/edit_country/{id}', [CountryController::class, 'updateCountry']);
+    Route::delete('/country/{id}', [CountryController::class, 'deleteCountry']);
+
+    Route::post('/add_state', [StateController::class, 'registerStates']);
+    Route::get('/state', [StateController::class, 'viewStates']);
+    Route::post('/edit_state/{id}', [StateController::class, 'updateState']);
+    Route::delete('/state/{id}', [StateController::class, 'deleteState']);
+
+    Route::post('/quotation-terms', [QuotationTermMasterController::class, 'add']);
+    Route::get('/quotation-terms', [QuotationTermMasterController::class, 'retrieve']);
+    Route::post('/edit-quotation-terms/{id}', [QuotationTermMasterController::class, 'update']);
 });
 
 Route::get('/sales_invoice_migrate', [SalesInvoiceController::class, 'importSalesInvoices']);

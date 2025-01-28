@@ -9,7 +9,7 @@ class QuotationProductsModel extends Model
     //
     protected $table = 't_quotation_products';
 
-    protected $fillable = ['quotation_id', 'company_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst'];
+    protected $fillable = ['quotation_id', 'company_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'delivery', 'discount_type', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst'];
 
     public function quotation()
     {
