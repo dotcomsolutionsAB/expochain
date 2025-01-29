@@ -53,36 +53,125 @@ class MastersController extends Controller
         : response()->json(['code' => 200, 'success' => false, 'message' => 'Failed to register Products record'], 200);
     }
 
+    // public function view_products(Request $request)
+    // {
+    //     // Get the input parameters
+    //     $offset = $request->input('offset', 0); // Default to 0 if not provided
+    //     $limit = $request->input('limit', 10); // Default to 10 if not provided
+    //     $productName = $request->input('product_name'); // Optional product name
+    //     $group = $request->input('group_id') ? explode(',', $request->input('group_id')) : null; // Comma-separated groups
+    //     $category = $request->input('category_id') ? explode(',', $request->input('category_id')) : null; // Comma-separated categories
+    //     $subCategory = $request->input('sub_category_id') ? explode(',', $request->input('sub_category_id')) : null; // Comma-separated subcategories
+
+    //     // Build the query
+    //     $query = ProductsModel::select('serial_number','company_id','name','alias','description','type','group','category','sub_category','cost_price','sale_price', 'unit', 'hsn', 'tax');
+        
+    //     // Apply filters
+    //     if ($productName) {
+    //         // Normalize the search query
+    //         $normalizedInput = strtolower(preg_replace('/[^a-zA-Z0-9]/', ' ', $productName)); // Remove special chars
+    //         $tokens = preg_split('/\s+/', $normalizedInput); // Split into tokens
+        
+    //         // Apply the search condition
+    //         $query->where(function ($q) use ($tokens) {
+    //             foreach ($tokens as $token) {
+    //                 // Search within 'name' and 'alias' columns
+    //                 $q->where(function ($subQuery) use ($token) {
+    //                     $subQuery->whereRaw(
+    //                         "LOWER(REPLACE(REPLACE(REPLACE(name, ' ', ''), '-', ''), 'x', '')) LIKE ?", 
+    //                         ['%' . $token . '%']
+    //                     )
+    //                     ->orWhereRaw(
+    //                         "LOWER(REPLACE(REPLACE(REPLACE(alias, ' ', ''), '-', ''), 'x', '')) LIKE ?", 
+    //                         ['%' . $token . '%']
+    //                     );
+    //                 });
+    //             }
+    //         });
+    //     }
+
+    //     if ($group) {
+    //         $query->whereIn('group', $group);
+    //     }
+    //     if ($category) {
+    //         $query->whereIn('category', $category);
+    //     }
+    //     if ($subCategory) {
+    //         $query->whereIn('sub_category', $subCategory);
+    //     }
+
+    //     $product_count = $query->count();
+    //     // Apply offset and limit
+    //     $query->offset($offset)->limit($limit);
+
+    //     // Fetch the products
+    //     $get_products = $query->get();
+
+    //     // Append stock_details to each product
+    //     $stockDetails = "Opening Stock as on 01-04-2024 : Office - 30 SETS | Kushtia - 10 SETS | ANK - 25 SETS";
+    //     $get_products->transform(function ($product) use ($stockDetails) {
+    //         $product->stock_details = $stockDetails;
+    //         return $product;
+    //     });
+        
+    //     // Return the response
+    //     return $get_products->isNotEmpty()
+    //         ? response()->json([
+    //             'code' => 200,
+    //             'success' => true,
+    //             'message' => 'Fetch data successfully!',
+    //             'data' => $get_products,
+    //             'count' => $product_count,
+    //         ], 200)
+    //         : response()->json([
+    //             'code' => 200,
+    //             'success' => false,
+    //             'data' => [],
+    //             'message' => 'Sorry, No products found!',
+    //             'count' => 0
+    //         ], 200);
+    // }
+
     public function view_products(Request $request)
     {
-        // Get the input parameters
-        $offset = $request->input('offset', 0); // Default to 0 if not provided
-        $limit = $request->input('limit', 10); // Default to 10 if not provided
-        $productName = $request->input('product_name'); // Optional product name
-        $group = $request->input('group_id') ? explode(',', $request->input('group_id')) : null; // Comma-separated groups
-        $category = $request->input('category_id') ? explode(',', $request->input('category_id')) : null; // Comma-separated categories
-        $subCategory = $request->input('sub_category_id') ? explode(',', $request->input('sub_category_id')) : null; // Comma-separated subcategories
+        $offset = $request->input('offset', 0);
+        $limit = $request->input('limit', 10);
+        $productName = $request->input('product_name');
+        $group = $request->input('group_id') ? explode(',', $request->input('group_id')) : null;
+        $category = $request->input('category_id') ? explode(',', $request->input('category_id')) : null;
+        $subCategory = $request->input('sub_category_id') ? explode(',', $request->input('sub_category_id')) : null;
 
-        // Build the query
-        $query = ProductsModel::select('serial_number','company_id','name','alias','description','type','group','category','sub_category','cost_price','sale_price', 'unit', 'hsn', 'tax');
-        
-        // Apply filters
+        $query = ProductsModel::with(['group', 'category', 'subCategory'])
+            ->select(
+                'serial_number',
+                'company_id',
+                'name',
+                'alias',
+                'description',
+                'type',
+                'group',
+                'category',
+                'sub_category',
+                'cost_price',
+                'sale_price',
+                'unit',
+                'hsn',
+                'tax'
+            );
+
         if ($productName) {
-            // Normalize the search query
-            $normalizedInput = strtolower(preg_replace('/[^a-zA-Z0-9]/', ' ', $productName)); // Remove special chars
-            $tokens = preg_split('/\s+/', $normalizedInput); // Split into tokens
-        
-            // Apply the search condition
+            $normalizedInput = strtolower(preg_replace('/[^a-zA-Z0-9]/', ' ', $productName));
+            $tokens = preg_split('/\s+/', $normalizedInput);
+
             $query->where(function ($q) use ($tokens) {
                 foreach ($tokens as $token) {
-                    // Search within 'name' and 'alias' columns
                     $q->where(function ($subQuery) use ($token) {
                         $subQuery->whereRaw(
-                            "LOWER(REPLACE(REPLACE(REPLACE(name, ' ', ''), '-', ''), 'x', '')) LIKE ?", 
+                            "LOWER(REPLACE(REPLACE(REPLACE(name, ' ', ''), '-', ''), 'x', '')) LIKE ?",
                             ['%' . $token . '%']
                         )
                         ->orWhereRaw(
-                            "LOWER(REPLACE(REPLACE(REPLACE(alias, ' ', ''), '-', ''), 'x', '')) LIKE ?", 
+                            "LOWER(REPLACE(REPLACE(REPLACE(alias, ' ', ''), '-', ''), 'x', '')) LIKE ?",
                             ['%' . $token . '%']
                         );
                     });
@@ -101,20 +190,20 @@ class MastersController extends Controller
         }
 
         $product_count = $query->count();
-        // Apply offset and limit
         $query->offset($offset)->limit($limit);
 
-        // Fetch the products
         $get_products = $query->get();
 
-        // Append stock_details to each product
         $stockDetails = "Opening Stock as on 01-04-2024 : Office - 30 SETS | Kushtia - 10 SETS | ANK - 25 SETS";
         $get_products->transform(function ($product) use ($stockDetails) {
             $product->stock_details = $stockDetails;
+            $product->group = $product->group->name ?? null;
+            $product->category = $product->category->name ?? null;
+            $product->sub_category = $product->subCategory->name ?? null;
+            // unset($product->group, $product->category, $product->subCategory); // Remove relationships if not needed
             return $product;
         });
-        
-        // Return the response
+
         return $get_products->isNotEmpty()
             ? response()->json([
                 'code' => 200,
@@ -128,7 +217,7 @@ class MastersController extends Controller
                 'success' => false,
                 'data' => [],
                 'message' => 'Sorry, No products found!',
-                'count' => 0
+                'count' => 0,
             ], 200);
     }
 
