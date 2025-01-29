@@ -49,8 +49,8 @@ class MastersController extends Controller
         unset($register_products['id'], $register_products['created_at'], $register_products['updated_at']);
 
         return isset($register_products) && $register_products !== null
-        ? response()->json(['code' => 200, 'status' => true, 'message' => 'Products registered successfully!', 'data' => $register_products], 200)
-        : response()->json(['code' => 200, 'status' => false, 'message' => 'Failed to register Products record'], 200);
+        ? response()->json(['code' => 200, 'success' => true, 'message' => 'Products registered successfully!', 'data' => $register_products], 200)
+        : response()->json(['code' => 200, 'success' => false, 'message' => 'Failed to register Products record'], 200);
     }
 
     public function view_products(Request $request)
@@ -190,13 +190,13 @@ class MastersController extends Controller
         return $update_products
         ? response()->json([
             'code' => 200,
-            'status' => true,
+            'success' => true,
             'message' => 'Products were updated successfully!',
             'data' => $update_products
         ], 200)
         : response()->json([
             'code' => 200,
-            'status' => true,
+            'success' => true,
             'message' => 'No changes detected.',
             'data' => []
         ], 200);
@@ -212,12 +212,12 @@ class MastersController extends Controller
         return $delete_products
         ? response()->json([
             'code' => 200,
-            'status' => true,
+            'success' => true,
             'message' => 'Deleted Product successfully!'
         ], 200)
         : response()->json([
             'code' => 200,
-            'status' => true,
+            'success' => true,
             'message' => 'Sorry, product not found.'
         ], 200);
     }
