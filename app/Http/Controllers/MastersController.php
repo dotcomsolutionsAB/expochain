@@ -791,6 +791,7 @@ class MastersController extends Controller
             // Prepare PDF template data
             $pdfTemplateData = [
                 'name' => $pdf_record['name'],
+                'company_id' => Auth::user()->company_id,
                 'phone_number' => $pdf_record['phone'],
                 'mobile' => $pdf_record['mobile'],
                 'email' => $pdf_record['email'],

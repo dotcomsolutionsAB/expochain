@@ -76,7 +76,7 @@ class CounterController extends Controller
                 'message' => 'Counters fetched successfully!',
                 'data' => $counters->makeHidden(['id', 'created_at', 'updated_at']),
             ])
-            : response()->json(['code' => 404, 'success' => false, 'message' => 'No counters found!'], 404);
+            : response()->json(['code' => 200, 'success' => false, 'message' => 'No counters found!', 'data' => []], 200);
     }
 
 
@@ -87,7 +87,7 @@ class CounterController extends Controller
     public function edit_counter(Request $request, $id)
     {
         $request->validate([
-            'name' => 'nullable|string|unique:t_counters,name,' . $id,
+            // 'name' => 'nullable|string|unique:t_counters,name,' . $id,
             'type' => 'nullable|in:manual,auto',
             'prefix' => 'nullable|string',
             'next_number' => 'nullable|integer|min:1',
@@ -100,7 +100,8 @@ class CounterController extends Controller
             return response()->json(['code' => 404, 'success' => false, 'message' => 'Counter not found!'], 404);
         }
 
-        $counter->update($request->only(['name', 'type', 'prefix', 'next_number', 'postfix']));
+        // $counter->update($request->only(['name', 'type', 'prefix', 'next_number', 'postfix']));
+        $counter->update($request->only(['type', 'prefix', 'next_number', 'postfix']));
 
         return response()->json([
             'code' => 200,
