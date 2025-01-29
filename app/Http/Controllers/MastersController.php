@@ -678,8 +678,8 @@ class MastersController extends Controller
         
 
         return isset($get_pdf_template) && $get_pdf_template !== null
-        ? response()->json(['Fetch data successfully!', 'data' => $get_pdf_template], 200)
-        : response()->json(['Failed to fetch data'], 404); 
+        ? response()->json(['code' => 200, 'success' => true, 'Fetch data successfully!', 'data' => $get_pdf_template], 200)
+        : response()->json(['code' => 200, 'success' => false, 'Failed to fetch data', 'data' => []], 200); 
     }
 
     // update
