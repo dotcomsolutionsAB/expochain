@@ -224,9 +224,9 @@ class ClientsController extends Controller
                     $query->select('customer_id', 'type', 'country', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode');
                 },
             ])
-            ->select('customer_id', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
+            ->select('id','name','customer_id', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
             ->where('company_id', Auth::user()->company_id)
-            ->where('customer_id', $id)
+            ->where('id', $id)
             ->first();
 
             if ($client) {
@@ -265,7 +265,7 @@ class ClientsController extends Controller
                     $query->select('customer_id', 'type', 'country', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode');
                 },
             ])
-            ->select('name', 'customer_id', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
+            ->select('id', 'name', 'customer_id', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
             ->where('company_id', Auth::user()->company_id);
 
             // Apply search filter
