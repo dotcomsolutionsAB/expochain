@@ -203,7 +203,7 @@ class MastersController extends Controller
             $product->sub_category_name = $product->subCategory->name ?? null;
 
             // Remove the loaded relationship objects
-            unset($product->Group,$product->Category,$product->subCategory);
+            unset($product->group,$product->category,$product->subCategory);
 
             return $product;
         });
