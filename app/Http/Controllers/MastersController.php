@@ -14,6 +14,10 @@ use App\Models\OpeningStockModel;
 use App\Models\ClosingStockModel;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 use Auth;
 
 
@@ -53,85 +57,7 @@ class MastersController extends Controller
         : response()->json(['code' => 200, 'success' => false, 'message' => 'Failed to register Products record'], 200);
     }
 
-    // public function view_products(Request $request)
-    // {
-    //     // Get the input parameters
-    //     $offset = $request->input('offset', 0); // Default to 0 if not provided
-    //     $limit = $request->input('limit', 10); // Default to 10 if not provided
-    //     $productName = $request->input('product_name'); // Optional product name
-    //     $group = $request->input('group_id') ? explode(',', $request->input('group_id')) : null; // Comma-separated groups
-    //     $category = $request->input('category_id') ? explode(',', $request->input('category_id')) : null; // Comma-separated categories
-    //     $subCategory = $request->input('sub_category_id') ? explode(',', $request->input('sub_category_id')) : null; // Comma-separated subcategories
-
-    //     // Build the query
-    //     $query = ProductsModel::select('serial_number','company_id','name','alias','description','type','group','category','sub_category','cost_price','sale_price', 'unit', 'hsn', 'tax');
-        
-    //     // Apply filters
-    //     if ($productName) {
-    //         // Normalize the search query
-    //         $normalizedInput = strtolower(preg_replace('/[^a-zA-Z0-9]/', ' ', $productName)); // Remove special chars
-    //         $tokens = preg_split('/\s+/', $normalizedInput); // Split into tokens
-        
-    //         // Apply the search condition
-    //         $query->where(function ($q) use ($tokens) {
-    //             foreach ($tokens as $token) {
-    //                 // Search within 'name' and 'alias' columns
-    //                 $q->where(function ($subQuery) use ($token) {
-    //                     $subQuery->whereRaw(
-    //                         "LOWER(REPLACE(REPLACE(REPLACE(name, ' ', ''), '-', ''), 'x', '')) LIKE ?", 
-    //                         ['%' . $token . '%']
-    //                     )
-    //                     ->orWhereRaw(
-    //                         "LOWER(REPLACE(REPLACE(REPLACE(alias, ' ', ''), '-', ''), 'x', '')) LIKE ?", 
-    //                         ['%' . $token . '%']
-    //                     );
-    //                 });
-    //             }
-    //         });
-    //     }
-
-    //     if ($group) {
-    //         $query->whereIn('group', $group);
-    //     }
-    //     if ($category) {
-    //         $query->whereIn('category', $category);
-    //     }
-    //     if ($subCategory) {
-    //         $query->whereIn('sub_category', $subCategory);
-    //     }
-
-    //     $product_count = $query->count();
-    //     // Apply offset and limit
-    //     $query->offset($offset)->limit($limit);
-
-    //     // Fetch the products
-    //     $get_products = $query->get();
-
-    //     // Append stock_details to each product
-    //     $stockDetails = "Opening Stock as on 01-04-2024 : Office - 30 SETS | Kushtia - 10 SETS | ANK - 25 SETS";
-    //     $get_products->transform(function ($product) use ($stockDetails) {
-    //         $product->stock_details = $stockDetails;
-    //         return $product;
-    //     });
-        
-    //     // Return the response
-    //     return $get_products->isNotEmpty()
-    //         ? response()->json([
-    //             'code' => 200,
-    //             'success' => true,
-    //             'message' => 'Fetch data successfully!',
-    //             'data' => $get_products,
-    //             'count' => $product_count,
-    //         ], 200)
-    //         : response()->json([
-    //             'code' => 200,
-    //             'success' => false,
-    //             'data' => [],
-    //             'message' => 'Sorry, No products found!',
-    //             'count' => 0
-    //         ], 200);
-    // }
-
+    // fetch
     public function view_products(Request $request)
     {
         $offset = $request->input('offset', 0);
@@ -140,6 +66,9 @@ class MastersController extends Controller
         $group = $request->input('group_id') ? explode(',', $request->input('group_id')) : null;
         $category = $request->input('category_id') ? explode(',', $request->input('category_id')) : null;
         $subCategory = $request->input('sub_category_id') ? explode(',', $request->input('sub_category_id')) : null;
+
+        // Get total count of records in `t_products`
+        $total_products = ProductsModel::count(); 
 
         $query = ProductsModel::with(['group', 'category', 'subCategory'])
             ->select(
@@ -215,6 +144,7 @@ class MastersController extends Controller
                 'message' => 'Fetch data successfully!',
                 'data' => $get_products,
                 'count' => $product_count,
+                'total_records' => $total_products,
             ], 200)
             : response()->json([
                 'code' => 200,
@@ -316,151 +246,7 @@ class MastersController extends Controller
         ], 200);
     }
 
-    // public function importProducts()
-    // {
-    //     ini_set('max_execution_time', 600); // Increase execution time
-    //     ini_set('memory_limit', '2048M');   // Increase memory limit
-
-    //     // Truncate the products table before import
-    //     ProductsModel::truncate();
-    //     CategoryModel::truncate();
-    //     SubCategoryModel::truncate();
-    //     GroupModel::truncate();
-
-    //     // Define the external URL
-    //     $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
-
-    //     try {
-    //         // Fetch data from the external URL
-    //         $response = Http::get($url);
-    //     } catch (\Exception $e) {
-    //         return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
-    //     }
-
-    //     if ($response->failed()) {
-    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
-    //     }
-
-    //     $data = $response->json('data');
-    //     if (empty($data)) {
-    //         return response()->json(['message' => 'No data found'], 404);
-    //     }
-
-    //     $batchSize = 500; // Batch size for processing
-    //     $batchData = [];
-    //     $successfulInserts = 0;
-    //     $errors = [];
-
-    //     // Preload existing categories, subcategories, and groups
-    //     $existingCategories = CategoryModel::pluck('id', 'name')->toArray();
-    //     $existingSubCategories = SubCategoryModel::pluck('id', 'name')->toArray();
-    //     $existingGroups = GroupModel::pluck('id', 'name')->toArray();
-
-    //     foreach ($data as $record) {
-    //         try {
-    //             // Handle blank `category`, `sub_category`, or `group_name`
-    //             $categoryId = null;
-    //             if (!empty($record['category'])) {
-    //                 $categoryId = $existingCategories[$record['category']] ?? null;
-
-    //                 if (!$categoryId) {
-    //                     $category = CategoryModel::create([
-    //                         'name' => $record['category'],
-    //                         'company_id' => Auth::user()->company_id,
-    //                         'serial_number' => random_int(10000, 99999)
-    //                     ]);
-    //                     $existingCategories[$record['category']] = $category->id;
-    //                     $categoryId = $category->id;
-    //                 }
-    //             }
-
-    //             $subCategoryId = null;
-    //             if (!empty($record['sub_category'])) {
-    //                 $subCategoryId = $existingSubCategories[$record['sub_category']] ?? null;
-
-    //                 if (!$subCategoryId) {
-    //                     $subCategory = SubCategoryModel::create([
-    //                         'name' => $record['sub_category'],
-    //                         'category_id' => $categoryId,
-    //                         'company_id' => Auth::user()->company_id,
-    //                         'serial_number' => random_int(10000, 99999)
-    //                     ]);
-    //                     $existingSubCategories[$record['sub_category']] = $subCategory->id;
-    //                     $subCategoryId = $subCategory->id;
-    //                 }
-    //             }
-
-    //             $groupId = null;
-    //             if (!empty($record['group_name'])) {
-    //                 $groupId = $existingGroups[$record['group_name']] ?? null;
-
-    //                 if (!$groupId) {
-    //                     $group = GroupModel::create([
-    //                         'name' => $record['group_name'],
-    //                         'company_id' => Auth::user()->company_id,
-    //                         'serial_number' => random_int(10000, 99999),
-    //                         'logo' => random_int(10000, 99999)
-    //                     ]);
-    //                     $existingGroups[$record['group_name']] = $group->id;
-    //                     $groupId = $group->id;
-    //                 }
-    //             }
-
-    //             // Sanitize numeric fields to prevent invalid values
-    //             $costPrice = is_numeric($record['cost_price']) ? $record['cost_price'] : 0;
-    //             $salePrice = is_numeric($record['sale_price']) ? $record['sale_price'] : 0;
-    //             $tax = is_numeric($record['tax']) ? $record['tax'] : 0;
-
-    //             // Prepare product data
-    //             $purchaseData = [
-    //                 'serial_number' => $record['sn'],
-    //                 'company_id' => Auth::user()->company_id,
-    //                 'name' => $record['name'],
-    //                 'alias' => $record['alias'],
-    //                 'description' => $record['description'] ?? 'No description available',
-    //                 'type' => $record['type'],
-    //                 'group' => $groupId,
-    //                 'category' => $categoryId,
-    //                 'sub_category' => $subCategoryId,
-    //                 'cost_price' => $costPrice,
-    //                 'sale_price' => $salePrice,
-    //                 'unit' => $record['unit'] ?? 'N/A',
-    //                 'hsn' => $record['hsn'] ?? 'N/A',
-    //                 'tax' => $record['tax'],
-    //                 'created_at' => now(),
-    //                 'updated_at' => now(),
-    //             ];
-
-    //             // Add to batch
-    //             $batchData[] = $purchaseData;
-
-    //             // Insert in batches
-    //             if (count($batchData) >= $batchSize) {
-    //                 ProductsModel::insert($batchData);
-    //                 $successfulInserts += count($batchData);
-    //                 $batchData = []; // Reset batch
-    //             }
-    //         } catch (\Exception $e) {
-    //             $errors[] = [
-    //                 'record' => $record,
-    //                 'error' => 'Error: ' . $e->getMessage()
-    //             ];
-    //         }
-    //     }
-
-    //     // Insert remaining records
-    //     if (count($batchData) > 0) {
-    //         ProductsModel::insert($batchData);
-    //         $successfulInserts += count($batchData);
-    //     }
-
-    //     // Return response
-    //     return response()->json([
-    //         'message' => "Product data import completed. Successful inserts: $successfulInserts.",
-    //         'errors' => $errors,
-    //     ], 200);
-    // }
-
+    // import products
     public function importProducts()
     {
         ini_set('max_execution_time', 1200); // Increase execution time
@@ -597,6 +383,148 @@ class MastersController extends Controller
         return response()->json([
             'message' => "Product data import completed. Successful inserts: $successfulInserts.",
             'errors' => $errors,
+        ], 200);
+    }
+
+    // export products
+    public function export_products(Request $request)
+    {
+        $group = $request->input('group_id') ? explode(',', $request->input('group_id')) : null;
+        $category = $request->input('category_id') ? explode(',', $request->input('category_id')) : null;
+        $subCategory = $request->input('sub_category_id') ? explode(',', $request->input('sub_category_id')) : null;
+        $productName = $request->input('product_name');
+
+        $query = ProductsModel::with(['Group:id,name', 'Category:id,name', 'SubCategory:id,name'])
+            ->select(
+                'serial_number',
+                // 'company_id',
+                'name',
+                'alias',
+                'description',
+                'type',
+                'group',
+                'category',
+                'sub_category',
+                'cost_price',
+                'sale_price',
+                'unit',
+                'hsn',
+                'tax'
+            );
+
+        if ($productName) {
+            $normalizedInput = strtolower(preg_replace('/[^a-zA-Z0-9]/', ' ', $productName));
+            $tokens = preg_split('/\s+/', $normalizedInput);
+
+            $query->where(function ($q) use ($tokens) {
+                foreach ($tokens as $token) {
+                    $q->where(function ($subQuery) use ($token) {
+                        $subQuery->whereRaw(
+                            "LOWER(REPLACE(REPLACE(REPLACE(name, ' ', ''), '-', ''), 'x', '')) LIKE ?",
+                            ['%' . $token . '%']
+                        )
+                        ->orWhereRaw(
+                            "LOWER(REPLACE(REPLACE(REPLACE(alias, ' ', ''), '-', ''), 'x', '')) LIKE ?",
+                            ['%' . $token . '%']
+                        );
+                    });
+                }
+            });
+        }
+
+        if ($group) {
+            $query->whereIn('group', $group);
+        }
+        if ($category) {
+            $query->whereIn('category', $category);
+        }
+        if ($subCategory) {
+            $query->whereIn('sub_category', $subCategory);
+        }
+
+        $products = $query->get();
+
+        if ($products->isEmpty()) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'Sorry! no products found to export!',
+            ], 404);
+        }
+
+        // Format data for export
+        $exportData = $products->map(function ($product) {
+            return [
+                'Serial Number' => $product->serial_number,
+                // 'Company ID' => $product->company_id,
+                'Product Name' => $product->name,
+                'Alias' => $product->alias,
+                'Description' => $product->description,
+                'Type' => $product->type,
+                'Group' => optional($product->Group)->name,
+                'Category' => optional($product->Category)->name,
+                'Sub Category' => optional($product->SubCategory)->name,
+                'Cost Price' => $product->cost_price,
+                'Sale Price' => $product->sale_price,
+                'Unit' => $product->unit,
+                'HSN' => $product->hsn,
+                'Tax' => $product->tax,
+            ];
+        })->toArray();
+
+        // File path
+        $fileName = 'products_export_' . now()->format('Ymd_His') . '.xlsx';
+        $filePath = 'uploads/products_excel/' . $fileName;
+
+        // Store Excel file in storage
+        Excel::store(new class($exportData) implements FromCollection, WithHeadings {
+            private $data;
+
+            public function __construct(array $data)
+            {
+                $this->data = collect($data);
+            }
+
+            public function collection()
+            {
+                return $this->data;
+            }
+
+            public function headings(): array
+            {
+                return [
+                    'Serial Number',
+                    // 'Company ID',
+                    'Product Name',
+                    'Alias',
+                    'Description',
+                    'Type',
+                    'Group',
+                    'Category',
+                    'Sub Category',
+                    'Cost Price',
+                    'Sale Price',
+                    'Unit',
+                    'HSN',
+                    'Tax',
+                ];
+            }
+        }, $filePath, 'public');
+
+        // Get file details
+        $fileUrl = asset('storage/' . $filePath);
+        $fileSize = Storage::disk('public')->size($filePath);
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'File available for download',
+            'data' => [
+                'file_url' => $fileUrl,
+                'file_name' => $fileName,
+                'file_size' => $fileSize,
+                'content_type' => "Excel",
+            ],
         ], 200);
     }
 

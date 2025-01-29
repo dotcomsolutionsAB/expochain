@@ -69,12 +69,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_products/{id}', [MastersController::class, 'edit_products']);
     Route::delete('/products/{id}', [MastersController::class, 'delete_products']);
 
-    Route::get('/get_tax', [MastersController::class, 'get_tax']);
-    Route::get('/get_unit', [MastersController::class, 'get_unit']);
-
     Route::get('/get_products', [MastersController::class, 'get_product']);
 
     Route::get('products_migrate', [MastersController::class, 'importProducts']);
+
+    Route::post('export_product', [MastersController::class, 'export_products']);
+    
+    Route::get('/get_tax', [MastersController::class, 'get_tax']);
+    Route::get('/get_unit', [MastersController::class, 'get_unit']);
 
     Route::post('/year', [MastersController::class, 'add_f_year']);
     Route::get('/year', [MastersController::class, 'view_f_year']);
@@ -232,6 +234,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/quotation-terms', [QuotationTermMasterController::class, 'add']);
     Route::get('/quotation-terms', [QuotationTermMasterController::class, 'retrieve']);
     Route::post('/edit-quotation-terms/{id}', [QuotationTermMasterController::class, 'update']);
+    Route::delete('/quotation-terms/{id}', [QuotationTermMasterController::class, 'delete']);
 });
 
 Route::get('/sales_invoice_migrate', [SalesInvoiceController::class, 'importSalesInvoices']);

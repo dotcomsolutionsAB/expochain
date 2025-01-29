@@ -20,7 +20,7 @@ return new class extends Migration
             // as it don't support `length`, it can store upto `65,535 characters for TEXT type in MySQL`
             $table->text('description');
             $table->string('type');
-            $table->string('brand');
+            $table->string('group');
             $table->string('category');
             $table->string('sub_category');
             $table->float('cost_price');
