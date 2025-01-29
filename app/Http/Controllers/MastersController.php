@@ -197,10 +197,14 @@ class MastersController extends Controller
         $stockDetails = "Opening Stock as on 01-04-2024 : Office - 30 SETS | Kushtia - 10 SETS | ANK - 25 SETS";
         $get_products->transform(function ($product) use ($stockDetails) {
             $product->stock_details = $stockDetails;
+            // Extract only the names for group, category, and sub-category
             $product->group = $product->group->name ?? null;
-            $product->category_name = $product->category->name ?? null;
-            $product->sub_category_name = $product->subCategory->name ?? null;
-            unset($product->group, $product->category, $product->subCategory); // Remove relationships if not needed
+            $product->category = $product->category->name ?? null;
+            $product->sub_category = $product->subCategory->name ?? null;
+
+            // Remove the loaded relationship objects
+            unset($product->group_name, $product->category_name, $product->sub_category_name, $product->group, $product->category, $product->subCategory);
+
             return $product;
         });
 
