@@ -100,6 +100,7 @@ class MastersController extends Controller
             $query->whereIn('sub_category', $subCategory);
         }
 
+        $product_count = $query->count();
         // Apply offset and limit
         $query->offset($offset)->limit($limit);
 
@@ -120,7 +121,7 @@ class MastersController extends Controller
                 'success' => true,
                 'message' => 'Fetch data successfully!',
                 'data' => $get_products,
-                'count' => $get_products->count(),
+                'count' => $product_count,
             ], 200)
             : response()->json([
                 'code' => 200,
