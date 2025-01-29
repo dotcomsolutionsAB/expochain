@@ -490,6 +490,78 @@ class ClientsController extends Controller
         }
     }
 
+    public function update_client_address(Request $request, $client_id)
+    {
+        // Validate the request input
+        $request->validate([
+            'type' => 'required|in:billing,shipping',
+            'address_line_1' => 'required|string',
+            'address_line_2' => 'nullable|string',
+            'city' => 'required|string',
+            'state' => 'required|string',
+            'pincode' => 'required|string',
+            'country' => 'required|string',
+        ]);
+
+        // Fetch the client by ID and company_id
+        $client = ClientsModel::where('id', $client_id)
+            ->where('company_id', Auth::user()->company_id)
+            ->first();
+
+        if (!$client) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'Client not found!',
+            ], 404);
+        }
+
+        // Check if an address of this type already exists
+        $existingAddress = ClientAddressModel::where('customer_id', $client->customer_id)
+            ->where('type', $request->input('type'))
+            ->first();
+
+        if ($existingAddress) {
+            // Update the existing address
+            $existingAddress->update([
+                'address_line_1' => $request->input('address_line_1'),
+                'address_line_2' => $request->input('address_line_2'),
+                'city' => $request->input('city'),
+                'state' => $request->input('state'),
+                'pincode' => $request->input('pincode'),
+                'country' => $request->input('country'),
+            ]);
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Address updated successfully!',
+                'data' => $existingAddress->makeHidden(['id', 'created_at', 'updated_at']),
+            ], 200);
+        } else {
+            // Create a new address entry
+            $newAddress = ClientAddressModel::create([
+                'customer_id' => $client->customer_id,
+                'company_id' => Auth::user()->company_id,
+                'type' => $request->input('type'),
+                'address_line_1' => $request->input('address_line_1'),
+                'address_line_2' => $request->input('address_line_2'),
+                'city' => $request->input('city'),
+                'state' => $request->input('state'),
+                'pincode' => $request->input('pincode'),
+                'country' => $request->input('country'),
+            ]);
+
+            return response()->json([
+                'code' => 201,
+                'success' => true,
+                'message' => 'Address added successfully!',
+                'data' => $newAddress->makeHidden(['id', 'created_at', 'updated_at']),
+            ], 201);
+        }
+    }
+
+
     // migrate
     // public function importClientsData()
     // {
