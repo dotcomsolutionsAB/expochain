@@ -28,9 +28,19 @@ class MastersController extends Controller
     public function add_products(Request $request)
     {
         $request->validate([
-            'name' => 'required|string',
-            'group' => 'required|string',
-            'category' => 'required|string',
+            'serial_number' => 'required|integer',
+            'name' => 'required|string|unique:products,name',
+            'alias' => 'nullable|string',
+            'description' => 'nullable|string',
+            'type' => 'required|string',
+            'group' => 'required|integer',
+            'category' => 'required|integer',
+            'sub_category' => 'nullable|integer',
+            'cost_price' => 'required|numeric|min:0',
+            'sale_price' => 'required|numeric|min:0',
+            'unit' => 'required|string',
+            'hsn' => 'required|string',
+            'tax' => 'required|numeric|min:0|max:100',
         ]);
 
         $register_products = ProductsModel::create([

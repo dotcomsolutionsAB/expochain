@@ -18,11 +18,11 @@ return new class extends Migration
             $table->string('name')->unique();
             $table->string('alias');
             // as it don't support `length`, it can store upto `65,535 characters for TEXT type in MySQL`
-            $table->text('description');
+            $table->text('description')->nullable();
             $table->string('type');
-            $table->string('group');
-            $table->string('category');
-            $table->string('sub_category');
+            $table->integer('group');
+            $table->integer('category');
+            $table->integer('sub_category');
             $table->float('cost_price');
             $table->float('sale_price');
             $table->string('unit');
