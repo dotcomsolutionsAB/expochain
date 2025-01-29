@@ -390,6 +390,9 @@ class SuppliersController extends Controller
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
 
+        // Get total count of records in `t_products`
+        $total_suppliers = SuppliersModel::count(); 
+
         // Build the query
         $suppliersQuery = SuppliersModel::with([
             'contacts' => function ($query) use ($search) {
@@ -439,6 +442,7 @@ class SuppliersController extends Controller
                 'data' => $suppliers,
                 'total_contacts' => $suppliers->sum(fn($supplier) => $supplier->contacts->count()), // Total contact count
                 'count' => $suppliers->count(), // Total suppliers count
+                'total_records' => $total_suppliers,
             ], 200)
             : response()->json([
                 'code' => 404,

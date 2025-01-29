@@ -255,6 +255,9 @@ class ClientsController extends Controller
             $limit = $request->input('limit', 10);
             $offset = $request->input('offset', 0);
 
+            // Get total count of records in `t_products`
+            $total_clients = ClientsModel::count(); 
+
             $clientsQuery = ClientsModel::with([
                 'contacts' => function ($query) use ($search) {
                     if ($search) {
@@ -308,6 +311,7 @@ class ClientsController extends Controller
                 'data' => $clients,
                 'total_contacts' => $clients->sum(fn($client) => $client->contacts->count()), // Sum all contacts
                 'count' => $clients->count(), // Total clients count
+                'total_records' => $total_clients,
             ], 200)
             : response()->json(['code' => 404, 'success' => false, 'message' => 'No clients available'], 404);
 

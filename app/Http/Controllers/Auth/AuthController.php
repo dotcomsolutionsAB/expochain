@@ -108,14 +108,14 @@ class AuthController extends Controller
                     {
                         return response()->json([
                             'code' => 200,
-                            'success' => true,
+                            'success' => false,
                             'message' => 'Sorry, invalid OTP!'
                         ], 200);
                     }
                     elseif ($otpRecord->expires_at < now()) {
                         return response()->json([
                             'code' => 200,
-                            'success' => true,
+                            'success' => false,
                             'message' => 'Sorry, OTP has expired!'
                         ], 200);
                     }
