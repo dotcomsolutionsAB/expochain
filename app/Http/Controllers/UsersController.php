@@ -87,7 +87,8 @@ class UsersController extends Controller
                 'email' => $get_user_records->email,
                 'mobile' => $get_user_records->mobile,
                 'role' => $get_user_records->role,
-                'company' => $get_user_records->company ? $get_user_records->company->company_name : null, // Handle null case
+                // 'company' => $get_user_records->company ? $get_user_records->company->company_name : null, // Handle null case
+                'company' => $get_user_records->company,
             ];
         });
         
