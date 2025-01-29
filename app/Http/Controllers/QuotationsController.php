@@ -780,7 +780,7 @@ class QuotationsController extends Controller
         foreach ($products as $productData) {
             $requestProductIDs[] = $productData['product_id'];
 
-            $existingProduct = QuotationProductsModel::where('quotation_id', $request->input('quotation_id'))
+            $existingProduct = QuotationProductsModel::where('quotation_id', $id)
                                                     ->where('product_id', $productData['product_id'])
                                                     ->first();
 
@@ -828,7 +828,7 @@ class QuotationsController extends Controller
         foreach ($addons as $addonData) {
             $requestAddonIDs[] = $addonData['name'];
 
-            $existingAddon = QuotationAddonsModel::where('quotation_id', $request->input('quotation_id'))
+            $existingAddon = QuotationAddonsModel::where('quotation_id', $id)
                                                 ->where('name', $addonData['name'])
                                                 ->first();
 
@@ -862,7 +862,7 @@ class QuotationsController extends Controller
         foreach ($terms as $termData) {
             $requestTermIDs[] = $termData['name'];
 
-            $existingTerm = QuotationTermsModel::where('quotation_id', $request->input('quotation_id'))
+            $existingTerm = QuotationTermsModel::where('quotation_id', $id)
                                             ->where('name', $termData['name'])
                                             ->first();
 
@@ -881,15 +881,15 @@ class QuotationsController extends Controller
         }
 
         // Delete products, addons, and terms not included in the request
-        QuotationProductsModel::where('quotation_id', $request->input('quotation_id'))
+        QuotationProductsModel::where('quotation_id', $id)
                             ->whereNotIn('product_id', $requestProductIDs)
                             ->delete();
 
-        QuotationAddonsModel::where('quotation_id', $request->input('quotation_id'))
+        QuotationAddonsModel::where('quotation_id', $id)
                             ->whereNotIn('name', $requestAddonIDs)
                             ->delete();
 
-        QuotationTermsModel::where('quotation_id', $request->input('quotation_id'))
+        QuotationTermsModel::where('quotation_id', $id)
                         ->whereNotIn('name', $requestTermIDs)
                         ->delete();
 
