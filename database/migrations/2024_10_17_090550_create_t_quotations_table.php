@@ -25,6 +25,8 @@ return new class extends Migration
             $table->string('country');
             $table->string('quotation_no');
             $table->string('quotation_date');
+            $table->enum('status', ['pending', 'completed', 'rejected'])->default('pending');
+            $table->integer('user');
             $table->string('enquiry_no');
             $table->string('enquiry_date');
             $table->string('sales_person');

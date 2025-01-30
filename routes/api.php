@@ -116,6 +116,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/quotations_migrate', [QuotationsController::class, 'importQuotations']);
 
+    Route::post('/update_status/{id}', [QuotationsController::class, 'updateQuotationStatus']);
+
     Route::post('/add_sales', [SalesOrderController::class, 'add_sales_order']);
     Route::post('/sales', [SalesOrderController::class, 'view_sales_order']);
     Route::post('/update_sales/{id?}', [SalesOrderController::class, 'edit_sales_order']);
