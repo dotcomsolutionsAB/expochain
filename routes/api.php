@@ -123,6 +123,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/sales_order_migrate', [SalesOrderController::class, 'importSalesOrders']);
 
+    Route::post('/export_sales_orders', [SalesOrderController::class, 'export_sales_orders']);
+
     Route::post('/add_sales_invoice', [SalesInvoiceController::class, 'add_sales_invoice']);
     Route::get('/sales_invoice', [SalesInvoiceController::class, 'view_sales_invoice']);
     Route::post('/update_sales_invoice/{id?}', [SalesInvoiceController::class, 'edit_sales_invoice']);

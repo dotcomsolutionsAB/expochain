@@ -9,11 +9,15 @@ use App\Models\SalesOrderModel;
 use App\Models\SalesOrderProductsModel;
 use App\Models\SalesOrderAddonsModel;
 use App\Models\ClientsModel;
-use App\Models\ClientsContactsModel;
+use App\Models\ClientContactsModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
 use Auth;
 use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
+use Illuminate\Support\Facades\Storage;
 
 class SalesOrderController extends Controller
 {
@@ -317,6 +321,9 @@ class SalesOrderController extends Controller
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
 
+        // Get total count of records in `t_sales_order`
+        $total_sales_order = SalesOrderModel::count(); 
+
         // Build the query
         $query = SalesOrderModel::with(['products' => function ($query) {
             $query->select('sales_order_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
@@ -369,6 +376,7 @@ class SalesOrderController extends Controller
                 'message' => 'Sales Orders fetched successfully!',
                 'data' => $get_sales_orders,
                 'count' => $get_sales_orders->count(),
+                'total_records' => $total_sales_order,
             ], 200)
             : response()->json([
                 'code' => 404,
@@ -618,7 +626,7 @@ class SalesOrderController extends Controller
                 continue; // Skip to the next record in the loop
             }
 
-            $clientContact = ClientsContactsModel::where('customer_id', $client->customer_id)->first();
+            $clientContact = ClientContactsModel::where('customer_id', $client->customer_id)->first();
 
             if (!$clientContact) {
                 // If the client contact is not found, log an error or skip this record
@@ -631,6 +639,7 @@ class SalesOrderController extends Controller
 
             // Set up main sales order data with fallbacks
             $salesOrderData = [
+                'company_id' => Auth::user()->company_id,
                 'client_id' => $client->id ?? null,
                 'client_contact_id' => $clientContact->id ?? null,
                 'name' => $record['client'] ?? 'Unnamed Client',
@@ -703,6 +712,7 @@ class SalesOrderController extends Controller
 
                     SalesOrderProductsModel::create([
                         'sales_order_id' => $salesOrder->id,
+                        'company_id' => Auth::user()->company_id,
                         'product_id' => $get_product->id,
                         'product_name' => $itemsData['product'][$index] ?? 'Unnamed Product',
                         'description' => $itemsData['desc'][$index] ?? '',
@@ -727,6 +737,7 @@ class SalesOrderController extends Controller
 
                     SalesOrderAddonsModel::create([
                         'sales_order_id' => $salesOrder->id,
+                        'company_id' => Auth::user()->company_id,
                         'name' => $name,
                         'amount' => $totalAmount,
                         'tax' => 18,
@@ -744,6 +755,182 @@ class SalesOrderController extends Controller
             'success' => true,
             'message' => "Sales orders import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
+        ], 200);
+    }
+
+    // export
+    public function export_sales_orders(Request $request)
+    {
+        // Check for comma-separated IDs
+        $ids = $request->input('id') ? explode(',', $request->input('id')) : null;
+
+        // Get filter inputs
+        $clientId = $request->input('client_id');
+        $clientContactId = $request->input('client_contact_id');
+        $name = $request->input('name');
+        $city = $request->input('city');
+        $pincode = $request->input('pincode');
+        $state = $request->input('state');
+        $country = $request->input('country');
+        $salesOrderNo = $request->input('sales_order_no');
+        $salesOrderDate = $request->input('sales_order_date');
+
+        // Build the query
+        $query = SalesOrderModel::query()
+            ->select(
+                'id', 
+                'client_id', 
+                'client_contact_id', 
+                'name', 
+                'address_line_1', 
+                'address_line_2', 
+                'city', 
+                'pincode', 
+                'state', 
+                'country', 
+                'sales_order_no', 
+                'sales_order_date', 
+                'quotation_no', 
+                'cgst', 
+                'sgst', 
+                'igst', 
+                'total', 
+                'currency', 
+                'template', 
+                'status'
+            )
+            ->where('company_id', Auth::user()->company_id);
+
+        // If IDs are provided, prioritize them
+        if ($ids) {
+            $query->whereIn('id', $ids);
+        } else {
+            // Apply filters only if IDs are not provided
+            if ($clientId) {
+                $query->where('client_id', $clientId);
+            }
+            if ($clientContactId) {
+                $query->where('client_contact_id', $clientContactId);
+            }
+            if ($name) {
+                $query->where('name', 'LIKE', '%' . $name . '%');
+            }
+            if ($city) {
+                $query->where('city', 'LIKE', '%' . $city . '%');
+            }
+            if ($pincode) {
+                $query->where('pincode', $pincode);
+            }
+            if ($state) {
+                $query->where('state', 'LIKE', '%' . $state . '%');
+            }
+            if ($country) {
+                $query->where('country', 'LIKE', '%' . $country . '%');
+            }
+            if ($salesOrderNo) {
+                $query->where('sales_order_no', 'LIKE', '%' . $salesOrderNo . '%');
+            }
+            if ($salesOrderDate) {
+                $query->whereDate('sales_order_date', $salesOrderDate);
+            }
+        }
+
+        $salesOrders = $query->get();
+
+        if ($salesOrders->isEmpty()) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Sales Orders found to export!',
+            ], 404);
+        }
+
+        // Format data for Excel
+        $exportData = $salesOrders->map(function ($order) {
+            return [
+                'Sales Order ID' => $order->id,
+                'Client ID' => $order->client_id,
+                'Client Contact ID' => $order->client_contact_id,
+                'Name' => $order->name,
+                'Address Line 1' => $order->address_line_1,
+                'Address Line 2' => $order->address_line_2,
+                'City' => $order->city,
+                'Pincode' => $order->pincode,
+                'State' => $order->state,
+                'Country' => $order->country,
+                'Sales Order No' => $order->sales_order_no,
+                'Sales Order Date' => $order->sales_order_date,
+                'Quotation No' => $order->quotation_no,
+                'CGST' => $order->cgst,
+                'SGST' => $order->sgst,
+                'IGST' => $order->igst,
+                'Total' => $order->total,
+                'Currency' => $order->currency,
+                'Template' => $order->template,
+                'Status' => $order->status,
+            ];
+        })->toArray();
+
+        // Generate the file path
+        $fileName = 'sales_orders_export_' . now()->format('Ymd_His') . '.xlsx';
+        $filePath = 'uploads/sales_orders_excel/' . $fileName;
+
+        // Save Excel to storage
+        Excel::store(new class($exportData) implements FromCollection, WithHeadings {
+            private $data;
+
+            public function __construct(array $data)
+            {
+                $this->data = collect($data);
+            }
+
+            public function collection()
+            {
+                return $this->data;
+            }
+
+            public function headings(): array
+            {
+                return [
+                    'Sales Order ID',
+                    'Client ID',
+                    'Client Contact ID',
+                    'Name',
+                    'Address Line 1',
+                    'Address Line 2',
+                    'City',
+                    'Pincode',
+                    'State',
+                    'Country',
+                    'Sales Order No',
+                    'Sales Order Date',
+                    'Quotation No',
+                    'CGST',
+                    'SGST',
+                    'IGST',
+                    'Total',
+                    'Currency',
+                    'Template',
+                    'Status',
+                ];
+            }
+        }, $filePath, 'public');
+
+        // Get file details
+        $fileUrl = asset('storage/' . $filePath);
+        $fileSize = Storage::disk('public')->size($filePath);
+
+        // Return response with file details
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'File available for download',
+            'data' => [
+                'file_url' => $fileUrl,
+                'file_name' => $fileName,
+                'file_size' => $fileSize,
+                'content_type' => 'Excel',
+            ],
         ], 200);
     }
 

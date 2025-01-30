@@ -390,7 +390,7 @@ class SuppliersController extends Controller
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
 
-        // Get total count of records in `t_products`
+        // Get total count of records in `t_suppliers`
         $total_suppliers = SuppliersModel::count(); 
 
         // Build the query
