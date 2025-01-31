@@ -158,7 +158,7 @@ class MastersController extends Controller
             ], 200)
             : response()->json([
                 'code' => 200,
-                'success' => false,
+                'success' => true,
                 'data' => [],
                 'message' => 'Sorry, No products found!',
                 'count' => 0,
