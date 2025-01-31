@@ -298,9 +298,11 @@ class QuotationsController extends Controller
                 'count' => $get_quotations->count(),
             ], 200)
             : response()->json([
-                'code' => 404,
-                'success' => false,
+                'code' => 200,
+                'success' => true,
+                'data' => [],
                 'message' => 'No Quotations found!',
+                'count' => 0,
             ], 404);
     }
 
