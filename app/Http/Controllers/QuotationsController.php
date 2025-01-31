@@ -303,7 +303,7 @@ class QuotationsController extends Controller
                 'data' => [],
                 'message' => 'No Quotations found!',
                 'count' => 0,
-            ], 404);
+            ], 200);
     }
 
     // Update Quotations
