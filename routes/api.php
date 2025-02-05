@@ -25,6 +25,7 @@ use App\Http\Controllers\ResetController;
 use App\Http\Controllers\CounterController;
 use App\Http\Controllers\CountryController;
 use App\Http\Controllers\StateController;
+use App\Http\Controllers\ChannelController;
 use App\Http\Controllers\QuotationTermMasterController;
 
 // Route::get('/user', function (Request $request) {
@@ -241,6 +242,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/quotation-terms', [QuotationTermMasterController::class, 'retrieve']);
     Route::post('/edit-quotation-terms/{id}', [QuotationTermMasterController::class, 'update']);
     Route::delete('/quotation-terms/{id}', [QuotationTermMasterController::class, 'delete']);
+
+    Route::post('/channel', [ChannelController::class, 'add']); // Create Channel
+    Route::get('/channels', [ChannelController::class, 'retrieve']); // View All Channels
+    Route::post('/update_channel/{id}', [ChannelController::class, 'update']); // Update Channel
+    Route::delete('/channel/{id}', [ChannelController::class, 'destroy']); // Delete Channel
 });
 
 Route::get('/sales_invoice_migrate', [SalesInvoiceController::class, 'importSalesInvoices']);

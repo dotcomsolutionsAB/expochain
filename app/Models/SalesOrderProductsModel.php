@@ -20,6 +20,8 @@ class SalesOrderProductsModel extends Model
         'sent',
         'unit',
         'price',
+        'channel',
+        'discount_type',
         'discount',
         'hsn',
         'tax',

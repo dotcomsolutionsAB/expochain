@@ -124,22 +124,42 @@ class SalesOrderController extends Controller
     {
         // Validate the request data
         $request->validate([
-            'client_id' => 'required|integer',
-            'client_contact_id' => 'required|integer',
-            'sales_order_no' => 'required|integer',
-            'quotation_no' => 'required|integer',
-            'currency' => 'required|string',
+            'client_id' => 'required|integer|exists:t_clients,id',
+            'client_contact_id' => 'required|integer|exists:t_client_contacts,id',
+            'sales_order_no' => 'required|string|unique:t_sales_order,sales_order_no',
+            'sales_order_date' => 'required|date_format:Y-m-d',
+            'quotation_no' => 'nullable|integer|exists:t_quotations,id',
+            'currency' => 'required|string|max:10',
             'template' => 'required|integer',
             'status' => 'required|integer',
-            'products.*.product_id' => 'required|integer',
-            'products.*.quantity' => 'required|integer',
-            'addons.*.name' => 'required|string',
-            'addons.*.amount' => 'required|numeric',
-            'addons.*.tax' => 'required|numeric',
-            'addons.*.hsn' => 'required|numeric',
-            'addons.*.cgst' => 'required|numeric',
-            'addons.*.sgst' => 'required|numeric',
-            'addons.*.igst' => 'required|numeric'
+            
+            'cgst' => 'nullable|numeric|min:0',
+            'sgst' => 'nullable|numeric|min:0',
+            'igst' => 'nullable|numeric|min:0',
+            'total' => 'required|numeric|min:0',
+        
+            'products' => 'required|array',
+            'products.*.product_id' => 'required|integer|exists:t_products,id',
+            'products.*.quantity' => 'required|integer|min:1',
+            'products.*.unit' => 'required|string|max:20',
+            'products.*.price' => 'required|numeric|min:0',
+            'products.*.channel' => 'nullable|integer|exists:t_channels,id',
+            'products.*.discount_type' => 'required|in:percentage,value',
+            'products.*.discount' => 'nullable|numeric|min:0',
+            'products.*.hsn' => 'nullable|string',
+            'products.*.tax' => 'nullable|numeric|min:0',
+            'products.*.cgst' => 'nullable|numeric|min:0',
+            'products.*.sgst' => 'nullable|numeric|min:0',
+            'products.*.igst' => 'nullable|numeric|min:0',
+        
+            'addons' => 'nullable|array',
+            'addons.*.name' => 'required|string|max:255',
+            'addons.*.amount' => 'required|numeric|min:0',
+            'addons.*.tax' => 'nullable|numeric|min:0',
+            'addons.*.hsn' => 'nullable|string',
+            'addons.*.cgst' => 'nullable|numeric|min:0',
+            'addons.*.sgst' => 'nullable|numeric|min:0',
+            'addons.*.igst' => 'nullable|numeric|min:0'        
         ]);
 
         // Fetch the client details using client_id
@@ -240,6 +260,8 @@ class SalesOrderController extends Controller
                     'quantity' => $quantity,
                     'unit' => $product_details->unit,
                     'price' => $rate,
+                    'channel' => $product_details->channel,
+                    'discount_type' => $product_details->discount_type,
                     'discount' => $discount_amount,
                     'hsn' => $product_details->hsn,
                     'tax' => $tax_rate,
@@ -326,7 +348,7 @@ class SalesOrderController extends Controller
 
         // Build the query
         $query = SalesOrderModel::with(['products' => function ($query) {
-            $query->select('sales_order_id', 'product_id', 'product_name', 'description', 'group', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
+            $query->select('sales_order_id', 'product_id', 'product_name', 'description', 'group', 'quantity', 'unit', 'price', 'discount_type', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
         }, 'addons' => function ($query) {
             $query->select('sales_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
         }])
@@ -685,6 +707,10 @@ class SalesOrderController extends Controller
                         'sent' => is_numeric($itemsData['sent'][$index]) ? (int)$itemsData['sent'][$index] : 0,
                         'unit' => $itemsData['unit'][$index] ?? '',
                         'price' => is_numeric($itemsData['price'][$index]) ? (float)$itemsData['price'][$index] : 0,
+                        'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index]) 
+                            ? (is_numeric($itemsData['channel'][$index]) ? (float)$itemsData['channel'][$index] : 0) 
+                            : null,
+                        'discount_type' => 'percentage',
                         'discount' => is_numeric($itemsData['discount'][$index]) ? (float)$itemsData['discount'][$index] : 0,
                         'hsn' => $itemsData['hsn'][$index] ?? '',
                         'tax' => is_numeric($itemsData['tax'][$index]) ? (float)$itemsData['tax'][$index] : 0,
