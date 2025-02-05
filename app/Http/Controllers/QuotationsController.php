@@ -676,6 +676,7 @@ class QuotationsController extends Controller
                 foreach ($itemsData['product'] as $index => $product) {
                     QuotationProductsModel::create([
                         'quotation_id' => $quotation->id,
+                        'company_id' => Auth::user()->company_id,
                         'product_id' => $productIdCounter,  // Set the product ID
                         'product_name' => $itemsData['product'][$index] ?? 'Unnamed Product',
                         'description' => $itemsData['desc'][$index] ?? 'No Description',
@@ -708,6 +709,7 @@ class QuotationsController extends Controller
 
                     QuotationAddonsModel::create([
                         'quotation_id' => $quotation->id,
+                        'company_id' => Auth::user()->company_id,
                         'name' => $name,
                         'amount' => $totalAmount,
                         'tax' => 18,
@@ -725,6 +727,7 @@ class QuotationsController extends Controller
                 foreach ($termsData as $name => $value) {
                     QuotationTermsModel::create([
                         'quotation_id' => $quotation->id,
+                        'company_id' => Auth::user()->company_id,
                         'name' => $name,
                         'value' => $value,
                     ]);
