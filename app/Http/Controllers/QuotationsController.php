@@ -631,6 +631,7 @@ class QuotationsController extends Controller
 
             // Validate main quotation data
             $validator = Validator::make($quotationData, [
+                'company_id' => 'required|integer',
                 'client_id' => 'nullable|integer',
                 'name' => 'required|string',
                 'address_line_1' => 'required|string',
