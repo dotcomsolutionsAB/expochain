@@ -1133,7 +1133,7 @@ class QuotationsController extends Controller
     $errors = [];
 
     // **Final optimized batch size to prevent MySQL errors**
-    $batchSize = 25;
+    $batchSize = 50;
 
     // Batching setup
     $quotationsBatch = [];
