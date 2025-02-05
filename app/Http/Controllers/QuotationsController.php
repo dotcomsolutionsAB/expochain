@@ -1271,7 +1271,7 @@ public function importQuotations()
 
     $successfulInserts = 0;
     $errors = [];
-    $batchSize = 25; // Optimal batch size
+    $batchSize = 10; // Optimal batch size
 
     // Batching setup
     $quotationsBatch = [];
