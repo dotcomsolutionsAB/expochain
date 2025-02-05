@@ -597,7 +597,7 @@ class QuotationsController extends Controller
                 1 => 'completed',
                 2 => 'rejected'
             ];
-dd(gettype(Auth::user()->company_id));
+
             // Set up main quotation data with fallbacks
             $quotationData = [
                 'company_id' => Auth::user()->company_id,
@@ -654,7 +654,7 @@ dd(gettype(Auth::user()->company_id));
                 'currency' => 'required|string',
                 'template' => 'required|string',
             ]);
-
+dd($validator);
             if ($validator->fails()) {
                 $errors[] = ['record' => $record, 'errors' => $validator->errors()];
                 continue;
