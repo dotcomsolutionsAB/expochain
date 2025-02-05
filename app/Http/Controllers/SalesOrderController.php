@@ -712,9 +712,9 @@ class SalesOrderController extends Controller
                                 is_numeric($itemsData['channel'][$index]) 
                                     ? (float)$itemsData['channel'][$index] 
                                     : (
-                                        strtolower($itemsData['channel'][$index]) === 'standard' ? 0 :
-                                        (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 1 :
-                                        (strtolower($itemsData['channel'][$index]) === 'cbs' ? 2 : null))
+                                        strtolower($itemsData['channel'][$index]) === 'standard' ? 1 :
+                                        (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 2 :
+                                        (strtolower($itemsData['channel'][$index]) === 'cbs' ? 3 : null))
                                     )
                             ) 
                             : null,
