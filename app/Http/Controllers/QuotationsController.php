@@ -213,6 +213,7 @@ class QuotationsController extends Controller
     // fetch
     public function view_quotations(Request $request)
     {
+        dd($request->toArray());
         // Enable Query Logging
         // DB::enableQueryLog();
 
