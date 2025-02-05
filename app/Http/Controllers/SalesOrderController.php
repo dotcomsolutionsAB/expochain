@@ -708,7 +708,15 @@ class SalesOrderController extends Controller
                         'unit' => $itemsData['unit'][$index] ?? '',
                         'price' => is_numeric($itemsData['price'][$index]) ? (float)$itemsData['price'][$index] : 0,
                         'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index]) 
-                            ? (is_numeric($itemsData['channel'][$index]) ? (float)$itemsData['channel'][$index] : 0) 
+                            ? (
+                                is_numeric($itemsData['channel'][$index]) 
+                                    ? (float)$itemsData['channel'][$index] 
+                                    : (
+                                        strtolower($itemsData['channel'][$index]) === 'standard' ? 0 :
+                                        (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 1 :
+                                        (strtolower($itemsData['channel'][$index]) === 'cbs' ? 2 : null))
+                                    )
+                            ) 
                             : null,
                         'discount_type' => 'percentage',
                         'discount' => is_numeric($itemsData['discount'][$index]) ? (float)$itemsData['discount'][$index] : 0,
