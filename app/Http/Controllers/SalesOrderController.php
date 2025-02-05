@@ -348,7 +348,7 @@ class SalesOrderController extends Controller
 
         // Build the query
         $query = SalesOrderModel::with(['products' => function ($query) {
-            $query->select('sales_order_id', 'product_id', 'product_name', 'description', 'group', 'quantity', 'unit', 'price', 'discount_type', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
+            $query->select('sales_order_id', 'product_id', 'product_name', 'description', 'group', 'quantity', 'sent', 'short_closed', 'unit', 'price', 'channel', 'discount_type', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
         }, 'addons' => function ($query) {
             $query->select('sales_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
         }])
