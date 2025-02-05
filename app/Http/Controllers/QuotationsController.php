@@ -597,7 +597,7 @@ class QuotationsController extends Controller
                 1 => 'completed',
                 2 => 'rejected'
             ];
-dd(Auth::user()->company_id);
+dd(type(Auth::user()->company_id));
             // Set up main quotation data with fallbacks
             $quotationData = [
                 'company_id' => Auth::user()->company_id,
