@@ -592,8 +592,15 @@ class QuotationsController extends Controller
             $salesContact = 'Contact ' . rand(100000, 999999);
             $salesEmail = 'placeholder_' . now()->timestamp . '@example.com';
 
+            $statusMap = [
+                0 => 'pending',
+                1 => 'completed',
+                2 => 'rejected'
+            ];
+
             // Set up main quotation data with fallbacks
             $quotationData = [
+                'company_id' => Auth::user()->company_id,
                 'client_id' => $client->id ?? null,
                 'client_contact_id' => $client_contact_id->id ?? null,
                 'name' => $record['Client'] ?? 'Unnamed Client',
@@ -606,6 +613,7 @@ class QuotationsController extends Controller
                 'quotation_no' => $record['quotation_no'],
                 'quotation_date' => $record['quotation_date'],
                 // 'status' => $request->input('status', 'pending'), // Default to 'pending'
+                'status' => $statusMap[$record['Status']] ?? 'pending', // Map status from $record['Status']
                 'user' => Auth::user()->id,
                 'enquiry_no' => $enquiryData['enquiry_no'] ?? 'No Enquiry',
                 'enquiry_date' => $enquiryData['enquiry_date'] ?? '1970-01-01',
