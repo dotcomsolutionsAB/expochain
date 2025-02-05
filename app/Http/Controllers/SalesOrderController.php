@@ -347,11 +347,20 @@ class SalesOrderController extends Controller
         $total_sales_order = SalesOrderModel::count(); 
 
         // Build the query
-        $query = SalesOrderModel::with(['products' => function ($query) {
-            $query->select('sales_order_id', 'product_id', 'product_name', 'description', 'group', 'quantity', 'sent', 'short_closed', 'unit', 'price', 'channel', 'discount_type', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
-        }, 'addons' => function ($query) {
-            $query->select('sales_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
-        }])
+        $query = SalesOrderModel::with([
+            'products' => function ($query) {
+                $query->select(
+                    'sales_order_id', 'product_id', 'product_name', 'description', 'group', 
+                    'quantity', 'sent', 'short_closed', 'unit', 'price', 'discount_type', 
+                    'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'channel'
+                )->with(['channel' => function ($channelQuery) {
+                    $channelQuery->select('id', 'name'); // Fetch channel name
+                }]);
+            },
+            'addons' => function ($query) {
+                $query->select('sales_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
+            }
+        ])
         ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'sales_order_no', 'sales_order_date', 'ref_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
         ->where('company_id', Auth::user()->company_id);
 
