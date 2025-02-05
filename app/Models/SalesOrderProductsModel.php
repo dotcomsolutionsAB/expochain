@@ -17,6 +17,7 @@ class SalesOrderProductsModel extends Model
         'description',
         'group',
         'quantity',
+        'sent',
         'unit',
         'price',
         'discount',
