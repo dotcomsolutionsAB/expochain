@@ -34,10 +34,5 @@ class SalesInvoiceProductsModel extends Model
     {
         return $this->belongsTo(SalesInvoiceModel::class, 'sales_invoice_id');
     }
-    
-    public function channel()
-    {
-        return $this->belongsTo(ChannelModel::class, 'channel', 'id');
-    }
 
 }

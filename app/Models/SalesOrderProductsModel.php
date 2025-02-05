@@ -35,4 +35,9 @@ class SalesOrderProductsModel extends Model
         return $this->belongsTo(SalesOrderModel::class, 'sales_order_id');
     }
 
+    public function channel()
+    {
+        return $this->belongsTo(ChannelModel::class, 'channel', 'id');
+    }
+
 }
