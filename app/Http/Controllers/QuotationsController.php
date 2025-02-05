@@ -968,7 +968,7 @@ class QuotationsController extends Controller
     $productsBatch = [];
     $addonsBatch = [];
     $termsBatch = [];
-    $batchSize = 500;  // Insert 500 records at a time
+    $batchSize = 100;  // Insert 500 records at a time
 
     foreach ($data as $record) {
         // Decode JSON fields
