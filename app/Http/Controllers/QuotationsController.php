@@ -227,6 +227,9 @@ class QuotationsController extends Controller
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
 
+        // Get total count of records in ` t_quotations`
+        $total_quotations = QuotationsModel::count(); 
+
         // Build the query
         $query = QuotationsModel::with(['products' => function ($query) {
             $query->select('quotation_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
@@ -296,6 +299,7 @@ class QuotationsController extends Controller
                 'message' => 'Quotations fetched successfully!',
                 'data' => $get_quotations,
                 'count' => $get_quotations->count(),
+                'total_records' => $total_quotations,
             ], 200)
             : response()->json([
                 'code' => 200,
