@@ -588,7 +588,7 @@ class QuotationsController extends Controller
             // Generate dummy sales data and fallback for missing fields
             $client = ClientsModel::where('name', $record['Client'])->first();
             $client_contact_id = ClientContactsModel::select('id')->where('customer_id', $client->customer_id)->first();
-            dd($client_contact_id);
+            dd($client_contact_id->id);
             $salesPerson = 'Sales Person ' . Str::random(5);
             $salesContact = 'Contact ' . rand(100000, 999999);
             $salesEmail = 'placeholder_' . now()->timestamp . '@example.com';
