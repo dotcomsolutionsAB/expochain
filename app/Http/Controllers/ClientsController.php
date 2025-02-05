@@ -674,8 +674,8 @@ class ClientsController extends Controller
                 'state' => 'nullable|string',
                 'country' => 'nullable|string',
                 'gstin' => 'nullable|string|unique:t_clients,gstin',
-                'mobile' => 'required|string',
-                'email' => 'required|email',
+                'mobile' => 'nullable|string',
+                'email' => 'nullable|email',
                 'contacts' => 'required|array',
             ]);
     
