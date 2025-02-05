@@ -1238,212 +1238,213 @@ class QuotationsController extends Controller
 //     ], 200);
 // }
 
-public function importQuotations()
-{
-    // Increase memory and execution time for large imports
-    ini_set('max_execution_time', 300); // 5 minutes
-    ini_set('memory_limit', '1024M');   // Increase memory limit
+    public function importQuotations()
+    {
+        // Increase memory and execution time for large imports
+        ini_set('max_execution_time', 300); // 5 minutes
+        ini_set('memory_limit', '1024M');   // Increase memory limit
 
-    // Clear old data before import
-    QuotationsModel::truncate();
-    QuotationProductsModel::truncate();
-    QuotationAddonsModel::truncate();
-    QuotationTermsModel::truncate();
+        // Clear old data before import
+        QuotationsModel::truncate();
+        QuotationProductsModel::truncate();
+        QuotationAddonsModel::truncate();
+        QuotationTermsModel::truncate();
 
-    $url = 'https://expo.egsm.in/assets/custom/migrate/quotation.php';
+        $url = 'https://expo.egsm.in/assets/custom/migrate/quotation.php';
 
-    // Fetch data from the external URL
-    try {
-        $response = Http::get($url);
-    } catch (\Exception $e) {
-        return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
-    }
-
-    if ($response->failed()) {
-        return response()->json(['error' => 'Failed to fetch data.'], 500);
-    }
-
-    $data = $response->json('data');
-
-    if (empty($data)) {
-        return response()->json(['message' => 'No data found'], 404);
-    }
-
-    $successfulInserts = 0;
-    $errors = [];
-    $batchSize = 10; // Optimal batch size
-
-    // Batching setup
-    $quotationsBatch = [];
-    $productsBatch = [];
-    $addonsBatch = [];
-    $termsBatch = [];
-
-    foreach ($data as $record) {
-        // Decode JSON fields
-        $enquiryData = json_decode($record['enq_no_date'] ?? '{}', true);
-        $addonsData = json_decode($record['addons'] ?? '{}', true);
-        $termsData = json_decode($record['Terms'] ?? '{}', true);
-        $itemsData = json_decode($record['items'] ?? '{}', true);
-        $taxData = json_decode($record['tax'] ?? '{}', true);
-
-        if (!is_array($addonsData) || !is_array($enquiryData) || !is_array($termsData) || !is_array($itemsData)) {
-            $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure in one of the fields.'];
-            continue;
+        // Fetch data from the external URL
+        try {
+            $response = Http::get($url);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
         }
 
-        // Get client data
-        $client = ClientsModel::where('name', $record['Client'])->first();
-        $client_contact = ClientContactsModel::select('id')->where('customer_id', $client->customer_id ?? 0)->first();
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch data.'], 500);
+        }
 
-        $statusMap = [
-            0 => 'pending',
-            1 => 'completed',
-            2 => 'rejected'
-        ];
+        $data = $response->json('data');
 
-        $igst = array_key_exists('igst', $taxData) ? (float)$taxData['igst'] : 0;
-        $cgst = array_key_exists('cgst', $taxData) ? (float)$taxData['cgst'] : 0;
-        $sgst = array_key_exists('sgst', $taxData) ? (float)$taxData['sgst'] : 0;
+        if (empty($data)) {
+            return response()->json(['message' => 'No data found'], 404);
+        }
 
-        // Prepare quotation data
-        $quotationsBatch[] = [
-            'company_id' => Auth::user()->company_id,
-            'client_id' => $client->id ?? null,
-            'client_contact_id' => $client_contact->id ?? null,
-            'name' => $record['Client'] ?? null,
-            'address_line_1' => $client->address_line_1 ?? null,
-            'address_line_2' => $client->address_line_2 ?? null,
-            'city' => $client->city ?? null,
-            'pincode' => $client->pincode ?? null,
-            'state' => $client->state ?? null,
-            'country' => $client->country ?? 'India',
-            'quotation_no' => $record['quotation_no'],
-            'quotation_date' => $record['quotation_date'],
-            'status' => $statusMap[$record['Status']] ?? 'pending',
-            'user' => Auth::user()->id,
-            'enquiry_no' => $enquiryData['enquiry_no'] ?? null,
-            'enquiry_date' => $enquiryData['enquiry_date'] ?? null,
-            'sales_person' => null,
-            'sales_contact' => null,
-            'sales_email' => null,
-            'discount' => is_numeric($record['discount']) ? (float) $record['discount'] : 0,
-            'cgst' => $cgst,
-            'sgst' => $sgst,
-            'igst' => $igst,
-            'total' => is_numeric($record['total']) ? (float) $record['total'] : 0,
-            'currency' => $record['currency'] ?? 'INR',
-            'template' => json_decode($record['template'], true)['id'] ?? '0',
-            'created_at' => now(),
-            'updated_at' => now()
-        ];
+        $successfulInserts = 0;
+        $errors = [];
+        $batchSize = 10; // Optimal batch size
 
-        // Add quotation ID reference
-        $quotation_id = count($quotationsBatch); // Temporary ID for mapping
+        // Batching setup
+        $quotationsBatch = [];
+        $productsBatch = [];
+        $addonsBatch = [];
+        $termsBatch = [];
 
-        // Process products
-        if (!empty($itemsData['product'])) {
-            foreach ($itemsData['product'] as $index => $product) {
-                $productsBatch[] = [
-                    'quotation_id' => $quotation_id,
-                    'company_id' => Auth::user()->company_id,
-                    'product_id' => $index + 1,
-                    'product_name' => $itemsData['product'][$index] ?? 'Unnamed Product',
-                    'description' => $itemsData['desc'][$index] ?? null,
-                    'brand' => !empty($itemsData['brand'][$index]) ? $itemsData['brand'][$index] : null,
-                    'quantity' => is_numeric($itemsData['quantity'][$index]) ? (int)$itemsData['quantity'][$index] : 0,
-                    'unit' => $itemsData['unit'][$index] ?? null,
-                    'price' => is_numeric($itemsData['price'][$index]) ? (float)$itemsData['price'][$index] : 0,
-                    'discount' => is_numeric($itemsData['discount'][$index]) ? (float)$itemsData['discount'][$index] : 0,
-                    'hsn' => $itemsData['hsn'][$index] ?? null,
-                    'tax' => is_numeric($itemsData['tax'][$index] ?? null) ? (float)$itemsData['tax'][$index] : 0,
-                    'cgst' => is_numeric($itemsData['cgst'][$index] ?? null) ? (float)$itemsData['cgst'][$index] : 0,
-                    'sgst' => is_numeric($itemsData['sgst'][$index] ?? null) ? (float)$itemsData['sgst'][$index] : 0,
-                    'igst' => is_numeric($itemsData['igst'][$index] ?? null) ? (float)$itemsData['igst'][$index] : 0,
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ];
+        foreach ($data as $record) {
+            // Decode JSON fields
+            $enquiryData = json_decode($record['enq_no_date'] ?? '{}', true);
+            $addonsData = json_decode($record['addons'] ?? '{}', true);
+            $termsData = json_decode($record['Terms'] ?? '{}', true);
+            $itemsData = json_decode($record['items'] ?? '{}', true);
+            $taxData = json_decode($record['tax'] ?? '{}', true);
+
+            if (!is_array($addonsData) || !is_array($enquiryData) || !is_array($termsData) || !is_array($itemsData)) {
+                $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure in one of the fields.'];
+                continue;
+            }
+
+            // Get client data
+            $client = ClientsModel::where('name', $record['Client'])->first();
+            $client_contact = ClientContactsModel::select('id')->where('customer_id', $client->customer_id ?? 0)->first();
+
+            $statusMap = [
+                0 => 'pending',
+                1 => 'completed',
+                2 => 'rejected'
+            ];
+
+            $igst = array_key_exists('igst', $taxData) ? (float)$taxData['igst'] : 0;
+            $cgst = array_key_exists('cgst', $taxData) ? (float)$taxData['cgst'] : 0;
+            $sgst = array_key_exists('sgst', $taxData) ? (float)$taxData['sgst'] : 0;
+
+            // Prepare quotation data
+            $quotationsBatch[] = [
+                'company_id' => Auth::user()->company_id,
+                'client_id' => $client->id ?? null,
+                'client_contact_id' => $client_contact->id ?? null,
+                'name' => $record['Client'] ?? null,
+                'address_line_1' => $client->address_line_1 ?? null,
+                'address_line_2' => $client->address_line_2 ?? null,
+                'city' => $client->city ?? null,
+                'pincode' => $client->pincode ?? null,
+                'state' => $client->state ?? null,
+                'country' => $client->country ?? 'India',
+                'quotation_no' => $record['quotation_no'],
+                'quotation_date' => $record['quotation_date'],
+                'status' => $statusMap[$record['Status']] ?? 'pending',
+                'user' => Auth::user()->id,
+                'enquiry_no' => $enquiryData['enquiry_no'] ?? null,
+                'enquiry_date' => $enquiryData['enquiry_date'] ?? null,
+                'sales_person' => null,
+                'sales_contact' => null,
+                'sales_email' => null,
+                'discount' => is_numeric($record['discount']) ? (float) $record['discount'] : 0,
+                'cgst' => $cgst,
+                'sgst' => $sgst,
+                'igst' => $igst,
+                'total' => is_numeric($record['total']) ? (float) $record['total'] : 0,
+                'currency' => $record['currency'] ?? 'INR',
+                'template' => json_decode($record['template'], true)['id'] ?? '0',
+                'created_at' => now(),
+                'updated_at' => now()
+            ];
+
+            // Add quotation ID reference
+            $quotation_id = count($quotationsBatch); // Temporary ID for mapping
+
+            // Process products
+            if (!empty($itemsData['product'])) {
+                foreach ($itemsData['product'] as $index => $product) {
+                    $productsBatch[] = [
+                        'quotation_id' => $quotation_id,
+                        'company_id' => Auth::user()->company_id,
+                        'product_id' => $index + 1,
+                        'product_name' => $itemsData['product'][$index] ?? 'Unnamed Product',
+                        'description' => $itemsData['desc'][$index] ?? null,
+                        // 'brand' => !empty($itemsData['brand'][$index]) ? $itemsData['brand'][$index] : null,
+                        'brand' => !empty($itemsData['brand'][$index]) ? $itemsData['brand'][$index] : 'Unknown Brand',
+                        'quantity' => is_numeric($itemsData['quantity'][$index]) ? (int)$itemsData['quantity'][$index] : 0,
+                        'unit' => $itemsData['unit'][$index] ?? null,
+                        'price' => is_numeric($itemsData['price'][$index]) ? (float)$itemsData['price'][$index] : 0,
+                        'discount' => is_numeric($itemsData['discount'][$index]) ? (float)$itemsData['discount'][$index] : 0,
+                        'hsn' => $itemsData['hsn'][$index] ?? null,
+                        'tax' => is_numeric($itemsData['tax'][$index] ?? null) ? (float)$itemsData['tax'][$index] : 0,
+                        'cgst' => is_numeric($itemsData['cgst'][$index] ?? null) ? (float)$itemsData['cgst'][$index] : 0,
+                        'sgst' => is_numeric($itemsData['sgst'][$index] ?? null) ? (float)$itemsData['sgst'][$index] : 0,
+                        'igst' => is_numeric($itemsData['igst'][$index] ?? null) ? (float)$itemsData['igst'][$index] : 0,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+                }
+            }
+
+            // Process addons
+            if (!empty($addonsData)) {
+                foreach ($addonsData as $name => $values) {
+                    $addonsBatch[] = [
+                        'quotation_id' => $quotation_id,
+                        'company_id' => Auth::user()->company_id,
+                        'name' => $name,
+                        'amount' => (float)($values['cgst'] ?? 0) + (float)($values['sgst'] ?? 0) + (float)($values['igst'] ?? 0),
+                        'tax' => 18,
+                        'hsn' => $values['hsn'] ?? null,
+                        'cgst' => (float)($values['cgst'] ?? 0),
+                        'sgst' => (float)($values['sgst'] ?? 0),
+                        'igst' => (float)($values['igst'] ?? 0),
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+                }
+            }
+
+            // Process terms
+            if (!empty($termsData)) {
+                foreach ($termsData as $name => $value) {
+                    $termsBatch[] = [
+                        'quotation_id' => $quotation_id,
+                        'company_id' => Auth::user()->company_id,
+                        'name' => $name,
+                        'value' => $value,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+                }
+            }
+
+            if (count($quotationsBatch) >= $batchSize) {
+                QuotationsModel::insert($quotationsBatch);
+                $quotationsBatch = [];
+            }
+
+            if (count($productsBatch) >= $batchSize) {
+                QuotationProductsModel::insert($productsBatch);
+                $productsBatch = [];
+            }
+
+            if (count($addonsBatch) >= $batchSize) {
+                QuotationAddonsModel::insert($addonsBatch);
+                $addonsBatch = [];
+            }
+
+            if (count($termsBatch) >= $batchSize) {
+                QuotationTermsModel::insert($termsBatch);
+                $termsBatch = [];
             }
         }
 
-        // Process addons
-        if (!empty($addonsData)) {
-            foreach ($addonsData as $name => $values) {
-                $addonsBatch[] = [
-                    'quotation_id' => $quotation_id,
-                    'company_id' => Auth::user()->company_id,
-                    'name' => $name,
-                    'amount' => (float)($values['cgst'] ?? 0) + (float)($values['sgst'] ?? 0) + (float)($values['igst'] ?? 0),
-                    'tax' => 18,
-                    'hsn' => $values['hsn'] ?? null,
-                    'cgst' => (float)($values['cgst'] ?? 0),
-                    'sgst' => (float)($values['sgst'] ?? 0),
-                    'igst' => (float)($values['igst'] ?? 0),
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ];
-            }
-        }
+        // ** Final Batch Insert**
+        // if (!empty($quotationsBatch)) QuotationsModel::insert($quotationsBatch);
+        // if (!empty($productsBatch)) QuotationProductsModel::insert($productsBatch);
+        // if (!empty($addonsBatch)) QuotationAddonsModel::insert($addonsBatch);
+        // if (!empty($termsBatch)) QuotationTermsModel::insert($termsBatch);
 
-        // Process terms
-        if (!empty($termsData)) {
-            foreach ($termsData as $name => $value) {
-                $termsBatch[] = [
-                    'quotation_id' => $quotation_id,
-                    'company_id' => Auth::user()->company_id,
-                    'name' => $name,
-                    'value' => $value,
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ];
-            }
-        }
-
-        if (count($quotationsBatch) >= $batchSize) {
+        // Insert remaining quotations
+        if (!empty($quotationsBatch)) {
             QuotationsModel::insert($quotationsBatch);
-            $quotationsBatch = [];
         }
 
-        if (count($productsBatch) >= $batchSize) {
-            QuotationProductsModel::insert($productsBatch);
-            $productsBatch = [];
+        // Insert products, addons & terms separately
+        foreach (array_chunk($productsBatch, $batchSize) as $chunk) {
+            QuotationProductsModel::insert($chunk);
+        }
+        foreach (array_chunk($addonsBatch, $batchSize) as $chunk) {
+            QuotationAddonsModel::insert($chunk);
+        }
+        foreach (array_chunk($termsBatch, $batchSize) as $chunk) {
+            QuotationTermsModel::insert($chunk);
         }
 
-        if (count($addonsBatch) >= $batchSize) {
-            QuotationAddonsModel::insert($addonsBatch);
-            $addonsBatch = [];
-        }
-
-        if (count($termsBatch) >= $batchSize) {
-            QuotationTermsModel::insert($termsBatch);
-            $termsBatch = [];
-        }
+        return response()->json(['message' => 'Import successful'], 200);
     }
-
-    // ** Final Batch Insert**
-    // if (!empty($quotationsBatch)) QuotationsModel::insert($quotationsBatch);
-    // if (!empty($productsBatch)) QuotationProductsModel::insert($productsBatch);
-    // if (!empty($addonsBatch)) QuotationAddonsModel::insert($addonsBatch);
-    // if (!empty($termsBatch)) QuotationTermsModel::insert($termsBatch);
-
-    // Insert remaining quotations
-    if (!empty($quotationsBatch)) {
-        QuotationsModel::insert($quotationsBatch);
-    }
-
-    // Insert products, addons & terms separately
-    foreach (array_chunk($productsBatch, $batchSize) as $chunk) {
-        QuotationProductsModel::insert($chunk);
-    }
-    foreach (array_chunk($addonsBatch, $batchSize) as $chunk) {
-        QuotationAddonsModel::insert($chunk);
-    }
-    foreach (array_chunk($termsBatch, $batchSize) as $chunk) {
-        QuotationTermsModel::insert($chunk);
-    }
-
-    return response()->json(['message' => 'Import successful'], 200);
-}
 
 
 
