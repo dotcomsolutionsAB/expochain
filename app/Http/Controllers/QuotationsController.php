@@ -1302,6 +1302,10 @@ public function importQuotations()
             2 => 'rejected'
         ];
 
+        $igst = array_key_exists('igst', $taxData) ? (float)$taxData['igst'] : 0;
+        $cgst = array_key_exists('cgst', $taxData) ? (float)$taxData['cgst'] : 0;
+        $sgst = array_key_exists('sgst', $taxData) ? (float)$taxData['sgst'] : 0;
+
         // Prepare quotation data
         $quotationsBatch[] = [
             'company_id' => Auth::user()->company_id,
@@ -1324,9 +1328,9 @@ public function importQuotations()
             'sales_contact' => null,
             'sales_email' => null,
             'discount' => is_numeric($record['discount']) ? (float) $record['discount'] : 0,
-            'cgst' => $taxData['cgst'] ?? 0,
-            'sgst' => $taxData['sgst'] ?? 0,
-            'igst' => $taxData['igst'] ?? 0,
+            'cgst' => $cgst,
+            'sgst' => $sgst,
+            'igst' => $igst,
             'total' => is_numeric($record['total']) ? (float) $record['total'] : 0,
             'currency' => $record['currency'] ?? 'INR',
             'template' => json_decode($record['template'], true)['id'] ?? '0',
