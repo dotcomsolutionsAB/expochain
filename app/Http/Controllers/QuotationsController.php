@@ -1149,6 +1149,14 @@ class QuotationsController extends Controller
         $itemsData = json_decode($record['items'] ?? '{}', true);
         $taxData = json_decode($record['tax'], true);
 
+        print_r($addonsData);
+        print_r("pp");
+        print_r($enquiryData);
+        print_r("qq");
+        print_r($termsData);
+        print_r("pp");
+        print_r($itemsData);
+
         if (!is_array($addonsData) || !is_array($enquiryData) || !is_array($termsData) || !is_array($itemsData)) {
             $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure in one of the fields.'];
             continue;
