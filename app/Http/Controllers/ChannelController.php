@@ -13,7 +13,7 @@ class ChannelController extends Controller
     {
         // Validate request
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255|unique:t_channel,name',
+            'name' => 'required|string|max:255|unique:t_channels,name',
         ]);
 
         if ($validator->fails()) {
