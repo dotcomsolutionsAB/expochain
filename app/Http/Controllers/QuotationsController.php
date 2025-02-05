@@ -8,7 +8,7 @@ use App\Models\QuotationProductsModel;
 use App\Models\QuotationAddonsModel;
 use App\Models\QuotationTermsModel;
 use App\Models\ClientsModel;
-use App\Models\ClientsContactsModel;
+use App\Models\ClientContactsModel;
 use App\Models\DiscountModel;
 use App\Models\ProductsModel;
 use App\Models\ClientAddressModel;
@@ -587,7 +587,7 @@ class QuotationsController extends Controller
 
             // Generate dummy sales data and fallback for missing fields
             $client = ClientsModel::where('name', $record['Client'])->first();
-            $client_contact_id = ClientsContactsModel::select('id')->where('customer_id', $client->customer_id)->first();
+            $client_contact_id = ClientContactsModel::select('id')->where('customer_id', $client->customer_id)->first();
             $salesPerson = 'Sales Person ' . Str::random(5);
             $salesContact = 'Contact ' . rand(100000, 999999);
             $salesEmail = 'placeholder_' . now()->timestamp . '@example.com';
