@@ -222,6 +222,8 @@ class QuotationsController extends Controller
         $name = $request->input('name');
         $quotationNo = $request->input('quotation_no');
         $quotationDate = $request->input('quotation_date');
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
         $enquiryNo = $request->input('enquiry_no');
         $enquiryDate = $request->input('enquiry_date');
         $limit = $request->input('limit', 10); // Default limit to 10
@@ -266,6 +268,14 @@ class QuotationsController extends Controller
         }
         if ($enquiryDate) {
             $query->whereDate('enquiry_date', $enquiryDate);
+        }
+
+        if ($dateFrom && $dateTo) {
+            $query->whereBetween('quotation_date', [$dateFrom, $dateTo]);
+        } elseif ($dateFrom) {
+            $query->whereDate('quotation_date', '>=', $dateFrom);
+        } elseif ($dateTo) {
+            $query->whereDate('quotation_date', '<=', $dateTo);
         }
 
         // Apply limit and offset
@@ -1319,7 +1329,10 @@ class QuotationsController extends Controller
                 'state' => $client->state ?? null,
                 'country' => $client->country ?? 'India',
                 'quotation_no' => $record['quotation_no'],
-                'quotation_date' => $record['quotation_date'],
+                // 'quotation_date' => $record['quotation_date'],
+                'quotation_date' => !empty($record['quotation_date']) 
+                    ? date('Y-m-d', strtotime($record['quotation_date'])) 
+                    : null,  // Convert only if not empty
                 'status' => $statusMap[$record['Status']] ?? 'pending',
                 'user' => Auth::user()->id,
                 'enquiry_no' => $enquiryData['enquiry_no'] ?? null,
