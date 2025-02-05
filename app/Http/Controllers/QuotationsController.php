@@ -1359,7 +1359,8 @@ public function importQuotations()
                     'tax' => is_numeric($itemsData['tax'][$index]) ? (float)$itemsData['tax'][$index] : 0,
                     'cgst' => is_numeric($itemsData['cgst'][$index]) ? (float)$itemsData['cgst'][$index] : 0,
                     'sgst' => is_numeric($itemsData['sgst'][$index]) ? (float)$itemsData['sgst'][$index] : 0,
-                    'igst' => is_numeric($itemsData['igst'][$index]) ? (float)$itemsData['igst'][$index] : 0,
+                    // 'igst' => is_numeric($itemsData['igst'][$index]) ? (float)$itemsData['igst'][$index] : 0,
+                    'igst' => is_numeric($itemsData['igst'][$index] ?? null) ? (float)$itemsData['igst'][$index] : 0,
                     'created_at' => now(),
                     'updated_at' => now()
                 ];
