@@ -641,7 +641,7 @@ class QuotationsController extends Controller
                 'country' => 'required|string',
                 'quotation_no' => 'required',
                 'quotation_date' => 'required|date',
-                'enquiry_no' => 'required',
+                'enquiry_no' => 'nullable',
                 'enquiry_date' => 'required|date',
                 'sales_person' => 'required|string',
                 'sales_contact' => 'required|string',
