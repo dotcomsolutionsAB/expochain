@@ -1398,13 +1398,49 @@ public function importQuotations()
                 ];
             }
         }
+
+        if (count($quotationsBatch) >= $batchSize) {
+            QuotationsModel::insert($quotationsBatch);
+            $quotationsBatch = [];
+        }
+
+        if (count($productsBatch) >= $batchSize) {
+            QuotationProductsModel::insert($productsBatch);
+            $productsBatch = [];
+        }
+
+        if (count($addonsBatch) >= $batchSize) {
+            QuotationAddonsModel::insert($addonsBatch);
+            $addonsBatch = [];
+        }
+
+        if (count($termsBatch) >= $batchSize) {
+            QuotationTermsModel::insert($termsBatch);
+            $termsBatch = [];
+        }
     }
 
-    // **🔥 Final Batch Insert**
-    if (!empty($quotationsBatch)) QuotationsModel::insert($quotationsBatch);
-    if (!empty($productsBatch)) QuotationProductsModel::insert($productsBatch);
-    if (!empty($addonsBatch)) QuotationAddonsModel::insert($addonsBatch);
-    if (!empty($termsBatch)) QuotationTermsModel::insert($termsBatch);
+    // ** Final Batch Insert**
+    // if (!empty($quotationsBatch)) QuotationsModel::insert($quotationsBatch);
+    // if (!empty($productsBatch)) QuotationProductsModel::insert($productsBatch);
+    // if (!empty($addonsBatch)) QuotationAddonsModel::insert($addonsBatch);
+    // if (!empty($termsBatch)) QuotationTermsModel::insert($termsBatch);
+
+    // Insert remaining quotations
+    if (!empty($quotationsBatch)) {
+        QuotationsModel::insert($quotationsBatch);
+    }
+
+    // Insert products, addons & terms separately
+    foreach (array_chunk($productsBatch, $batchSize) as $chunk) {
+        QuotationProductsModel::insert($chunk);
+    }
+    foreach (array_chunk($addonsBatch, $batchSize) as $chunk) {
+        QuotationAddonsModel::insert($chunk);
+    }
+    foreach (array_chunk($termsBatch, $batchSize) as $chunk) {
+        QuotationTermsModel::insert($chunk);
+    }
 
     return response()->json(['message' => 'Import successful'], 200);
 }
