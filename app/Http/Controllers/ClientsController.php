@@ -635,11 +635,11 @@ class ClientsController extends Controller
     
             // Process mobile and email
             $mobileList = array_filter(explode(',', $record['Mobile'] ?? '')); // Filter out empty values
-            $primaryMobile = $mobileList[0] ?? '0000000000'; // Use the first mobile number, or default
+            $primaryMobile = $mobileList[0] ?? null; // Use the first mobile number, or default
     
             $primaryEmail = filter_var(trim($record['Email'] ?? ''), FILTER_VALIDATE_EMAIL)
                 ? trim($record['Email'])
-                : 'placeholder_' . now()->timestamp . '@example.com';
+                : null;
     
             // Prepare validation data
             $validationData = [
