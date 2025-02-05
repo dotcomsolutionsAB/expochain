@@ -853,7 +853,7 @@ class QuotationsController extends Controller
                     'product_id' => $index + 1,
                     'product_name' => $itemsData['product'][$index] ?? 'Unnamed Product',
                     'description' => $itemsData['desc'][$index] ?? 'No Description',
-                    'brand' => $itemsData['brand'][$index] ?? null,
+                    'brand' => !empty($itemsData['brand'][$index]) ? $itemsData['brand'][$index] : 'Unknown Brand',
                     'quantity' => is_numeric($itemsData['quantity'][$index] ?? null) ? (int)$itemsData['quantity'][$index] : 0,
                     'unit' => $itemsData['unit'][$index] ?? '',
                     'price' => is_numeric($itemsData['price'][$index] ?? null) ? (float)$itemsData['price'][$index] : 0,
