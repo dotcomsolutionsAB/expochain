@@ -686,9 +686,9 @@ class QuotationsController extends Controller
                         'price' => $itemsData['price'][$index] ?? 0,
                         'discount' => (float)($itemsData['discount'][$index] ?? 0), // Ensures discount is numeric
                         'hsn' => $itemsData['hsn'][$index] ?? '',
-                        'tax' => $itemsData['tax'][$index] ?? 0,
-                        'cgst' => $itemsData['cgst'][$index] ?? 0,
-                        'sgst' => $itemsData['sgst'][$index] ?? 0,
+                        'tax' => is_numeric($itemsData['tax'][$index] ?? null) ? (float)$itemsData['tax'][$index] : 0,
+                        'cgst' => is_numeric($itemsData['cgst'][$index] ?? null) ? (float)$itemsData['cgst'][$index] : 0,
+                        'sgst' => is_numeric($itemsData['sgst'][$index] ?? null) ? (float)$itemsData['sgst'][$index] : 0,
                         'igst' => array_key_exists('igst', $itemsData) && isset($itemsData['igst'][$index])
                         ? $itemsData['igst'][$index]
                         : 0,  // Set igst to 0 if it's missing
