@@ -472,7 +472,7 @@ class SalesOrderController extends Controller
                     'igst' => $addonData['igst'],
                 ]);
             } else {
-                $aaa = SalesOrderAddonsModel::create([
+                SalesOrderAddonsModel::create([
                     'sales_order_id' => $id,
                     'name' => $addonData['name'],
                     'company_id' => Auth::user()->company_id,
@@ -483,7 +483,6 @@ class SalesOrderController extends Controller
                     'sgst' => $addonData['sgst'],
                     'igst' => $addonData['igst'],
                 ]);
-                print_r($aaa);
             }
         }
 
@@ -496,6 +495,8 @@ class SalesOrderController extends Controller
         $addonsDeleted = SalesOrderAddonsModel::where('sales_order_id', $id)
                                             ->where('name', $requestAddonIDs)
                                             ->delete();
+
+                                            print_r($addonsDeleted);
 
         return ($salesOrderUpdated || $productsDeleted || $addonsDeleted)
             ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Order, products, and addons updated successfully!', 'data' => $salesOrder], 200)
