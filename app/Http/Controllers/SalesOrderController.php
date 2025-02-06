@@ -158,29 +158,29 @@ class SalesOrderController extends Controller
                 $total_cgst += $cgst;
                 $total_sgst += $sgst;
                 $total_igst += $igst;
-dd($product);
+        dd($product);
                 // Create a record for the product
                 SalesOrderProductsModel::create([
                     'sales_order_id' => $register_sales_order->id,
                     'company_id' => Auth::user()->company_id,
-                    'product_id' => $product->product_id,
-                    'product_name' => $product->name,
-                    'description' => $product->description,
-                    'group' => $product->group,
+                    'product_id' => $product['product_id'],
+                    'product_name' => $product['name'],
+                    'description' => $product['description'],
+                    'group' => $product['group'],
                     'quantity' => $quantity,
                     // 'unit' => $product_details->unit,
                     // 'price' => $rate,
                     // 'channel' => $product_details->channel,
                     // 'discount_type' => $product_details->discount_type,
                     // 'discount' => $discount_amount,
-                    'sent' => $product->sent,
-                    'short_closed' => $product->short_closed,
-                    'unit' => $product->unit,
-                    'price' => $product->price,
-                    'channel' => $product->channel,
-                    'discount_type' => $product->discount_type,
-                    'discount' => $product->discount,
-                    'hsn' => $product->hsn,
+                    'sent' => $product['sent'],
+                    'short_closed' => $product['short_closed'],
+                    'unit' => $product['unit'],
+                    'price' => $product['price'],
+                    'channel' => $product['channel'],
+                    'discount_type' => $product['discount_type'],
+                    'discount' => $product['discount'],
+                    'hsn' => $product['hsn'],
                     'tax' => $tax_rate,
                     'cgst' => $cgst,
                     'sgst' => $sgst,
