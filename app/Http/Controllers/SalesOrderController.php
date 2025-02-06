@@ -472,7 +472,7 @@ class SalesOrderController extends Controller
                     'igst' => $addonData['igst'],
                 ]);
             } else {
-                $aa = SalesOrderAddonsModel::create([
+                $aaa = SalesOrderAddonsModel::create([
                     'sales_order_id' => $id,
                     'name' => $addonData['name'],
                     'company_id' => Auth::user()->company_id,
