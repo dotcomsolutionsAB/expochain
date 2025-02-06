@@ -10,6 +10,7 @@ use App\Models\SalesOrderProductsModel;
 use App\Models\SalesOrderAddonsModel;
 use App\Models\ClientsModel;
 use App\Models\ClientContactsModel;
+use App\Models\ClientAddressModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
 use Auth;
@@ -69,7 +70,8 @@ class SalesOrderController extends Controller
         // Fetch the client details using client_id
         $client = ClientsModel::find($request->input('client_id'));
 
-        dd($client);
+        $client_address = ClientAddressModel::find($client->id);
+        dd($client_address);
 
         if (!$client) {
             return response()->json(['message' => 'Client not found'], 404);
