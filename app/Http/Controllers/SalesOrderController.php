@@ -113,6 +113,8 @@ class SalesOrderController extends Controller
 
         // Iterate over the products array and calculate totals
         foreach ($products as $product) {
+
+            dd($product);
             $product_details = ProductsModel::where('id', $product['product_id'])
                                             ->where('company_id', Auth::user()->company_id)
                                             ->first();
