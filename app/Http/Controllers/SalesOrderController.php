@@ -46,6 +46,8 @@ class SalesOrderController extends Controller
             'products' => 'required|array',
             'products.*.product_id' => 'required|integer|exists:t_products,id',
             'products.*.quantity' => 'required|integer|min:1',
+            'products.*.sent' => 'nullable|integer|min:1',
+            'products.*.short_closed' => 'nullable|integer|min:1',
             'products.*.unit' => 'required|string|max:20',
             'products.*.price' => 'required|numeric|min:0',
             'products.*.channel' => 'nullable|integer|exists:t_channels,id',
@@ -155,7 +157,7 @@ class SalesOrderController extends Controller
                 $total_cgst += $cgst;
                 $total_sgst += $sgst;
                 $total_igst += $igst;
-
+dd($product_details);
                 // Create a record for the product
                 SalesOrderProductsModel::create([
                     'sales_order_id' => $register_sales_order->id,
@@ -170,6 +172,8 @@ class SalesOrderController extends Controller
                     // 'channel' => $product_details->channel,
                     // 'discount_type' => $product_details->discount_type,
                     // 'discount' => $discount_amount,
+                    'sent' => $product_details->sent,
+                    'short_closed' => $product_details->short_closed,
                     'unit' => $product_details->unit,
                     'price' => $product_details->price,
                     'channel' => $product_details->channel,

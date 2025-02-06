@@ -21,6 +21,8 @@ return new class extends Migration
             $table->text('description');
             $table->string('group');
             $table->integer('quantity');
+            $table->integer('sent');
+            $table->integer('short_closed');
             $table->string('unit');
             $table->float('price');
             $table->integer('channel')->nullable();
