@@ -486,17 +486,6 @@ class SalesOrderController extends Controller
             }
         }
 
-        // $abc = SalesOrderProductsModel::where('sales_order_id', $id)
-        //                                         ->whereNotIn('product_id', $requestProductIDs)
-        //                                         ->get();
-
-        //                                         print_r($abc);
-        //                                         $efg = SalesOrderAddonsModel::where('sales_order_id', $id)
-        //                                         ->whereNotIn('name', $requestAddonNames)
-        //                                         ->get();
-
-        //                                         dd($efg);
-
         // Delete products not included in the request
         $productsDeleted = SalesOrderProductsModel::where('sales_order_id', $id)
                                                 ->whereNotIn('product_id', $requestProductIDs)
@@ -515,6 +504,10 @@ class SalesOrderController extends Controller
     // Delete Sales Order
     public function delete_sales_order($id)
     {
+        $company_id = Auth::user()->company_id;
+
+        dd($company_id);
+
         $delete_sales_order = SalesOrderModel::where('id', $id)
                                                 ->where('company_id', $company_id)
                                                 ->delete();
