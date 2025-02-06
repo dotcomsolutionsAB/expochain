@@ -488,15 +488,13 @@ class SalesOrderController extends Controller
 
         // Delete products not included in the request
         $productsDeleted = SalesOrderProductsModel::where('sales_order_id', $id)
-                                                ->where('product_id', $requestProductIDs)
+                                                ->whereNotIn('product_id', $requestProductIDs)
                                                 ->delete();
 
         // Delete addons not included in the request
         $addonsDeleted = SalesOrderAddonsModel::where('sales_order_id', $id)
-                                            ->where('name', $requestAddonIDs)
+                                            ->whereNotIn('name', $requestAddonIDs)
                                             ->delete();
-
-                                            print_r($addonsDeleted);
 
         return ($salesOrderUpdated || $productsDeleted || $addonsDeleted)
             ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Order, products, and addons updated successfully!', 'data' => $salesOrder], 200)
