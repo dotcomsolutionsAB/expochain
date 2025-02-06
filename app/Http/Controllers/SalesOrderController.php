@@ -164,7 +164,7 @@ class SalesOrderController extends Controller
                     'sales_order_id' => $register_sales_order->id,
                     'company_id' => Auth::user()->company_id,
                     'product_id' => $product['product_id'],
-                    'product_name' => $product['name'],
+                    'product_name' => $product_details->name,
                     'description' => $product['description'],
                     'group' => $product['group'],
                     'quantity' => $quantity,
