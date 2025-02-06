@@ -463,7 +463,6 @@ class SalesOrderController extends Controller
                                                 ->first();
 
             if ($existingAddon) {
-                dd("uu");
                 $existingAddon->update([
                     'amount' => $addonData['amount'],
                     'tax' => $addonData['tax'],
@@ -473,8 +472,7 @@ class SalesOrderController extends Controller
                     'igst' => $addonData['igst'],
                 ]);
             } else {
-                dd("mm");
-                SalesOrderAddonsModel::create([
+                $aa = SalesOrderAddonsModel::create([
                     'sales_order_id' => $id,
                     'name' => $addonData['name'],
                     'company_id' => Auth::user()->company_id,
@@ -485,6 +483,7 @@ class SalesOrderController extends Controller
                     'sgst' => $addonData['sgst'],
                     'igst' => $addonData['igst'],
                 ]);
+                print_r($aaa);
             }
         }
 
