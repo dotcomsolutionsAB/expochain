@@ -491,7 +491,6 @@ class SalesOrderController extends Controller
                                                 ->get();
 
                                                 print_r($abc);
-                                                dd("ll");
                                                 $efg = SalesOrderAddonsModel::where('sales_order_id', $id)
                                                 ->whereNotIn('name', $requestAddonNames)
                                                 ->get();
