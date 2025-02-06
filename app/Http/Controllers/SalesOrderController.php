@@ -89,7 +89,7 @@ class SalesOrderController extends Controller
             'country' => $client->country,
             'sales_order_no' => $request->input('sales_order_no'),
             'sales_order_date' => $currentDate,
-            'quotation_no' => $request->input('quotation_no'),
+            'ref_no' => $request->input('ref_no'),
             'cgst' => 0,
             'sgst' => 0,
             'igst' => 0,
