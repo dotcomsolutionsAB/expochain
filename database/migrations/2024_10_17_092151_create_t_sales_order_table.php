@@ -25,7 +25,7 @@ return new class extends Migration
             $table->string('country');
             $table->string('sales_order_no');
             $table->date('sales_order_date');
-            $table->integer('quotation_no');
+            $table->string('ref_no');
             $table->float('cgst');
             $table->float('sgst');
             $table->float('igst');
