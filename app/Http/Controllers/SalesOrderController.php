@@ -456,6 +456,7 @@ class SalesOrderController extends Controller
         $requestAddonIDs = [];
 
         foreach ($addons as $addonData) {
+            dd($addonData);
             $requestAddonIDs[] = $addonData['name'];
 
             $existingAddon = SalesOrderAddonsModel::where('sales_order_id', $id)
