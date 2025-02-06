@@ -373,6 +373,10 @@ class SalesOrderController extends Controller
 
         $salesOrder = SalesOrderModel::where('id', $id)->first();
 
+        if (!$salesOrder) {
+            return response()->json(['code' => 404, 'success' => false, 'message' => 'Sales Order not found!'], 404);
+        }
+
         $salesOrderUpdated = $salesOrder->update([
             'client_id' => $request->input('client_id'),
             'client_contact_id' => $request->input('client_contact_id'),
