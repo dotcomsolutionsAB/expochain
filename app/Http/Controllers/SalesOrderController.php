@@ -114,7 +114,6 @@ class SalesOrderController extends Controller
         // Iterate over the products array and calculate totals
         foreach ($products as $product) {
 
-            dd($product);
             $product_details = ProductsModel::where('id', $product['product_id'])
                                             ->where('company_id', Auth::user()->company_id)
                                             ->first();
@@ -164,24 +163,24 @@ dd($product_details);
                 SalesOrderProductsModel::create([
                     'sales_order_id' => $register_sales_order->id,
                     'company_id' => Auth::user()->company_id,
-                    'product_id' => $product_details->id,
-                    'product_name' => $product_details->name,
-                    'description' => $product_details->description,
-                    'group' => $product_details->group,
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'description' => $product->description,
+                    'group' => $product->group,
                     'quantity' => $quantity,
                     // 'unit' => $product_details->unit,
                     // 'price' => $rate,
                     // 'channel' => $product_details->channel,
                     // 'discount_type' => $product_details->discount_type,
                     // 'discount' => $discount_amount,
-                    'sent' => $product_details->sent,
-                    'short_closed' => $product_details->short_closed,
-                    'unit' => $product_details->unit,
-                    'price' => $product_details->price,
-                    'channel' => $product_details->channel,
-                    'discount_type' => $product_details->discount_type,
-                    'discount' => $product_details->discount,
-                    'hsn' => $product_details->hsn,
+                    'sent' => $product->sent,
+                    'short_closed' => $product->short_closed,
+                    'unit' => $product->unit,
+                    'price' => $product->price,
+                    'channel' => $product->channel,
+                    'discount_type' => $product->discount_type,
+                    'discount' => $product->discount,
+                    'hsn' => $product->hsn,
                     'tax' => $tax_rate,
                     'cgst' => $cgst,
                     'sgst' => $sgst,
