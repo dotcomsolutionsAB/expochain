@@ -428,7 +428,7 @@ class SalesOrderController extends Controller
                 ]);
             } else {
                 SalesOrderProductsModel::create([
-                    'sales_order_id' => $productData['sales_order_id'],
+                    'sales_order_id' => $id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
@@ -472,7 +472,7 @@ class SalesOrderController extends Controller
                 ]);
             } else {
                 SalesOrderAddonsModel::create([
-                    'sales_order_id' => $addonData['sales_order_id'],
+                    'sales_order_id' => $id,
                     'name' => $addonData['name'],
                     'amount' => $addonData['amount'],
                     'tax' => $addonData['tax'],
