@@ -166,7 +166,7 @@ class SalesOrderController extends Controller
                     'product_id' => $product['product_id'],
                     'product_name' => $product_details->name,
                     'description' => $product_details->description,
-                    'group' => $product['group'],
+                    'group' => $product_details->group,
                     'quantity' => $quantity,
                     // 'unit' => $product_details->unit,
                     // 'price' => $rate,
