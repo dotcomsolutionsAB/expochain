@@ -158,7 +158,7 @@ class SalesOrderController extends Controller
                 $total_cgst += $cgst;
                 $total_sgst += $sgst;
                 $total_igst += $igst;
-        dd($product);
+
                 // Create a record for the product
                 SalesOrderProductsModel::create([
                     'sales_order_id' => $register_sales_order->id,
