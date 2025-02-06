@@ -399,61 +399,72 @@ class SalesOrderController extends Controller
         $products = $request->input('products');
         $requestProductIDs = [];
 
-        // Process products
-        foreach ($products as $productData) {
-            $requestProductIDs[] = $productData['product_id'];
+        // // Process products
+        // foreach ($products as $productData) {
+        //     $requestProductIDs[] = $productData['product_id'];
 
-            $existingProduct = SalesOrderProductsModel::where('sales_order_id', $id)
-                                                    ->where('product_id', $productData['product_id'])
-                                                    ->first();
+        //     $existingProduct = SalesOrderProductsModel::where('sales_order_id', $id)
+        //                                             ->where('product_id', $productData['product_id'])
+        //                                             ->first();
 
-            if ($existingProduct) {
-                $existingProduct->update([
-                    'product_name' => $productData['product_name'],
-                    'description' => $productData['description'],
-                    'group' => $productData['group'],
-                    'quantity' => $productData['quantity'],
-                    'sent' => isset($productData['sent']) && is_numeric($productData['sent']) ? (int)        $productData['sent'] : 0,
-                    'short_closed' => isset($productData['short_closed']) && is_numeric($productData['short_closed']) ? (int)$productData['short_closed'] : 0,
-                    'unit' => $productData['unit'],
-                    'price' => $productData['price'],
-                    'channel' => $productData['channel'],
-                    'discount_type' => $productData['discount_type'],
-                    'discount' => $productData['discount'],
-                    'hsn' => $productData['hsn'],
-                    'tax' => $productData['tax'],
-                    'cgst' => $productData['cgst'],
-                    'sgst' => $productData['sgst'],
-                    'igst' => $productData['igst'],
-                ]);
-            } else {
-                SalesOrderProductsModel::create([
-                    'sales_order_id' => $id,
-                    'company_id' => Auth::user()->company_id,
-                    'product_id' => $productData['product_id'],
-                    'product_name' => $productData['product_name'],
-                    'description' => $productData['description'],
-                    'group' => $productData['group'],
-                    'quantity' => $productData['quantity'],
-                    'sent' => $productData['sent'],
-                    'short_closed' => $productData['short_closed'],
-                    'unit' => $productData['unit'],
-                    'price' => $productData['price'],
-                    'channel' => $productData['channel'],
-                    'discount_type' => $productData['discount_type'],
-                    'discount' => $productData['discount'],
-                    'hsn' => $productData['hsn'],
-                    'tax' => $productData['tax'],
-                    'cgst' => $productData['cgst'],
-                    'sgst' => $productData['sgst'],
-                    'igst' => $productData['igst'],
-                ]);
-            }
-        }
+        //     if ($existingProduct) {
+        //         $existingProduct->update([
+        //             'product_name' => $productData['product_name'],
+        //             'description' => $productData['description'],
+        //             'group' => $productData['group'],
+        //             'quantity' => $productData['quantity'],
+        //             'sent' => isset($productData['sent']) && is_numeric($productData['sent']) ? (int)        $productData['sent'] : 0,
+        //             'short_closed' => isset($productData['short_closed']) && is_numeric($productData['short_closed']) ? (int)$productData['short_closed'] : 0,
+        //             'unit' => $productData['unit'],
+        //             'price' => $productData['price'],
+        //             'channel' => $productData['channel'],
+        //             'discount_type' => $productData['discount_type'],
+        //             'discount' => $productData['discount'],
+        //             'hsn' => $productData['hsn'],
+        //             'tax' => $productData['tax'],
+        //             'cgst' => $productData['cgst'],
+        //             'sgst' => $productData['sgst'],
+        //             'igst' => $productData['igst'],
+        //         ]);
+        //     } else {
+        //         SalesOrderProductsModel::create([
+        //             'sales_order_id' => $id,
+        //             'company_id' => Auth::user()->company_id,
+        //             'product_id' => $productData['product_id'],
+        //             'product_name' => $productData['product_name'],
+        //             'description' => $productData['description'],
+        //             'group' => $productData['group'],
+        //             'quantity' => $productData['quantity'],
+        //             'sent' => $productData['sent'],
+        //             'short_closed' => $productData['short_closed'],
+        //             'unit' => $productData['unit'],
+        //             'price' => $productData['price'],
+        //             'channel' => $productData['channel'],
+        //             'discount_type' => $productData['discount_type'],
+        //             'discount' => $productData['discount'],
+        //             'hsn' => $productData['hsn'],
+        //             'tax' => $productData['tax'],
+        //             'cgst' => $productData['cgst'],
+        //             'sgst' => $productData['sgst'],
+        //             'igst' => $productData['igst'],
+        //         ]);
+        //     }
+        // }
 
         // Process addons
         $addons = $request->input('addons');
         $requestAddonIDs = [];
+
+        $abc = SalesOrderProductsModel::where('sales_order_id', $id)
+                                                ->whereNotIn('product_id', $requestProductIDs)
+                                                ->get();
+
+                                                print_r($abc);
+                                                $efg = SalesOrderAddonsModel::where('sales_order_id', $id)
+                                                ->whereNotIn('name', $requestAddonIDs)
+                                                ->get();
+
+                                                print_r($efg);
 
         foreach ($addons as $addonData) {
             $requestAddonIDs[] = $addonData['name'];
