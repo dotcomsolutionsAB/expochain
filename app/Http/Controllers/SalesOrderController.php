@@ -459,12 +459,12 @@ class SalesOrderController extends Controller
                                                 ->whereNotIn('product_id', $requestProductIDs)
                                                 ->get();
 
-                                                dd($abc);
+                                                print_r($abc);
                                                 $efg = SalesOrderAddonsModel::where('sales_order_id', $id)
                                                 ->whereNotIn('name', $requestAddonIDs)
                                                 ->get();
 
-                                                print_r($efg);
+                                                dd($efg);
 
         foreach ($addons as $addonData) {
             $requestAddonIDs[] = $addonData['name'];
