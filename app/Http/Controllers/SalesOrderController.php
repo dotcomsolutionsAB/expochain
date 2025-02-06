@@ -333,7 +333,7 @@ class SalesOrderController extends Controller
             'country' => 'required|string',
             'sales_order_no' => 'required|integer',
             'sales_order_date' => 'required|date',
-            'quotation_no' => 'required|integer',
+            'ref_no' => 'required|string',
             'cgst' => 'required|numeric',
             'sgst' => 'required|numeric',
             'igst' => 'required|numeric',
@@ -342,14 +342,18 @@ class SalesOrderController extends Controller
             'template' => 'required|integer',
             'status' => 'required|integer',
             'products' => 'required|array',
-            'products.*.sales_order_id' => 'required|integer',
+            // 'products.*.sales_order_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
             'products.*.group' => 'required|string',
             'products.*.quantity' => 'required|integer',
+            'products.*.sent' => 'required|integer',
+            'products.*.short_closed' => 'required|integer',
             'products.*.unit' => 'required|integer',
             'products.*.price' => 'required|numeric',
+            'products.*.channel' => 'nullable|integer|exists:t_channels,id',
+            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.discount' => 'nullable|numeric',
             'products.*.hsn' => 'required|string',
             'products.*.tax' => 'required|numeric',
@@ -382,7 +386,7 @@ class SalesOrderController extends Controller
             'country' => $request->input('country'),
             'sales_order_no' => $request->input('sales_order_no'),
             'sales_order_date' => $request->input('sales_order_date'),
-            'quotation_no' => $request->input('quotation_no'),
+            'ref_no' => $request->input('ref_no'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
@@ -399,7 +403,7 @@ class SalesOrderController extends Controller
         foreach ($products as $productData) {
             $requestProductIDs[] = $productData['product_id'];
 
-            $existingProduct = SalesOrderProductsModel::where('sales_order_id', $productData['sales_order_id'])
+            $existingProduct = SalesOrderProductsModel::where('sales_order_id', $id)
                                                     ->where('product_id', $productData['product_id'])
                                                     ->toSql();
                                                     // dd($productData['product_id']);
@@ -410,8 +414,12 @@ class SalesOrderController extends Controller
                     'description' => $productData['description'],
                     'group' => $productData['group'],
                     'quantity' => $productData['quantity'],
+                    'sent' => $productData['sent'],
+                    'short_closed' => $productData['short_closed'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
+                    'channel' => $productData['channel'],
+                    'discount_type' => $productData['discount_type'],
                     'discount' => $productData['discount'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
@@ -427,8 +435,12 @@ class SalesOrderController extends Controller
                     'description' => $productData['description'],
                     'group' => $productData['group'],
                     'quantity' => $productData['quantity'],
+                    'sent' => $productData['sent'],
+                    'short_closed' => $productData['short_closed'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
+                    'channel' => $productData['channel'],
+                    'discount_type' => $productData['discount_type'],
                     'discount' => $productData['discount'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
@@ -446,7 +458,7 @@ class SalesOrderController extends Controller
         foreach ($addons as $addonData) {
             $requestAddonIDs[] = $addonData['name'];
 
-            $existingAddon = SalesOrderAddonsModel::where('sales_order_id', $addonData['sales_order_id'])
+            $existingAddon = SalesOrderAddonsModel::where('sales_order_id', $id)
                                                 ->where('name', $addonData['name'])
                                                 ->first();
 
