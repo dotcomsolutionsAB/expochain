@@ -66,8 +66,6 @@ class SalesOrderController extends Controller
             'addons.*.igst' => 'nullable|numeric|min:0'        
         ]);
 
-        dd($request->all());
-
         // Fetch the client details using client_id
         $client = ClientsModel::find($request->input('client_id'));
 
@@ -170,10 +168,10 @@ class SalesOrderController extends Controller
                     // 'discount_type' => $product_details->discount_type,
                     // 'discount' => $discount_amount,
                     'unit' => $product_details->unit,
-                    'price' => $rate,
+                    'price' => $product_details->price,
                     'channel' => $product_details->channel,
                     'discount_type' => $product_details->discount_type,
-                    'discount' => $discount_amount,
+                    'discount' => $product_details->discount,
                     'hsn' => $product_details->hsn,
                     'tax' => $tax_rate,
                     'cgst' => $cgst,
