@@ -22,7 +22,7 @@ class SalesOrderModel extends Model
         'country',
         'sales_order_no',
         'sales_order_date',
-        'quotation_no',
+        'ref_no',
         'cgst',
         'sgst',
         'igst',
