@@ -45,6 +45,7 @@ class SalesOrderController extends Controller
         
             'products' => 'required|array',
             'products.*.product_id' => 'required|integer|exists:t_products,id',
+            'products.*.description' => 'required|string',
             'products.*.quantity' => 'required|integer|min:1',
             'products.*.sent' => 'nullable|integer|min:1',
             'products.*.short_closed' => 'nullable|integer|min:1',
@@ -165,7 +166,7 @@ class SalesOrderController extends Controller
                     'company_id' => Auth::user()->company_id,
                     'product_id' => $product['product_id'],
                     'product_name' => $product_details->name,
-                    'description' => $product_details->description,
+                    'description' => $product['description'],
                     'group' => $product_details->group,
                     'quantity' => $quantity,
                     // 'unit' => $product_details->unit,
