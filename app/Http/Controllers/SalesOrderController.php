@@ -71,7 +71,6 @@ class SalesOrderController extends Controller
         $client = ClientsModel::find($request->input('client_id'));
 
         $client_address = ClientAddressModel::find($client->id);
-        dd($client_address->address_line_1);
 
         if (!$client) {
             return response()->json(['message' => 'Client not found'], 404);
@@ -85,12 +84,12 @@ class SalesOrderController extends Controller
             'client_contact_id' => $request->input('client_contact_id'),
             'company_id' => Auth::user()->company_id,
             'name' => $client->name,
-            'address_line_1' => $client->address_line_1,
-            'address_line_2' => $client->address_line_2,
-            'city' => $client->city,
-            'pincode' => $client->pincode,
-            'state' => $client->state,
-            'country' => $client->country,
+            'address_line_1' => $client_address->address_line_1,
+            'address_line_2' => $client_address->address_line_2,
+            'city' => $client_address->city,
+            'pincode' => $client_address->pincode,
+            'state' => $client_address->state,
+            'country' => $client_address->country,
             'sales_order_no' => $request->input('sales_order_no'),
             'sales_order_date' => $currentDate,
             'ref_no' => $request->input('ref_no'),
