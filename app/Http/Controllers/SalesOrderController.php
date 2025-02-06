@@ -406,7 +406,6 @@ class SalesOrderController extends Controller
             $existingProduct = SalesOrderProductsModel::where('sales_order_id', $id)
                                                     ->where('product_id', $productData['product_id'])
                                                     ->toSql();
-                                                    // dd($productData['product_id']);
 
             if ($existingProduct) {
                 $existingProduct->update([
