@@ -23,103 +23,6 @@ class SalesOrderController extends Controller
 {
     //
     // create
-    // public function add_sales_order(Request $request)
-    // {
-    //     $request->validate([
-    //         'client_id' => 'required',
-    //         'client_contact_id' => 'required',
-    //         'name' => 'required|string',
-    //         'address_line_1' => 'required|string',
-    //         'address_line_2' => 'required|string',
-    //         'city' => 'required|string',
-    //         'pincode' => 'required',
-    //         'state' => 'required|string',
-    //         'country' => 'required|string',
-    //         'sales_order_no' => 'required|integer',
-    //         'sales_order_date' => 'required|date',
-    //         'quotation_no' => 'required|integer',
-    //         'cgst' => 'required|numeric',
-    //         'sgst' => 'required|numeric',
-    //         'igst' => 'required|numeric',
-    //         'total' => 'required|numeric',
-    //         'currency' => 'required|string',
-    //         'template' => 'required|integer',
-    //         'status' => 'required|integer',
-    //     ]);
-    
-    
-    //     $register_sales_order = SalesOrderModel::create([
-    //         'client_id' => $request->input('client_id'),
-    //         'client_contact_id' => $request->input('client_contact_id'),
-    //         'company_id' => Auth::user()->company_id,
-    //         'name' => $request->input('name'),
-    //         'address_line_1' => $request->input('address_line_1'),
-    //         'address_line_2' => $request->input('address_line_2'),
-    //         'city' => $request->input('city'),
-    //         'pincode' => $request->input('pincode'),
-    //         'state' => $request->input('state'),
-    //         'country' => $request->input('country'),
-    //         'sales_order_no' => $request->input('sales_order_no'),
-    //         'sales_order_date' => $request->input('sales_order_date'),
-    //         'quotation_no' => $request->input('quotation_no'),
-    //         'cgst' => $request->input('cgst'),
-    //         'sgst' => $request->input('sgst'),
-    //         'igst' => $request->input('igst'),
-    //         'total' => $request->input('total'),
-    //         'currency' => $request->input('currency'),
-    //         'template' => $request->input('template'),
-    //         'status' => $request->input('status'),
-    //     ]);
-        
-    //     $products = $request->input('products');
-    
-    //     // Iterate over the products array and insert each contact
-    //     foreach ($products as $product) 
-    //     {
-    //         SalesOrderProductsModel::create([
-    //         'sales_order_id' => $register_sales_order['id'],
-    //         'company_id' => Auth::user()->company_id,
-    //         'product_id' => $product['product_id'],
-    //         'product_name' => $product['product_name'],
-    //         'description' => $product['description'],
-    //         'brand' => $product['brand'],
-    //         'quantity' => $product['quantity'],
-    //         'unit' => $product['unit'],
-    //         'price' => $product['price'],
-    //         'discount' => $product['discount'],
-    //         'hsn' => $product['hsn'],
-    //         'tax' => $product['tax'],
-    //         'cgst' => $product['cgst'],
-    //         'sgst' => $product['sgst'],
-    //         'igst' => $product['igst'],
-    //         ]);
-    //     }
-
-    //     $addons = $request->input('addons');
-    
-    //     // Iterate over the addons array and insert each contact
-    //     foreach ($addons as $addon) 
-    //     {
-    //         SalesOrderAddonsModel::create([
-    //         'sales_order_id' => $register_sales_order['id'],
-    //         'company_id' => Auth::user()->company_id,
-    //         'name' => $addon['name'],
-    //         'amount' => $addon['amount'],
-    //         'tax' => $addon['tax'],
-    //         'hsn' => $addon['hsn'],
-    //         'cgst' => $addon['cgst'],
-    //         'sgst' => $addon['sgst'],
-    //         'igst' => $addon['igst'],
-    //         ]);
-    //     }
-
-    //     unset($register_sales_order['id'], $register_sales_order['created_at'], $register_sales_order['updated_at']);
-    
-    //     return isset($register_sales_order) && $register_sales_order !== null
-    //     ? response()->json(['Sales Order registered successfully!', 'data' => $register_sales_order], 201)
-    //     : response()->json(['Failed to register Sales Order record'], 400);
-    // }
-
     public function add_sales_order(Request $request)
     {
         // Validate the request data
@@ -127,7 +30,7 @@ class SalesOrderController extends Controller
             'client_id' => 'required|integer|exists:t_clients,id',
             'client_contact_id' => 'required|integer|exists:t_client_contacts,id',
             'sales_order_no' => 'required|string|unique:t_sales_order,sales_order_no',
-            'sales_order_date' => 'required|date_format:Y-m-d',
+            // 'sales_order_date' => 'required|date_format:Y-m-d',
             'quotation_no' => 'nullable|integer|exists:t_quotations,id',
             'currency' => 'required|string|max:10',
             'template' => 'required|integer',
@@ -161,6 +64,8 @@ class SalesOrderController extends Controller
             'addons.*.sgst' => 'nullable|numeric|min:0',
             'addons.*.igst' => 'nullable|numeric|min:0'        
         ]);
+
+        dd($request->all());
 
         // Fetch the client details using client_id
         $client = ClientsModel::find($request->input('client_id'));
@@ -258,6 +163,11 @@ class SalesOrderController extends Controller
                     'description' => $product_details->description,
                     'group' => $product_details->group,
                     'quantity' => $quantity,
+                    // 'unit' => $product_details->unit,
+                    // 'price' => $rate,
+                    // 'channel' => $product_details->channel,
+                    // 'discount_type' => $product_details->discount_type,
+                    // 'discount' => $discount_amount,
                     'unit' => $product_details->unit,
                     'price' => $rate,
                     'channel' => $product_details->channel,
@@ -311,23 +221,7 @@ class SalesOrderController extends Controller
         ], 201);
     }
 
-
     // View Sales Orders
-    // public function view_sales_order()
-    // {
-    //     $get_sales_orders = SalesOrderModel::with(['products' => function ($query) {
-    //         $query->select('sales_order_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
-    //     }, 'addons' => function ($query) {
-    //         $query->select('sales_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
-    //     }])
-    //     ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'sales_order_no', 'sales_order_date', 'quotation_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
-    //     ->where('company_id',Auth::user()->company_id)
-    //     ->get();
-
-    //     return isset($get_sales_orders) && $get_sales_orders !== null
-    //         ? response()->json(['Sales Orders fetched successfully!', 'data' => $get_sales_orders], 200)
-    //         : response()->json(['Failed to fetch Sales Order data'], 404);
-    // }
     public function view_sales_order(Request $request)
     {
         // Get filter inputs
@@ -415,7 +309,6 @@ class SalesOrderController extends Controller
                 'message' => 'No Sales Orders found!',
             ], 404);
     }
-
 
     // Update Sales Order
     public function edit_sales_order(Request $request, $id)
@@ -792,7 +685,6 @@ class SalesOrderController extends Controller
             'errors' => $errors,
         ], 200);
     }
-
 
     // export
     public function export_sales_orders(Request $request)
