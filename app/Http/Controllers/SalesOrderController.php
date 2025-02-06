@@ -429,6 +429,7 @@ class SalesOrderController extends Controller
             } else {
                 SalesOrderProductsModel::create([
                     'sales_order_id' => $id,
+                    'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
@@ -474,6 +475,7 @@ class SalesOrderController extends Controller
                 SalesOrderAddonsModel::create([
                     'sales_order_id' => $id,
                     'name' => $addonData['name'],
+                    'company_id' => Auth::user()->company_id,
                     'amount' => $addonData['amount'],
                     'tax' => $addonData['tax'],
                     'hsn' => $addonData['hsn'],
