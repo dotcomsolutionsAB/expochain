@@ -506,8 +506,6 @@ class SalesOrderController extends Controller
     {
         $company_id = Auth::user()->company_id;
 
-        dd($company_id);
-
         $delete_sales_order = SalesOrderModel::where('id', $id)
                                                 ->where('company_id', $company_id)
                                                 ->delete();
