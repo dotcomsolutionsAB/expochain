@@ -163,7 +163,7 @@ class SalesOrderController extends Controller
                 SalesOrderProductsModel::create([
                     'sales_order_id' => $register_sales_order->id,
                     'company_id' => Auth::user()->company_id,
-                    'product_id' => $product->id,
+                    'product_id' => $product->product_id,
                     'product_name' => $product->name,
                     'description' => $product->description,
                     'group' => $product->group,
