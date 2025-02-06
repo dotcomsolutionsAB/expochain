@@ -379,6 +379,10 @@ class QuotationsController extends Controller
 
         $quotation = QuotationsModel::where('id', $id)->first();
 
+        if (!$quotation) {
+            return response()->json(['code' => 404, 'success' => false, 'message' => 'Quotation not found!'], 404);
+        }
+
         $quotationUpdated = $quotation->update([
             'client_id' => $request->input('client_id'),
             'client_contact_id' => $request->input('client_contact_id'),
