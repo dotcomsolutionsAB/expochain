@@ -456,13 +456,12 @@ class SalesOrderController extends Controller
         $requestAddonIDs = [];
 
         foreach ($addons as $addonData) {
-            dd($addonData['name']);
             $requestAddonIDs[] = $addonData['name'];
 
             $existingAddon = SalesOrderAddonsModel::where('sales_order_id', $id)
                                                 ->where('name', $addonData['name'])
                                                 ->first();
-
+dd($existingAddon);
             if ($existingAddon) {
                 $existingAddon->update([
                     'amount' => $addonData['amount'],
