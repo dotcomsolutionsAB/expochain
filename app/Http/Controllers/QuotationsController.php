@@ -649,6 +649,8 @@ class QuotationsController extends Controller
                 'created_at' => now(),
                 'updated_at' => now()
             ];
+
+            dd($quotationsBatch);
         }
 
         // **2️⃣ Batch Insert Quotations & Fetch IDs**
