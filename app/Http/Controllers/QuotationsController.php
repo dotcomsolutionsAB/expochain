@@ -242,7 +242,7 @@ class QuotationsController extends Controller
 
         // Build the query
         $query = QuotationsModel::with(['products' => function ($query) {
-            $query->select('quotation_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'amount', 'unit', 'price', 'delivery', 'discount_type', 'discount', 'hsn', 'tax as cast', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'cgst', 'sgst', 'igst','attachment');
+            $query->select('product_id', 'product_name', 'description', 'quantity', 'amount', 'unit', 'price', 'delivery', 'discount_type', 'discount', 'hsn', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'cgst', 'sgst', 'igst','attachment');
             }, 'addons' => function ($query) {
                 $query->select('quotation_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
             }, 'terms' => function ($query) {
@@ -251,6 +251,9 @@ class QuotationsController extends Controller
                 'get_user' => function ($query) { // Fetch only user name
                     $query->select('id', 'name');
             },
+            'get_template' => function ($query) { // Fetch template id and name
+            $query->select('id', 'name');
+            }
         ])
         ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'status', 'user', 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'sales_person', 'sales_contact', 'sales_email', 'discount', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template')
         ->where('company_id', Auth::user()->company_id);
@@ -306,8 +309,18 @@ class QuotationsController extends Controller
             // Capitalize the first letter of status
             $quotation->status = ucfirst($quotation->status);
 
-            // Replace user_id with user name
-            $quotation->user_name = isset($quotation->get_user) ? $quotation->get_user->name : 'Unknown';
+            // Replace user ID with user object
+            $quotation->user = isset($quotation->get_user) ? [
+                'id' => $quotation->get_user->id,
+                'name' => $quotation->get_user->name
+            ] : ['id' => null, 'name' => 'Unknown'];
+            unset($quotation->get_user);
+
+            // Replace template ID with template object
+            $quotation->template = isset($quotation->get_template) ? [
+                'id' => $quotation->get_template->id,
+                'name' => $quotation->get_template->name
+            ] : ['id' => null, 'name' => 'Unknown'];
             unset($quotation->user); // Remove user object after fetching the name
 
             return $quotation;

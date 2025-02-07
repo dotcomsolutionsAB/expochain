@@ -23,9 +23,15 @@ return new class extends Migration
             $table->integer('quantity');
             $table->string('unit');
             $table->float('price');
+            $table->integer('channel');
+            $table->integer('returned');
+            $table->float('profit');
+            $table->integer('purchase_invoice_id');
+            $table->float('purchase_rate');
+            $table->enum('discount_type', ['percentage', 'value']);
             $table->float('discount');
-            $table->integer('purchase_invoice_products_id');
-            $table->float('rate');
+            $table->integer('purchase_invoice_id');
+            $table->integer('rate');
             $table->string('hsn');
             $table->float('tax');
             $table->float('cgst');

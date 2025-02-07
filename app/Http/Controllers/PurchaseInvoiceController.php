@@ -114,20 +114,20 @@ class PurchaseInvoiceController extends Controller
             'purchase_invoice_no' => $purchase_invoice_number,
             'purchase_invoice_date' => $currentDate,
             'purchase_order_no' => $request->input('purchase_order_no'),
-            'cgst' => 0,
-            'sgst' => 0,
-            'igst' => 0,
+            'cgst' => $request->input('cgst'),
+            'sgst' => $request->input('sgst'),
+            'igst' => $request->input('igst'),
             'currency' => $request->input('currency'),
             'template' => $request->input('template'),
             'status' => $request->input('status'),
         ]);
         
         $products = $request->input('products');
-        $total_amount = 0;
-        $total_cgst = 0;
-        $total_sgst = 0;
-        $total_igst = 0;
-        $total_discount = 0;
+        // $total_amount = 0;
+        // $total_cgst = 0;
+        // $total_sgst = 0;
+        // $total_igst = 0;
+        // $total_discount = 0;
 
         // Iterate over the products array and insert each contact
         foreach ($products as $product) 
@@ -224,12 +224,12 @@ class PurchaseInvoiceController extends Controller
             ]);
 
              // Update the total amount and tax values in the sales invoice record
-            $register_purchase_invoice->update([
-                'total' => $total_amount,
-                'cgst' => $total_cgst,
-                'sgst' => $total_sgst,
-                'igst' => $total_igst,
-            ]);
+            // $register_purchase_invoice->update([
+            //     'total' => $total_amount,
+            //     'cgst' => $total_cgst,
+            //     'sgst' => $total_sgst,
+            //     'igst' => $total_igst,
+            // ]);
         }
 
         unset($register_purchase_invoice['id'], $register_purchase_invoice['created_at'], $register_purchase_invoice['updated_at']);

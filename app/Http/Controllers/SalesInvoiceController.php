@@ -178,10 +178,10 @@ class SalesInvoiceController extends Controller
             'sales_invoice_date' => $currentDate,
             'sales_order_no' => $request->input('sales_order_no'),
             'quotation_no' => $request->input('quotation_no'),
-            'cgst' => 0,
-            'sgst' => 0,
-            'igst' => 0,
-            'total' => 0,
+            'cgst' => $request->input('cgst'),
+            'sgst' => $request->input('sgst'),
+            'igst' => $request->input('igst'),
+            'total' => $request->input('total'),
             'currency' => $request->input('currency'),
             'template' => $request->input('template'),
             'status' => $request->input('status'),
@@ -190,94 +190,116 @@ class SalesInvoiceController extends Controller
         ]);
 
         $products = $request->input('products');
-        $total_amount = 0;
-        $total_cgst = 0;
-        $total_sgst = 0;
-        $total_igst = 0;
-        $total_discount = 0;
+        // $total_amount = 0;
+        // $total_cgst = 0;
+        // $total_sgst = 0;
+        // $total_igst = 0;
+        // $total_discount = 0;
+
+        // Create a record for the product
+        SalesInvoiceProductsModel::create([
+            'sales_invoice_id' => $register_sales_invoice->id,
+            'company_id' => Auth::user()->company_id,
+            'product_id' => $product['product_id'],
+            'product_name' => $product['product_name'],
+            'description' => $product['description'],
+            'brand' => $product['brand'],
+            'quantity' => $product['quantity'],
+            'unit' => $product['unit'],
+            'price' => $product['price'],
+            'discount' => $product['discount'],
+            'purchase_invoice_products_id' => $product['purchase_invoice_products_id'],
+            'rate' => $product['rate'],
+            'hsn' => $product['hsn'],
+            'tax' => $product['tax'],
+            'cgst' => $product['cgst'],
+            'sgst' => $product['sgst'],
+            'igst' => $product['igst'],
+            'godown' => $product['godown'],
+        ]);
 
         // Iterate over the products array and fetch product details
-        foreach ($products as $product) {
-            $product_details = ProductsModel::where('id', $product['product_id'])
-                                            ->where('company_id', Auth::user()->company_id)
-                                            ->first();
+        // foreach ($products as $product) {
+        //     $product_details = ProductsModel::where('id', $product['product_id'])
+        //                                     ->where('company_id', Auth::user()->company_id)
+        //                                     ->first();
             
-            if ($product_details) {
-                $quantity = $product['quantity'];
-                $rate = $product_details->sale_price;
-                $tax_rate = $product_details->tax;
+        //     if ($product_details) {
+        //         $quantity = $product['quantity'];
+        //         $rate = $product_details->sale_price;
+        //         $tax_rate = $product_details->tax;
 
-               // Calculate the discount based on category or sub-category
-               $sub_category_discount = DiscountModel::select('discount')
-                                                    ->where('client', $request->input('client_id'))
-                                                    ->where('sub_category', $product_details->sub_category)
-                                                    ->first();
+        //        // Calculate the discount based on category or sub-category
+        //        $sub_category_discount = DiscountModel::select('discount')
+        //                                             ->where('client', $request->input('client_id'))
+        //                                             ->where('sub_category', $product_details->sub_category)
+        //                                             ->first();
 
-                $category_discount = DiscountModel::select('discount')
-                                                    ->where('client', $request->input('client_id'))
-                                                    ->where('category', $product_details->category)
-                                                    ->first();
+        //         $category_discount = DiscountModel::select('discount')
+        //                                             ->where('client', $request->input('client_id'))
+        //                                             ->where('category', $product_details->category)
+        //                                             ->first();
 
-                $discount_rate = $sub_category_discount->discount ?? $category_discount->discount ?? 0;
-                $discount_amount = $rate * $quantity * ($discount_rate / 100);
-                $total_discount += $discount_amount;
+        //         $discount_rate = $sub_category_discount->discount ?? $category_discount->discount ?? 0;
+        //         $discount_amount = $rate * $quantity * ($discount_rate / 100);
+        //         $total_discount += $discount_amount;
 
-                // Calculate the total for the product
-                $product_total = $rate * $quantity - $discount_amount;
-                $tax_amount = $product_total * ($tax_rate / 100);
+        //         // Calculate the total for the product
+        //         $product_total = $rate * $quantity - $discount_amount;
+        //         $tax_amount = $product_total * ($tax_rate / 100);
 
-                // Determine the tax distribution based on the client's state
-                if (strtolower($client->state) === 'west bengal') {
-                    $cgst = $tax_amount / 2;
-                    $sgst = $tax_amount / 2;
-                    $igst = 0;
-                } else {
-                    $cgst = 0;
-                    $sgst = 0;
-                    $igst = $tax_amount;
-                }
+        //         // Determine the tax distribution based on the client's state
+        //         if (strtolower($client->state) === 'west bengal') {
+        //             $cgst = $tax_amount / 2;
+        //             $sgst = $tax_amount / 2;
+        //             $igst = 0;
+        //         } else {
+        //             $cgst = 0;
+        //             $sgst = 0;
+        //             $igst = $tax_amount;
+        //         }
 
-                // Accumulate totals
-                $total_amount += $product_total;
-                $total_cgst += $cgst;
-                $total_sgst += $sgst;
-                $total_igst += $igst;
+        //         // Accumulate totals
+        //         $total_amount += $product_total;
+        //         $total_cgst += $cgst;
+        //         $total_sgst += $sgst;
+        //         $total_igst += $igst;
 
-                // Create a record for the product
-                SalesInvoiceProductsModel::create([
-                    'sales_invoice_id' => $register_sales_invoice->id,
-                    'company_id' => Auth::user()->company_id,
-                    'product_id' => $product_details->id,
-                    'product_name' => $product_details->name,
-                    'description' => $product_details->description,
-                    'brand' => $product_details->brand,
-                    'quantity' => $quantity,
-                    'unit' => $product_details->unit,
-                    'price' => $rate,
-                    'discount' => $discount_amount,
-                    'purchase_invoice_products_id' => $product['purchase_invoice_products_id'],
-                    'rate' => $product['rate'],
-                    'hsn' => $product_details->hsn,
-                    'tax' => $product_details->tax,
-                    'cgst' => $cgst,
-                    'sgst' => $sgst,
-                    'igst' => $igst,
-                    'godown' => $product['godown'],
-                ]);
+        //         // Create a record for the product
+        //         SalesInvoiceProductsModel::create([
+        //             'sales_invoice_id' => $register_sales_invoice->id,
+        //             'company_id' => Auth::user()->company_id,
+        //             'product_id' => $product_details->id,
+        //             'product_name' => $product_details->name,
+        //             'description' => $product_details->description,
+        //             'brand' => $product_details->brand,
+        //             'quantity' => $quantity,
+        //             'unit' => $product_details->unit,
+        //             'price' => $rate,
+        //             'discount' => $discount_amount,
+        //             'purchase_invoice_products_id' => $product['purchase_invoice_products_id'],
+        //             'rate' => $product['rate'],
+        //             'hsn' => $product_details->hsn,
+        //             'tax' => $product_details->tax,
+        //             'cgst' => $cgst,
+        //             'sgst' => $sgst,
+        //             'igst' => $igst,
+        //             'godown' => $product['godown'],
+        //         ]);
 
-            }
-            else{
-                return response()->json(['code' => 404,'success' => false, 'message' => 'Sorry, Products not found'], 404);
-            }
-        }
+        //     }
+        //     else{
+        //         return response()->json(['code' => 404,'success' => false, 'message' => 'Sorry, Products not found'], 404);
+        //     }
+        // }
 
         // Update the total amount and tax values in the sales invoice record
-        $register_sales_invoice->update([
-            'total' => $total_amount,
-            'cgst' => $total_cgst,
-            'sgst' => $total_sgst,
-            'igst' => $total_igst,
-        ]);
+        // $register_sales_invoice->update([
+        //     'total' => $total_amount,
+        //     'cgst' => $total_cgst,
+        //     'sgst' => $total_sgst,
+        //     'igst' => $total_igst,
+        // ]);
 
         // Process and insert addons
         $addons = $request->input('addons');
