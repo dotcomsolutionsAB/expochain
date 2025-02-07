@@ -741,6 +741,14 @@ class QuotationsController extends Controller
                     'cgst' => is_numeric($itemsData['cgst'][$index] ?? null) ? (float)$itemsData['cgst'][$index] : 0,
                     'sgst' => is_numeric($itemsData['sgst'][$index] ?? null) ? (float)$itemsData['sgst'][$index] : 0,
                     'igst' => is_numeric($itemsData['igst'][$index] ?? null) ? (float)$itemsData['igst'][$index] : 0,
+                    // Calculate the amount
+                    'amount' => (
+                        $itemsData['quantity'][$index] ?? 0
+                    ) * (
+                        ($itemsData['price'][$index] ?? 0) - (
+                            ($itemsData['discount'][$index] ?? 0) * ($itemsData['price'][$index] ?? 0) / 100
+                        )
+                    ) + ($itemsData['cgst'][$index] ?? 0) + ($itemsData['sgst'][$index] ?? 0) + ($itemsData['igst'][$index] ?? 0),
                     'created_at' => now(),
                     'updated_at' => now()
                 ];
