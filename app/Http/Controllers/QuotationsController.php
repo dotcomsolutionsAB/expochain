@@ -321,7 +321,7 @@ class QuotationsController extends Controller
                 'id' => $quotation->get_template->id,
                 'name' => $quotation->get_template->name
             ] : ['id' => null, 'name' => 'Unknown'];
-            // unset($quotation->user); // Remove user object after fetching the name
+            unset($quotation->get_template); // Remove user object after fetching the name
 
             return $quotation;
         });
