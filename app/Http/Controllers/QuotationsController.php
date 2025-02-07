@@ -743,12 +743,19 @@ class QuotationsController extends Controller
                     'igst' => is_numeric($itemsData['igst'][$index] ?? null) ? (float)$itemsData['igst'][$index] : 0,
                     // Calculate the amount
                     'amount' => (
-                        $itemsData['quantity'][$index] ?? 0
-                    ) * (
-                        ($itemsData['price'][$index] ?? 0) - (
-                            ($itemsData['discount'][$index] ?? 0) * ($itemsData['price'][$index] ?? 0) / 100
+                        (isset($itemsData['quantity'][$index]) ? (float) $itemsData['quantity'][$index] : 0.0) *
+                        (
+                            (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0) -
+                            (
+                                ((isset($itemsData['discount'][$index]) ? (float) $itemsData['discount'][$index] : 0.0) *
+                                (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0)) / 100
+                            )
                         )
-                    ) + ($itemsData['cgst'][$index] ?? 0) + ($itemsData['sgst'][$index] ?? 0) + ($itemsData['igst'][$index] ?? 0),
+                    ) + (
+                        (isset($itemsData['cgst'][$index]) ? (float) $itemsData['cgst'][$index] : 0.0) +
+                        (isset($itemsData['sgst'][$index]) ? (float) $itemsData['sgst'][$index] : 0.0) +
+                        (isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0.0)
+                    ),
                     'created_at' => now(),
                     'updated_at' => now()
                 ];
