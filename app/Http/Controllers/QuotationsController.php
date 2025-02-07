@@ -323,6 +323,24 @@ class QuotationsController extends Controller
             ] : ['id' => null, 'name' => 'Unknown'];
             unset($quotation->get_template); // Remove user object after fetching the name
 
+            // **Remove `quotation_id` from products**
+            $quotation->products->transform(function ($product) {
+                unset($product->quotation_id);
+                return $product;
+            });
+
+            // **Remove `quotation_id` from addons**
+            $quotation->addons->transform(function ($addon) {
+                unset($addon->quotation_id);
+                return $addon;
+            });
+
+            // **Remove `quotation_id` from terms**
+            $quotation->terms->transform(function ($term) {
+                unset($term->quotation_id);
+                return $term;
+            });
+
             return $quotation;
         });
 
