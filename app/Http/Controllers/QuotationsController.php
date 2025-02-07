@@ -18,6 +18,7 @@ use Illuminate\Support\Str;
 use Auth;
 use Carbon\Carbon;
 use DB;
+use NumberFormatter;
 
 class QuotationsController extends Controller
 {
@@ -211,6 +212,11 @@ class QuotationsController extends Controller
     }
 
     // fetch
+    function convertNumberToWords($num) {
+        $formatter = new NumberFormatter("en", NumberFormatter::SPELLOUT);
+        return ucfirst($formatter->format($num)) . ' Only';
+    }
+
     public function view_quotations(Request $request)
     {
         // Enable Query Logging
@@ -244,14 +250,7 @@ class QuotationsController extends Controller
                     $query->select('id', 'name');
             },
         ])
-        ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'status', 'user', 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'sales_person', 'sales_contact', 'sales_email', 'discount', 'cgst', 'sgst', 'igst', 'total', DB::raw("CONCAT(
-            TRIM(TRANSLATE(
-                to_char(total, '999G999G999G999'), 
-                '0123456789', 
-                'ZeroOneTwoThreeFourFiveSixSevenEightNine'
-            )),
-            ' Only'
-        ) as amount_in_words"), 'currency', 'template')
+        ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'status', 'user', 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'sales_person', 'sales_contact', 'sales_email', 'discount', 'cgst', 'sgst', 'igst', 'total', DB::raw('FORMAT(total, 0) AS formatted_total'), 'currency', 'template')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
