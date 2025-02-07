@@ -961,15 +961,16 @@ class QuotationsController extends Controller
             ];
         }
 
-        // **2️⃣ Insert Quotations & Fetch IDs**
-        if (!empty($quotationsBatch)) {
-            QuotationsModel::insert($quotationsBatch);
-
-            // Fetch newly inserted IDs
-            $quotationIds = QuotationsModel::whereIn('quotation_no', array_column($quotationsBatch, 'quotation_no'))
-                ->pluck('id', 'quotation_no')
-                ->toArray();
+        // **2️⃣ Batch Insert Quotations & Fetch IDs**
+        foreach (array_chunk($quotationsBatch, $batchSize) as $chunk) {
+            QuotationsModel::insert($chunk);
         }
+
+        // Fetch newly inserted IDs
+        $quotationIds = QuotationsModel::whereIn('quotation_no', array_column($quotationsBatch, 'quotation_no'))
+        ->pluck('id', 'quotation_no')
+        ->toArray();
+
 
         // **3️⃣ Insert Related Products, Addons, and Terms**
         foreach ($data as $record) {
@@ -983,9 +984,9 @@ class QuotationsController extends Controller
             $addonsData = json_decode($record['addons'] ?? '{}', true);
             $termsData = json_decode($record['Terms'] ?? '{}', true);
 
-            if (!is_array($addonsData) || !is_array($itemsData) || !is_array($termsData)) {
-                continue;
-            }
+            // if (!is_array($addonsData) || !is_array($itemsData) || !is_array($termsData)) {
+            //     continue;
+            // }
 
             foreach ($itemsData['product'] as $index => $product) {
                 $productsBatch[] = [
@@ -1037,10 +1038,21 @@ class QuotationsController extends Controller
             }
         }
 
+        // **4️⃣ Batch Insert Products, Addons, and Terms**
+        foreach (array_chunk($productsBatch, $batchSize) as $chunk) {
+            QuotationProductsModel::insert($chunk);
+        }
+        foreach (array_chunk($addonsBatch, $batchSize) as $chunk) {
+            QuotationAddonsModel::insert($chunk);
+        }
+        foreach (array_chunk($termsBatch, $batchSize) as $chunk) {
+            QuotationTermsModel::insert($chunk);
+        }
+
         // **4️⃣ Batch Insert**
-        QuotationProductsModel::insert($productsBatch);
-        QuotationAddonsModel::insert($addonsBatch);
-        QuotationTermsModel::insert($termsBatch);
+        // QuotationProductsModel::insert($productsBatch);
+        // QuotationAddonsModel::insert($addonsBatch);
+        // QuotationTermsModel::insert($termsBatch);
 
         return response()->json(['message' => 'Import successful'], 200);
     }
