@@ -234,7 +234,7 @@ class QuotationsController extends Controller
 
         // Build the query
         $query = QuotationsModel::with(['products' => function ($query) {
-            $query->select('quotation_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
+            $query->select('quotation_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount_type', 'discount', 'hsn', 'tax as cast', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'cgst', 'sgst', 'igst');
             }, 'addons' => function ($query) {
                 $query->select('quotation_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
             }, 'terms' => function ($query) {
@@ -244,7 +244,14 @@ class QuotationsController extends Controller
                     $query->select('id', 'name');
             },
         ])
-        ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'status', 'user', 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'sales_person', 'sales_contact', 'sales_email', 'discount', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template')
+        ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'status', 'user', 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'sales_person', 'sales_contact', 'sales_email', 'discount', 'cgst', 'sgst', 'igst', 'total', DB::raw("CONCAT(
+            TRIM(TRANSLATE(
+                to_char(total, '999G999G999G999'), 
+                '0123456789', 
+                'ZeroOneTwoThreeFourFiveSixSevenEightNine'
+            )),
+            ' Only'
+        ) as amount_in_words"), 'currency', 'template')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
