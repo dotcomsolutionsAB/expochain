@@ -19,6 +19,8 @@ class PurchaseInvoiceProductsModel extends Model
         'quantity',
         'unit',
         'price',
+        'returned',
+        'discount_type',
         'discount',
         'sold',
         'hsn',

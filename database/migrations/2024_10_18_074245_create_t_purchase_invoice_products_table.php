@@ -23,6 +23,8 @@ return new class extends Migration
             $table->integer('quantity');
             $table->string('unit');
             $table->float('price');
+            $table->string('returned')->default('0');
+            $table->enum('discount_type', ['percentage', 'value']);
             $table->float('discount');
             $table->integer('sold');
             $table->string('hsn');

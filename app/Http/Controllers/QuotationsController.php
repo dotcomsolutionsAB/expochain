@@ -43,6 +43,7 @@ class QuotationsController extends Controller
             'products.*.quantity' => 'required|numeric|min:1',
             'products.*.unit' => 'required|string|max:50',
             'products.*.price' => 'required|numeric|min:0',
+            'products.*.amount' => 'required|numeric|min:0',
             'products.*.delivery' => 'nullable|string|max:255',
             'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.discount' => 'required|numeric|min:0',
@@ -74,7 +75,7 @@ class QuotationsController extends Controller
         // Handle quotation number logic
         $counterController = new CounterController();
         $sendRequest = Request::create('/counter', 'GET', [
-            'name' => 'Quotation Counter',
+            'name' => 'Quotation',
             'company_id' => Auth::user()->company_id,
         ]);
 
@@ -160,6 +161,7 @@ class QuotationsController extends Controller
                 'quantity' => $product['quantity'],
                 'unit' => $product['unit'],
                 'price' => $product['price'],
+                'amount' => $product['amount'],
                 'delivery' => $product['delivery'],
                 'discount_type' => $product['discount_type'],
                 'discount' => $product['discount'],
@@ -366,6 +368,7 @@ class QuotationsController extends Controller
             'products.*.quantity' => 'required|integer',
             'products.*.unit' => 'required|string',
             'products.*.price' => 'required|numeric',
+            'products.*.amount' => 'required|numeric',
             'products.*.delivery' => 'nullable|string|max:255',
             'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.discount' => 'nullable|numeric',
@@ -437,6 +440,7 @@ class QuotationsController extends Controller
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
+                    'amount' => $productData['amount'],
                     'delivery' => $productData['delivery'],
                     'discount_type' => $productData['discount_type'],
                     'discount' => $productData['discount'],
