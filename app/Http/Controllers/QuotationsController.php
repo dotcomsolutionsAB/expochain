@@ -297,6 +297,10 @@ class QuotationsController extends Controller
 
         // Transform Data
         $get_quotations->transform(function ($quotation) {
+
+            // Convert total to words
+            $quotation->amount_in_words = convertNumberToWords($quotation->total);
+
             // Capitalize the first letter of status
             $quotation->status = ucfirst($quotation->status);
 
