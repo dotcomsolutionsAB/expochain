@@ -18,58 +18,171 @@ class PurchaseOrderController extends Controller
 {
     //
     // create
+    public function add_purchase_order(Request $request)
+    {
+        $request->validate([
+            'supplier_id' => 'required|integer',
+            'name' => 'required|string',
+            'address_line_1' => 'required|string',
+            'address_line_2' => 'nullable|string',
+            'city' => 'required|string',
+            'pincode' => 'required|string',
+            'state' => 'required|string',
+            'country' => 'required|string',
+            'purchase_order_no' => 'required|string',
+            'purchase_order_date' => 'required|date',
+            'cgst' => 'required|numeric',
+            'sgst' => 'required|numeric',
+            'igst' => 'required|numeric',
+            'total' => 'required|numeric',
+            'currency' => 'required|string',
+            'template' => 'required|integer',
+            'status' => 'required|integer',
+            'products' => 'required|array', // Validating array of products
+            'products.*.product_id' => 'required|integer',
+            'products.*.product_name' => 'required|string',
+            'products.*.description' => 'nullable|string',
+            'products.*.brand' => 'required|string',
+            'products.*.quantity' => 'required|integer',
+            'products.*.unit' => 'required|string',
+            'products.*.price' => 'required|numeric',
+            'products.*.discount_type' => 'required|in:percentage,value',
+            'products.*.discount' => 'nullable|numeric',
+            'products.*.hsn' => 'required|string',
+            'products.*.tax' => 'required|numeric',
+            'products.*.cgst' => 'required|numeric',
+            'products.*.sgst' => 'required|numeric',
+            'products.*.igst' => 'required|numeric',
+            'products.*.godown' => 'required|integer',
+        ]);
+        
+        // Handle quotation number logic
+        $counterController = new CounterController();
+        $sendRequest = Request::create('/counter', 'GET', [
+            'name' => 'Purchase Order',
+            'company_id' => Auth::user()->company_id,
+        ]);
+
+        $response = $counterController->view_counter($sendRequest);
+        $decodedResponse = json_decode($response->getContent(), true);
+
+        if ($decodedResponse['code'] === 200) {
+            $data = $decodedResponse['data'];
+            $get_customer_type = $data[0]['type'];
+        }
+
+        if ($get_customer_type == "auto") {
+            $purchase_order_no = $decodedResponse['data'][0]['prefix'] .
+                str_pad($decodedResponse['data'][0]['next_number'], 3, '0', STR_PAD_LEFT) .
+                $decodedResponse['data'][0]['postfix'];
+        } else {
+            $purchase_order_no = $request->input('purchase_order_no');
+        }
+
+        $exists = PurchaseOrderModel::where('company_id', Auth::user()->company_id)
+            ->where('purchase_order_no', $purchase_order_no)
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'error' => 'The combination of company_id and purchase_order_no must be unique.',
+            ], 422);
+        }
+
+        $register_purchase_order = PurchaseOrderModel::create([
+            'supplier_id' => $request->input('supplier_id'),
+            'company_id' => Auth::user()->company_id,
+            'name' => $request->input('name'),
+            'address_line_1' => $request->input('address_line_1'),
+            'address_line_2' => $request->input('address_line_2'),
+            'city' => $request->input('city'),
+            'pincode' => $request->input('pincode'),
+            'state' => $request->input('state'),
+            'country' => $request->input('country'),
+            'purchase_order_no' => $purchase_order_no,
+            'purchase_order_date' => $request->input('purchase_order_date'),
+            'cgst' => $request->input('cgst'),
+            'sgst' => $request->input('sgst'),
+            'igst' => $request->input('igst'),
+            'total' => $request->input('total'),
+            'currency' => $request->input('currency'),
+            'template' => $request->input('template'),
+            'status' => $request->input('status'),
+        
+        ]);
+
+        $products = $request->input('products');
+
+        // Iterate over the products array and insert each contact
+        foreach ($products as $product) 
+        {
+            PurchaseOrderProductsModel::create([
+                'purchase_order_number' => $register_purchase_order['id'],
+                'product_id' => $product['product_id'],
+                'company_id' => Auth::user()->company_id,
+                'product_name' => $product['product_name'],
+                'description' => $product['description'],
+                'brand' => $product['brand'],
+                'quantity' => $product['quantity'],
+                'brand' => $product['brand'],
+                'unit' => $product['unit'],
+                'price' => $product['price'],
+                'discount_type' => $product['discount_type'],
+                'discount' => $product['discount'],
+                'hsn' => $product['hsn'],
+                'tax' => $product['tax'],
+                'cgst' => $product['cgst'],
+                'sgst' => $product['sgst'],
+                'igst' => $product['igst'],
+            ]);
+        }
+
+        unset($register_purchase_order['id'], $register_purchase_order['created_at'], $register_purchase_order['updated_at']);
+    
+        return isset($register_purchase_order) && $register_purchase_order !== null
+        ? response()->json(['Purchase Order registered successfully!', 'data' => $register_purchase_order], 201)
+        : response()->json(['Failed to register Purchase Order record'], 400);
+    }
+
     // public function add_purchase_order(Request $request)
     // {
     //     $request->validate([
     //         'supplier_id' => 'required|integer',
-    //         'name' => 'required|string',
-    //         'address_line_1' => 'required|string',
-    //         'address_line_2' => 'nullable|string',
-    //         'city' => 'required|string',
-    //         'pincode' => 'required|string',
-    //         'state' => 'required|string',
-    //         'country' => 'required|string',
     //         'purchase_order_no' => 'required|string',
     //         'purchase_order_date' => 'required|date',
-    //         'cgst' => 'required|numeric',
-    //         'sgst' => 'required|numeric',
-    //         'igst' => 'required|numeric',
     //         'currency' => 'required|string',
     //         'template' => 'required|integer',
     //         'status' => 'required|integer',
     //         'products' => 'required|array', // Validating array of products
     //         'products.*.product_id' => 'required|integer',
-    //         'products.*.product_name' => 'required|string',
-    //         'products.*.description' => 'nullable|string',
-    //         'products.*.brand' => 'required|string',
     //         'products.*.quantity' => 'required|integer',
-    //         'products.*.unit' => 'required|string',
-    //         'products.*.price' => 'required|numeric',
-    //         'products.*.discount' => 'nullable|numeric',
-    //         'products.*.hsn' => 'required|string',
-    //         'products.*.tax' => 'required|numeric',
-    //         'products.*.cgst' => 'required|numeric',
-    //         'products.*.sgst' => 'required|numeric',
-    //         'products.*.igst' => 'required|numeric',
     //         'products.*.godown' => 'required|integer',
     //     ]);
+
+    //     // Fetch supplier details using supplier_id
+    //     $supplier = SuppliersModel::find($request->input('supplier_id'));
+    //     if (!$supplier) {
+    //         return response()->json(['message' => 'Supplier not found'], 404);
+    //     }
     
+    //     $currentDate = Carbon::now()->toDateString();
     
     //     $register_purchase_order = PurchaseOrderModel::create([
     //         'supplier_id' => $request->input('supplier_id'),
     //         'company_id' => Auth::user()->company_id,
-    //         'name' => $request->input('name'),
-    //         'address_line_1' => $request->input('address_line_1'),
-    //         'address_line_2' => $request->input('address_line_2'),
-    //         'city' => $request->input('city'),
-    //         'pincode' => $request->input('pincode'),
-    //         'state' => $request->input('state'),
-    //         'country' => $request->input('country'),
+    //         'name' => $supplier->name,
+    //         'address_line_1' => $supplier->address_line_1,
+    //         'address_line_2' => $supplier->address_line_2,
+    //         'city' => $supplier->city,
+    //         'pincode' => $supplier->pincode,
+    //         'state' => $supplier->state,
+    //         'country' => $supplier->country,
     //         'purchase_order_no' => $request->input('purchase_order_no'),
-    //         'purchase_order_date' => $request->input('purchase_order_date'),
-    //         'cgst' => $request->input('cgst'),
-    //         'sgst' => $request->input('sgst'),
-    //         'igst' => $request->input('igst'),
+    //         'purchase_order_date' => $currentDate,
+    //         'cgst' => 0,
+    //         'sgst' => 0,
+    //         'igst' => 0,
+    //         'total' => 0,
     //         'currency' => $request->input('currency'),
     //         'template' => $request->input('template'),
     //         'status' => $request->input('status'),
@@ -77,191 +190,100 @@ class PurchaseOrderController extends Controller
     //     ]);
         
     //     $products = $request->input('products');
+    //     $total_amount = 0;
+    //     $total_cgst = 0;
+    //     $total_sgst = 0;
+    //     $total_igst = 0;
+    //     $total_discount = 0;
 
     //     // Iterate over the products array and insert each contact
     //     foreach ($products as $product) 
     //     {
-    //         PurchaseOrderProductsModel::create([
-    //             'purchase_order_number' => $register_purchase_order['id'],
-    //             'product_id' => $product['product_id'],
-    //             'company_id' => Auth::user()->company_id,
-    //             'product_name' => $product['product_name'],
-    //             'description' => $product['description'],
-    //             'brand' => $product['brand'],
-    //             'quantity' => $product['quantity'],
-    //             'brand' => $product['brand'],
-    //             'unit' => $product['unit'],
-    //             'price' => $product['price'],
-    //             'discount' => $product['discount'],
-    //             'hsn' => $product['hsn'],
-    //             'tax' => $product['tax'],
-    //             'cgst' => $product['cgst'],
-    //             'sgst' => $product['sgst'],
-    //             'igst' => $product['igst'],
-    //         ]);
+    //         $product_details = ProductsModel::where('id', $product['product_id'])
+    //                                         ->where('company_id', Auth::user()->company_id)
+    //                                         ->first();
+            
+    //         if ($product_details) {
+    //             $quantity = $product['quantity'];
+    //             $rate = $product_details->sale_price;
+    //             $tax_rate = $product_details->tax;
+
+    //            // Calculate the discount based on category or sub-category
+    //            $sub_category_discount = DiscountModel::select('discount')
+    //                                                 ->where('client', $request->input('supplier_id'))
+    //                                                 ->where('sub_category', $product_details->sub_category)
+    //                                                 ->first();
+
+    //             $category_discount = DiscountModel::select('discount')
+    //                                                 ->where('client', $request->input('supplier_id'))
+    //                                                 ->where('category', $product_details->category)
+    //                                                 ->first();
+
+    //             $discount_rate = $sub_category_discount->discount ?? $category_discount->discount ?? 0;
+    //             $discount_amount = $rate * $quantity * ($discount_rate / 100);
+    //             $total_discount += $discount_amount;
+
+    //             // Calculate the total for the product
+    //             $product_total = $rate * $quantity - $discount_amount;
+    //             $tax_amount = $product_total * ($tax_rate / 100);
+
+    //             // Determine the tax distribution based on the client's state
+    //             if (strtolower($supplier->state) === 'west bengal') {
+    //                 $cgst = $tax_amount / 2;
+    //                 $sgst = $tax_amount / 2;
+    //                 $igst = 0;
+    //             } else {
+    //                 $cgst = 0;
+    //                 $sgst = 0;
+    //                 $igst = $tax_amount;
+    //             }
+
+    //             // Accumulate totals
+    //             $total_amount += $product_total;
+    //             $total_cgst += $cgst;
+    //             $total_sgst += $sgst;
+    //             $total_igst += $igst;
+
+    //             PurchaseOrderProductsModel::create([
+    //                 'purchase_order_number' => $register_purchase_order['id'],
+    //                 'product_id' => $product['product_id'],
+    //                 'company_id' => Auth::user()->company_id,
+    //                 'product_name' => $product_details->name,
+    //                 'description' => $product_details->description,
+    //                 'brand' => $product_details->brand,
+    //                 'quantity' => $product['quantity'],
+    //                 'unit' => $product_details->unit,
+    //                 'price' => $rate,
+    //                 'discount' => $discount_amount,
+    //                 'hsn' => $product_details->hsn,
+    //                 'tax' => $product_details->tax,
+    //                 'cgst' => $cgst,
+    //                 'sgst' => $sgst,
+    //                 'igst' => $igst,
+    //             ]);
+    //         }
+
+    //         else{
+    //             return response()->json(['message' => 'Sorry, Products not found'], 404);
+    //         }
     //     }
+
+    //     // Update the total amount and tax values in the sales invoice record
+    //     $register_purchase_order->update([
+    //         'total' => $total_amount,
+    //         'cgst' => $total_cgst,
+    //         'sgst' => $total_sgst,
+    //         'igst' => $total_igst,
+    //     ]);
 
     //     unset($register_purchase_order['id'], $register_purchase_order['created_at'], $register_purchase_order['updated_at']);
     
     //     return isset($register_purchase_order) && $register_purchase_order !== null
-    //     ? response()->json(['Purchase Order registered successfully!', 'data' => $register_purchase_order], 201)
-    //     : response()->json(['Failed to register Purchase Order record'], 400);
+    //     ? response()->json(['code' => 201,'success' => true, 'Purchase Order registered successfully!', 'data' => $register_purchase_order, 'total_cgst' => $total_cgst, 'total_sgst' => $total_sgst, 'total_igst' => $total_igst, 'total_discount' => $total_discount, 'total_amount' => $total_amount], 201)
+    //     : response()->json(['code' => 400,'success' => false, 'Failed to register Purchase Order record'], 400);
     // }
-
-    public function add_purchase_order(Request $request)
-    {
-        $request->validate([
-            'supplier_id' => 'required|integer',
-            'purchase_order_no' => 'required|string',
-            'purchase_order_date' => 'required|date',
-            'currency' => 'required|string',
-            'template' => 'required|integer',
-            'status' => 'required|integer',
-            'products' => 'required|array', // Validating array of products
-            'products.*.product_id' => 'required|integer',
-            'products.*.quantity' => 'required|integer',
-            'products.*.godown' => 'required|integer',
-        ]);
-
-        // Fetch supplier details using supplier_id
-        $supplier = SuppliersModel::find($request->input('supplier_id'));
-        if (!$supplier) {
-            return response()->json(['message' => 'Supplier not found'], 404);
-        }
-    
-        $currentDate = Carbon::now()->toDateString();
-    
-        $register_purchase_order = PurchaseOrderModel::create([
-            'supplier_id' => $request->input('supplier_id'),
-            'company_id' => Auth::user()->company_id,
-            'name' => $supplier->name,
-            'address_line_1' => $supplier->address_line_1,
-            'address_line_2' => $supplier->address_line_2,
-            'city' => $supplier->city,
-            'pincode' => $supplier->pincode,
-            'state' => $supplier->state,
-            'country' => $supplier->country,
-            'purchase_order_no' => $request->input('purchase_order_no'),
-            'purchase_order_date' => $currentDate,
-            'cgst' => 0,
-            'sgst' => 0,
-            'igst' => 0,
-            'total' => 0,
-            'currency' => $request->input('currency'),
-            'template' => $request->input('template'),
-            'status' => $request->input('status'),
-        
-        ]);
-        
-        $products = $request->input('products');
-        $total_amount = 0;
-        $total_cgst = 0;
-        $total_sgst = 0;
-        $total_igst = 0;
-        $total_discount = 0;
-
-        // Iterate over the products array and insert each contact
-        foreach ($products as $product) 
-        {
-            $product_details = ProductsModel::where('id', $product['product_id'])
-                                            ->where('company_id', Auth::user()->company_id)
-                                            ->first();
-            
-            if ($product_details) {
-                $quantity = $product['quantity'];
-                $rate = $product_details->sale_price;
-                $tax_rate = $product_details->tax;
-
-               // Calculate the discount based on category or sub-category
-               $sub_category_discount = DiscountModel::select('discount')
-                                                    ->where('client', $request->input('supplier_id'))
-                                                    ->where('sub_category', $product_details->sub_category)
-                                                    ->first();
-
-                $category_discount = DiscountModel::select('discount')
-                                                    ->where('client', $request->input('supplier_id'))
-                                                    ->where('category', $product_details->category)
-                                                    ->first();
-
-                $discount_rate = $sub_category_discount->discount ?? $category_discount->discount ?? 0;
-                $discount_amount = $rate * $quantity * ($discount_rate / 100);
-                $total_discount += $discount_amount;
-
-                // Calculate the total for the product
-                $product_total = $rate * $quantity - $discount_amount;
-                $tax_amount = $product_total * ($tax_rate / 100);
-
-                // Determine the tax distribution based on the client's state
-                if (strtolower($supplier->state) === 'west bengal') {
-                    $cgst = $tax_amount / 2;
-                    $sgst = $tax_amount / 2;
-                    $igst = 0;
-                } else {
-                    $cgst = 0;
-                    $sgst = 0;
-                    $igst = $tax_amount;
-                }
-
-                // Accumulate totals
-                $total_amount += $product_total;
-                $total_cgst += $cgst;
-                $total_sgst += $sgst;
-                $total_igst += $igst;
-
-                PurchaseOrderProductsModel::create([
-                    'purchase_order_number' => $register_purchase_order['id'],
-                    'product_id' => $product['product_id'],
-                    'company_id' => Auth::user()->company_id,
-                    'product_name' => $product_details->name,
-                    'description' => $product_details->description,
-                    'brand' => $product_details->brand,
-                    'quantity' => $product['quantity'],
-                    'unit' => $product_details->unit,
-                    'price' => $rate,
-                    'discount' => $discount_amount,
-                    'hsn' => $product_details->hsn,
-                    'tax' => $product_details->tax,
-                    'cgst' => $cgst,
-                    'sgst' => $sgst,
-                    'igst' => $igst,
-                ]);
-            }
-
-            else{
-                return response()->json(['message' => 'Sorry, Products not found'], 404);
-            }
-        }
-
-        // Update the total amount and tax values in the sales invoice record
-        $register_purchase_order->update([
-            'total' => $total_amount,
-            'cgst' => $total_cgst,
-            'sgst' => $total_sgst,
-            'igst' => $total_igst,
-        ]);
-
-        unset($register_purchase_order['id'], $register_purchase_order['created_at'], $register_purchase_order['updated_at']);
-    
-        return isset($register_purchase_order) && $register_purchase_order !== null
-        ? response()->json(['code' => 201,'success' => true, 'Purchase Order registered successfully!', 'data' => $register_purchase_order, 'total_cgst' => $total_cgst, 'total_sgst' => $total_sgst, 'total_igst' => $total_igst, 'total_discount' => $total_discount, 'total_amount' => $total_amount], 201)
-        : response()->json(['code' => 400,'success' => false, 'Failed to register Purchase Order record'], 400);
-    }
 
     // view
-    // public function view_purchase_order()
-    // {
-    //     $get_purchase_orders = PurchaseOrderModel::with(['products' => function ($query) {
-    //         $query->select('purchase_order_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
-    //     }])
-    //     ->select('id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'cgst', 'sgst', 'igst', 'currency', 'template', 'status')
-    //     ->where('company_id',Auth::user()->company_id)
-    //     ->get();
-
-    //     return isset($get_purchase_orders) && $get_purchase_orders->isNotEmpty()
-    //         ? response()->json(['Purchase Orders fetched successfully!', 'data' => $get_purchase_orders], 200)
-    //         : response()->json(['Failed to fetch Purchase Order data'], 404);
-    // }
-
     public function view_purchase_order(Request $request)
     {
         // Get filter inputs
@@ -274,7 +296,7 @@ class PurchaseOrderController extends Controller
 
         // Build the query
         $query = PurchaseOrderModel::with(['products' => function ($query) {
-            $query->select('purchase_order_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
+            $query->select('purchase_order_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'received', 'short_closed', 'discount_type', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
         }])
         ->select('id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'cgst', 'sgst', 'igst', 'currency', 'template', 'status')
         ->where('company_id', Auth::user()->company_id);
@@ -344,6 +366,7 @@ class PurchaseOrderController extends Controller
             'products.*.quantity' => 'required|integer',
             'products.*.unit' => 'required|string',
             'products.*.price' => 'required|numeric',
+            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.discount' => 'nullable|numeric',
             'products.*.hsn' => 'required|string',
             'products.*.tax' => 'required|numeric',
@@ -392,6 +415,7 @@ class PurchaseOrderController extends Controller
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
+                    'discount_type' => $productData['discount_type'],
                     'discount' => $productData['discount'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
@@ -411,6 +435,7 @@ class PurchaseOrderController extends Controller
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
+                    'discount_type' => $productData['discount_type'],
                     'discount' => $productData['discount'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
