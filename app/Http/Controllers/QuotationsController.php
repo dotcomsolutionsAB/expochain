@@ -212,7 +212,7 @@ class QuotationsController extends Controller
     }
 
     // fetch
-    function convertNumberToWords($num) {
+    private function convertNumberToWords($num) {
         $formatter = new NumberFormatter("en", NumberFormatter::SPELLOUT);
         return ucfirst($formatter->format($num)) . ' Only';
     }
@@ -299,7 +299,7 @@ class QuotationsController extends Controller
         $get_quotations->transform(function ($quotation) {
 
             // Convert total to words
-            $quotation->amount_in_words = convertNumberToWords($quotation->total);
+            $quotation->amount_in_words = $this->convertNumberToWords($quotation->total);
 
             // Capitalize the first letter of status
             $quotation->status = ucfirst($quotation->status);
