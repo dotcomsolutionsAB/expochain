@@ -242,7 +242,7 @@ class QuotationsController extends Controller
 
         // Build the query
         $query = QuotationsModel::with(['products' => function ($query) {
-            $query->select('product_id', 'product_name', 'description', 'quantity', 'amount', 'unit', 'price', 'delivery', 'discount_type', 'discount', 'hsn', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'cgst', 'sgst', 'igst','attachment');
+            $query->select('quotation_id', 'product_id', 'product_name', 'description', 'quantity', 'amount', 'unit', 'price', 'delivery', 'discount_type', 'discount', 'hsn', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'cgst', 'sgst', 'igst','attachment');
             }, 'addons' => function ($query) {
                 $query->select('quotation_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
             }, 'terms' => function ($query) {
