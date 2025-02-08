@@ -45,4 +45,9 @@ class SalesInvoiceModel extends Model
         return $this->hasMany(SalesInvoiceAddonsModel::class, 'sales_invoice_id');
     }
 
+    public function get_user()
+    {
+        return $this->belongsTo(User::class, 'user', 'id'); 
+    }
+
 }

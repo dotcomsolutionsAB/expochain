@@ -43,4 +43,9 @@ class SalesOrderModel extends Model
         return $this->hasMany(SalesOrderAddonsModel::class, 'sales_order_id');
     }
 
+    public function get_user()
+    {
+        return $this->belongsTo(User::class, 'user', 'id'); 
+    }
+
 }
