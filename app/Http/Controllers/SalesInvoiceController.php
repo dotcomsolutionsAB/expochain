@@ -697,7 +697,7 @@ class SalesInvoiceController extends Controller
                     'sales_invoice_no' => 'required|integer',
                     'sales_invoice_date' => 'required|date',
                     'sales_order_no' => 'required|integer',
-                    'quotation_no' => 'required|integer',
+                    // 'quotation_no' => 'required|integer',
                     'cgst' => 'required|numeric',
                     'sgst' => 'required|numeric',
                     'igst' => 'required|numeric',
