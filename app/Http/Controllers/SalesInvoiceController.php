@@ -878,6 +878,7 @@ class SalesInvoiceController extends Controller
                     'pincode' => $client->pincode ?? null,
                     'state' => $client->state ?? null,
                     'country' => $client->country ?? null,
+                    'user' => Auth::user()->id,
                     'sales_invoice_no' => !empty($record['si_no']) ? (int) $record['si_no'] : 0,
                     'sales_invoice_date' => $record['so_date'] ?? now(),
                     'sales_order_no' => !empty($record['so_no']) ? (int) $record['so_no'] : 0,
