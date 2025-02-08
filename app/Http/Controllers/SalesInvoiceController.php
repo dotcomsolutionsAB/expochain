@@ -391,6 +391,7 @@ class SalesInvoiceController extends Controller
         // Transform Data
         $get_sales_invoices->transform(function ($invoice) {
             // Convert user ID into an object with `id` and `name`
+            dd($invoice);
             $invoice->user = isset($invoice->get_user) ? [
                 'id' => $invoice->get_user->id,
                 'name' => $invoice->get_user->name
