@@ -235,6 +235,8 @@ class QuotationsController extends Controller
         $dateTo = $request->input('date_to');
         $enquiryNo = $request->input('enquiry_no');
         $enquiryDate = $request->input('enquiry_date');
+        $user = $request->input('user');
+        $status = $request->input('status');
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
 
@@ -256,7 +258,7 @@ class QuotationsController extends Controller
             $query->select('id', 'name');
             }
         ])
-        ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'status', 'user', 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'sales_person', 'sales_contact', 'sales_email', 'discount', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template')
+        ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'status', 'user', 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'sales_person', 'sales_contact', 'sales_email', 'discount', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'contact_person')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -288,6 +290,13 @@ class QuotationsController extends Controller
             $query->whereDate('quotation_date', '>=', $dateFrom);
         } elseif ($dateTo) {
             $query->whereDate('quotation_date', '<=', $dateTo);
+        }
+
+        if ($user) {
+            $query->whereDate('user', $user);
+        }
+        if ($status) {
+            $query->whereDate('status', $status);
         }
 
         // Apply limit and offset
