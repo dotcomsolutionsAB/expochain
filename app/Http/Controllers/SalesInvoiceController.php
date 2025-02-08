@@ -129,6 +129,7 @@ class SalesInvoiceController extends Controller
             'pincode' => $client_address_record->pincode,
             'state' => $client_address_record->state,
             'country' => $client_address_record->country,
+            'user' => Auth::user()->id,
             'sales_invoice_no' => $request->input('sales_invoice_no'),
             'sales_invoice_date' => $currentDate,
             'sales_order_no' => $request->input('sales_order_no'),
@@ -319,6 +320,7 @@ class SalesInvoiceController extends Controller
         // $status = $request->input('date_to');
         // $user = $request->input('date_from');
         $dateTo = $request->input('date_to');
+        $user = $request->input('user');
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
 
@@ -368,6 +370,10 @@ class SalesInvoiceController extends Controller
                 $q->where('product_name', 'LIKE', '%' . $product . '%')
                 ->orWhere('product_id', $product);
             });
+        }
+
+        if ($user) {
+            $query->where('user', $user);
         }
 
         // Apply limit and offset
@@ -457,6 +463,7 @@ class SalesInvoiceController extends Controller
             'pincode' => $request->input('pincode'),
             'state' => $request->input('state'),
             'country' => $request->input('country'),
+            'user' => Auth::user()->id,
             'sales_invoice_no' => $request->input('sales_invoice_no'),
             'sales_invoice_date' => $request->input('sales_invoice_date'),
             'sales_order_no' => $request->input('sales_order_no'),
