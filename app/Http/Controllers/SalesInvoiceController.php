@@ -808,8 +808,6 @@ class SalesInvoiceController extends Controller
 
     public function importSalesInvoices()
     {
-        dd(Auth::user());
-
         set_time_limit(1200);
 
         // Clear existing data from SalesInvoice and related tables
