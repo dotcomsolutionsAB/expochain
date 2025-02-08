@@ -339,7 +339,7 @@ class SalesInvoiceController extends Controller
                 $query->select('id', 'name');
             }
         ])
-        ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_no', 'cgst', 'sgst', 'igst', 'total','template','commission', 'cash')
+        ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'user', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_no', 'cgst', 'sgst', 'igst', 'total','template','commission', 'cash')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -391,7 +391,6 @@ class SalesInvoiceController extends Controller
         // Transform Data
         $get_sales_invoices->transform(function ($invoice) {
             // Convert user ID into an object with `id` and `name`
-            dd($invoice);
             $invoice->user = isset($invoice->get_user) ? [
                 'id' => $invoice->get_user->id,
                 'name' => $invoice->get_user->name

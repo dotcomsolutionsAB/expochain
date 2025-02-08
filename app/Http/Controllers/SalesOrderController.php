@@ -334,7 +334,7 @@ class SalesOrderController extends Controller
                 $query->select('id', 'name');
             },
         ])
-        ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'sales_order_no', 'sales_order_date', 'ref_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
+        ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'user', 'sales_order_no', 'sales_order_date', 'ref_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
