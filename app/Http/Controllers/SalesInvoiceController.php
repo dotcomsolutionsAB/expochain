@@ -808,7 +808,7 @@ class SalesInvoiceController extends Controller
 
     public function importSalesInvoices()
     {
-        dd(Auth::user()->company_id);
+        dd(Auth::user());
 
         set_time_limit(1200);
 
