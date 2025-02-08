@@ -868,6 +868,7 @@ class SalesInvoiceController extends Controller
 
                 // Prepare sales invoice data for batch insert
                 $salesInvoicesBatch[] = [
+                    'company_id' => Auth::user()->company_id,
                     'client_id' => $client->id ?? null,
                     'client_contact_id' => $clientContact->id ?? null,
                     'name' => $record['client'] ?? 'Unnamed Client',
@@ -924,6 +925,7 @@ class SalesInvoiceController extends Controller
 
                         $productsBatch[] = [
                             'sales_invoice_id' => $salesInvoiceId,
+                            'company_id' => Auth::user()->company_id,
                             'product_id' => $productModel->id,
                             'product_name' => $product,
                             'description' => $itemsData['desc'][$index] ?? '',
@@ -972,6 +974,7 @@ class SalesInvoiceController extends Controller
                     foreach ($addonsData as $name => $values) {
                         $addonsBatch[] = [
                             'sales_invoice_id' => $salesInvoiceId,
+                            'company_id' => Auth::user()->company_id,
                             'name' => $name,
                             'amount' => (float) ($values['igst'] ?? 0),
                             'tax' => 18,
