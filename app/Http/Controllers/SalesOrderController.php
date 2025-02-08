@@ -127,6 +127,7 @@ class SalesOrderController extends Controller
             'pincode' => $client_address->pincode,
             'state' => $client_address->state,
             'country' => $client_address->country,
+            'user' => Auth::user()->id,
             'sales_order_no' => $request->input('sales_order_no'),
             'sales_order_date' => $currentDate,
             'ref_no' => $request->input('ref_no'),
@@ -498,6 +499,7 @@ class SalesOrderController extends Controller
             'pincode' => $request->input('pincode'),
             'state' => $request->input('state'),
             'country' => $request->input('country'),
+            'user' => Auth::user()->id,
             'sales_order_no' => $request->input('sales_order_no'),
             'sales_order_date' => $request->input('sales_order_date'),
             'ref_no' => $request->input('ref_no'),
@@ -715,6 +717,7 @@ class SalesOrderController extends Controller
                 'pincode' => $client->pincode ?? '000000',
                 'state' => $client->state ?? 'State Name',
                 'country' => $client->country ?? 'India',
+                'user' => Auth::user()->id,
                 'sales_order_no' => $record['so_no'] ?? 'Unknown',
                 'sales_order_date' => date('Y-m-d', strtotime($record['so_date'] ?? now())), // Ensure correct format
                 'ref_no' => $record['ref_no'] ?? 0,
