@@ -652,17 +652,8 @@ class SalesInvoiceController extends Controller
                     continue;
                 }
 
-                $clientContact = ClientsContactsModel::where('customer_id', $client->customer_id)->first();
-                if (!$clientContact) {
-                    $errors[] = [
-                        'record' => $record,
-                        'error' => 'Client contact not found for customer ID: ' . $client->customer_id
-                    ];
-                    continue;
-                }
-
                 $client_address_record = ClientAddressModel::select('address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country')
-                    ->where('customer_id', $clientContact->customer_id)
+                    ->where('customer_id', $client->customer_id)
                     ->where('type', 'billing')
                     ->first();
 
