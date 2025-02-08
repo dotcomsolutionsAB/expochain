@@ -60,31 +60,8 @@ class PurchaseInvoiceController extends Controller
             'products.*.godown' => 'required|string|max:255'
         ]);     
         
-        // Handle purchse invoice number logic
-        $counterController = new CounterController();
-        $sendRequest = Request::create('/counter', 'GET', [
-            'name' => 'Purchase Invoice',
-            'company_id' => Auth::user()->company_id,
-        ]);
-
-        $response = $counterController->view_counter($sendRequest);
-        $decodedResponse = json_decode($response->getContent(), true);
-
-        if ($decodedResponse['code'] === 200) {
-            $data = $decodedResponse['data'];
-            $get_customer_type = $data[0]['type'];
-        }
-
-        if ($get_customer_type == "auto") {
-            $purchase_invoice_number = $decodedResponse['data'][0]['prefix'] .
-                str_pad($decodedResponse['data'][0]['next_number'], 3, '0', STR_PAD_LEFT) .
-                $decodedResponse['data'][0]['postfix'];
-        } else {
-            $purchase_invoice_number = $request->input('purchase_invoice_number');
-        }
-
         $exists = PurchaseInvoiceModel::where('company_id', Auth::user()->company_id)
-            ->where('purchase_invoice_number', $purchase_invoice_number)
+            ->where('purchase_invoice_number', $request->input('purchase_invoice_no'))
             ->exists();
 
         if ($exists) {
@@ -111,7 +88,7 @@ class PurchaseInvoiceController extends Controller
             'pincode' => $supplier->pincode,
             'state' => $supplier->state,
             'country' => $supplier->country,
-            'purchase_invoice_no' => $purchase_invoice_number,
+            'purchase_invoice_no' => $request->input('purchase_invoice_no'),
             'purchase_invoice_date' => $currentDate,
             'purchase_order_no' => $request->input('purchase_order_no'),
             'cgst' => $request->input('cgst'),
@@ -239,6 +216,7 @@ class PurchaseInvoiceController extends Controller
         : response()->json(['code' => 400,'success' => false, 'Failed to register Purchase Invoice record'], 400);
     }
 
+    // view
     public function view_purchase_invoice(Request $request)
     {
         // Get filter inputs
@@ -296,7 +274,7 @@ class PurchaseInvoiceController extends Controller
             ], 404);
     }
 
-
+    // update
     public function edit_purchase_invoice(Request $request, $id)
     {
         $request->validate([
@@ -338,6 +316,16 @@ class PurchaseInvoiceController extends Controller
 
         $purchaseInvoice = PurchaseInvoiceModel::where('id', $id)->first();
 
+        $exists = PurchaseInvoiceModel::where('company_id', Auth::user()->company_id)
+            ->where('purchase_invoice_number', $request->input('purchase_invoice_no'))
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'error' => 'The combination of company_id and purchase_invoice_number must be unique.',
+            ], 422);
+        }
+        
         $purchaseInvoiceUpdated = $purchaseInvoice->update([
             'supplier_id' => $request->input('supplier_id'),
             'name' => $request->input('name'),

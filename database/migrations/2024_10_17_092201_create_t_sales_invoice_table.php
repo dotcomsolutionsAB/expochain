@@ -23,10 +23,10 @@ return new class extends Migration
             $table->string('pincode');
             $table->string('state');
             $table->string('country');
-            $table->bigInteger('sales_invoice_no');
+            $table->string('sales_invoice_no');
             $table->date('sales_invoice_date');
-            $table->integer('sales_order_no');
-            $table->integer('quotation_no');
+            $table->string('sales_order_no');
+            $table->integer('ref_no');
             $table->float('cgst');
             $table->float('sgst');
             $table->float('igst');
@@ -36,6 +36,7 @@ return new class extends Migration
             $table->integer('status');
             $table->float('commission');
             $table->float('cash');
+            $table->integer('contact_person')->nullable();
             $table->timestamps();
         });
     }

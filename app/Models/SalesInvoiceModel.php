@@ -23,7 +23,6 @@ class SalesInvoiceModel extends Model
         'sales_invoice_no',
         'sales_invoice_date',
         'sales_order_no',
-        'quotation_no',
         'cgst',
         'sgst',
         'igst',

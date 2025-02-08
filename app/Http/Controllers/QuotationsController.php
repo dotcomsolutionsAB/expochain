@@ -214,6 +214,7 @@ class QuotationsController extends Controller
     }
 
     // fetch
+    // helper function
     private function convertNumberToWords($num) {
         $formatter = new NumberFormatter("en", NumberFormatter::SPELLOUT);
         return ucfirst($formatter->format($num)) . ' Only';
@@ -602,7 +603,6 @@ class QuotationsController extends Controller
     }
 
     // migrate data
-
     public function importQuotations()
     {
         // Increase memory and execution time for large imports
