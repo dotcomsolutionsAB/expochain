@@ -696,6 +696,13 @@ class SalesOrderController extends Controller
                 continue;
             }
 
+            // Mapping status integer values to their corresponding enum values
+            $statusMapping = [
+                1 => 'pending',
+                2 => 'partial',
+                3 => 'completed'
+            ];
+
             // Prepare sales order data
             $salesOrdersBatch[] = [
                 'company_id' => Auth::user()->company_id,
@@ -717,7 +724,11 @@ class SalesOrderController extends Controller
                 'total' => (float)($record['total'] ?? 0),
                 'currency' => 'INR',
                 'template' => json_decode($record['pdf_template'], true)['id'] ?? '0',
-                'status' => $record['status'] ?? 1,
+                // 'status' => $record['status'] ?? 1,
+                // Assign status based on integer mapping; default to 'pending' if not found
+                'status' => isset($record['status']) && isset($statusMapping[$record['status']]) 
+                ? $statusMapping[$record['status']] 
+                : 'pending',
                 'created_at' => now(),
                 'updated_at' => now()
             ];
