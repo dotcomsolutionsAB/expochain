@@ -248,6 +248,3 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_channel/{id}', [ChannelController::class, 'update']); // Update Channel
     Route::delete('/channel/{id}', [ChannelController::class, 'destroy']); // Delete Channel
 });
-
-Route::get('/sales_invoice_migrate', [SalesInvoiceController::class, 'importSalesInvoices']);
-
