@@ -84,6 +84,39 @@ class SalesInvoiceController extends Controller
 
         $currentDate = Carbon::now()->toDateString();
 
+        // Handle quotation number logic
+        $counterController = new CounterController();
+        $sendRequest = Request::create('/counter', 'GET', [
+            'name' => 'Sales Invoice',
+            'company_id' => Auth::user()->company_id,
+        ]);
+
+        $response = $counterController->view_counter($sendRequest);
+        $decodedResponse = json_decode($response->getContent(), true);
+
+        if ($decodedResponse['code'] === 200) {
+            $data = $decodedResponse['data'];
+            $get_customer_type = $data[0]['type'];
+        }
+
+        if ($get_customer_type == "auto") {
+            $quotation_no = $decodedResponse['data'][0]['prefix'] .
+                str_pad($decodedResponse['data'][0]['next_number'], 3, '0', STR_PAD_LEFT) .
+                $decodedResponse['data'][0]['postfix'];
+        } else {
+            $sales_invoice_no = $request->input('sales_invoice_no');
+        }
+
+        $exists = SalesInvoiceModel::where('company_id', Auth::user()->company_id)
+            ->where('sales_invoice_no', $sales_invoice_no)
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'error' => 'The combination of company_id and sales_invoice_no must be unique.',
+            ], 422);
+        }
+
         // Register the sales invoice
         $register_sales_invoice = SalesInvoiceModel::create([
             'client_id' => $request->input('client_id'),
@@ -281,8 +314,16 @@ class SalesInvoiceController extends Controller
         $salesInvoiceNo = $request->input('sales_invoice_no');
         $salesInvoiceDate = $request->input('sales_invoice_date');
         $salesOrderNo = $request->input('sales_order_no');
+        $product = $request->input('product');
+        $dateFrom = $request->input('date_from');
+        // $status = $request->input('date_to');
+        // $user = $request->input('date_from');
+        $dateTo = $request->input('date_to');
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Get total count of records in `t_sales_invoice`
+        $total_sales_invoice = SalesInvoiceModel::count(); 
 
         // Build the query
         $query = SalesInvoiceModel::with(['products' => function ($query) {
@@ -313,6 +354,22 @@ class SalesInvoiceController extends Controller
             $query->where('sales_order_no', 'LIKE', '%' . $salesOrderNo . '%');
         }
 
+        if ($dateFrom && $dateTo) {
+            $query->whereBetween('sales_invoice_date', [$dateFrom, $dateTo]);
+        } elseif ($dateFrom) {
+            $query->whereDate('sales_invoice_date', '>=', $dateFrom);
+        } elseif ($dateTo) {
+            $query->whereDate('sales_invoice_date', '<=', $dateTo);
+        }
+
+        // 🔹 **Filter by Product Name or Product ID**
+        if ($product) {
+            $query->whereHas('products', function ($q) use ($product) {
+                $q->where('product_name', 'LIKE', '%' . $product . '%')
+                ->orWhere('product_id', $product);
+            });
+        }
+
         // Apply limit and offset
         $query->offset($offset)->limit($limit);
 
@@ -327,6 +384,7 @@ class SalesInvoiceController extends Controller
                 'message' => 'Sales Invoices fetched successfully!',
                 'data' => $get_sales_invoices,
                 'count' => $get_sales_invoices->count(),
+                'total_records' => $total_sales_invoice,
             ], 200)
             : response()->json([
                 'code' => 404,
