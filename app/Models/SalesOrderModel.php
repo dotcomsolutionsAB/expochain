@@ -20,6 +20,7 @@ class SalesOrderModel extends Model
         'pincode',
         'state',
         'country',
+        'user',
         'sales_order_no',
         'sales_order_date',
         'ref_no',

@@ -20,6 +20,7 @@ class SalesInvoiceModel extends Model
         'pincode',
         'state',
         'country',
+        'user',
         'sales_invoice_no',
         'sales_invoice_date',
         'sales_order_no',
