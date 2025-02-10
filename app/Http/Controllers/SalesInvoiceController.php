@@ -1224,8 +1224,29 @@ class SalesInvoiceController extends Controller
         
             foreach ($chunk as $record) {
                 $salesInvoicesBatch[] = [
-                    'sales_invoice_no' => $record['si_no'],
+                    // 'sales_invoice_no' => $record['si_no'],
+                    // 'total' => $record['total'] ?? 0,
+                    'company_id' => Auth::user()->company_id,
+                    'client_id' => $client->id ?? null,
+                    'client_contact_id' => $clientContact->id ?? null,
+                    'name' => $record['client'] ?? 'Unnamed Client',
+                    'address_line_1' => $client->address_line_1 ?? null,
+                    'address_line_2' => $client->address_line_2 ?? null,
+                    'city' => $client->city ?? null,
+                    'pincode' => $client->pincode ?? null,
+                    'state' => $client->state ?? null,
+                    'country' => $client->country ?? null,
+                    'user' => Auth::user()->id,
+                    'sales_invoice_no' => !empty($record['si_no']) ? (int) $record['si_no'] : 0,
+                    'sales_invoice_date' => $record['so_date'] ?? now(),
+                    'sales_order_no' => !empty($record['so_no']) ? (int) $record['so_no'] : 0,
+                    'cgst' => $taxData['cgst'] ?? 0,
+                    'sgst' => $taxData['sgst'] ?? 0,
+                    'igst' => $taxData['igst'] ?? 0,
                     'total' => $record['total'] ?? 0,
+                    'template' => json_decode($record['pdf_template'], true)['id'] ?? '0',
+                    'commission' => !empty($record['commission']) ? (float) $record['commission'] : 0,
+                    'cash' => !empty($record['cash']) ? (string) $record['cash'] : '0',
                     'created_at' => now(),
                     'updated_at' => now()
                 ];
@@ -1252,9 +1273,38 @@ class SalesInvoiceController extends Controller
         
                         $productsBatch[] = [
                             'sales_invoice_id' => $salesInvoiceId,
-                            'product_name' => $product['product_name'],
-                            'quantity' => $product['quantity'] ?? 0,
-                            'price' => $product['price'] ?? 0.0,
+                            'company_id' => Auth::user()->company_id,
+                            'product_id' => $productModel->id,
+                            'product_name' => $product,
+                            'description' => $itemsData['desc'][$index] ?? '',
+                            // 'brand' => $itemsData['group'][$index] ?? '',
+                            // 'brand' => is_array($itemsData['group'] ?? '') ? json_encode($itemsData['group']) : ($itemsData['group'] ?? ''),
+                            'quantity' => $itemsData['quantity'][$index] ?? 0,
+                            'unit' => $itemsData['unit'][$index] ?? '',
+                            'price' => isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0,
+                            'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index])
+                                ? (is_numeric($itemsData['channel'][$index])
+                                    ? (float)$itemsData['channel'][$index]
+                                    : (strtolower($itemsData['channel'][$index]) === 'standard' ? 1
+                                        : (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 2
+                                            : (strtolower($itemsData['channel'][$index]) === 'cbs' ? 3 : null))))
+                                : null,
+                            'returned' => $itemsData['returned'][$index] ?? 0,
+                            'profit' => $itemsData['profit'][$index] ?? 0.0,
+                            'discount_type' => 'percentage',
+                            'discount' => (float) ($itemsData['discount'][$index] ?? 0),
+                            // 'so_no' => $itemsData['so_no'] ?? '',
+                            // 'so_no' => is_array($itemsData['so_no'] ?? '') ? json_encode($itemsData['so_no']) : ($itemsData['so_no'] ?? ''),
+                            'so_no' => isset($itemsData['so_no'][$index]) && is_array($itemsData['so_no'][$index])
+                                ? (empty(array_filter($itemsData['so_no'][$index])) ? null : implode(', ', $itemsData['so_no'][$index]))
+                                : (isset($itemsData['so_no'][$index]) ? trim($itemsData['so_no'][$index]) : null),
+                            'hsn' => $itemsData['hsn'][$index] ?? '',
+                            // 'tax' => $itemsData['tax'][$index] ?? 0,
+                            'tax' => isset($itemsData['tax'][$index]) && is_numeric($itemsData['tax'][$index]) ? (float) $itemsData['tax'][$index] : 0,
+                            'cgst' =>  isset($itemsData['cgst'][$index]) && is_numeric($itemsData['cgst'][$index]) ? (float) $itemsData['cgst'][$index] : 0,
+                            'sgst' => isset($itemsData['sgst'][$index]) && is_numeric($itemsData['sgst'][$index]) ? (float) $itemsData['sgst'][$index] : 0,
+                            'igst' => isset($itemsData['igst'][$index]) && is_numeric($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
+                            'godown' => $itemsData['place'][$index] ?? '',
                             'created_at' => now(),
                             'updated_at' => now(),
                         ];
