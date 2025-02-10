@@ -35,6 +35,15 @@ class QuotationsController extends Controller
             'enquiry_no' => 'required|string|max:255',
             'enquiry_date' => 'required|date',
             'template' => 'required|integer|exists:t_pdf_template,id',
+            'discount' => 'nullable|numeric|min:0',
+            'cgst' => 'nullable|numeric|min:0',
+            'sgst' => 'nullable|numeric|min:0',
+            'igst' => 'nullable|numeric|min:0',
+            'total' => 'required|numeric|min:0',
+            'currency' => 'required|string|max:10',
+            'contact_person' => 'required|integer|exists:users,id',
+
+            // for products
             'products' => 'required|array|min:1',
             'products.*.product_id' => 'required|integer|exists:t_products,id',
             'products.*.product_name' => 'required|string|max:255',
@@ -51,6 +60,8 @@ class QuotationsController extends Controller
             'products.*.cgst' => 'nullable|numeric|min:0',
             'products.*.sgst' => 'nullable|numeric|min:0',
             'products.*.igst' => 'nullable|numeric|min:0',
+
+            // for add-ons
             'addons' => 'nullable|array',
             'addons.*.name' => 'required|string|max:255',
             'addons.*.amount' => 'required|numeric|min:0',
@@ -59,16 +70,11 @@ class QuotationsController extends Controller
             'addons.*.cgst' => 'nullable|numeric|min:0',
             'addons.*.sgst' => 'nullable|numeric|min:0',
             'addons.*.igst' => 'nullable|numeric|min:0',
+
+            // for terms
             'terms' => 'nullable|array',
             'terms.*.name' => 'required|string|max:255',
             'terms.*.value' => 'required|string|max:255',
-            'discount' => 'nullable|numeric|min:0',
-            'cgst' => 'nullable|numeric|min:0',
-            'sgst' => 'nullable|numeric|min:0',
-            'igst' => 'nullable|numeric|min:0',
-            'total' => 'required|numeric|min:0',
-            'currency' => 'required|string|max:10',
-            'contact_person' => 'required|integer|exists:users,id'
         ]);
 
         // Handle quotation number logic
