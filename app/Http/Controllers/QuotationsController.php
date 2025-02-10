@@ -414,6 +414,8 @@ class QuotationsController extends Controller
             'total' => 'required|numeric',
             'currency' => 'required|string',
             'template' => 'required|integer|exists:t_pdf_template,id',
+
+            // for products
             'products' => 'required|array',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
@@ -430,6 +432,9 @@ class QuotationsController extends Controller
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
+            'products.*.attachment' => 'required|string',
+
+             // for addons
             'addons' => 'nullable|array',
             'addons.*.name' => 'required|string',
             'addons.*.amount' => 'required|numeric',
@@ -438,6 +443,8 @@ class QuotationsController extends Controller
             'addons.*.cgst' => 'required|numeric',
             'addons.*.sgst' => 'required|numeric',
             'addons.*.igst' => 'required|numeric',
+
+             // for terms
             'terms' => 'nullable|array',
             'terms.*.name' => 'required|string',
             'terms.*.value' => 'required|string',
