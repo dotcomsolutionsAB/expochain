@@ -1095,7 +1095,8 @@ class SalesInvoiceController extends Controller
                     'state' => $client->state ?? null,
                     'country' => $client->country ?? null,
                     'user' => Auth::user()->id,
-                    'sales_invoice_no' => !empty($record['si_no']) ? (int) $record['si_no'] : 0,
+                    // 'sales_invoice_no' => !empty($record['si_no']) ? (int) $record['si_no'] : 0,
+                    'sales_invoice_no' => !empty($record['si_no']) ? trim($record['si_no']) : null,
                     'sales_invoice_date' => $record['so_date'] ?? now(),
                     'sales_order_no' => !empty($record['so_no']) ? (int) $record['so_no'] : 0,
                     'cgst' => $taxData['cgst'] ?? 0,
@@ -1120,7 +1121,7 @@ class SalesInvoiceController extends Controller
                     ->pluck('id', 'sales_invoice_no')
                     ->toArray();
             }
-dd($insertedInvoices[$record['si_no']]);
+// dd($insertedInvoices[$record['si_no']]);
             // **Batch process products**
             foreach ($chunk as $record) {
                 $salesInvoiceId = $insertedInvoices[$record['si_no']] ?? null;
