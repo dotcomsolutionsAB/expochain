@@ -1056,177 +1056,18 @@ class SalesInvoiceController extends Controller
         $batchSize = 500; // Define batch size for optimal insertion
 
         // Chunk the data for batch processing
-        // foreach (array_chunk($data, $batchSize) as $chunk) {
-        //     $salesInvoicesBatch = [];
-        //     $productsBatch = [];
-        //     $addonsBatch = [];
-
-        //     foreach ($chunk as $record) {
-        //         // Decode JSON fields for items, tax, and addons
-        //         $itemsData = json_decode($record['items'] ?? '{}', true);
-        //         $taxData = json_decode($record['tax'] ?? '{}', true);
-        //         $addonsData = json_decode($record['addons'] ?? '{}', true);
-
-        //         // Retrieve client and client contact IDs
-        //         $client = ClientsModel::where('name', $record['client'])->first();
-        //         if (!$client) {
-        //             $errors[] = [
-        //                 'record' => $record,
-        //                 'error' => 'Client not found for the provided name: ' . $record['client']
-        //             ];
-        //             continue;
-        //         }
-
-        //         $client_address_record = ClientAddressModel::select('address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country')
-        //             ->where('customer_id', $client->customer_id)
-        //             ->where('type', 'billing')
-        //             ->first();
-
-        //         // Prepare sales invoice data for batch insert
-        //         $salesInvoicesBatch[] = [
-        //             'company_id' => Auth::user()->company_id,
-        //             'client_id' => $client->id ?? null,
-        //             'client_contact_id' => $clientContact->id ?? null,
-        //             'name' => $record['client'] ?? 'Unnamed Client',
-        //             'address_line_1' => $client->address_line_1 ?? null,
-        //             'address_line_2' => $client->address_line_2 ?? null,
-        //             'city' => $client->city ?? null,
-        //             'pincode' => $client->pincode ?? null,
-        //             'state' => $client->state ?? null,
-        //             'country' => $client->country ?? null,
-        //             'user' => Auth::user()->id,
-        //             'sales_invoice_no' => !empty($record['si_no']) ? (int) $record['si_no'] : 0,
-        //             'sales_invoice_date' => $record['so_date'] ?? now(),
-        //             'sales_order_no' => !empty($record['so_no']) ? (int) $record['so_no'] : 0,
-        //             'cgst' => $taxData['cgst'] ?? 0,
-        //             'sgst' => $taxData['sgst'] ?? 0,
-        //             'igst' => $taxData['igst'] ?? 0,
-        //             'total' => $record['total'] ?? 0,
-        //             'template' => json_decode($record['pdf_template'], true)['id'] ?? '0',
-        //             'commission' => !empty($record['commission']) ? (float) $record['commission'] : 0,
-        //             'cash' => !empty($record['cash']) ? (string) $record['cash'] : '0',
-        //             'created_at' => now(),
-        //             'updated_at' => now()
-        //         ];
-        //     }
-
-        //     // **Batch insert sales invoices**
-        //     if (!empty($salesInvoicesBatch)) {
-        //         SalesInvoiceModel::insert($salesInvoicesBatch);
-        //         $successfulInserts += count($salesInvoicesBatch);
-
-        //         // Fetch inserted invoice IDs for mapping
-        //         $insertedInvoices = SalesInvoiceModel::whereIn('sales_invoice_no', array_column($salesInvoicesBatch, 'sales_invoice_no'))
-        //             ->pluck('id', 'sales_invoice_no')
-        //             ->toArray();
-        //     }
-
-        //     // **Batch process products**
-        //     foreach ($chunk as $record) {
-        //         $salesInvoiceId = $insertedInvoices[$record['si_no']] ?? null;
-        //         if (!$salesInvoiceId) continue;
-
-        //         $itemsData = json_decode($record['items'] ?? '{}', true);
-
-        //         if ($itemsData && isset($itemsData['product']) && is_array($itemsData['product'])) {
-        //             foreach ($itemsData['product'] as $index => $product) {
-        //                 $productModel = ProductsModel::where('name', $product)->first();
-
-        //                 if (!$productModel) {
-        //                     $errors[] = [
-        //                         'record' => $itemsData,
-        //                         'error' => "Product with name '{$product}' not found."
-        //                     ];
-        //                     continue;
-        //                 }
-
-        //                 $productsBatch[] = [
-        //                     'sales_invoice_id' => $salesInvoiceId,
-        //                     'company_id' => Auth::user()->company_id,
-        //                     'product_id' => $productModel->id,
-        //                     'product_name' => $product,
-        //                     'description' => $itemsData['desc'][$index] ?? '',
-        //                     // 'brand' => $itemsData['group'][$index] ?? '',
-        //                     // 'brand' => is_array($itemsData['group'] ?? '') ? json_encode($itemsData['group']) : ($itemsData['group'] ?? ''),
-        //                     'quantity' => $itemsData['quantity'][$index] ?? 0,
-        //                     'unit' => $itemsData['unit'][$index] ?? '',
-        //                     'price' => isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0,
-        //                     'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index])
-        //                         ? (is_numeric($itemsData['channel'][$index])
-        //                             ? (float)$itemsData['channel'][$index]
-        //                             : (strtolower($itemsData['channel'][$index]) === 'standard' ? 1
-        //                                 : (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 2
-        //                                     : (strtolower($itemsData['channel'][$index]) === 'cbs' ? 3 : null))))
-        //                         : null,
-        //                     'returned' => $itemsData['returned'][$index] ?? 0,
-        //                     'profit' => $itemsData['profit'][$index] ?? 0.0,
-        //                     'discount_type' => 'percentage',
-        //                     'discount' => (float) ($itemsData['discount'][$index] ?? 0),
-        //                     // 'so_no' => $itemsData['so_no'] ?? '',
-        //                     // 'so_no' => is_array($itemsData['so_no'] ?? '') ? json_encode($itemsData['so_no']) : ($itemsData['so_no'] ?? ''),
-        //                     'so_no' => isset($itemsData['so_no'][$index]) && is_array($itemsData['so_no'][$index])
-        //                         ? (empty(array_filter($itemsData['so_no'][$index])) ? null : implode(', ', $itemsData['so_no'][$index]))
-        //                         : (isset($itemsData['so_no'][$index]) ? trim($itemsData['so_no'][$index]) : null),
-        //                     'hsn' => $itemsData['hsn'][$index] ?? '',
-        //                     // 'tax' => $itemsData['tax'][$index] ?? 0,
-        //                     'tax' => isset($itemsData['tax'][$index]) && is_numeric($itemsData['tax'][$index]) ? (float) $itemsData['tax'][$index] : 0,
-        //                     'cgst' =>  isset($itemsData['cgst'][$index]) && is_numeric($itemsData['cgst'][$index]) ? (float) $itemsData['cgst'][$index] : 0,
-        //                     'sgst' => isset($itemsData['sgst'][$index]) && is_numeric($itemsData['sgst'][$index]) ? (float) $itemsData['sgst'][$index] : 0,
-        //                     'igst' => isset($itemsData['igst'][$index]) && is_numeric($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
-        //                     'godown' => $itemsData['place'][$index] ?? '',
-        //                     'created_at' => now(),
-        //                     'updated_at' => now()
-        //                 ];
-        //             }
-        //         }
-        //     }
-
-        //     // **Batch insert products**
-        //     foreach (array_chunk($productsBatch, $batchSize) as $productChunk) {
-        //         SalesInvoiceProductsModel::insert($productChunk);
-        //     }
-
-        //     // **Batch insert addons**
-        //     foreach ($chunk as $record) {
-        //         $salesInvoiceId = $insertedInvoices[$record['si_no']] ?? null;
-        //         if (!$salesInvoiceId) continue;
-
-        //         $addonsData = json_decode($record['addons'] ?? '{}', true);
-
-        //         if ($addonsData) {
-        //             foreach ($addonsData as $name => $values) {
-        //                 $addonsBatch[] = [
-        //                     'sales_invoice_id' => $salesInvoiceId,
-        //                     'company_id' => Auth::user()->company_id,
-        //                     'name' => $name,
-        //                     'amount' => (float) ($values['igst'] ?? 0),
-        //                     'tax' => 18,
-        //                     'hsn' => $values['hsn'] ?? '',
-        //                     'cgst' => 0,
-        //                     'sgst' => 0,
-        //                     'igst' => (float) ($values['igst'] ?? 0),
-        //                     'created_at' => now(),
-        //                     'updated_at' => now()
-        //                 ];
-        //             }
-        //         }
-        //     }
-
-        //     foreach (array_chunk($addonsBatch, $batchSize) as $addonChunk) {
-        //         SalesInvoiceAddonsModel::insert($addonChunk);
-        //     }
-        // }
-
         foreach (array_chunk($data, $batchSize) as $chunk) {
             $salesInvoicesBatch = [];
             $productsBatch = [];
             $addonsBatch = [];
-        
+
             foreach ($chunk as $record) {
-
+                // Decode JSON fields for items, tax, and addons
+                $itemsData = json_decode($record['items'] ?? '{}', true);
                 $taxData = json_decode($record['tax'] ?? '{}', true);
+                $addonsData = json_decode($record['addons'] ?? '{}', true);
 
-                 // Retrieve client and client contact IDs
+                // Retrieve client and client contact IDs
                 $client = ClientsModel::where('name', $record['client'])->first();
                 if (!$client) {
                     $errors[] = [
@@ -1241,9 +1082,8 @@ class SalesInvoiceController extends Controller
                     ->where('type', 'billing')
                     ->first();
 
+                // Prepare sales invoice data for batch insert
                 $salesInvoicesBatch[] = [
-                    // 'sales_invoice_no' => $record['si_no'],
-                    // 'total' => $record['total'] ?? 0,
                     'company_id' => Auth::user()->company_id,
                     'client_id' => $client->id ?? null,
                     'client_contact_id' => $clientContact->id ?? null,
@@ -1269,27 +1109,37 @@ class SalesInvoiceController extends Controller
                     'updated_at' => now()
                 ];
             }
-        
+
+            // **Batch insert sales invoices**
             if (!empty($salesInvoicesBatch)) {
                 SalesInvoiceModel::insert($salesInvoicesBatch);
-        
+                $successfulInserts += count($salesInvoicesBatch);
+
+                // Fetch inserted invoice IDs for mapping
                 $insertedInvoices = SalesInvoiceModel::whereIn('sales_invoice_no', array_column($salesInvoicesBatch, 'sales_invoice_no'))
                     ->pluck('id', 'sales_invoice_no')
                     ->toArray();
             }
-        
-            // **Processing Products**
+dd($record['si_no']);
+            // **Batch process products**
             foreach ($chunk as $record) {
                 $salesInvoiceId = $insertedInvoices[$record['si_no']] ?? null;
                 if (!$salesInvoiceId) continue;
-        
+
                 $itemsData = json_decode($record['items'] ?? '{}', true);
-        
-                if (isset($itemsData['product']) && is_array($itemsData['product'])) {
+
+                if ($itemsData && isset($itemsData['product']) && is_array($itemsData['product'])) {
                     foreach ($itemsData['product'] as $index => $product) {
-                        if (!isset($product['product_name'])) continue;
-        
-                        dd($salesInvoiceId);
+                        $productModel = ProductsModel::where('name', $product)->first();
+
+                        if (!$productModel) {
+                            $errors[] = [
+                                'record' => $itemsData,
+                                'error' => "Product with name '{$product}' not found."
+                            ];
+                            continue;
+                        }
+
                         $productsBatch[] = [
                             'sales_invoice_id' => $salesInvoiceId,
                             'company_id' => Auth::user()->company_id,
@@ -1325,26 +1175,25 @@ class SalesInvoiceController extends Controller
                             'igst' => isset($itemsData['igst'][$index]) && is_numeric($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
                             'godown' => $itemsData['place'][$index] ?? '',
                             'created_at' => now(),
-                            'updated_at' => now(),
+                            'updated_at' => now()
                         ];
                     }
                 }
             }
-        
+
+            // **Batch insert products**
             foreach (array_chunk($productsBatch, $batchSize) as $productChunk) {
-                if (!empty($productChunk)) {
-                    SalesInvoiceProductsModel::insert($productChunk);
-                }
+                SalesInvoiceProductsModel::insert($productChunk);
             }
-        
-            // **Processing Addons**
+
+            // **Batch insert addons**
             foreach ($chunk as $record) {
                 $salesInvoiceId = $insertedInvoices[$record['si_no']] ?? null;
                 if (!$salesInvoiceId) continue;
-        
+
                 $addonsData = json_decode($record['addons'] ?? '{}', true);
-        
-                if (!empty($addonsData) && is_array($addonsData)) {
+
+                if ($addonsData) {
                     foreach ($addonsData as $name => $values) {
                         $addonsBatch[] = [
                             'sales_invoice_id' => $salesInvoiceId,
@@ -1362,14 +1211,11 @@ class SalesInvoiceController extends Controller
                     }
                 }
             }
-        
+
             foreach (array_chunk($addonsBatch, $batchSize) as $addonChunk) {
-                if (!empty($addonChunk)) {
-                    SalesInvoiceAddonsModel::insert($addonChunk);
-                }
+                SalesInvoiceAddonsModel::insert($addonChunk);
             }
         }
-        
 
         return response()->json(['message' => "Sales invoices import completed with $successfulInserts successful inserts.", 'errors' => $errors], 200);
     }
