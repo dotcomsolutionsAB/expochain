@@ -44,7 +44,7 @@ class SalesInvoiceController extends Controller
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
-            'products.*.brand' => 'nullable|string',
+            // 'products.*.brand' => 'nullable|string',
             'products.*.quantity' => 'required|integer|min:0',
             'products.*.unit' => 'required|string',
             'products.*.price' => 'required|numeric|min:0',
@@ -157,7 +157,7 @@ class SalesInvoiceController extends Controller
             'product_id' => $product['product_id'],
             'product_name' => $product['product_name'],
             'description' => $product['description'],
-            'brand' => $product['brand'],
+            // 'brand' => $product['brand'],
             'quantity' => $product['quantity'],
             'unit' => $product['unit'],
             'price' => $product['price'],
@@ -330,7 +330,7 @@ class SalesInvoiceController extends Controller
          // Build the query
         $query = SalesInvoiceModel::with([
             'products' => function ($query) {
-                $query->select('sales_invoice_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
+                $query->select('sales_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
             },
             'addons' => function ($query) {
                 $query->select('sales_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
@@ -441,7 +441,7 @@ class SalesInvoiceController extends Controller
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
-            'products.*.brand' => 'nullable|string',
+            // 'products.*.brand' => 'nullable|string',
             'products.*.quantity' => 'required|integer|min:0',
             'products.*.unit' => 'required|string',
             'products.*.price' => 'required|numeric|min:0',
@@ -512,7 +512,7 @@ class SalesInvoiceController extends Controller
                 $existingProduct->update([
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    'brand' => $productData['brand'],
+                    // 'brand' => $productData['brand'],
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
@@ -949,7 +949,7 @@ class SalesInvoiceController extends Controller
                             'product_name' => $product,
                             'description' => $itemsData['desc'][$index] ?? '',
                             // 'brand' => $itemsData['group'][$index] ?? '',
-                            'brand' => is_array($itemsData['group'] ?? '') ? json_encode($itemsData['group']) : ($itemsData['group'] ?? ''),
+                            // 'brand' => is_array($itemsData['group'] ?? '') ? json_encode($itemsData['group']) : ($itemsData['group'] ?? ''),
                             'quantity' => $itemsData['quantity'][$index] ?? 0,
                             'unit' => $itemsData['unit'][$index] ?? '',
                             'price' => isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0,
@@ -965,7 +965,10 @@ class SalesInvoiceController extends Controller
                             'discount_type' => 'percentage',
                             'discount' => (float) ($itemsData['discount'][$index] ?? 0),
                             // 'so_no' => $itemsData['so_no'] ?? '',
-                            'so_no' => is_array($itemsData['so_no'] ?? '') ? json_encode($itemsData['so_no']) : ($itemsData['so_no'] ?? ''),
+                            // 'so_no' => is_array($itemsData['so_no'] ?? '') ? json_encode($itemsData['so_no']) : ($itemsData['so_no'] ?? ''),
+                            'so_no' => isset($itemsData['so_no'][$index]) && is_array($itemsData['so_no'][$index])
+                                ? (empty(array_filter($itemsData['so_no'][$index])) ? null : implode(', ', $itemsData['so_no'][$index]))
+                                : (isset($itemsData['so_no'][$index]) ? trim($itemsData['so_no'][$index]) : null),
                             'hsn' => $itemsData['hsn'][$index] ?? '',
                             // 'tax' => $itemsData['tax'][$index] ?? 0,
                             'tax' => isset($itemsData['tax'][$index]) && is_numeric($itemsData['tax'][$index]) ? (float) $itemsData['tax'][$index] : 0,

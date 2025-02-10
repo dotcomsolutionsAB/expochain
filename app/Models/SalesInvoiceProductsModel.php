@@ -15,7 +15,7 @@ class SalesInvoiceProductsModel extends Model
         'company_id',
         'product_name',
         'description',
-        'brand',
+        // 'brand',
         'quantity',
         'unit',
         'price',
