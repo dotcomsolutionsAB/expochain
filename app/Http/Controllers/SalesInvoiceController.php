@@ -1223,6 +1223,24 @@ class SalesInvoiceController extends Controller
             $addonsBatch = [];
         
             foreach ($chunk as $record) {
+
+                $taxData = json_decode($record['tax'] ?? '{}', true);
+
+                 // Retrieve client and client contact IDs
+                $client = ClientsModel::where('name', $record['client'])->first();
+                if (!$client) {
+                    $errors[] = [
+                        'record' => $record,
+                        'error' => 'Client not found for the provided name: ' . $record['client']
+                    ];
+                    continue;
+                }
+
+                $client_address_record = ClientAddressModel::select('address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country')
+                    ->where('customer_id', $client->customer_id)
+                    ->where('type', 'billing')
+                    ->first();
+
                 $salesInvoicesBatch[] = [
                     // 'sales_invoice_no' => $record['si_no'],
                     // 'total' => $record['total'] ?? 0,
