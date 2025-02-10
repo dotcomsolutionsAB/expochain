@@ -775,11 +775,11 @@ class QuotationsController extends Controller
                     //             ? json_encode($itemsData['attachment'][$index]) 
                     //             : $itemsData['attachment'][$index]))
                     //     : null,
-    //                 'attachment' => isset($itemsData['attachment'][$index]) && trim($itemsData['attachment'][$index]) !== ''
-    // ? (is_array($itemsData['attachment'][$index]) 
-    //     ? (empty(array_filter($itemsData['attachment'][$index])) ? null : json_encode($itemsData['attachment'][$index])) 
-    //     : $itemsData['attachment'][$index]) 
-    // : null,
+                    'attachment' => isset($itemsData['attachment'][$index]) && trim($itemsData['attachment'][$index]) !== ''
+    ? (is_array($itemsData['attachment'][$index]) 
+        ? (empty(array_filter($itemsData['attachment'][$index])) ? null : json_encode($itemsData['attachment'][$index])) 
+        : $itemsData['attachment'][$index]) 
+    : null,
 
 
                     'created_at' => now(),
