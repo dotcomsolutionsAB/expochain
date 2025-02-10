@@ -34,6 +34,7 @@ class QuotationsController extends Controller
             'status' => 'nullable|in:pending,completed,rejected', // Allow status but it's optional
             'enquiry_no' => 'required|string|max:255',
             'enquiry_date' => 'required|date',
+            'sales_person' => 'required|exists:users,id',
             'template' => 'required|integer|exists:t_pdf_template,id',
             'discount' => 'nullable|numeric|min:0',
             'cgst' => 'nullable|numeric|min:0',
@@ -138,13 +139,11 @@ class QuotationsController extends Controller
             'country' => $client_address_record->country,
             'quotation_no' => $quotation_no,
             'quotation_date' => $currentDate,
+            'sales_person' => $request->input('sales_person'),
             'status' => $request->input('status', 'pending'), // Default to 'pending'
             'user' => Auth::user()->id,
             'enquiry_no' => $request->input('enquiry_no'),
             'enquiry_date' => $request->input('enquiry_date'),
-            'sales_person' => Auth::user()->name,
-            'sales_contact' => Auth::user()->mobile,
-            'sales_email' => Auth::user()->email,
             'discount' => $request->input('discount'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
@@ -262,7 +261,7 @@ class QuotationsController extends Controller
             $query->select('id', 'name');
             }
         ])
-        ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'status', 'user', 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'sales_person', 'sales_contact', 'sales_email', 'discount', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'contact_person')
+        ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'status', 'user', 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'sales_person', 'discount', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'contact_person')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -395,7 +394,7 @@ class QuotationsController extends Controller
             'quotation_date' => 'required|date',
             'enquiry_no' => 'required|string',
             'enquiry_date' => 'required|date',
-            // 'sales_person' => 'required|exists:users,id',
+            'sales_person' => 'required|exists:users,id',
             // 'sales_contact' => 'required|string',
             // 'sales_email' => 'required|string',
             'discount' => 'required|numeric',
@@ -404,7 +403,7 @@ class QuotationsController extends Controller
             'igst' => 'required|numeric',
             'total' => 'required|numeric',
             'currency' => 'required|string',
-            'template' => 'required|integer',
+            'template' => 'required|integer|exists:t_pdf_template,id',
             'products' => 'required|array',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
@@ -454,9 +453,10 @@ class QuotationsController extends Controller
             'quotation_date' => $request->input('quotation_date'),
             'enquiry_no' => $request->input('enquiry_no'),
             'enquiry_date' => $request->input('enquiry_date'),
-            'sales_person' => Auth::user()->name,
-            'sales_contact' => Auth::user()->mobile,
-            'sales_email' => Auth::user()->email,
+            'sales_person' => $request->input('sales_person'),
+            // 'sales_person' => Auth::user()->name,
+            // 'sales_contact' => Auth::user()->mobile,
+            // 'sales_email' => Auth::user()->email,
             'discount' => $request->input('discount'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
