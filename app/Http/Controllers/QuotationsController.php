@@ -761,13 +761,19 @@ class QuotationsController extends Controller
                     'cgst' => is_numeric($itemsData['cgst'][$index] ?? null) ? (float)$itemsData['cgst'][$index] : 0,
                     'sgst' => is_numeric($itemsData['sgst'][$index] ?? null) ? (float)$itemsData['sgst'][$index] : 0,
                     'igst' => is_numeric($itemsData['igst'][$index] ?? null) ? (float)$itemsData['igst'][$index] : 0,
-                    'attachment' => isset($itemsData['attachment'][$index]) && $itemsData['attachment'][$index] !== '' 
-                        ? (is_array($itemsData['attachment'][$index]) && empty(array_filter($itemsData['attachment'][$index])) 
-                            ? null 
-                            : (is_array($itemsData['attachment'][$index]) 
-                                ? json_encode($itemsData['attachment'][$index]) 
-                                : $itemsData['attachment'][$index]))
-                        : null,
+                    // 'attachment' => isset($itemsData['attachment'][$index]) && $itemsData['attachment'][$index] !== '' 
+                    //     ? (is_array($itemsData['attachment'][$index]) && empty(array_filter($itemsData['attachment'][$index])) 
+                    //         ? null 
+                    //         : (is_array($itemsData['attachment'][$index]) 
+                    //             ? json_encode($itemsData['attachment'][$index]) 
+                    //             : $itemsData['attachment'][$index]))
+                    //     : null,
+                    'attachment' => !empty($itemsData['attachment'][$index]) 
+    ? (is_array($itemsData['attachment'][$index]) 
+        ? (empty(array_filter($itemsData['attachment'][$index])) ? null : json_encode($itemsData['attachment'][$index])) 
+        : $itemsData['attachment'][$index]) 
+    : null,
+
                     'created_at' => now(),
                     'updated_at' => now()
                 ];
@@ -819,7 +825,6 @@ class QuotationsController extends Controller
 
         return response()->json(['message' => 'Import successful'], 200);
     }
-
 
     // update quotation status
     public function updateQuotationStatus(Request $request, $id)
