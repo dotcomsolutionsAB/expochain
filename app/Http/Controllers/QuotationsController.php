@@ -756,11 +756,10 @@ class QuotationsController extends Controller
                         (isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0.0)
                     ),
                     'delivery' => isset($itemsData['delivery'][$index]) 
-    ? (is_array($itemsData['delivery'][$index]) 
-        ? (empty(array_filter($itemsData['delivery'][$index])) ? null : implode(', ', $itemsData['delivery'][$index])) 
-        : trim($itemsData['delivery'][$index])) 
-    : null,
-
+                        ? (is_array($itemsData['delivery'][$index]) 
+                            ? (empty(array_filter($itemsData['delivery'][$index])) ? null : implode(', ', $itemsData['delivery'][$index])) 
+                            : trim($itemsData['delivery'][$index])) 
+                        : null,
                     'discount_type' => 'percentage',
                     'discount' => is_numeric($itemsData['discount'][$index]) ? (float)$itemsData['discount'][$index] : 0,
                     'hsn' => $itemsData['hsn'][$index] ?? null,
@@ -768,20 +767,11 @@ class QuotationsController extends Controller
                     'cgst' => is_numeric($itemsData['cgst'][$index] ?? null) ? (float)$itemsData['cgst'][$index] : 0,
                     'sgst' => is_numeric($itemsData['sgst'][$index] ?? null) ? (float)$itemsData['sgst'][$index] : 0,
                     'igst' => is_numeric($itemsData['igst'][$index] ?? null) ? (float)$itemsData['igst'][$index] : 0,
-                    // 'attachment' => isset($itemsData['attachment'][$index]) && $itemsData['attachment'][$index] !== '' 
-                    //     ? (is_array($itemsData['attachment'][$index]) && empty(array_filter($itemsData['attachment'][$index])) 
-                    //         ? null 
-                    //         : (is_array($itemsData['attachment'][$index]) 
-                    //             ? json_encode($itemsData['attachment'][$index]) 
-                    //             : $itemsData['attachment'][$index]))
-                    //     : null,
                     'attachment' => isset($itemsData['attachment'][$index]) && trim($itemsData['attachment'][$index]) !== ''
-    ? (is_array($itemsData['attachment'][$index]) 
-        ? (empty(array_filter($itemsData['attachment'][$index])) ? null : json_encode($itemsData['attachment'][$index])) 
-        : $itemsData['attachment'][$index]) 
-    : null,
-
-
+                        ? (is_array($itemsData['attachment'][$index]) 
+                            ? (empty(array_filter($itemsData['attachment'][$index])) ? null : json_encode($itemsData['attachment'][$index])) 
+                            : $itemsData['attachment'][$index]) 
+                        : null,
                     'created_at' => now(),
                     'updated_at' => now()
                 ];
