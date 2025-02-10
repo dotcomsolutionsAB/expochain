@@ -738,12 +738,6 @@ class QuotationsController extends Controller
                     'quantity' => is_numeric($itemsData['quantity'][$index]) ? (int)$itemsData['quantity'][$index] : 0,
                     'unit' => $itemsData['unit'][$index] ?? null,
                     'price' => is_numeric($itemsData['price'][$index]) ? (float)$itemsData['price'][$index] : 0,
-                    'discount' => is_numeric($itemsData['discount'][$index]) ? (float)$itemsData['discount'][$index] : 0,
-                    'hsn' => $itemsData['hsn'][$index] ?? null,
-                    'tax' => is_numeric($itemsData['tax'][$index] ?? null) ? (float)$itemsData['tax'][$index] : 0,
-                    'cgst' => is_numeric($itemsData['cgst'][$index] ?? null) ? (float)$itemsData['cgst'][$index] : 0,
-                    'sgst' => is_numeric($itemsData['sgst'][$index] ?? null) ? (float)$itemsData['sgst'][$index] : 0,
-                    'igst' => is_numeric($itemsData['igst'][$index] ?? null) ? (float)$itemsData['igst'][$index] : 0,
                     // Calculate the amount
                     'amount' => (
                         (isset($itemsData['quantity'][$index]) ? (float) $itemsData['quantity'][$index] : 0.0) *
@@ -759,6 +753,15 @@ class QuotationsController extends Controller
                         (isset($itemsData['sgst'][$index]) ? (float) $itemsData['sgst'][$index] : 0.0) +
                         (isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0.0)
                     ),
+                    'delivery' => $itemsData['delivery'] ?? null,
+                    'discount_type' => 'percentage',
+                    'discount' => is_numeric($itemsData['discount'][$index]) ? (float)$itemsData['discount'][$index] : 0,
+                    'hsn' => $itemsData['hsn'][$index] ?? null,
+                    'tax' => is_numeric($itemsData['tax'][$index] ?? null) ? (float)$itemsData['tax'][$index] : 0,
+                    'cgst' => is_numeric($itemsData['cgst'][$index] ?? null) ? (float)$itemsData['cgst'][$index] : 0,
+                    'sgst' => is_numeric($itemsData['sgst'][$index] ?? null) ? (float)$itemsData['sgst'][$index] : 0,
+                    'igst' => is_numeric($itemsData['igst'][$index] ?? null) ? (float)$itemsData['igst'][$index] : 0,
+                    'attachment' => $itemsData['attachment'][$index] ?? null,
                     'created_at' => now(),
                     'updated_at' => now()
                 ];
