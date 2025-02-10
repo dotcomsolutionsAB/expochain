@@ -1120,7 +1120,7 @@ class SalesInvoiceController extends Controller
                     ->pluck('id', 'sales_invoice_no')
                     ->toArray();
             }
-dd($record['si_no']);
+dd($insertedInvoices[$record['si_no']]);
             // **Batch process products**
             foreach ($chunk as $record) {
                 $salesInvoiceId = $insertedInvoices[$record['si_no']] ?? null;
