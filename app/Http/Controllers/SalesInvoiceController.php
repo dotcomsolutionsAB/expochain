@@ -1289,6 +1289,7 @@ class SalesInvoiceController extends Controller
                     foreach ($itemsData['product'] as $index => $product) {
                         if (!isset($product['product_name'])) continue;
         
+                        dd($salesInvoiceId);
                         $productsBatch[] = [
                             'sales_invoice_id' => $salesInvoiceId,
                             'company_id' => Auth::user()->company_id,
