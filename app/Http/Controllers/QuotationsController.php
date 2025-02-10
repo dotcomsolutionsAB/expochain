@@ -257,8 +257,11 @@ class QuotationsController extends Controller
                 'get_user' => function ($query) { // Fetch only user name
                     $query->select('id', 'name');
             },
-            'get_template' => function ($query) { // Fetch template id and name
-            $query->select('id', 'name');
+                'get_template' => function ($query) { // Fetch template id and name
+                $query->select('id', 'name');
+            },
+                'salesPerson' => function ($query) {  // New addition
+                $query->select('id', 'name');
             }
         ])
         ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'status', 'user', 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'sales_person', 'discount', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'contact_person')
@@ -328,6 +331,13 @@ class QuotationsController extends Controller
                 'name' => $quotation->get_user->name
             ] : ['id' => null, 'name' => 'Unknown'];
             unset($quotation->get_user);
+
+            // ✅ New Fix for sales_person
+            $quotation->sales_person = isset($quotation->salesPerson) ? [
+                'id' => $quotation->salesPerson->id,
+                'name' => $quotation->salesPerson->name
+            ] : ['id' => null, 'name' => 'Unknown'];
+            unset($quotation->salesPerson);
 
             // Replace template ID with template object
             $quotation->template = isset($quotation->get_template) ? [
