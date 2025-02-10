@@ -730,7 +730,7 @@ class QuotationsController extends Controller
 
             foreach ($itemsData['product'] as $index => $product) {
 
-                dd($itemsData['attachment'][$index]);
+                // dd($itemsData['attachment'][$index]);
                 $productsBatch[] = [
                     'quotation_id' => $quotationId,
                     'company_id' => Auth::user()->company_id,
