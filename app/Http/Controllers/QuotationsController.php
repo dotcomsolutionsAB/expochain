@@ -729,7 +729,7 @@ class QuotationsController extends Controller
             // }
 
             foreach ($itemsData['product'] as $index => $product) {
-                dd($itemsData['delivery'][$index]);
+                // dd($itemsData['delivery'][$index]);
                 // dd($itemsData['attachment'][$index]);
                 $productsBatch[] = [
                     'quotation_id' => $quotationId,
@@ -755,7 +755,12 @@ class QuotationsController extends Controller
                         (isset($itemsData['sgst'][$index]) ? (float) $itemsData['sgst'][$index] : 0.0) +
                         (isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0.0)
                     ),
-                    'delivery' => $itemsData['delivery'] ?? null,
+                    'delivery' => isset($itemsData['delivery'][$index]) 
+    ? (is_array($itemsData['delivery'][$index]) 
+        ? (empty(array_filter($itemsData['delivery'][$index])) ? null : implode(', ', $itemsData['delivery'][$index])) 
+        : trim($itemsData['delivery'][$index])) 
+    : null,
+
                     'discount_type' => 'percentage',
                     'discount' => is_numeric($itemsData['discount'][$index]) ? (float)$itemsData['discount'][$index] : 0,
                     'hsn' => $itemsData['hsn'][$index] ?? null,
