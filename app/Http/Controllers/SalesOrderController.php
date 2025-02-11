@@ -379,7 +379,6 @@ class SalesOrderController extends Controller
         if ($user) {
             $query->where('user', $user);
         }
-        dd($product);
         if ($product) {
             $query->whereHas('products', function ($q) use ($product) {
                 $q->where('product_name', 'LIKE', '%' . $product . '%');
