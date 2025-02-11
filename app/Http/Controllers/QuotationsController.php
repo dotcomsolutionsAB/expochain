@@ -207,7 +207,7 @@ class QuotationsController extends Controller
         //     'data' => $register_quotations,
         // ], 201);
         return isset($register_quotations) && $register_quotations !== null
-            ? response()->json(['code' => 201, 'success' => true,'Quotations registered successfully!', 'data' => $register_quotations], 201)
+            ? response()->json(['code' => 201, 'success' => true, 'message' => 'Quotations registered successfully!', 'data' => $register_quotations], 201)
             : response()->json(['code' => 400, 'success' => false,'Failed to register quotations record'], 400);
     }
 
@@ -690,12 +690,12 @@ class QuotationsController extends Controller
                 'client_id' => $client->id ?? null,
                 'client_contact_id' => $client_contact->id ?? null,
                 'name' => $record['Client'] ?? null,
-                'address_line_1' => $client->address_line_1 ?? null,
-                'address_line_2' => $client->address_line_2 ?? null,
-                'city' => $client->city ?? null,
-                'pincode' => $client->pincode ?? null,
-                'state' => $client->state ?? null,
-                'country' => $client->country ?? 'India',
+                // 'address_line_1' => $client->address_line_1 ?? null,
+                // 'address_line_2' => $client->address_line_2 ?? null,
+                // 'city' => $client->city ?? null,
+                // 'pincode' => $client->pincode ?? null,
+                // 'state' => $client->state ?? null,
+                // 'country' => $client->country ?? 'India',
                 'quotation_no' => $record['quotation_no'],
                 'quotation_date' => !empty($record['quotation_date']) 
                     ? date('Y-m-d', strtotime($record['quotation_date'])) 
