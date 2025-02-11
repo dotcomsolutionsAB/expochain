@@ -235,6 +235,7 @@ class QuotationsController extends Controller
         $enquiryDate = $request->input('enquiry_date');
         $user = $request->input('user');
         $status = $request->input('status');
+        $productIds = $request->input('product_ids'); 
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
 
@@ -259,7 +260,7 @@ class QuotationsController extends Controller
                 $query->select('id', 'name');
             }
         ])
-        ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'status', 'user', 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'sales_person', 'discount', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'contact_person')
+        ->select('id', 'client_id', 'client_contact_id', 'name', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'status', 'user', 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'sales_person', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'contact_person')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -298,6 +299,19 @@ class QuotationsController extends Controller
         }
         if ($status) {
             $query->whereDate('status', $status);
+        }
+         // ✅ **Filter by comma-separated statuses**
+        if (!empty($status)) {
+            $statusArray = explode(',', $status); // Convert CSV to array
+            $query->whereIn('status', $statusArray);
+        }
+
+        // ✅ **Filter by comma-separated product IDs**
+        if (!empty($productIds)) {
+            $productIdArray = explode(',', $productIds); // Convert CSV to array
+            $query->whereHas('products', function ($query) use ($productIdArray) {
+                $query->whereIn('product_id', $productIdArray);
+            });
         }
 
         // Apply limit and offset
