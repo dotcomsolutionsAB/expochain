@@ -319,7 +319,7 @@ class SalesOrderController extends Controller
         $dateTo = $request->input('date_to');
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
-dd($request->input('product'));
+
         // Get total count of records in `t_sales_order`
         $total_sales_order = SalesOrderModel::count(); 
 
@@ -379,6 +379,7 @@ dd($request->input('product'));
         if ($user) {
             $query->where('user', $user);
         }
+        dd($product);
         if ($product) {
             $query->whereHas('products', function ($q) use ($product) {
                 $q->where('product_name', 'LIKE', '%' . $product . '%');
