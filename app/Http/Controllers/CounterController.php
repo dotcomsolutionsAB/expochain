@@ -67,16 +67,32 @@ class CounterController extends Controller
         ->when($company_id, function ($query, $company_id) {
             $query->where('company_id', $company_id); // Apply company_id filter
         })
-        ->get();
+        ->get()
+        ->map(function ($counter) {
+            return [
+                'name' => $counter->name,
+                'type' => $counter->type,
+                'prefix' => $counter->prefix,
+                'next_number' => $counter->next_number,
+                'postfix' => $counter->postfix,
+                'counter_no' => $counter->prefix . $counter->next_number . $counter->postfix // Concatenated number
+            ];
+        });
 
+        // Return response
         return $counters->isNotEmpty()
-            ? response()->json([
-                'code' => 200,
-                'success' => true,
-                'message' => 'Counters fetched successfully!',
-                'data' => $counters->makeHidden(['id', 'created_at', 'updated_at']),
-            ])
-            : response()->json(['code' => 200, 'success' => false, 'message' => 'No counters found!', 'data' => []], 200);
+        ? response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Counters fetched successfully!',
+            'data' => $counters
+        ])
+        : response()->json([
+            'code' => 200,
+            'success' => false,
+            'message' => 'No counters found!',
+            'data' => []
+        ], 200);
     }
 
 
