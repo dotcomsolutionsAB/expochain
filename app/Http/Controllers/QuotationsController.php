@@ -688,7 +688,7 @@ class QuotationsController extends Controller
             $quotationsBatch[] = [
                 'company_id' => Auth::user()->company_id,
                 'client_id' => $client->id ?? null,
-                'client_contact_id' => $client_contact->id ?? null,
+                // 'client_contact_id' => $client_contact->id ?? null,
                 'name' => $record['Client'] ?? null,
                 // 'address_line_1' => $client->address_line_1 ?? null,
                 // 'address_line_2' => $client->address_line_2 ?? null,
