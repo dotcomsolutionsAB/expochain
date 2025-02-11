@@ -75,7 +75,7 @@ class CounterController extends Controller
                 'prefix' => $counter->prefix,
                 'next_number' => $counter->next_number,
                 'postfix' => $counter->postfix,
-                'counter_no' => $counter->prefix . $counter->next_number . $counter->postfix // Concatenated number
+                'full_no' => $counter->prefix . $counter->next_number . $counter->postfix // Concatenated number
             ];
         });
 
