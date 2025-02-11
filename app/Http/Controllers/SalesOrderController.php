@@ -29,20 +29,16 @@ class SalesOrderController extends Controller
         // Validate the request data
         $validatedData = $request->validate([
             'client_id' => 'required|integer|exists:t_clients,id',
-            // 'client_contact_id' => 'required|integer|exists:t_client_contacts,id',
             'sales_order_no' => 'required|string|unique:t_sales_order,sales_order_no',
             'sales_order_date' => 'required|date_format:Y-m-d',
-            // 'quotation_no' => 'nullable|integer|exists:t_quotations,id',
             'ref_no' => 'required|string',
 
+            'template' => 'required|integer|exists:t_pdf_template,id',
+            'contact_person' => 'required|integer|exists:users,id',
             'cgst' => 'nullable|numeric|min:0',
             'sgst' => 'nullable|numeric|min:0',
             'igst' => 'nullable|numeric|min:0',
             'total' => 'required|numeric|min:0',
-
-            'currency' => 'required|string|max:10',
-            'template' => 'required|integer|exists:t_pdf_template,id',
-            'status' => 'required|in:pending,partial,completed',
         
             // for products 
             'products' => 'required|array',
@@ -54,16 +50,15 @@ class SalesOrderController extends Controller
             // 'products.*.short_closed' => 'nullable|integer|min:1',
             'products.*.unit' => 'required|string|max:20',
             'products.*.price' => 'required|numeric|min:0',
-            'products.*.channel' => 'nullable|integer|exists:t_channels,id',
-            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.discount' => 'nullable|numeric|min:0',
-            'products.*.so_no' => 'nullable|string|min:0',
-            'products.*.rate' => 'nullable|numeric|min:0',
+            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.hsn' => 'nullable|string',
             'products.*.tax' => 'nullable|numeric|min:0',
             'products.*.cgst' => 'nullable|numeric|min:0',
             'products.*.sgst' => 'nullable|numeric|min:0',
             'products.*.igst' => 'nullable|numeric|min:0',
+            'products.*.amount' => 'nullable|numeric|min:0',
+            'products.*.channel' => 'nullable|integer|exists:t_channels,id',
             
             // for add-ons 
             'addons' => 'nullable|array',
