@@ -379,6 +379,11 @@ class SalesOrderController extends Controller
         if ($user) {
             $query->where('user', $user);
         }
+        if ($product) {
+            $query->whereHas('products', function ($q) use ($product) {
+                $q->where('product_name', 'LIKE', '%' . $product . '%');
+            });
+        }        
     
         // Apply Date Range Filter
         if ($dateFrom && $dateTo) {
