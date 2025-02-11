@@ -494,6 +494,7 @@ class ClientsController extends Controller
         }
     }
 
+    // update address
     public function update_client_address(Request $request, $client_id)
     {
         // Validate the request input
@@ -565,6 +566,43 @@ class ClientsController extends Controller
         }
     }
 
+    // update gst
+    public function update_client_gst(Request $request, $client_id)
+    {
+        // Validate the request input
+        $request->validate([
+            'gst' => 'required|string',
+        ]);
+
+        // Fetch the client by ID and company_id
+        $client = ClientsModel::where('id', $client_id)
+            ->where('company_id', Auth::user()->company_id)
+            ->first();
+
+        if (!$client) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'Client not found!',
+            ], 404);
+        }
+
+            // ✅ **Update GST if the client exists**
+            $client->update([
+                'gst' => $request->input('gst')
+            ]);
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Client GST updated successfully!',
+                'data' => [
+                    'id' => $client->id,
+                    'name' => $client->name,
+                    'gst' => $client->gst
+                ]
+            ], 200);
+    }
 
     // migrate
     public function importClientsData()

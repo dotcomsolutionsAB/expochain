@@ -58,6 +58,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/get_address/{id}', [ClientsController::class, 'update_client_address']);
 
+    Route::post('/update_gst/{id}', [ClientsController::class, 'update_client_gst']);
+
     Route::post('/suppliers', [SuppliersController::class, 'add_suppliers']);
     Route::post('/get_suppliers', [SuppliersController::class, 'view_suppliers']);
     Route::post('/update_suppliers/{id}', [SuppliersController::class, 'update_suppliers']);

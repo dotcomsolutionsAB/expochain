@@ -29,12 +29,12 @@ class QuotationsController extends Controller
     {
         $request->validate([
             'client_id' => 'required|integer|exists:t_clients,id',
-            'client_contact_id' => 'nullable|integer|exists:t_client_contacts,id',
+            // 'client_contact_id' => 'nullable|integer|exists:t_client_contacts,id',
             'quotation_no' => 'nullable|string|max:255',
             'quotation_date' => 'required|date_format:Y-m-d',
-            'status' => 'nullable|in:pending,completed,rejected', // Allow status but it's optional
             'enquiry_no' => 'required|string|max:255',
             'enquiry_date' => 'required|date',
+            // 'status' => 'nullable|in:pending,completed,rejected', // Allow status but it's optional
             'sales_person' => 'required|exists:users,id',
             'template' => 'required|integer|exists:t_pdf_template,id',
             'discount' => 'nullable|numeric|min:0',
@@ -83,7 +83,7 @@ class QuotationsController extends Controller
         $counterController = new CounterController();
         $sendRequest = Request::create('/counter', 'GET', [
             'name' => 'Quotation',
-            'company_id' => Auth::user()->company_id,
+            // 'company_id' => Auth::user()->company_id,
         ]);
 
         $response = $counterController->view_counter($sendRequest);
