@@ -27,7 +27,7 @@ class SalesOrderController extends Controller
     public function add_sales_order(Request $request)
     {
         // Validate the request data
-        $request->validate([
+        $validatedData = $request->validate([
             'client_id' => 'required|integer|exists:t_clients,id',
             'client_contact_id' => 'required|integer|exists:t_client_contacts,id',
             'sales_order_no' => 'required|string|unique:t_sales_order,sales_order_no',
@@ -75,7 +75,7 @@ class SalesOrderController extends Controller
             'addons.*.sgst' => 'nullable|numeric|min:0',
             'addons.*.igst' => 'nullable|numeric|min:0'        
         ]);
-dd($products);
+
         // Fetch the client details using client_id
         $client = ClientsModel::find($request->input('client_id'));
 
@@ -145,37 +145,39 @@ dd($products);
             'status' => $request->input('status'),
         ]);
 
-        $products = $request->input('products');
-
-        // Create a record for the product
-        SalesOrderProductsModel::create([
-            'sales_order_id' => $register_sales_order->id,
-            'company_id' => Auth::user()->company_id,
-            'product_id' => $products['product_id'],
-            'product_name' => $products['product_name'],
-            'description' => $products['description'],
-            // 'group' => $product['group'],
-            'quantity' => $products['quantity'],
-            // 'unit' => $product_details->unit,
-            // 'price' => $rate,
-            // 'channel' => $product_details->channel,
-            // 'discount_type' => $product_details->discount_type,
-            // 'discount' => $discount_amount,
-            // 'sent' => array_key_exists('sent', $product) ? $product['sent'] : 0,
-            // 'short_closed' => array_key_exists('short_closed', $product) ? $product['short_closed'] : 0,
-            'unit' => $products['unit'],
-            'price' => $products['price'],
-            'channel' => $products['channel'],
-            'discount_type' => $products['discount_type'],
-            'discount' => $products['discount'],
-            'so_no' => $products['so_no'],
-            'rate' => $products['rate'],
-            'hsn' => $products['hsn'],
-            'tax' => $products['tax'],
-            'cgst' =>$products['cgst'],
-            'sgst' => $products['sgst'],
-            'igst' => $products['igst'],
-        ]);
+         // **Step 2: Register Sales Order Products**
+        $products = $validatedData['products'];
+        foreach ($products as $product) {
+            // Create a record for the product
+            SalesOrderProductsModel::create([
+                'sales_order_id' => $register_sales_order->id,
+                'company_id' => Auth::user()->company_id,
+                'product_id' => $products['product_id'],
+                'product_name' => $products['product_name'],
+                'description' => $products['description'],
+                // 'group' => $product['group'],
+                'quantity' => $products['quantity'],
+                // 'unit' => $product_details->unit,
+                // 'price' => $rate,
+                // 'channel' => $product_details->channel,
+                // 'discount_type' => $product_details->discount_type,
+                // 'discount' => $discount_amount,
+                // 'sent' => array_key_exists('sent', $product) ? $product['sent'] : 0,
+                // 'short_closed' => array_key_exists('short_closed', $product) ? $product['short_closed'] : 0,
+                'unit' => $products['unit'],
+                'price' => $products['price'],
+                'channel' => $products['channel'],
+                'discount_type' => $products['discount_type'],
+                'discount' => $products['discount'],
+                'so_no' => $products['so_no'],
+                'rate' => $products['rate'],
+                'hsn' => $products['hsn'],
+                'tax' => $products['tax'],
+                'cgst' =>$products['cgst'],
+                'sgst' => $products['sgst'],
+                'igst' => $products['igst'],
+            ]);
+        }
         // $total_amount = 0;
         // $total_cgst = 0;
         // $total_sgst = 0;
@@ -269,7 +271,8 @@ dd($products);
         // ]);
 
         // Process and insert addons
-        $addons = $request->input('addons');
+        // **Step 3: Register Sales Order Add-ons**
+        $addons = $validatedData['addons'] ?? [];
         foreach ($addons as $addon) {
             SalesOrderAddonsModel::create([
                 'sales_order_id' => $register_sales_order->id,
