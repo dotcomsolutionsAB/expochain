@@ -294,11 +294,11 @@ class SalesOrderController extends Controller
             'success' => true,
             'message' => 'Sales Order registered successfully!',
             'data' => $register_sales_order,
-            'total_cgst' => $total_cgst,
-            'total_sgst' => $total_sgst,
-            'total_igst' => $total_igst,
-            'total_discount' => $total_discount,
-            'total_amount' => $total_amount
+            // 'total_cgst' => $total_cgst,
+            // 'total_sgst' => $total_sgst,
+            // 'total_igst' => $total_igst,
+            // 'total_discount' => $total_discount,
+            // 'total_amount' => $total_amount
         ], 201);
     }
 
