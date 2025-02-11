@@ -260,7 +260,7 @@ class QuotationsController extends Controller
                 $query->select('id', 'name');
             }
         ])
-        ->select('id', 'client_id', 'client_contact_id', 'name', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'status', 'user', 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'sales_person', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'contact_person')
+        ->select('id', 'client_id', 'name', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'status', 'user', 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'sales_person', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'contact_person')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
