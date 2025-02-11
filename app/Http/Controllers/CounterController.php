@@ -70,6 +70,7 @@ class CounterController extends Controller
         ->get()
         ->map(function ($counter) {
             return [
+                'id' => $counter->id,
                 'name' => $counter->name,
                 'type' => $counter->type,
                 'prefix' => $counter->prefix,
