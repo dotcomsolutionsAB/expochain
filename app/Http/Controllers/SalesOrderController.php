@@ -75,7 +75,7 @@ class SalesOrderController extends Controller
             'addons.*.sgst' => 'nullable|numeric|min:0',
             'addons.*.igst' => 'nullable|numeric|min:0'        
         ]);
-
+dd($products);
         // Fetch the client details using client_id
         $client = ClientsModel::find($request->input('client_id'));
 
