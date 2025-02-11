@@ -47,7 +47,7 @@ class SalesOrderController extends Controller
             // for products 
             'products' => 'required|array',
             'products.*.product_id' => 'required|integer|exists:t_products,id',
-            'products.*.product_name' => 'required|integer|exists:t_products,name',
+            'products.*.product_name' => 'required|string|exists:t_products,name',
             'products.*.description' => 'required|string',
             'products.*.quantity' => 'required|integer|min:1',
             // 'products.*.sent' => 'nullable|integer|min:1',
