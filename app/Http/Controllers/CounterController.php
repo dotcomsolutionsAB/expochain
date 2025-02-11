@@ -59,7 +59,7 @@ class CounterController extends Controller
 
         // Fetch counters with optional name filter
         $name = $request->input('name'); // Get the name from the request if passed
-        $company_id = $request->input('company_id'); // Get the company_id from the request if passed
+        $company_id = Auth::user()->company_id; // Get the company_id from the request if passed
 
         $counters = CounterModel::when($name, function ($query, $name) {
             $query->where('name', 'LIKE', '%' . $name . '%'); // Apply name filter

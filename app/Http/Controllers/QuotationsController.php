@@ -31,6 +31,7 @@ class QuotationsController extends Controller
             'client_id' => 'required|integer|exists:t_clients,id',
             'client_contact_id' => 'nullable|integer|exists:t_client_contacts,id',
             'quotation_no' => 'nullable|string|max:255',
+            'quotation_date' => 'required|date_format:Y-m-d',
             'status' => 'nullable|in:pending,completed,rejected', // Allow status but it's optional
             'enquiry_no' => 'required|string|max:255',
             'enquiry_date' => 'required|date',
@@ -123,7 +124,7 @@ class QuotationsController extends Controller
             ->where('type', 'billing')
             ->first();
 
-        $currentDate = Carbon::now()->toDateString();
+        // $currentDate = Carbon::now()->toDateString();
 
         // Create quotation
         $register_quotations = QuotationsModel::create([
@@ -138,7 +139,8 @@ class QuotationsController extends Controller
             'state' => $client_address_record->state,
             'country' => $client_address_record->country,
             'quotation_no' => $quotation_no,
-            'quotation_date' => $currentDate,
+            // 'quotation_date' => $currentDate,
+            'quotation_date' => $request->input('quotation_date'),
             'sales_person' => $request->input('sales_person'),
             'status' => $request->input('status', 'pending'), // Default to 'pending'
             'user' => Auth::user()->id,

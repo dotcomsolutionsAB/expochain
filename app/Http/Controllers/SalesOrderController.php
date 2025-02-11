@@ -29,9 +29,9 @@ class SalesOrderController extends Controller
         // Validate the request data
         $validatedData = $request->validate([
             'client_id' => 'required|integer|exists:t_clients,id',
-            'client_contact_id' => 'required|integer|exists:t_client_contacts,id',
+            // 'client_contact_id' => 'required|integer|exists:t_client_contacts,id',
             'sales_order_no' => 'required|string|unique:t_sales_order,sales_order_no',
-            // 'sales_order_date' => 'required|date_format:Y-m-d',
+            'sales_order_date' => 'required|date_format:Y-m-d',
             // 'quotation_no' => 'nullable|integer|exists:t_quotations,id',
             'ref_no' => 'required|string',
 
@@ -118,7 +118,7 @@ class SalesOrderController extends Controller
             ], 422);
         }
 
-        $currentDate = Carbon::now()->toDateString();
+        // $currentDate = Carbon::now()->toDateString();
 
         // Register the sales order
         $register_sales_order = SalesOrderModel::create([
@@ -134,7 +134,8 @@ class SalesOrderController extends Controller
             'country' => $client_address->country,
             'user' => Auth::user()->id,
             'sales_order_no' => $request->input('sales_order_no'),
-            'sales_order_date' => $currentDate,
+            // 'sales_order_date' => $currentDate,
+            'sales_order_date' => $request->input('sales_order_date'),
             'ref_no' => $request->input('ref_no'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
@@ -898,25 +899,25 @@ class SalesOrderController extends Controller
                 continue;
             }
 
-            $clientContact = ClientContactsModel::where('customer_id', $client->customer_id)->first();
-            if (!$clientContact) {
-                $errors[] = ['record' => $record, 'error' => 'Client contact not found for customer ID: ' . $client->customer_id];
-                continue;
-            }
+            // $clientContact = ClientContactsModel::where('customer_id', $client->customer_id)->first();
+            // if (!$clientContact) {
+            //     $errors[] = ['record' => $record, 'error' => 'Client contact not found for customer ID: ' . $client->customer_id];
+            //     continue;
+            // }
 
             // Map status
             $statusMapping = [1 => 'pending', 2 => 'partial', 3 => 'completed'];
             $salesOrdersBatch[] = [
                 'company_id' => Auth::user()->company_id,
                 'client_id' => $client->id,
-                'client_contact_id' => $clientContact->id,
+                // 'client_contact_id' => $clientContact->id,
                 'name' => $record['client'],
-                'address_line_1' => $client->address_line_1 ?? null,
-                'address_line_2' => $client->address_line_2 ?? null,
-                'city' => $client->city ?? null,
-                'pincode' => $client->pincode ?? null,
-                'state' => $client->state ?? null,
-                'country' => $client->country ?? null,
+                // 'address_line_1' => $client->address_line_1 ?? null,
+                // 'address_line_2' => $client->address_line_2 ?? null,
+                // 'city' => $client->city ?? null,
+                // 'pincode' => $client->pincode ?? null,
+                // 'state' => $client->state ?? null,
+                // 'country' => $client->country ?? null,
                 'user' => Auth::user()->id,
                 'sales_order_no' => $record['so_no'],
                 'sales_order_date' => date('Y-m-d', strtotime($record['so_date'] ?? now())),
