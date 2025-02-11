@@ -589,7 +589,7 @@ class ClientsController extends Controller
 
             // ✅ **Update GST if the client exists**
             $client->update([
-                'gst' => $request->input('gst')
+                'gstin' => $request->input('gst')
             ]);
 
             return response()->json([
@@ -599,7 +599,7 @@ class ClientsController extends Controller
                 'data' => [
                     'id' => $client->id,
                     'name' => $client->name,
-                    'gst' => $client->gst
+                    'gst' => $client->gstin
                 ]
             ], 200);
     }
