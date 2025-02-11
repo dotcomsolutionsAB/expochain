@@ -37,13 +37,13 @@ class QuotationsController extends Controller
             // 'status' => 'nullable|in:pending,completed,rejected', // Allow status but it's optional
             'sales_person' => 'required|exists:users,id',
             'template' => 'required|integer|exists:t_pdf_template,id',
-            'discount' => 'nullable|numeric|min:0',
+            'contact_person' => 'required|integer|exists:users,id',
+            // 'discount' => 'nullable|numeric|min:0',
             'cgst' => 'nullable|numeric|min:0',
             'sgst' => 'nullable|numeric|min:0',
             'igst' => 'nullable|numeric|min:0',
             'total' => 'required|numeric|min:0',
             'currency' => 'required|string|max:10',
-            'contact_person' => 'required|integer|exists:users,id',
 
             // for products
             'products' => 'required|array|min:1',
@@ -53,15 +53,16 @@ class QuotationsController extends Controller
             'products.*.quantity' => 'required|numeric|min:1',
             'products.*.unit' => 'required|string|max:50',
             'products.*.price' => 'required|numeric|min:0',
-            'products.*.amount' => 'required|numeric|min:0',
-            'products.*.delivery' => 'nullable|string|max:255',
-            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.discount' => 'required|numeric|min:0',
+            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.hsn' => 'nullable|string|max:255',
             'products.*.tax' => 'required|numeric|min:0',
             'products.*.cgst' => 'nullable|numeric|min:0',
             'products.*.sgst' => 'nullable|numeric|min:0',
             'products.*.igst' => 'nullable|numeric|min:0',
+            'products.*.amount' => 'required|numeric|min:0',
+            'products.*.delivery' => 'nullable|string|max:255',
+            'products.*.attachment' => 'nullable|string|max:255',
 
             // for add-ons
             'addons' => 'nullable|array',
@@ -113,47 +114,39 @@ class QuotationsController extends Controller
         }
 
         // Retrieve client contact and address
-        $client_contact_id = $request->input('client_contact_id') ?? ClientsModel::where('id', $request->input('client_id'))->value('default_contact');
+        // $client_contact_id = $request->input('client_contact_id') ?? ClientsModel::where('id', $request->input('client_id'))->value('default_contact');
 
         $get_customer_data = ClientsModel::select('name', 'customer_id')
             ->where('id', $request->input('client_id'))
             ->first();
 
-        $client_address_record = ClientAddressModel::select('address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country')
-            ->where('customer_id', $get_customer_data->customer_id)
-            ->where('type', 'billing')
-            ->first();
+        // $client_address_record = ClientAddressModel::select('address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country')
+        //     ->where('customer_id', $get_customer_data->customer_id)
+        //     ->where('type', 'billing')
+        //     ->first();
 
         // $currentDate = Carbon::now()->toDateString();
 
         // Create quotation
         $register_quotations = QuotationsModel::create([
             'client_id' => $request->input('client_id'),
-            'client_contact_id' => $client_contact_id,
+            // 'client_contact_id' => $client_contact_id,
             'company_id' => Auth::user()->company_id,
             'name' => $get_customer_data->name,
-            'address_line_1' => $client_address_record->address_line_1,
-            'address_line_2' => $client_address_record->address_line_2,
-            'city' => $client_address_record->city,
-            'pincode' => $client_address_record->pincode,
-            'state' => $client_address_record->state,
-            'country' => $client_address_record->country,
             'quotation_no' => $quotation_no,
-            // 'quotation_date' => $currentDate,
             'quotation_date' => $request->input('quotation_date'),
-            'sales_person' => $request->input('sales_person'),
-            'status' => $request->input('status', 'pending'), // Default to 'pending'
-            'user' => Auth::user()->id,
             'enquiry_no' => $request->input('enquiry_no'),
             'enquiry_date' => $request->input('enquiry_date'),
-            'discount' => $request->input('discount'),
+            'template' => $request->input('template'),
+            'contact_person' => $request->input('contact_person'),
+            'sales_person' => $request->input('sales_person'),
+            'status' => 'pending', // Default to 'pending'
+            'user' => Auth::user()->id,
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
             'currency' => $request->input('currency'),
-            'template' => $request->input('template'),
-            'contact_person' => $request->input('contact_person'),
         ]);
 
         foreach ($request->input('products') as $product) {
