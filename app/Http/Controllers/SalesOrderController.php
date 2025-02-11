@@ -44,8 +44,10 @@ class SalesOrderController extends Controller
             'template' => 'required|integer|exists:t_pdf_template,id',
             'status' => 'required|in:pending,partial,completed',
         
+            // for products 
             'products' => 'required|array',
             'products.*.product_id' => 'required|integer|exists:t_products,id',
+            'products.*.product_name' => 'required|integer|exists:t_products,name',
             'products.*.description' => 'required|string',
             'products.*.quantity' => 'required|integer|min:1',
             // 'products.*.sent' => 'nullable|integer|min:1',
@@ -55,12 +57,15 @@ class SalesOrderController extends Controller
             'products.*.channel' => 'nullable|integer|exists:t_channels,id',
             'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.discount' => 'nullable|numeric|min:0',
+            'products.*.so_no' => 'nullable|string|min:0',
+            'products.*.rate' => 'nullable|numeric|min:0',
             'products.*.hsn' => 'nullable|string',
             'products.*.tax' => 'nullable|numeric|min:0',
             'products.*.cgst' => 'nullable|numeric|min:0',
             'products.*.sgst' => 'nullable|numeric|min:0',
             'products.*.igst' => 'nullable|numeric|min:0',
-        
+            
+            // for add-ons 
             'addons' => 'nullable|array',
             'addons.*.name' => 'required|string|max:255',
             'addons.*.amount' => 'required|numeric|min:0',
@@ -149,7 +154,7 @@ class SalesOrderController extends Controller
             'product_id' => $product['product_id'],
             'product_name' => $product['product_name'],
             'description' => $product['description'],
-            'group' => $product['group'],
+            // 'group' => $product['group'],
             'quantity' => $product['quantity'],
             // 'unit' => $product_details->unit,
             // 'price' => $rate,
@@ -163,6 +168,8 @@ class SalesOrderController extends Controller
             'channel' => $product['channel'],
             'discount_type' => $product['discount_type'],
             'discount' => $product['discount'],
+            'so_no' => $product['so_no'],
+            'rate' => $product['rate'],
             'hsn' => $product['hsn'],
             'tax' => $product['tax'],
             'cgst' =>$product['cgst'],
@@ -320,7 +327,7 @@ class SalesOrderController extends Controller
         $query = SalesOrderModel::with([
             'products' => function ($query) {
                 $query->select(
-                    'sales_order_id', 'product_id', 'product_name', 'description', 'group', 
+                    'sales_order_id', 'product_id', 'product_name', 'description',
                     'quantity', 'sent', 'short_closed', 'unit', 'price', 'discount_type', 
                     'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'channel'
                 )->with(['channel' => function ($channelQuery) {
@@ -442,12 +449,14 @@ class SalesOrderController extends Controller
             'currency' => 'required|string',
             'template' => 'required|integer|exists:t_pdf_template,id',
             'status' => 'required|in:pending,partial,completed',
+
+             // for products 
             'products' => 'required|array',
             // 'products.*.sales_order_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
-            'products.*.group' => 'required|string',
+            // 'products.*.group' => 'required|string',
             'products.*.quantity' => 'required|integer',
             // 'products.*.sent' => 'nullable|integer',
             // 'products.*.short_closed' => 'nullable|integer',
@@ -461,8 +470,10 @@ class SalesOrderController extends Controller
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
+
+            // for addons 
             'addons' => 'nullable|array',
-            'addons.*.sales_order_id' => 'required|integer',
+            // 'addons.*.sales_order_id' => 'required|integer',
             'addons.*.name' => 'required|string',
             'addons.*.amount' => 'required|numeric',
             'addons.*.tax' => 'required|numeric',
@@ -527,7 +538,7 @@ class SalesOrderController extends Controller
                 $existingProduct->update([
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    'group' => $productData['group'],
+                    // 'group' => $productData['group'],
                     'quantity' => $productData['quantity'],
                     // 'sent' => isset($productData['sent']) && is_numeric($productData['sent']) ? (int)        $productData['sent'] : 0,
                     // 'short_closed' => isset($productData['short_closed']) && is_numeric($productData['short_closed']) ? (int)$productData['short_closed'] : 0,
@@ -549,7 +560,7 @@ class SalesOrderController extends Controller
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    'group' => $productData['group'],
+                    // 'group' => $productData['group'],
                     'quantity' => $productData['quantity'],
                     // 'sent' => $productData['sent'],
                     // 'short_closed' => $productData['short_closed'],

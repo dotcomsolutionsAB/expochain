@@ -15,7 +15,7 @@ class SalesOrderProductsModel extends Model
         'product_id',
         'product_name',
         'description',
-        'group',
+        // 'group',
         'quantity',
         'sent',
         'unit',
