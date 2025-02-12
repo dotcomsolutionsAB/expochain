@@ -29,16 +29,13 @@ class QuotationsController extends Controller
     {
         $request->validate([
             'client_id' => 'required|integer|exists:t_clients,id',
-            // 'client_contact_id' => 'nullable|integer|exists:t_client_contacts,id',
             'quotation_no' => 'nullable|string|max:255',
             'quotation_date' => 'required|date_format:Y-m-d',
             'enquiry_no' => 'required|string|max:255',
             'enquiry_date' => 'required|date',
-            // 'status' => 'nullable|in:pending,completed,rejected', // Allow status but it's optional
             'sales_person' => 'required|exists:users,id',
             'template' => 'required|integer|exists:t_pdf_template,id',
             'contact_person' => 'required|integer|exists:users,id',
-            // 'discount' => 'nullable|numeric|min:0',
             'cgst' => 'nullable|numeric|min:0',
             'sgst' => 'nullable|numeric|min:0',
             'igst' => 'nullable|numeric|min:0',
@@ -113,24 +110,13 @@ class QuotationsController extends Controller
             ], 422);
         }
 
-        // Retrieve client contact and address
-        // $client_contact_id = $request->input('client_contact_id') ?? ClientsModel::where('id', $request->input('client_id'))->value('default_contact');
-
         $get_customer_data = ClientsModel::select('name', 'customer_id')
             ->where('id', $request->input('client_id'))
             ->first();
 
-        // $client_address_record = ClientAddressModel::select('address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country')
-        //     ->where('customer_id', $get_customer_data->customer_id)
-        //     ->where('type', 'billing')
-        //     ->first();
-
-        // $currentDate = Carbon::now()->toDateString();
-
         // Create quotation
         $register_quotations = QuotationsModel::create([
             'client_id' => $request->input('client_id'),
-            // 'client_contact_id' => $client_contact_id,
             'company_id' => Auth::user()->company_id,
             'name' => $get_customer_data->name,
             'quotation_no' => $quotation_no,
@@ -328,6 +314,9 @@ class QuotationsController extends Controller
             // Convert total to words
             $quotation->amount_in_words = $this->convertNumberToWords($quotation->total);
 
+            // ✅ Format total with comma-separated values
+            $quotation->total = is_numeric($quotation->total) ? number_format((float) $quotation->total, 2) : $quotation->total;
+
             // Capitalize the first letter of status
             $quotation->status = ucfirst($quotation->status);
 
@@ -398,28 +387,18 @@ class QuotationsController extends Controller
         $request->validate([
             // 'quotation_id' => 'required|integer',
             'client_id' => 'required|integer',
-            'client_contact_id' => 'required|integer',
-            // 'name' => 'required|string',
-            'address_line_1' => 'required|string',
-            'address_line_2' => 'required|string',
-            'city' => 'required|string',
-            'pincode' => 'required|string',
-            'state' => 'required|string',
-            'country' => 'required|string',
             'quotation_no' => 'nullable|string|max:255',
             'quotation_date' => 'required|date',
             'enquiry_no' => 'required|string',
             'enquiry_date' => 'required|date',
+            'template' => 'required|integer|exists:t_pdf_template,id',
+            'contact_person' => 'required|integer|exists:users,id',
             'sales_person' => 'required|exists:users,id',
-            // 'sales_contact' => 'required|string',
-            // 'sales_email' => 'required|string',
-            'discount' => 'required|numeric',
             'cgst' => 'required|numeric',
             'sgst' => 'required|numeric',
             'igst' => 'required|numeric',
             'total' => 'required|numeric',
             'currency' => 'required|string',
-            'template' => 'required|integer|exists:t_pdf_template,id',
 
             // for products
             'products' => 'required|array',
@@ -429,15 +408,15 @@ class QuotationsController extends Controller
             'products.*.quantity' => 'required|integer',
             'products.*.unit' => 'required|string',
             'products.*.price' => 'required|numeric',
-            'products.*.amount' => 'required|numeric',
-            'products.*.delivery' => 'nullable|string|max:255',
-            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.discount' => 'nullable|numeric',
+            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.hsn' => 'required|string',
             'products.*.tax' => 'required|numeric',
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
+            'products.*.amount' => 'required|numeric',
+            'products.*.delivery' => 'nullable|string|max:255',
             'products.*.attachment' => 'required|string',
 
              // for addons
@@ -464,29 +443,18 @@ class QuotationsController extends Controller
 
         $quotationUpdated = $quotation->update([
             'client_id' => $request->input('client_id'),
-            'client_contact_id' => $request->input('client_contact_id'),
-            // 'name' => $request->input('name'),
-            'address_line_1' => $request->input('address_line_1'),
-            'address_line_2' => $request->input('address_line_2'),
-            'city' => $request->input('city'),
-            'pincode' => $request->input('pincode'),
-            'state' => $request->input('state'),
-            'country' => $request->input('country'),
-            // 'quotation_no' => $request->input('quotation_date'),
+            'quotation_no' => $request->input('quotation_no'),
             'quotation_date' => $request->input('quotation_date'),
             'enquiry_no' => $request->input('enquiry_no'),
             'enquiry_date' => $request->input('enquiry_date'),
+            'template' => $request->input('template'),
+            'contact_person' =>$request->input('contact_person'),
             'sales_person' => $request->input('sales_person'),
-            // 'sales_person' => Auth::user()->name,
-            // 'sales_contact' => Auth::user()->mobile,
-            // 'sales_email' => Auth::user()->email,
-            'discount' => $request->input('discount'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
-            'currency' => $request->input('currency'),
-            'template' => $request->input('template'),
+            'currency' => $request->input('currency'),  
         ]);
 
         $products = $request->input('products');
@@ -506,15 +474,16 @@ class QuotationsController extends Controller
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
-                    'amount' => $productData['amount'],
-                    'delivery' => $productData['delivery'],
-                    'discount_type' => $productData['discount_type'],
                     'discount' => $productData['discount'],
+                    'discount_type' => $productData['discount_type'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
+                    'amount' => $productData['amount'],
+                    'delivery' => $productData['delivery'],
+                    'attachment' => $productData['attachment'],
                 ]);
             } else {
                 QuotationProductsModel::create([
@@ -527,11 +496,15 @@ class QuotationsController extends Controller
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
                     'discount' => $productData['discount'],
+                    'discount_type' => $productData['discount_type'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
+                    'amount' => $productData['amount'],
+                    'delivery' => $productData['delivery'],
+                    'attachment' => $productData['attachment'],
                 ]);
             }
         }
