@@ -649,6 +649,20 @@ class SalesInvoiceController extends Controller
                             'quantity' => $itemsData['quantity'][$index] ?? 0,
                             'unit' => $itemsData['unit'][$index] ?? '',
                             'price' => isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0,
+                            'amount' => (
+                                (isset($itemsData['quantity'][$index]) ? (float) $itemsData['quantity'][$index] : 0.0) *
+                                (
+                                    (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0) -
+                                    (
+                                        ((isset($itemsData['discount'][$index]) ? (float) $itemsData['discount'][$index] : 0.0) *
+                                        (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0)) / 100
+                                    )
+                                )
+                            ) + (
+                                (isset($itemsData['cgst'][$index]) ? (float) $itemsData['cgst'][$index] : 0.0) +
+                                (isset($itemsData['sgst'][$index]) ? (float) $itemsData['sgst'][$index] : 0.0) +
+                                (isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0.0)
+                            ),
                             'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index])
                                 ? (is_numeric($itemsData['channel'][$index])
                                     ? (float)$itemsData['channel'][$index]
