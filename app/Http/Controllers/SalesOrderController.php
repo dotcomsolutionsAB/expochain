@@ -273,7 +273,7 @@ class SalesOrderController extends Controller
 
         // Transform Data
         $get_sales_orders->transform(function ($order) {
-
+dd($order->total);
              // Format total with comma-separated values (Indian numbering system)
             $order->total = number_format($order->total, 2);
 
