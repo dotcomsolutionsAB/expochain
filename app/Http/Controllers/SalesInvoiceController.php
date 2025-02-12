@@ -595,13 +595,19 @@ class SalesInvoiceController extends Controller
                     'user' => Auth::user()->id,
                     'sales_invoice_no' => !empty($record['si_no']) ? trim($record['si_no']) : null,
                     'sales_invoice_date' => $record['so_date'] ?? now(),
-                    'sales_order_id' => !empty($record['so_no']) ? (int) $record['so_no'] : 0,
+                    // 'sales_order_id' => !empty($record['so_no']) ? (int) $record['so_no'] : 0,
+                    'sales_order_id' => isset($record['so_no']) 
+                    ? (
+                        is_array($record['so_no']) 
+                            ? (empty(array_filter($record['so_no'])) ? null : implode(', ', array_filter($record['so_no'])))
+                            : (!empty($record['so_no']) ? (int) $record['so_no'] : null)
+                    )
+                    : null,
                     'cgst' => $taxData['cgst'] ?? 0,
                     'sgst' => $taxData['sgst'] ?? 0,
                     'igst' => $taxData['igst'] ?? 0,
                     'total' => $record['total'] ?? 0,
                     'template' => json_decode($record['pdf_template'], true)['id'] ?? '0',
-                    // 'commission' => !empty($record['commission']) ? (float) $record['commission'] : 0,
                     'cash' => !empty($record['cash']) ? (string) $record['cash'] : '0',
                     'created_at' => now(),
                     'updated_at' => now()
