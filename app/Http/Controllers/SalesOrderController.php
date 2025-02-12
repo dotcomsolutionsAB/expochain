@@ -19,6 +19,8 @@ use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Illuminate\Support\Facades\Storage;
+use DB;
+use NumberFormatter;
 
 class SalesOrderController extends Controller
 {
