@@ -138,7 +138,7 @@ class PurchaseInvoiceController extends Controller
 
         // Build the query
         $query = PurchaseInvoiceModel::with(['products' => function ($query) {
-            $query->select('purchase_invoice_number', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel',  'return', 'stock');
+            $query->select('purchase_invoice_number', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'stock');
         }])
         ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 'purchase_invoice_date', 'oa_no', 'ref_no', 'template', 'user', 'cgst', 'sgst', 'igst', 'total')
         ->where('company_id', Auth::user()->company_id);
