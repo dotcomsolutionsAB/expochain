@@ -219,7 +219,7 @@ class SalesOrderController extends Controller
                 $query->select('id', 'name');
             },
         ])
-        ->select('id', 'client_id', 'name', 'sales_order_no', 'sales_order_date', 'ref_no', 'template', 'contact_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', DB::raw('FORMAT(total, 0) AS total'))
+        ->select('id', 'client_id', 'name', 'sales_order_no', 'sales_order_date', 'ref_no', 'template', 'contact_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
