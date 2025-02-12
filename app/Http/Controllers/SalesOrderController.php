@@ -238,9 +238,6 @@ class SalesOrderController extends Controller
         if ($salesOrderDate) {
             $query->whereDate('sales_order_date', $salesOrderDate);
         }
-        if ($status) {
-            $query->where('status', $status);
-        }
         // ✅ **Filter by comma-separated statuses**
         if (!empty($status)) {
             $statusArray = explode(',', $status); // Convert CSV to array
@@ -420,7 +417,7 @@ class SalesOrderController extends Controller
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
                     'amount' => $productData['amount'],
-                    'channel' => $productData['channel'], 
+                    'channel' => $productData['channel']
                 ]);
             } else {
                 SalesOrderProductsModel::create([
@@ -440,7 +437,7 @@ class SalesOrderController extends Controller
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
                     'amount' => $productData['amount'],
-                    'channel' => $productData['channel'],
+                    'channel' => $productData['channel']
                 ]);
             }
         }

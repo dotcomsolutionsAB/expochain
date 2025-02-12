@@ -16,6 +16,8 @@ use App\Models\DiscountModel;
 use App\Http\Controllers\ResetController;
 use Carbon\Carbon;
 use Auth;
+use DB;
+use NumberFormatter;
 
 class SalesInvoiceController extends Controller
 {
@@ -27,38 +29,35 @@ class SalesInvoiceController extends Controller
         $request->validate([
             // Sales Invoice
             'client_id' => 'required|integer|exists:t_clients,id',
-            'client_contact_id' => 'required|integer|exists:t_client_contacts,id',
             'sales_invoice_no' => 'required|string',
-            'sales_order_no' => 'required|string|exists:t_sales_order,sales_order_no',
+            'sales_invoice_date' => 'required|date_format:Y-m-d',
+            'sales_order_id' => 'required|string|exists:t_sales_order,id',
+            'sales_order_date' => 'required|date_format:Y-m-d',
+            'template' => 'required|integer|exists:t_pdf_template,id',
+            'contact_person' => 'required|integer|exists:users,id',
+            'cash' => 'required|in:0,1',
             'cgst' => 'required|numeric|min:0',
             'sgst' => 'required|numeric|min:0',
             'igst' => 'required|numeric|min:0',
             'total' => 'required|numeric|min:0',
-            'template' => 'required|integer|exists:t_pdf_template,id',
-            'commission' => 'required|numeric|min:0',
-            'cash' => 'required|in:0,1',
-            'contact_person' => 'required|integer|exists:users,id',
-
+            
             // Products Array Validation
             'products' => 'required|array',
-            'products.*.product_id' => 'required|integer',
-            'products.*.product_name' => 'required|string',
+            'products.*.product_id' => 'required|integer|exists:t_products,id',
+            'products.*.product_name' => 'required|string|exists:t_products,name',
             'products.*.description' => 'nullable|string',
-            // 'products.*.brand' => 'nullable|string',
             'products.*.quantity' => 'required|integer|min:0',
             'products.*.unit' => 'required|string',
             'products.*.price' => 'required|numeric|min:0',
-            'products.*.channel' => 'nullable|integer',
-            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.discount' => 'nullable|numeric|min:0',
-            'products.*.so_no' => 'required|string|exists:t_sales_order,sales_order_no',
-            'products.*.rate' => 'required|integer|min:0',
+            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.hsn' => 'required|string',
             'products.*.tax' => 'required|numeric|min:0',
             'products.*.cgst' => 'required|numeric|min:0',
             'products.*.sgst' => 'required|numeric|min:0',
             'products.*.igst' => 'required|numeric|min:0',
-            'products.*.godown' => 'required|string',
+            'products.*.amount' => 'required|numeric|min:0',
+            'products.*.channel' => 'nullable|integer|exists:t_channels,id',
 
             // Addons Array Validation
             'addons' => 'required|array',
@@ -73,16 +72,6 @@ class SalesInvoiceController extends Controller
 
         // Fetch the client details using client_id
         $client = ClientsModel::find($request->input('client_id'));
-        if (!$client) {
-            return response()->json(['message' => 'Client not found'], 404);
-        }
-
-        $client_address_record = ClientAddressModel::select('address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country')
-            ->where('customer_id', $client->customer_id)
-            ->where('type', 'billing')
-            ->first();
-
-        $currentDate = Carbon::now()->toDateString();
 
         // Handle quotation number logic
         $counterController = new CounterController();
@@ -120,142 +109,46 @@ class SalesInvoiceController extends Controller
         // Register the sales invoice
         $register_sales_invoice = SalesInvoiceModel::create([
             'client_id' => $request->input('client_id'),
-            'client_contact_id' => $request->input('client_contact_id'),
             'company_id' => Auth::user()->company_id,
             'name' => $client->name,
-            'address_line_1' => $client_address_record->address_line_1,
-            'address_line_2' => $client_address_record->address_line_2,
-            'city' => $client_address_record->city,
-            'pincode' => $client_address_record->pincode,
-            'state' => $client_address_record->state,
-            'country' => $client_address_record->country,
-            'user' => Auth::user()->id,
             'sales_invoice_no' => $request->input('sales_invoice_no'),
             'sales_invoice_date' => $currentDate,
-            'sales_order_no' => $request->input('sales_order_no'),
+            'sales_order_id' => $request->input('sales_order_id'),
+            'sales_order_date' => $request->input('sales_order_date'),
+            'template' => $request->input('template'),
+            'contact_person' => $request->input('contact_person'),
+            'cash' => $request->input('cash'),
+            'user' => Auth::user()->id,
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
-            'template' => $request->input('template'),
-            'commission' => $request->input('commission'),
-            'cash' => $request->input('cash'),
-            'contact_person' => $request->input('contact_person'),
         ]);
 
+        // Process and insert products
         $products = $request->input('products');
-        // $total_amount = 0;
-        // $total_cgst = 0;
-        // $total_sgst = 0;
-        // $total_igst = 0;
-        // $total_discount = 0;
-
-        // Create a record for the product
-        SalesInvoiceProductsModel::create([
-            'sales_invoice_id' => $register_sales_invoice->id,
-            'company_id' => Auth::user()->company_id,
-            'product_id' => $product['product_id'],
-            'product_name' => $product['product_name'],
-            'description' => $product['description'],
-            // 'brand' => $product['brand'],
-            'quantity' => $product['quantity'],
-            'unit' => $product['unit'],
-            'price' => $product['price'],
-            'channel' => $product['channel'],
-            'discount_type' => $product['discount_type'],
-            'discount' => $product['discount'],
-            // 'purchase_invoice_products_id' => $product['purchase_invoice_products_id'],
-            'rate' => $product['rate'],
-            'hsn' => $product['hsn'],
-            'tax' => $product['tax'],
-            'cgst' => $product['cgst'],
-            'sgst' => $product['sgst'],
-            'igst' => $product['igst'],
-            'godown' => $product['godown'],
-        ]);
-
-        // Iterate over the products array and fetch product details
-        // foreach ($products as $product) {
-        //     $product_details = ProductsModel::where('id', $product['product_id'])
-        //                                     ->where('company_id', Auth::user()->company_id)
-        //                                     ->first();
-            
-        //     if ($product_details) {
-        //         $quantity = $product['quantity'];
-        //         $rate = $product_details->sale_price;
-        //         $tax_rate = $product_details->tax;
-
-        //        // Calculate the discount based on category or sub-category
-        //        $sub_category_discount = DiscountModel::select('discount')
-        //                                             ->where('client', $request->input('client_id'))
-        //                                             ->where('sub_category', $product_details->sub_category)
-        //                                             ->first();
-
-        //         $category_discount = DiscountModel::select('discount')
-        //                                             ->where('client', $request->input('client_id'))
-        //                                             ->where('category', $product_details->category)
-        //                                             ->first();
-
-        //         $discount_rate = $sub_category_discount->discount ?? $category_discount->discount ?? 0;
-        //         $discount_amount = $rate * $quantity * ($discount_rate / 100);
-        //         $total_discount += $discount_amount;
-
-        //         // Calculate the total for the product
-        //         $product_total = $rate * $quantity - $discount_amount;
-        //         $tax_amount = $product_total * ($tax_rate / 100);
-
-        //         // Determine the tax distribution based on the client's state
-        //         if (strtolower($client->state) === 'west bengal') {
-        //             $cgst = $tax_amount / 2;
-        //             $sgst = $tax_amount / 2;
-        //             $igst = 0;
-        //         } else {
-        //             $cgst = 0;
-        //             $sgst = 0;
-        //             $igst = $tax_amount;
-        //         }
-
-        //         // Accumulate totals
-        //         $total_amount += $product_total;
-        //         $total_cgst += $cgst;
-        //         $total_sgst += $sgst;
-        //         $total_igst += $igst;
-
-        //         // Create a record for the product
-        //         SalesInvoiceProductsModel::create([
-        //             'sales_invoice_id' => $register_sales_invoice->id,
-        //             'company_id' => Auth::user()->company_id,
-        //             'product_id' => $product_details->id,
-        //             'product_name' => $product_details->name,
-        //             'description' => $product_details->description,
-        //             'brand' => $product_details->brand,
-        //             'quantity' => $quantity,
-        //             'unit' => $product_details->unit,
-        //             'price' => $rate,
-        //             'discount' => $discount_amount,
-        //             'purchase_invoice_products_id' => $product['purchase_invoice_products_id'],
-        //             'rate' => $product['rate'],
-        //             'hsn' => $product_details->hsn,
-        //             'tax' => $product_details->tax,
-        //             'cgst' => $cgst,
-        //             'sgst' => $sgst,
-        //             'igst' => $igst,
-        //             'godown' => $product['godown'],
-        //         ]);
-
-        //     }
-        //     else{
-        //         return response()->json(['code' => 404,'success' => false, 'message' => 'Sorry, Products not found'], 404);
-        //     }
-        // }
-
-        // Update the total amount and tax values in the sales invoice record
-        // $register_sales_invoice->update([
-        //     'total' => $total_amount,
-        //     'cgst' => $total_cgst,
-        //     'sgst' => $total_sgst,
-        //     'igst' => $total_igst,
-        // ]);
+        foreach ($products as $product) {
+            // Create a record for the product
+            SalesInvoiceProductsModel::create([
+                'sales_invoice_id' => $register_sales_invoice->id,
+                'company_id' => Auth::user()->company_id,
+                'product_id' => $product['product_id'],
+                'product_name' => $product['product_name'],
+                'description' => $product['description'],
+                'quantity' => $product['quantity'],
+                'unit' => $product['unit'],
+                'price' => $product['price'],
+                'discount' => $product['discount'],
+                'discount_type' => $product['discount_type'],
+                'hsn' => $product['hsn'],
+                'tax' => $product['tax'],
+                'cgst' => $product['cgst'],
+                'sgst' => $product['sgst'],
+                'igst' => $product['igst'],
+                'amount' => $product['amount'],
+                'channel' => $product['channel'],
+            ]);
+        }
 
         // Process and insert addons
         $addons = $request->input('addons');
@@ -306,6 +199,11 @@ class SalesInvoiceController extends Controller
 
 
     // View Sales Invoices
+    // helper function
+    private function convertNumberToWords($num) {
+        $formatter = new NumberFormatter("en", NumberFormatter::SPELLOUT);
+        return ucfirst($formatter->format($num)) . ' Only';
+    }
     public function view_sales_invoice(Request $request)
     {
         // Get filter inputs
@@ -317,10 +215,9 @@ class SalesInvoiceController extends Controller
         $salesOrderNo = $request->input('sales_order_no');
         $product = $request->input('product');
         $dateFrom = $request->input('date_from');
-        // $status = $request->input('date_to');
-        // $user = $request->input('date_from');
         $dateTo = $request->input('date_to');
         $user = $request->input('user');
+        $productIds = $request->input('product_ids'); 
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
 
@@ -330,7 +227,7 @@ class SalesInvoiceController extends Controller
          // Build the query
         $query = SalesInvoiceModel::with([
             'products' => function ($query) {
-                $query->select('sales_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
+                $query->select('sales_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'anount');
             },
             'addons' => function ($query) {
                 $query->select('sales_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
@@ -339,7 +236,7 @@ class SalesInvoiceController extends Controller
                 $query->select('id', 'name');
             }
         ])
-        ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'user', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_no', 'cgst', 'sgst', 'igst', 'total','template','commission', 'cash')
+        ->select('id', 'client_id', 'name', 'user', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_id', 'sales_order_date', 'template', 'contact_person', 'cash', 'user', 'cgst', 'sgst', 'igst', 'total')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -361,6 +258,14 @@ class SalesInvoiceController extends Controller
         if ($salesOrderNo) {
             $query->where('sales_order_no', 'LIKE', '%' . $salesOrderNo . '%');
         }
+
+        // ✅ **Filter by comma-separated product IDs**
+        if (!empty($productIds)) {
+            $productIdArray = explode(',', $productIds); // Convert CSV to array
+            $query->whereHas('products', function ($query) use ($productIdArray) {
+                $query->whereIn('product_id', $productIdArray);
+            });
+        }      
 
         if ($dateFrom && $dateTo) {
             $query->whereBetween('sales_invoice_date', [$dateFrom, $dateTo]);
@@ -390,6 +295,19 @@ class SalesInvoiceController extends Controller
 
         // Transform Data
         $get_sales_invoices->transform(function ($invoice) {
+
+            // Convert total to words
+            $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
+
+            // ✅ Format total with comma-separated values
+            $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
+
+            // Replace user ID with corresponding contact_person object
+            $invoice->contact_person = isset($invoice->get_user) ? [
+                'id' => $invoice->get_user->id,
+                'name' => $invoice->get_user->name
+            ] : ['id' => null, 'name' => 'Unknown'];
+
             // Convert user ID into an object with `id` and `name`
             $invoice->user = isset($invoice->get_user) ? [
                 'id' => $invoice->get_user->id,
@@ -424,38 +342,35 @@ class SalesInvoiceController extends Controller
         $request->validate([
             // Sales Invoice
             'client_id' => 'required|integer|exists:t_clients,id',
-            'client_contact_id' => 'required|integer|exists:t_client_contacts,id',
             'sales_invoice_no' => 'required|string',
-            'sales_order_no' => 'required|string|exists:t_sales_order,sales_order_no',
+            'sales_invoice_date' => 'required|date_format:Y-m-d',
+            'sales_order_id' => 'required|string|exists:t_sales_order,id',
+            'sales_order_date' => 'required|date_format:Y-m-d',
+            'template' => 'required|integer|exists:t_pdf_template,id',
+            'contact_person' => 'required|integer|exists:users,id',
+            'cash' => 'required|in:0,1',
             'cgst' => 'required|numeric|min:0',
             'sgst' => 'required|numeric|min:0',
             'igst' => 'required|numeric|min:0',
             'total' => 'required|numeric|min:0',
-            'template' => 'required|integer|exists:t_pdf_template,id',
-            'commission' => 'required|numeric|min:0',
-            'cash' => 'required|in:0,1',
-            'contact_person' => 'required|integer|exists:users,id',
-
+            
             // Products Array Validation
             'products' => 'required|array',
-            'products.*.product_id' => 'required|integer',
-            'products.*.product_name' => 'required|string',
+            'products.*.product_id' => 'required|integer|exists:t_products,id',
+            'products.*.product_name' => 'required|string|exists:t_products,name',
             'products.*.description' => 'nullable|string',
-            // 'products.*.brand' => 'nullable|string',
             'products.*.quantity' => 'required|integer|min:0',
             'products.*.unit' => 'required|string',
             'products.*.price' => 'required|numeric|min:0',
-            'products.*.channel' => 'nullable|integer',
-            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.discount' => 'nullable|numeric|min:0',
-            'products.*.so_no' => 'required|string|exists:t_sales_order,sales_order_no',
-            'products.*.rate' => 'required|integer|min:0',
+            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.hsn' => 'required|string',
             'products.*.tax' => 'required|numeric|min:0',
             'products.*.cgst' => 'required|numeric|min:0',
             'products.*.sgst' => 'required|numeric|min:0',
             'products.*.igst' => 'required|numeric|min:0',
-            'products.*.godown' => 'required|string',
+            'products.*.amount' => 'required|numeric|min:0',
+            'products.*.channel' => 'nullable|integer|exists:t_channels,id',
 
             // Addons Array Validation
             'addons' => 'required|array',
@@ -465,34 +380,27 @@ class SalesInvoiceController extends Controller
             'addons.*.hsn' => 'required|numeric',
             'addons.*.cgst' => 'required|numeric',
             'addons.*.sgst' => 'required|numeric',
-            'addons.*.igst' => 'required|numeric'        
+            'addons.*.igst' => 'required|numeric'
         ]);
 
         $salesInvoice = SalesInvoiceModel::where('id', $id)->first();
 
         $salesInvoiceUpdated = $salesInvoice->update([
             'client_id' => $request->input('client_id'),
-            'client_contact_id' => $request->input('client_contact_id'),
             'company_id' => Auth::user()->company_id,
-            'name' => $request->input('name'),
-            'address_line_1' => $request->input('address_line_1'),
-            'address_line_2' => $request->input('address_line_2'),
-            'city' => $request->input('city'),
-            'pincode' => $request->input('pincode'),
-            'state' => $request->input('state'),
-            'country' => $request->input('country'),
-            'user' => Auth::user()->id,
+            'name' => $client->name,
             'sales_invoice_no' => $request->input('sales_invoice_no'),
-            'sales_invoice_date' => $request->input('sales_invoice_date'),
-            'sales_order_no' => $request->input('sales_order_no'),
+            'sales_invoice_date' => $currentDate,
+            'sales_order_id' => $request->input('sales_order_id'),
+            'sales_order_date' => $request->input('sales_order_date'),
+            'template' => $request->input('template'),
+            'contact_person' => $request->input('contact_person'),
+            'cash' => $request->input('cash'),
+            'user' => Auth::user()->id,
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
-            'template' => $request->input('template'),
-            'commission' => $request->input('commission'),
-            'cash' => $request->input('cash'),
-            'contact_person' => $request->input('contact_person'),
         ]);
 
         // Handle Products
@@ -512,21 +420,18 @@ class SalesInvoiceController extends Controller
                 $existingProduct->update([
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    // 'brand' => $productData['brand'],
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
-                    'channel' => $productData['channel'],
-                    'discount_type' => $productData['discount_type'],
                     'discount' => $productData['discount'],
-                    'so_no' => $productData['so_no'],
-                    'rate' => $productData['rate'],
+                    'discount_type' => $productData['discount_type'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
-                    'godown' => $productData['godown'],
+                    'amount' => $productData['amount'],
+                    'channel' => $productData['channel'],
                 ]);
             } else {
                 SalesInvoiceProductsModel::create([
@@ -534,21 +439,18 @@ class SalesInvoiceController extends Controller
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    'brand' => $productData['brand'],
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
-                    'channel' => $productData['channel'],
-                    'discount_type' => $productData['discount_type'],
                     'discount' => $productData['discount'],
-                    'so_no' => $productData['so_no'],
-                    'rate' => $productData['rate'],
+                    'discount_type' => $productData['discount_type'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
-                    'godown' => $productData['godown'],
+                    'amount' => $productData['amount'],
+                    'channel' => $productData['channel'],
                 ]);
             }
         }
@@ -689,19 +591,11 @@ class SalesInvoiceController extends Controller
                 $salesInvoicesBatch[] = [
                     'company_id' => Auth::user()->company_id,
                     'client_id' => $client->id ?? null,
-                    'client_contact_id' => $clientContact->id ?? null,
                     'name' => $record['client'] ?? 'Unnamed Client',
-                    'address_line_1' => $client->address_line_1 ?? null,
-                    'address_line_2' => $client->address_line_2 ?? null,
-                    'city' => $client->city ?? null,
-                    'pincode' => $client->pincode ?? null,
-                    'state' => $client->state ?? null,
-                    'country' => $client->country ?? null,
                     'user' => Auth::user()->id,
-                    // 'sales_invoice_no' => !empty($record['si_no']) ? (int) $record['si_no'] : 0,
                     'sales_invoice_no' => !empty($record['si_no']) ? trim($record['si_no']) : null,
                     'sales_invoice_date' => $record['so_date'] ?? now(),
-                    'sales_order_no' => !empty($record['so_no']) ? (int) $record['so_no'] : 0,
+                    'sales_order_id' => !empty($record['so_no']) ? (int) $record['so_no'] : 0,
                     'cgst' => $taxData['cgst'] ?? 0,
                     'sgst' => $taxData['sgst'] ?? 0,
                     'igst' => $taxData['igst'] ?? 0,
