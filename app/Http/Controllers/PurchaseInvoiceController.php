@@ -11,6 +11,8 @@ use App\Models\ProductsModel;
 use App\Models\DiscountModel;
 use Carbon\Carbon;
 use Auth;
+use DB;
+use NumberFormatter;
 
 class PurchaseInvoiceController extends Controller
 {
@@ -21,22 +23,15 @@ class PurchaseInvoiceController extends Controller
         $request->validate([
             // Purchase Invoice Fields
             'supplier_id' => 'required|integer|exists:t_suppliers,id',
-            'name' => 'required|string|max:255',
-            'address_line_1' => 'nullable|string|max:255',
-            'address_line_2' => 'nullable|string|max:255',
-            'city' => 'nullable|string|max:100',
-            'pincode' => 'nullable|string|max:10',
-            'state' => 'nullable|string|max:100',
-            'country' => 'nullable|string|max:100',
             'purchase_invoice_no' => 'required|string|max:255',
             'purchase_invoice_date' => 'required|date_format:Y-m-d',
-            'purchase_order_no' => 'required|string|max:50',
+            'oa_no' => 'required|string|max:50',
+            'ref_no' => 'required|string|max:50',
+            'template' => 'required|integer|exists:t_pdf_template,id',
             'cgst' => 'nullable|numeric|min:0',
             'sgst' => 'nullable|numeric|min:0',
             'igst' => 'nullable|numeric|min:0',
-            'currency' => 'required|string|max:10',
-            'template' => 'required|integer',
-            'status' => 'required|integer|in:0,1,2',
+            'total' => 'required|string|max:10',
         
             // Product Details (Array Validation)
             'products' => 'required|array',
@@ -44,20 +39,17 @@ class PurchaseInvoiceController extends Controller
             'products.*.product_id' => 'required|integer|exists:t_products,id',
             'products.*.product_name' => 'required|string|max:255',
             'products.*.description' => 'nullable|string',
-            'products.*.brand' => 'nullable|string|max:100',
             'products.*.quantity' => 'required|integer|min:1',
             'products.*.unit' => 'required|string|max:20',
             'products.*.price' => 'required|numeric|min:0',
-            'products.*.returned' => 'nullable|integer|min:0',
-            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.discount' => 'nullable|numeric|min:0',
-            'products.*.sold' => 'nullable|integer|min:0',
+            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.hsn' => 'required|string|max:20',
             'products.*.tax' => 'required|numeric|min:0',
             'products.*.cgst' => 'nullable|numeric|min:0',
             'products.*.sgst' => 'nullable|numeric|min:0',
             'products.*.igst' => 'nullable|numeric|min:0',
-            'products.*.godown' => 'required|string|max:255'
+            'products.*.amount' => 'nullable|numeric|min:0',
         ]);     
         
         $exists = PurchaseInvoiceModel::where('company_id', Auth::user()->company_id)
@@ -82,131 +74,41 @@ class PurchaseInvoiceController extends Controller
             'supplier_id' => $request->input('supplier_id'),
             'company_id' => Auth::user()->company_id,
             'name' => $supplier->name,
-            'address_line_1' => $supplier->address_line_1,
-            'address_line_2' => $supplier->address_line_2,
-            'city' => $supplier->city,
-            'pincode' => $supplier->pincode,
-            'state' => $supplier->state,
-            'country' => $supplier->country,
             'purchase_invoice_no' => $request->input('purchase_invoice_no'),
             'purchase_invoice_date' => $currentDate,
-            'purchase_order_no' => $request->input('purchase_order_no'),
+            'oa_no' => $request->input('oa_no'),
+            'ref_no' => $request->input('ref_no'),
+            'template' => $request->input('template'),
+            'user' => Auth::user()->id,
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
-            'currency' => $request->input('currency'),
-            'template' => $request->input('template'),
-            'status' => $request->input('status'),
+            'total' => $request->input('total'),
         ]);
         
         $products = $request->input('products');
-        // $total_amount = 0;
-        // $total_cgst = 0;
-        // $total_sgst = 0;
-        // $total_igst = 0;
-        // $total_discount = 0;
 
         // Iterate over the products array and insert each contact
         foreach ($products as $product) 
         {
-            $product_details = ProductsModel::where('id', $product['product_id'])
-                                            ->where('company_id', Auth::user()->company_id)
-                                            ->first();
-            
-            // if ($product_details) 
-            // {
-            //     $quantity = $product['quantity'];
-            //     $rate = $product_details->sale_price;
-            //     $tax_rate = $product_details->tax;
-
-            //    // Calculate the discount based on category or sub-category
-            //    $sub_category_discount = DiscountModel::select('discount')
-            //                                         ->where('client', $request->input('supplier_id'))
-            //                                         ->where('sub_category', $product_details->sub_category)
-            //                                         ->first();
-
-            //     $category_discount = DiscountModel::select('discount')
-            //                                         ->where('client', $request->input('supplier_id'))
-            //                                         ->where('category', $product_details->category)
-            //                                         ->first();
-
-            //     $discount_rate = $sub_category_discount->discount ?? $category_discount->discount ?? 0;
-            //     $discount_amount = $rate * $quantity * ($discount_rate / 100);
-            //     $total_discount += $discount_amount;
-
-            //     // Calculate the total for the product
-            //     $product_total = $rate * $quantity - $discount_amount;
-            //     $tax_amount = $product_total * ($tax_rate / 100);
-
-            //     // Determine the tax distribution based on the client's state
-            //     if (strtolower($supplier->state) === 'west bengal') {
-            //         $cgst = $tax_amount / 2;
-            //         $sgst = $tax_amount / 2;
-            //         $igst = 0;
-            //     } else {
-            //         $cgst = 0;
-            //         $sgst = 0;
-            //         $igst = $tax_amount;
-            //     }
-
-            //     // Accumulate totals
-            //     $total_amount += $product_total;
-            //     $total_cgst += $cgst;
-            //     $total_sgst += $sgst;
-            //     $total_igst += $igst;
-
-            //     PurchaseInvoiceProductsModel::create([
-            //         'purchase_invoice_number' => $register_purchase_invoice['id'],
-            //         'product_id' => $product['product_id'],
-            //         'company_id' => Auth::user()->company_id,
-            //         'product_name' => $product_details->name,
-            //         'description' => $product_details->description,
-            //         'brand' => $product_details->brand,
-            //         'quantity' => $product['quantity'],
-            //         'unit' => $product_details->unit,
-            //         'price' => $rate,
-            //         'discount' => $discount_amount,
-            //         'sold' => $product['sold'],
-            //         'hsn' => $product_details->hsn,
-            //         'tax' => $product_details->tax,
-            //         'cgst' => $cgst,
-            //         'sgst' => $sgst,
-            //         'igst' => $igst,
-            //         'godown' => $product['godown'],
-            //     ]);
-            // }
-
-            // else{
-            //     return response()->json(['message' => 'Sorry, Products not found'], 404);
-            // }
             PurchaseInvoiceProductsModel::create([
                 'purchase_invoice_number' => $register_purchase_invoice['id'],
                 'product_id' => $product['product_id'],
                 'company_id' => Auth::user()->company_id,
                 'product_name' => $product['product_name'],
                 'description' => $product['description'],
-                'brand' => $product['brand'],
                 'quantity' => $product['quantity'],
                 'unit' => $product['unit'],
                 'price' => $product['price'],
-                'discount_type' => $product['discount_type'],
                 'discount' => $product['discount'],
-                'sold' => $product['sold'],
+                'discount_type' => $product['discount_type'],
                 'hsn' => $product['hsn'],
                 'tax' => $product['tax'],
                 'cgst' => $product['cgst'],
                 'sgst' => $product['sgst'],
                 'igst' => $product['igst'],
-                'godown' => $product['godown'],
+                'amount' => $product['amount'],
             ]);
-
-             // Update the total amount and tax values in the sales invoice record
-            // $register_purchase_invoice->update([
-            //     'total' => $total_amount,
-            //     'cgst' => $total_cgst,
-            //     'sgst' => $total_sgst,
-            //     'igst' => $total_igst,
-            // ]);
         }
 
         unset($register_purchase_invoice['id'], $register_purchase_invoice['created_at'], $register_purchase_invoice['updated_at']);
@@ -217,6 +119,11 @@ class PurchaseInvoiceController extends Controller
     }
 
     // view
+    // helper function
+     private function convertNumberToWords($num) {
+        $formatter = new NumberFormatter("en", NumberFormatter::SPELLOUT);
+        return ucfirst($formatter->format($num)) . ' Only';
+    }
     public function view_purchase_invoice(Request $request)
     {
         // Get filter inputs
@@ -225,14 +132,15 @@ class PurchaseInvoiceController extends Controller
         $purchaseInvoiceNo = $request->input('purchase_invoice_no');
         $purchaseInvoiceDate = $request->input('purchase_invoice_date');
         $purchaseOrderNo = $request->input('purchase_order_no');
+        $productIds = $request->input('product_ids'); 
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
 
         // Build the query
         $query = PurchaseInvoiceModel::with(['products' => function ($query) {
-            $query->select('purchase_invoice_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'returned', 'discount_type', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
+            $query->select('purchase_invoice_number', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel',  'return', 'stock');
         }])
-        ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 'purchase_invoice_date', 'purchase_order_no', 'cgst', 'sgst', 'igst', 'currency', 'template', 'status')
+        ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 'purchase_invoice_date', 'oa_no', 'ref_no', 'template', 'user', 'cgst', 'sgst', 'igst', 'total')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -251,12 +159,45 @@ class PurchaseInvoiceController extends Controller
         if ($purchaseOrderNo) {
             $query->where('purchase_order_no', 'LIKE', '%' . $purchaseOrderNo . '%');
         }
+            // ✅ **Filter by comma-separated product IDs**
+            if (!empty($productIds)) {
+            $productIdArray = explode(',', $productIds); // Convert CSV to array
+            $query->whereHas('products', function ($query) use ($productIdArray) {
+                $query->whereIn('product_id', $productIdArray);
+            });
+        }
 
         // Apply limit and offset
         $query->offset($offset)->limit($limit);
 
         // Fetch data
         $get_purchase_invoices = $query->get();
+
+        // Transform Data
+        $get_purchase_invoices->transform(function ($invoice) {
+
+            // Convert total to words
+            $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
+
+            // ✅ Format total with comma-separated values
+            $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
+
+            // Replace user ID with corresponding contact_person object
+            $invoice->contact_person = isset($invoice->get_user) ? [
+                'id' => $invoice->get_user->id,
+                'name' => $invoice->get_user->name
+            ] : ['id' => null, 'name' => 'Unknown'];
+
+            // Convert user ID into an object with `id` and `name`
+            $invoice->user = isset($invoice->get_user) ? [
+                'id' => $invoice->get_user->id,
+                'name' => $invoice->get_user->name
+            ] : ['id' => null, 'name' => 'Unknown'];
+
+            unset($invoice->get_user); // Remove original relationship data
+
+            return $invoice;
+        });
 
         // Return response
         return $get_purchase_invoices->isNotEmpty()
@@ -278,40 +219,35 @@ class PurchaseInvoiceController extends Controller
     public function edit_purchase_invoice(Request $request, $id)
     {
         $request->validate([
-            'supplier_id' => 'required|integer',
-            'name' => 'required|string',
-            'address_line_1' => 'required|string',
-            'address_line_2' => 'nullable|string',
-            'city' => 'required|string',
-            'pincode' => 'required|string',
-            'state' => 'required|string',
-            'country' => 'required|string',
-            'purchase_invoice_no' => 'required|string',
-            'purchase_invoice_date' => 'required|date',
-            'purchase_order_no' => 'required|string',
-            'cgst' => 'required|numeric',
-            'sgst' => 'required|numeric',
-            'igst' => 'required|numeric',
-            'currency' => 'required|string',
-            'template' => 'required|integer',
-            'status' => 'required|integer',
+            // Purchase Invoice Fields
+            'supplier_id' => 'required|integer|exists:t_suppliers,id',
+            'purchase_invoice_no' => 'required|string|max:255',
+            'purchase_invoice_date' => 'required|date_format:Y-m-d',
+            'oa_no' => 'required|string|max:50',
+            'ref_no' => 'required|string|max:50',
+            'template' => 'required|integer|exists:t_pdf_template,id',
+            'cgst' => 'nullable|numeric|min:0',
+            'sgst' => 'nullable|numeric|min:0',
+            'igst' => 'nullable|numeric|min:0',
+            'total' => 'required|string|max:10',
+        
+            // Product Details (Array Validation)
             'products' => 'required|array',
-            'products.*.purchase_invoice_number' => 'required|integer',
-            'products.*.product_id' => 'required|integer',
-            'products.*.product_name' => 'required|string',
+            'products.*.purchase_invoice_number' => 'required|string|max:50|exists:t_purchase_invoices,purchase_invoice_no',
+            'products.*.product_id' => 'required|integer|exists:t_products,id',
+            'products.*.product_name' => 'required|string|max:255',
             'products.*.description' => 'nullable|string',
-            'products.*.brand' => 'required|string',
-            'products.*.quantity' => 'required|integer',
-            'products.*.unit' => 'required|string',
-            'products.*.price' => 'required|numeric',
+            'products.*.quantity' => 'required|integer|min:1',
+            'products.*.unit' => 'required|string|max:20',
+            'products.*.price' => 'required|numeric|min:0',
+            'products.*.discount' => 'nullable|numeric|min:0',
             'products.*.discount_type' => 'required|in:percentage,value',
-            'products.*.discount' => 'nullable|numeric',
-            'products.*.hsn' => 'required|string',
-            'products.*.tax' => 'required|numeric',
-            'products.*.cgst' => 'required|numeric',
-            'products.*.sgst' => 'required|numeric',
-            'products.*.igst' => 'required|numeric',
-            'products.*.godown' => 'required|integer',
+            'products.*.hsn' => 'required|string|max:20',
+            'products.*.tax' => 'required|numeric|min:0',
+            'products.*.cgst' => 'nullable|numeric|min:0',
+            'products.*.sgst' => 'nullable|numeric|min:0',
+            'products.*.igst' => 'nullable|numeric|min:0',
+            'products.*.amount' => 'nullable|numeric|min:0',
         ]);
 
         $purchaseInvoice = PurchaseInvoiceModel::where('id', $id)->first();
@@ -329,21 +265,16 @@ class PurchaseInvoiceController extends Controller
         $purchaseInvoiceUpdated = $purchaseInvoice->update([
             'supplier_id' => $request->input('supplier_id'),
             'name' => $request->input('name'),
-            'address_line_1' => $request->input('address_line_1'),
-            'address_line_2' => $request->input('address_line_2'),
-            'city' => $request->input('city'),
-            'pincode' => $request->input('pincode'),
-            'state' => $request->input('state'),
-            'country' => $request->input('country'),
             'purchase_invoice_no' => $request->input('purchase_invoice_no'),
-            'purchase_invoice_date' => $request->input('purchase_invoice_date'),
-            'purchase_order_no' => $request->input('purchase_order_no'),
+            'purchase_invoice_date' => $currentDate,
+            'oa_no' => $request->input('oa_no'),
+            'ref_no' => $request->input('ref_no'),
+            'template' => $request->input('template'),
+            'user' => Auth::user()->id,
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
-            'currency' => $request->input('currency'),
-            'template' => $request->input('template'),
-            'status' => $request->input('status'),
+            'total' => $request->input('total'),
         ]);
 
         $products = $request->input('products');
@@ -361,18 +292,17 @@ class PurchaseInvoiceController extends Controller
                 $existingProduct->update([
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    'brand' => $productData['brand'],
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
-                    'discount_type' => $productData['discount_type'],
                     'discount' => $productData['discount'],
+                    'discount_type' => $productData['discount_type'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
-                    'godown' => $productData['godown'],
+                    'amount' => $productData['amount'],
                 ]);
             } else {
                 // Add new product
@@ -382,18 +312,17 @@ class PurchaseInvoiceController extends Controller
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    'brand' => $productData['brand'],
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
-                    'discount_type' => $productData['discount_type'],
                     'discount' => $productData['discount'],
+                    'discount_type' => $productData['discount_type'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
-                    'godown' => $productData['godown'],
+                    'amount' => $productData['amount'],
                 ]);
             }
         }

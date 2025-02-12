@@ -15,20 +15,17 @@ class PurchaseInvoiceProductsModel extends Model
         'company_id',
         'product_name',
         'description',
-        'brand',
         'quantity',
         'unit',
         'price',
-        'returned',
-        'discount_type',
         'discount',
-        'sold',
+        'discount_type',
         'hsn',
         'tax',
         'cgst',
         'sgst',
         'igst',
-        'godown'
+        'amount'
     ];
 
     public function purchaseInvoice()
