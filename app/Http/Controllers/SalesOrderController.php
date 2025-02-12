@@ -274,6 +274,9 @@ class SalesOrderController extends Controller
         // Transform Data
         $get_sales_orders->transform(function ($order) {
 
+             // Format total with comma-separated values (Indian numbering system)
+            $order->total = number_format($order->total, 2);
+
             // Convert total to words
             $order->amount_in_words = $this->convertNumberToWords($order->total);
 
