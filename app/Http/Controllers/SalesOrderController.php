@@ -32,7 +32,6 @@ class SalesOrderController extends Controller
             'sales_order_no' => 'required|string|unique:t_sales_order,sales_order_no',
             'sales_order_date' => 'required|date_format:Y-m-d',
             'ref_no' => 'required|string',
-
             'template' => 'required|integer|exists:t_pdf_template,id',
             'contact_person' => 'required|integer|exists:users,id',
             'cgst' => 'nullable|numeric|min:0',
@@ -46,8 +45,6 @@ class SalesOrderController extends Controller
             'products.*.product_name' => 'required|string|exists:t_products,name',
             'products.*.description' => 'required|string',
             'products.*.quantity' => 'required|integer|min:1',
-            // 'products.*.sent' => 'nullable|integer|min:1',
-            // 'products.*.short_closed' => 'nullable|integer|min:1',
             'products.*.unit' => 'required|string|max:20',
             'products.*.price' => 'required|numeric|min:0',
             'products.*.discount' => 'nullable|numeric|min:0',
@@ -73,12 +70,6 @@ class SalesOrderController extends Controller
 
         // Fetch the client details using client_id
         $client = ClientsModel::find($request->input('client_id'));
-
-        $client_address = ClientAddressModel::find($client->id);
-
-        if (!$client) {
-            return response()->json(['message' => 'Client not found'], 404);
-        }
 
         // Handle quotation number logic
         $counterController = new CounterController();
@@ -113,32 +104,22 @@ class SalesOrderController extends Controller
             ], 422);
         }
 
-        // $currentDate = Carbon::now()->toDateString();
-
         // Register the sales order
         $register_sales_order = SalesOrderModel::create([
             'client_id' => $request->input('client_id'),
-            'client_contact_id' => $request->input('client_contact_id'),
             'company_id' => Auth::user()->company_id,
             'name' => $client->name,
-            'address_line_1' => $client_address->address_line_1,
-            'address_line_2' => $client_address->address_line_2,
-            'city' => $client_address->city,
-            'pincode' => $client_address->pincode,
-            'state' => $client_address->state,
-            'country' => $client_address->country,
-            'user' => Auth::user()->id,
             'sales_order_no' => $request->input('sales_order_no'),
-            // 'sales_order_date' => $currentDate,
             'sales_order_date' => $request->input('sales_order_date'),
             'ref_no' => $request->input('ref_no'),
+            'template' => $request->input('template'),
+            'contact_person' => $request->input('contact_person'),
+            'status' => "pending",
+            'user' => Auth::user()->id,
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
-            'currency' => $request->input('currency'),
-            'template' => $request->input('template'),
-            'status' => $request->input('status'),
         ]);
 
          // **Step 2: Register Sales Order Products**
@@ -151,120 +132,20 @@ class SalesOrderController extends Controller
                 'product_id' => $product['product_id'],
                 'product_name' => $product['product_name'],
                 'description' => $product['description'],
-                // 'group' => $product['group'],
                 'quantity' => $product['quantity'],
-                // 'unit' => $product_details->unit,
-                // 'price' => $rate,
-                // 'channel' => $product_details->channel,
-                // 'discount_type' => $product_details->discount_type,
-                // 'discount' => $discount_amount,
-                // 'sent' => array_key_exists('sent', $product) ? $product['sent'] : 0,
-                // 'short_closed' => array_key_exists('short_closed', $product) ? $product['short_closed'] : 0,
                 'unit' => $product['unit'],
                 'price' => $product['price'],
-                'channel' => $product['channel'],
-                'discount_type' => $product['discount_type'],
                 'discount' => $product['discount'],
-                'so_no' => $product['so_no'],
-                'rate' => $product['rate'],
+                'discount_type' => $product['discount_type'],
                 'hsn' => $product['hsn'],
                 'tax' => $product['tax'],
                 'cgst' =>$product['cgst'],
                 'sgst' => $product['sgst'],
                 'igst' => $product['igst'],
+                'amount' => $product['amount'],
+                'channel' => $product['channel'],
             ]);
         }
-        // $total_amount = 0;
-        // $total_cgst = 0;
-        // $total_sgst = 0;
-        // $total_igst = 0;
-        // $total_discount = 0;
-
-        // Iterate over the products array and calculate totals
-        // foreach ($products as $product) {
-
-        //     $product_details = ProductsModel::where('id', $product['product_id'])
-        //                                     ->where('company_id', Auth::user()->company_id)
-        //                                     ->first();
-
-        //     if ($product_details) {
-        //         $quantity = $product['quantity'];
-        //         $rate = $product_details->sale_price;
-        //         $tax_rate = $product_details->tax;
-
-        //         // Calculate the discount based on category or sub-category
-        //         $sub_category_discount = DiscountModel::select('discount')
-        //                                                 ->where('client', $request->input('client_id'))
-        //                                                 ->where('sub_category', $product_details->sub_category)
-        //                                                 ->first();
-
-        //         $category_discount = DiscountModel::select('discount')
-        //                                             ->where('client', $request->input('client_id'))
-        //                                             ->where('category', $product_details->category)
-        //                                             ->first();
-
-        //         $discount_rate = $sub_category_discount->discount ?? $category_discount->discount ?? 0;
-        //         $discount_amount = $rate * $quantity * ($discount_rate / 100);
-        //         $total_discount += $discount_amount;
-
-        //         // Calculate the total for the product
-        //         $product_total = $rate * $quantity - $discount_amount;
-        //         $tax_amount = $product_total * ($tax_rate / 100);
-
-        //         // Determine the tax distribution
-        //         if (strtolower($client->state) === 'west bengal') {
-        //             $cgst = $tax_amount / 2;
-        //             $sgst = $tax_amount / 2;
-        //             $igst = 0;
-        //         } else {
-        //             $cgst = 0;
-        //             $sgst = 0;
-        //             $igst = $tax_amount;
-        //         }
-
-        //         // Accumulate the totals
-        //         $total_amount += $product_total;
-        //         $total_cgst += $cgst;
-        //         $total_sgst += $sgst;
-        //         $total_igst += $igst;
-
-        //         // Create a record for the product
-        //         SalesOrderProductsModel::create([
-        //             'sales_order_id' => $register_sales_order->id,
-        //             'company_id' => Auth::user()->company_id,
-        //             'product_id' => $product['product_id'],
-        //             'product_name' => $product_details->name,
-        //             'description' => $product['description'],
-        //             'group' => $product_details->group,
-        //             'quantity' => $quantity,
-        //             // 'unit' => $product_details->unit,
-        //             // 'price' => $rate,
-        //             // 'channel' => $product_details->channel,
-        //             // 'discount_type' => $product_details->discount_type,
-        //             // 'discount' => $discount_amount,
-        //             'sent' => array_key_exists('sent', $product) ? $product['sent'] : 0,
-        //             'short_closed' => array_key_exists('short_closed', $product) ? $product['short_closed'] : 0,
-        //             'unit' => $product['unit'],
-        //             'price' => $product['price'],
-        //             'channel' => $product['channel'],
-        //             'discount_type' => $product['discount_type'],
-        //             'discount' => $product['discount'],
-        //             'hsn' => $product['hsn'],
-        //             'tax' => $tax_rate,
-        //             'cgst' => $cgst,
-        //             'sgst' => $sgst,
-        //             'igst' => $igst,
-        //         ]);
-        //     }
-        // }
-
-        // Update the total amount and tax values in the sales order record
-        // $register_sales_order->update([
-        //     'total' => $total_amount,
-        //     'cgst' => $total_cgst,
-        //     'sgst' => $total_sgst,
-        //     'igst' => $total_igst,
-        // ]);
 
         // Process and insert addons
         // **Step 3: Register Sales Order Add-ons**
@@ -290,32 +171,29 @@ class SalesOrderController extends Controller
             'success' => true,
             'message' => 'Sales Order registered successfully!',
             'data' => $register_sales_order,
-            // 'total_cgst' => $total_cgst,
-            // 'total_sgst' => $total_sgst,
-            // 'total_igst' => $total_igst,
-            // 'total_discount' => $total_discount,
-            // 'total_amount' => $total_amount
         ], 201);
     }
 
     // View Sales Orders
+    // helper function
+    private function convertNumberToWords($num) {
+        $formatter = new NumberFormatter("en", NumberFormatter::SPELLOUT);
+        return ucfirst($formatter->format($num)) . ' Only';
+    }
+
     public function view_sales_order(Request $request)
     {
         // Get filter inputs
         $clientId = $request->input('client_id');
         $clientContactId = $request->input('client_contact_id');
         $name = $request->input('name');
-        $city = $request->input('city');
-        $pincode = $request->input('pincode');
-        $state = $request->input('state');
-        $country = $request->input('country');
         $salesOrderNo = $request->input('sales_order_no');
         $salesOrderDate = $request->input('sales_order_date');
-        $status = $request->input('status'); // New filter for status
         $user = $request->input('user'); // New filter for user
-        $product = $request->input('product'); // New filter for product
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
+        $status = $request->input('status');
+        $productIds = $request->input('product_ids'); 
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
 
@@ -327,8 +205,7 @@ class SalesOrderController extends Controller
             'products' => function ($query) {
                 $query->select(
                     'sales_order_id', 'product_id', 'product_name', 'description',
-                    'quantity', 'sent', 'short_closed', 'unit', 'price', 'discount_type', 
-                    'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'channel'
+                    'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'sent', 'short_closed', 
                 )->with(['channel' => function ($channelQuery) {
                     $channelQuery->select('id', 'name'); // Fetch channel name
                 }]);
@@ -340,7 +217,7 @@ class SalesOrderController extends Controller
                 $query->select('id', 'name');
             },
         ])
-        ->select('id', 'client_id', 'client_contact_id', 'name', 'address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country', 'user', 'sales_order_no', 'sales_order_date', 'ref_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
+        ->select('id', 'client_id', 'name', 'sales_order_no', 'sales_order_date', 'ref_no', 'template', 'contact_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -353,18 +230,6 @@ class SalesOrderController extends Controller
         if ($name) {
             $query->where('name', 'LIKE', '%' . $name . '%');
         }
-        if ($city) {
-            $query->where('city', 'LIKE', '%' . $city . '%');
-        }
-        if ($pincode) {
-            $query->where('pincode', $pincode);
-        }
-        if ($state) {
-            $query->where('state', 'LIKE', '%' . $state . '%');
-        }
-        if ($country) {
-            $query->where('country', 'LIKE', '%' . $country . '%');
-        }
         if ($salesOrderNo) {
             $query->where('sales_order_no', 'LIKE', '%' . $salesOrderNo . '%');
         }
@@ -374,15 +239,19 @@ class SalesOrderController extends Controller
         if ($status) {
             $query->where('status', $status);
         }
-        // Apply User Filter (ID)
-        if ($user) {
-            $query->where('user', $user);
+        // ✅ **Filter by comma-separated statuses**
+        if (!empty($status)) {
+            $statusArray = explode(',', $status); // Convert CSV to array
+            $query->whereIn('status', $statusArray);
         }
-        if ($product) {
-            $query->whereHas('products', function ($q) use ($product) {
-                $q->where('product_name', 'LIKE', '%' . $product . '%');
+
+        // ✅ **Filter by comma-separated product IDs**
+        if (!empty($productIds)) {
+            $productIdArray = explode(',', $productIds); // Convert CSV to array
+            $query->whereHas('products', function ($query) use ($productIdArray) {
+                $query->whereIn('product_id', $productIdArray);
             });
-        }        
+        }      
     
         // Apply Date Range Filter
         if ($dateFrom && $dateTo) {
@@ -402,6 +271,19 @@ class SalesOrderController extends Controller
 
         // Transform Data
         $get_sales_orders->transform(function ($order) {
+
+            // Convert total to words
+            $order->amount_in_words = $this->convertNumberToWords($order->total);
+
+            // Capitalize the first letter of status
+            $order->status = ucfirst($order->status);
+
+            // Replace user ID with corresponding contact_person object
+            $order->contact_person = isset($order->get_user) ? [
+                'id' => $order->get_user->id,
+                'name' => $order->get_user->name
+            ] : ['id' => null, 'name' => 'Unknown'];
+
             // Replace user ID with corresponding user object
             $order->user = isset($order->get_user) ? [
                 'id' => $order->get_user->id,
@@ -435,49 +317,37 @@ class SalesOrderController extends Controller
     {
         $request->validate([
             'client_id' => 'required|integer|exists:t_clients,id',
-            'client_contact_id' => 'required|integer|exists:t_client_contacts,id',
             'name' => 'required|string',
-            'address_line_1' => 'required|string',
-            'address_line_2' => 'required|string',
-            'city' => 'required|string',
-            'pincode' => 'required',
-            'state' => 'required|string',
-            'country' => 'required|string',
             'sales_order_no' => 'required|integer',
             'sales_order_date' => 'required|date',
             'ref_no' => 'required|string',
+            'template' => 'required|integer|exists:t_pdf_template,id',
+            'contact_person' => 'required|integer|exists:users,id',
             'cgst' => 'required|numeric',
             'sgst' => 'required|numeric',
             'igst' => 'required|numeric',
             'total' => 'required|numeric',
-            'currency' => 'required|string',
-            'template' => 'required|integer|exists:t_pdf_template,id',
-            'status' => 'required|in:pending,partial,completed',
 
-             // for products 
+            // for products 
             'products' => 'required|array',
-            // 'products.*.sales_order_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
-            // 'products.*.group' => 'required|string',
             'products.*.quantity' => 'required|integer',
-            // 'products.*.sent' => 'nullable|integer',
-            // 'products.*.short_closed' => 'nullable|integer',
             'products.*.unit' => 'required|string',
             'products.*.price' => 'required|numeric',
-            'products.*.channel' => 'nullable|integer|exists:t_channels,id',
-            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.discount' => 'nullable|numeric',
+            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.hsn' => 'required|string',
             'products.*.tax' => 'required|numeric',
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
+            'products.*.amount' => 'nullable|numeric|min:0',
+            'products.*.channel' => 'nullable|integer|exists:t_channels,id',
 
             // for addons 
             'addons' => 'nullable|array',
-            // 'addons.*.sales_order_id' => 'required|integer',
             'addons.*.name' => 'required|string',
             'addons.*.amount' => 'required|numeric',
             'addons.*.tax' => 'required|numeric',
@@ -505,26 +375,18 @@ class SalesOrderController extends Controller
 
         $salesOrderUpdated = $salesOrder->update([
             'client_id' => $request->input('client_id'),
-            'client_contact_id' => $request->input('client_contact_id'),
             'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
-            'address_line_1' => $request->input('address_line_1'),
-            'address_line_2' => $request->input('address_line_2'),
-            'city' => $request->input('city'),
-            'pincode' => $request->input('pincode'),
-            'state' => $request->input('state'),
-            'country' => $request->input('country'),
             'user' => Auth::user()->id,
             'sales_order_no' => $request->input('sales_order_no'),
             'sales_order_date' => $request->input('sales_order_date'),
             'ref_no' => $request->input('ref_no'),
+            'template' => $request->input('template'),
+            'contact_person' => $request->input('contact_person'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
-            'currency' => $request->input('currency'),
-            'template' => $request->input('template'),
-            'status' => $request->input('status'),
         ]);
 
         $products = $request->input('products');
@@ -542,20 +404,18 @@ class SalesOrderController extends Controller
                 $existingProduct->update([
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    // 'group' => $productData['group'],
                     'quantity' => $productData['quantity'],
-                    // 'sent' => isset($productData['sent']) && is_numeric($productData['sent']) ? (int)        $productData['sent'] : 0,
-                    // 'short_closed' => isset($productData['short_closed']) && is_numeric($productData['short_closed']) ? (int)$productData['short_closed'] : 0,
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
-                    'channel' => $productData['channel'],
-                    'discount_type' => $productData['discount_type'],
                     'discount' => $productData['discount'],
+                    'discount_type' => $productData['discount_type'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
+                    'amount' => $productData['amount'],
+                    'channel' => $productData['channel'], 
                 ]);
             } else {
                 SalesOrderProductsModel::create([
@@ -564,20 +424,18 @@ class SalesOrderController extends Controller
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    // 'group' => $productData['group'],
                     'quantity' => $productData['quantity'],
-                    // 'sent' => $productData['sent'],
-                    // 'short_closed' => $productData['short_closed'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
-                    'channel' => $productData['channel'],
-                    'discount_type' => $productData['discount_type'],
                     'discount' => $productData['discount'],
+                    'discount_type' => $productData['discount_type'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
+                    'amount' => $productData['amount'],
+                    'channel' => $productData['channel'],
                 ]);
             }
         }

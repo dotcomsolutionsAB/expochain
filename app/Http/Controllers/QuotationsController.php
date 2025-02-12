@@ -297,10 +297,7 @@ class QuotationsController extends Controller
         if ($user) {
             $query->whereDate('user', $user);
         }
-        if ($status) {
-            $query->whereDate('status', $status);
-        }
-         // ✅ **Filter by comma-separated statuses**
+        // ✅ **Filter by comma-separated statuses**
         if (!empty($status)) {
             $statusArray = explode(',', $status); // Convert CSV to array
             $query->whereIn('status', $statusArray);
