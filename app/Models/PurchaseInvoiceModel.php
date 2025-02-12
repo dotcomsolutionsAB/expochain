@@ -34,4 +34,9 @@ class PurchaseInvoiceModel extends Model
     {
         return $this->hasMany(PurchaseInvoiceProductsModel::class, 'purchase_invoice_number', 'id');
     }
+
+    public function get_user()
+    {
+        return $this->belongsTo(User::class, 'user', 'id'); 
+    }
 }
