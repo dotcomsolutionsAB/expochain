@@ -765,14 +765,7 @@ class SalesOrderController extends Controller
             $salesOrdersBatch[] = [
                 'company_id' => Auth::user()->company_id,
                 'client_id' => $client->id,
-                // 'client_contact_id' => $clientContact->id,
                 'name' => $record['client'],
-                // 'address_line_1' => $client->address_line_1 ?? null,
-                // 'address_line_2' => $client->address_line_2 ?? null,
-                // 'city' => $client->city ?? null,
-                // 'pincode' => $client->pincode ?? null,
-                // 'state' => $client->state ?? null,
-                // 'country' => $client->country ?? null,
                 'user' => Auth::user()->id,
                 'sales_order_no' => $record['so_no'],
                 'sales_order_date' => date('Y-m-d', strtotime($record['so_date'] ?? now())),
@@ -828,6 +821,20 @@ class SalesOrderController extends Controller
                         'sent' => is_numeric($itemsData['sent'][$index]) ? (int)$itemsData['sent'][$index] : 0,
                         'unit' => $itemsData['unit'][$index] ?? '',
                         'price' => is_numeric($itemsData['price'][$index]) ? (float)$itemsData['price'][$index] : 0,
+                        'amount' => (
+                            (isset($itemsData['quantity'][$index]) ? (float) $itemsData['quantity'][$index] : 0.0) *
+                            (
+                                (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0) -
+                                (
+                                    ((isset($itemsData['discount'][$index]) ? (float) $itemsData['discount'][$index] : 0.0) *
+                                    (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0)) / 100
+                                )
+                            )
+                        ) + (
+                            (isset($itemsData['cgst'][$index]) ? (float) $itemsData['cgst'][$index] : 0.0) +
+                            (isset($itemsData['sgst'][$index]) ? (float) $itemsData['sgst'][$index] : 0.0) +
+                            (isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0.0)
+                        ),
                         'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index]) 
                                 ? (
                                     is_numeric($itemsData['channel'][$index]) 
