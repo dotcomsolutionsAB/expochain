@@ -10,7 +10,23 @@ class QuotationsModel extends Model
     protected $table = 't_quotations';
 
     protected $fillable = [        
-        'company_id', 'client_id', 'quotation_no', 'quotation_date', 'enquiry_no', 'enquiry_date', 'status','user', 'name', 'user', 'sales_person', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'contact_person'
+        'company_id',
+        'client_id',
+        'name',
+        'quotation_no',
+        'quotation_date',
+        'enquiry_no',
+        'enquiry_date',
+        'template',
+        'contact_person',
+        'sales_person',
+        'status',
+        'user',
+        'cgst',
+        'sgst',
+        'igst',
+        'total',
+        'currency',
     ];
 
     public function products()

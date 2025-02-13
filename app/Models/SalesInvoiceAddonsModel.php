@@ -10,8 +10,8 @@ class SalesInvoiceAddonsModel extends Model
     protected $table = 't_sales_invoice_addons';
 
     protected $fillable = [
-       'sales_invoice_id',
-       'company_id',
+        'sales_invoice_id',
+        'company_id',
         'name',
         'amount',
         'tax',

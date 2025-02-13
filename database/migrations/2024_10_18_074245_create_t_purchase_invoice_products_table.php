@@ -14,25 +14,25 @@ return new class extends Migration
         Schema::create('t_purchase_invoice_products', function (Blueprint $table) {
             $table->id();
             $table->integer('company_id');
-            $table->string('purchase_invoice_number');
+            $table->string('purchase_invoice_id');
             $table->integer('product_id');
             $table->string('product_name');
             // as it don't support `length`, it can store upto `65,535 characters for TEXT type in MySQL`
             $table->text('description');
-            $table->string('brand');
             $table->integer('quantity');
             $table->string('unit');
             $table->float('price');
-            $table->string('returned')->default('0');
-            $table->enum('discount_type', ['percentage', 'value']);
             $table->float('discount');
-            $table->integer('sold');
+            $table->enum('discount_type', ['percentage', 'value']);
             $table->string('hsn');
             $table->float('tax');
             $table->float('cgst');
             $table->float('sgst');
             $table->float('igst');
-            $table->string('godown');
+            $table->float('amount')->default('0');
+            $table->integer('channel')->default('0');
+            $table->integer('returned')->default('0');//
+            $table->integer('stock')->default('0');
             $table->timestamps();
         });
     }

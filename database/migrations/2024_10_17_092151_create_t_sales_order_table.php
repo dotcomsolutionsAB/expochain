@@ -15,24 +15,18 @@ return new class extends Migration
             $table->id();
             $table->integer('company_id');
             $table->integer('client_id');
-            $table->integer('client_contact_id');
             $table->string('name');
-            $table->string('address_line_1');
-            $table->string('address_line_2');
-            $table->string('city');
-            $table->string('pincode');
-            $table->string('state');
-            $table->string('country');
             $table->string('sales_order_no');
             $table->date('sales_order_date');
             $table->string('ref_no');
+            $table->integer('template');
+            $table->integer('contact_person');
+            $table->enum('status', ['pending', 'partial', 'completed', 'short_closed']);
+            $table->integer('user');
             $table->float('cgst');
             $table->float('sgst');
             $table->float('igst');
             $table->float('total');
-            $table->string('currency');
-            $table->integer('template');
-            $table->integer('status');
             $table->timestamps();
         });
     }

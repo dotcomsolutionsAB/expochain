@@ -19,25 +19,23 @@ return new class extends Migration
             $table->string('product_name');
             // as it don't support `length`, it can store upto `65,535 characters for TEXT type in MySQL`
             $table->text('description');
-            $table->string('brand');
             $table->integer('quantity');
             $table->string('unit');
             $table->float('price');
-            $table->integer('channel')->nullable();
-            $table->integer('returned')->default(0);
-            $table->float('profit')->default(0);
-            $table->integer('purchase_invoice_id')->default(0);
-            $table->float('purchase_rate')->default(0.00);
-            $table->enum('discount_type', ['percentage', 'value'])->default('percentage');
             $table->float('discount');
-            $table->integer('purchase_invoice_id');
-            $table->integer('rate');
+            $table->enum('discount_type', ['percentage', 'value'])->default('percentage');
             $table->string('hsn');
             $table->float('tax');
             $table->float('cgst');
             $table->float('sgst');
             $table->float('igst');
-            $table->string('godown');
+            $table->float('amount');
+            $table->integer('channel')->nullable();
+            $table->integer('so_id')->nullable();
+            $table->integer('returned')->default(0);
+            $table->integer('profit')->default(0);
+            $table->integer('purchase_invoice_id')->default(0);
+            $table->float('purchase_rate')->default(0.00);
             $table->timestamps();
         });
     }

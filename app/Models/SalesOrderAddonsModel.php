@@ -10,8 +10,8 @@ class SalesOrderAddonsModel extends Model
     protected $table = 't_sales_order_addons';
 
     protected $fillable = [
-       'sales_order_id',
-       'company_id',
+        'sales_order_id',
+        'company_id',
         'name',
         'amount',
         'tax',

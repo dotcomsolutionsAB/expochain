@@ -186,12 +186,6 @@ class QuotationsController extends Controller
 
         unset($register_quotations['id'], $register_quotations['created_at'], $register_quotations['updated_at']);
 
-        // return response()->json([
-        //     'code' => 201,
-        //     'success' => true,
-        //     'message' => 'Quotations registered successfully!',
-        //     'data' => $register_quotations,
-        // ], 201);
         return isset($register_quotations) && $register_quotations !== null
             ? response()->json(['code' => 201, 'success' => true, 'message' => 'Quotations registered successfully!', 'data' => $register_quotations], 201)
             : response()->json(['code' => 400, 'success' => false,'Failed to register quotations record'], 400);

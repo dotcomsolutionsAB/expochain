@@ -19,20 +19,20 @@ return new class extends Migration
             $table->string('product_name');
             // as it don't support `length`, it can store upto `65,535 characters for TEXT type in MySQL`
             $table->text('description');
-            $table->string('group');
             $table->integer('quantity');
-            $table->integer('sent');
-            $table->integer('short_closed');
             $table->string('unit');
             $table->float('price');
-            $table->integer('channel')->nullable();
-            $table->enum('discount_type', ['percentage', 'value']);
             $table->float('discount');
+            $table->enum('discount_type', ['percentage', 'value']);
             $table->string('hsn');
             $table->float('tax');
             $table->float('cgst');
             $table->float('sgst');
             $table->float('igst');
+            $table->float('amount');
+            $table->integer('channel')->nullable();
+            $table->integer('sent')->default(0);
+            $table->integer('short_closed')->default(0);
             $table->timestamps();
         });
     }

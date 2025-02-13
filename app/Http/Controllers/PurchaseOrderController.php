@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Auth;
+use DB;
+use NumberFormatter;
 
 class PurchaseOrderController extends Controller
 {
@@ -21,39 +23,49 @@ class PurchaseOrderController extends Controller
     public function add_purchase_order(Request $request)
     {
         $request->validate([
-            'supplier_id' => 'required|integer',
-            'name' => 'required|string',
-            'address_line_1' => 'required|string',
-            'address_line_2' => 'nullable|string',
-            'city' => 'required|string',
-            'pincode' => 'required|string',
-            'state' => 'required|string',
-            'country' => 'required|string',
-            'purchase_order_no' => 'required|string',
-            'purchase_order_date' => 'required|date',
-            'cgst' => 'required|numeric',
-            'sgst' => 'required|numeric',
-            'igst' => 'required|numeric',
-            'total' => 'required|numeric',
-            'currency' => 'required|string',
-            'template' => 'required|integer',
-            'status' => 'required|integer',
+            'supplier_id' => 'required|integer|exists:t_suppliers,id',
+            'purchase_order_no' => 'required|string|max:255', // Matches DB column
+            'purchase_order_date' => 'required|date_format:Y-m-d',
+            'oa_no' => 'required|string', 
+            'oa_date' => 'required|date', 
+            'template' => 'required|integer|exists:t_pdf_template,id',
+            'cgst' => 'nullable|numeric|min:0', // Made nullable, default 0
+            'sgst' => 'nullable|numeric|min:0', // Made nullable, default 0
+            'igst' => 'nullable|numeric|min:0', // Made nullable, default 0
+            'total' => 'required|numeric|min:0',
+            'currency' => 'required|string|max:10',
+
+            // Product Details (Array Validation)
             'products' => 'required|array', // Validating array of products
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
-            'products.*.brand' => 'required|string',
             'products.*.quantity' => 'required|integer',
             'products.*.unit' => 'required|string',
             'products.*.price' => 'required|numeric',
-            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.discount' => 'nullable|numeric',
+            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.hsn' => 'required|string',
             'products.*.tax' => 'required|numeric',
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
-            'products.*.godown' => 'required|integer',
+            'products.*.amount' => 'nullable|numeric',
+
+            // for add-ons
+            'addons' => 'nullable|array',
+            'addons.*.name' => 'required|string|max:255',
+            'addons.*.amount' => 'required|numeric|min:0',
+            'addons.*.tax' => 'nullable|numeric|min:0',
+            'addons.*.hsn' => 'nullable|string|max:255',
+            'addons.*.cgst' => 'nullable|numeric|min:0',
+            'addons.*.sgst' => 'nullable|numeric|min:0',
+            'addons.*.igst' => 'nullable|numeric|min:0',
+
+            // for terms
+            'terms' => 'nullable|array',
+            'terms.*.name' => 'required|string|max:255',
+            'terms.*.value' => 'required|string|min:0',
         ]);
         
         // Handle quotation number logic
@@ -89,26 +101,28 @@ class PurchaseOrderController extends Controller
             ], 422);
         }
 
+        // Fetch supplier details using supplier_id
+        $supplier = SuppliersModel::find($request->input('supplier_id'));
+        if (!$supplier) {
+            return response()->json(['message' => 'Supplier not found'], 404);
+        }
+
         $register_purchase_order = PurchaseOrderModel::create([
             'supplier_id' => $request->input('supplier_id'),
             'company_id' => Auth::user()->company_id,
-            'name' => $request->input('name'),
-            'address_line_1' => $request->input('address_line_1'),
-            'address_line_2' => $request->input('address_line_2'),
-            'city' => $request->input('city'),
-            'pincode' => $request->input('pincode'),
-            'state' => $request->input('state'),
-            'country' => $request->input('country'),
+            'name' => $supplier->name,
             'purchase_order_no' => $purchase_order_no,
             'purchase_order_date' => $request->input('purchase_order_date'),
+            'oa_no' => $request->input('oa_no'),
+            'oa_date' => $request->input('oa_date'),
+            'template' => $request->input('template'),
+            'status' => "pending",
+            'user' => Auth::user()->id,
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
             'currency' => $request->input('currency'),
-            'template' => $request->input('template'),
-            'status' => $request->input('status'),
-        
         ]);
 
         $products = $request->input('products');
@@ -117,23 +131,47 @@ class PurchaseOrderController extends Controller
         foreach ($products as $product) 
         {
             PurchaseOrderProductsModel::create([
-                'purchase_order_number' => $register_purchase_order['id'],
+                'purchase_order_id' => $register_purchase_order['id'],
                 'product_id' => $product['product_id'],
                 'company_id' => Auth::user()->company_id,
                 'product_name' => $product['product_name'],
                 'description' => $product['description'],
-                'brand' => $product['brand'],
                 'quantity' => $product['quantity'],
-                'brand' => $product['brand'],
                 'unit' => $product['unit'],
                 'price' => $product['price'],
-                'discount_type' => $product['discount_type'],
                 'discount' => $product['discount'],
+                'discount_type' => $product['discount_type'],
                 'hsn' => $product['hsn'],
                 'tax' => $product['tax'],
                 'cgst' => $product['cgst'],
                 'sgst' => $product['sgst'],
                 'igst' => $product['igst'],
+                'amount' => $product['amount'],
+            ]);
+        }
+
+        // Iterate over the addons array and insert each contact
+        foreach ($request->input('addons', []) as $addon) {
+            PurchaseOrderAddonsModel::create([
+                'purchase_order_id' => $register_purchase_order['id'],
+                'company_id' => Auth::user()->company_id,
+                'name' => $addon['name'],
+                'amount' => $addon['amount'],
+                'tax' => $addon['tax'],
+                'hsn' => $addon['hsn'],
+                'cgst' => $addon['cgst'],
+                'sgst' => $addon['sgst'],
+                'igst' => $addon['igst'],
+            ]);
+        }
+
+        // Iterate over the terms array and insert each contact
+        foreach ($request->input('terms', []) as $term) {
+            PurchaseOrderTermsModel::create([
+                'purchase_order_id' => $register_purchase_order['id'],
+                'company_id' => Auth::user()->company_id,
+                'name' => $term['name'],
+                'value' => $term['value'],
             ]);
         }
 
@@ -284,6 +322,11 @@ class PurchaseOrderController extends Controller
     // }
 
     // view
+    // helper function
+    private function convertNumberToWords($num) {
+        $formatter = new NumberFormatter("en", NumberFormatter::SPELLOUT);
+        return ucfirst($formatter->format($num)) . ' Only';
+    }
     public function view_purchase_order(Request $request)
     {
         // Get filter inputs
@@ -291,14 +334,32 @@ class PurchaseOrderController extends Controller
         $name = $request->input('name');
         $purchaseOrderNo = $request->input('purchase_order_no');
         $purchaseOrderDate = $request->input('purchase_order_date');
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
+        $user = $request->input('user');
+        $status = $request->input('status');
+        $productIds = $request->input('product_ids');
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
 
+        // Get total count of records in `t_purchase_order`
+        $get_purchase_order = PurchaseOrderModel::count(); 
+
         // Build the query
         $query = PurchaseOrderModel::with(['products' => function ($query) {
-            $query->select('purchase_order_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'received', 'short_closed', 'discount_type', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
-        }])
-        ->select('id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'cgst', 'sgst', 'igst', 'currency', 'template', 'status')
+            $query->select('purchase_order_number', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount',  'discount_type', 'hsn', 'tax', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'cgst', 'sgst', 'igst', 'amount', 'channel', 'received', 'short-closed');
+            },'addons' => function ($query) {
+                $query->select('quotation_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
+            }, 'terms' => function ($query) {
+                $query->select('quotation_id', 'name', 'value');
+            },
+                'get_user' => function ($query) { // Fetch only user name
+                    $query->select('id', 'name');
+            },
+                'get_template' => function ($query) { // Fetch template id and name
+                $query->select('id', 'name');
+            }])
+        ->select('id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'oa_no', 'oa_date', 'template', 'status', 'user', 'cgst', 'sgst', 'igst', 'total')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -315,11 +376,77 @@ class PurchaseOrderController extends Controller
             $query->whereDate('purchase_order_date', $purchaseOrderDate);
         }
 
+        if ($dateFrom && $dateTo) {
+            $query->whereBetween('purchase_order_date', [$dateFrom, $dateTo]);
+        } elseif ($dateFrom) {
+            $query->whereDate('purchase_order_date', '>=', $dateFrom);
+        } elseif ($dateTo) {
+            $query->whereDate('purchase_order_date', '<=', $dateTo);
+        }
+
+        if ($user) {
+            $query->whereDate('user', $user);
+        }
+
         // Apply limit and offset
         $query->offset($offset)->limit($limit);
 
         // Fetch data
         $get_purchase_orders = $query->get();
+
+        // Transform Data
+        $get_purchase_orders->transform(function ($purchase_orders) {
+
+            // Convert total to words
+            $purchase_orders->amount_in_words = $this->convertNumberToWords($quotation->total);
+
+            // ✅ Format total with comma-separated values
+            $purchase_orders->total = is_numeric($purchase_orders->total) ? number_format((float) $purchase_orders->total, 2) : $purchase_orders->total;
+
+            // Capitalize the first letter of status
+            $purchase_orders->status = ucfirst($purchase_orders->status);
+
+            // Replace user ID with user object
+            $purchase_orders->user = isset($purchase_orders->get_user) ? [
+                'id' => $purchase_orders->get_user->id,
+                'name' => $purchase_orders->get_user->name
+            ] : ['id' => null, 'name' => 'Unknown'];
+            unset($purchase_orders->get_user);
+
+            // ✅ New Fix for sales_person
+            $purchase_orders->sales_person = isset($purchase_orders->salesPerson) ? [
+                'id' => $purchase_orders->salesPerson->id,
+                'name' => $purchase_orders->salesPerson->name
+            ] : ['id' => null, 'name' => 'Unknown'];
+            unset($purchase_orders->salesPerson);
+
+            // Replace template ID with template object
+            $purchase_orders->template = isset($purchase_orders->get_template) ? [
+                'id' => $purchase_orders->get_template->id,
+                'name' => $purchase_orders->get_template->name
+            ] : ['id' => null, 'name' => 'Unknown'];
+            unset($purchase_orders->get_template); // Remove user object after fetching the name
+
+            // **Remove `purchase_orders_id` from products**
+            $purchase_orders->products->transform(function ($product) {
+                unset($product->purchase_orders_id);
+                return $product;
+            });
+
+            // **Remove `purchase_orders_id` from addons**
+            $purchase_orders->addons->transform(function ($addon) {
+                unset($addon->purchase_orders_id);
+                return $addon;
+            });
+
+            // **Remove `purchase_orders_id` from terms**
+            $purchase_orders->terms->transform(function ($term) {
+                unset($term->purchase_orders_id);
+                return $term;
+            });
+
+            return $purchase_orders;
+        });
 
         // Return response
         return $get_purchase_orders->isNotEmpty()
@@ -328,7 +455,8 @@ class PurchaseOrderController extends Controller
                 'success' => true,
                 'message' => 'Purchase Orders fetched successfully!',
                 'data' => $get_purchase_orders,
-                'count' => $get_purchase_orders->count(),
+                'fetched_records' => $get_purchase_order->count(),
+                'count' => $total_purchase_orders,
             ], 200)
             : response()->json([
                 'code' => 404,
@@ -341,39 +469,49 @@ class PurchaseOrderController extends Controller
     public function edit_purchase_order(Request $request, $id)
     {
         $request->validate([
-            'supplier_id' => 'required|integer',
-            'name' => 'required|string',
-            'address_line_1' => 'required|string',
-            'address_line_2' => 'nullable|string',
-            'city' => 'required|string',
-            'pincode' => 'required|string',
-            'state' => 'required|string',
-            'country' => 'required|string',
-            'purchase_order_no' => 'required|string',
-            'purchase_order_date' => 'required|date',
-            'cgst' => 'required|numeric',
-            'sgst' => 'required|numeric',
-            'igst' => 'required|numeric',
-            'currency' => 'required|string',
-            'template' => 'required|integer',
-            'status' => 'required|integer',
-            'products' => 'required|array',
-            'products.*.purchase_order_number' => 'required|integer',
+            'supplier_id' => 'required|integer|exists:t_suppliers,id',
+            'purchase_order_no' => 'required|string|max:255', // Matches DB column
+            'purchase_order_date' => 'required|date_format:Y-m-d',
+            'oa_no' => 'required|string', 
+            'oa_date' => 'required|date', 
+            'template' => 'required|integer|exists:t_pdf_template,id',
+            'cgst' => 'nullable|numeric|min:0', // Made nullable, default 0
+            'sgst' => 'nullable|numeric|min:0', // Made nullable, default 0
+            'igst' => 'nullable|numeric|min:0', // Made nullable, default 0
+            'total' => 'required|numeric|min:0',
+            'currency' => 'required|string|max:10',
+
+            // Product Details (Array Validation)
+            'products' => 'required|array', // Validating array of products
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
-            'products.*.brand' => 'required|string',
             'products.*.quantity' => 'required|integer',
             'products.*.unit' => 'required|string',
             'products.*.price' => 'required|numeric',
-            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.discount' => 'nullable|numeric',
+            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.hsn' => 'required|string',
             'products.*.tax' => 'required|numeric',
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
-            'products.*.godown' => 'required|integer',
+            'products.*.amount' => 'nullable|numeric',
+
+            // for add-ons
+            'addons' => 'nullable|array',
+            'addons.*.name' => 'required|string|max:255',
+            'addons.*.amount' => 'required|numeric|min:0',
+            'addons.*.tax' => 'nullable|numeric|min:0',
+            'addons.*.hsn' => 'nullable|string|max:255',
+            'addons.*.cgst' => 'nullable|numeric|min:0',
+            'addons.*.sgst' => 'nullable|numeric|min:0',
+            'addons.*.igst' => 'nullable|numeric|min:0',
+
+            // for terms
+            'terms' => 'nullable|array',
+            'terms.*.name' => 'required|string|max:255',
+            'terms.*.value' => 'required|string|min:0',
         ]);
 
         $purchaseOrder = PurchaseOrderModel::where('id', $id)->first();
@@ -391,20 +529,18 @@ class PurchaseOrderController extends Controller
         $purchaseOrderUpdated = $purchaseOrder->update([
             'supplier_id' => $request->input('supplier_id'),
             'name' => $request->input('name'),
-            'address_line_1' => $request->input('address_line_1'),
-            'address_line_2' => $request->input('address_line_2'),
-            'city' => $request->input('city'),
-            'pincode' => $request->input('pincode'),
-            'state' => $request->input('state'),
-            'country' => $request->input('country'),
             'purchase_order_no' => $request->input('purchase_order_no'),
             'purchase_order_date' => $request->input('purchase_order_date'),
+            'oa_no' => $request->input('oa_no'),
+            'oa_date' => $request->input('oa_date'),
+            'template' => $request->input('template'),
+            'status' => "pending",
+            'user' => Auth::user()->id,
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
+            'total' => $request->input('total'),
             'currency' => $request->input('currency'),
-            'template' => $request->input('template'),
-            'status' => $request->input('status'),
         ]);
 
         $products = $request->input('products');
@@ -413,7 +549,7 @@ class PurchaseOrderController extends Controller
         foreach ($products as $productData) {
             $requestProductIDs[] = $productData['product_id'];
 
-            $existingProduct = PurchaseOrderProductsModel::where('purchase_order_number', $productData['purchase_order_number'])
+            $existingProduct = PurchaseOrderProductsModel::where('purchase_order_id', $id)
                                                         ->where('product_id', $productData['product_id'])
                                                         ->first();
 
@@ -421,18 +557,17 @@ class PurchaseOrderController extends Controller
                 $existingProduct->update([
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    'brand' => $productData['brand'],
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
-                    'discount_type' => $productData['discount_type'],
                     'discount' => $productData['discount'],
+                    'discount_type' => $productData['discount_type'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
-                    'godown' => $productData['godown'],
+                    'amount' => $productData['amount'],
                 ]);
             } else {
                 PurchaseOrderProductsModel::create([
@@ -441,25 +576,91 @@ class PurchaseOrderController extends Controller
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    'brand' => $productData['brand'],
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
-                    'discount_type' => $productData['discount_type'],
                     'discount' => $productData['discount'],
+                    'discount_type' => $productData['discount_type'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
-                    'godown' => $productData['godown'],
+                    'amount' => $productData['amount'],
                 ]);
             }
         }
 
-        $productsDeleted = PurchaseOrderProductsModel::where('purchase_order_number', $id)
+        $productsDeleted = PurchaseOrderProductsModel::where('purchase_order_id', $id)
                                                     ->where('product_id', $requestProductIDs)
                                                     ->delete();
+
+        $addons = $request->input('addons');
+        $requestAddonIDs = [];
+
+        foreach ($addons as $addonData) {
+            $requestAddonIDs[] = $addonData['name'];
+
+            $existingAddon = PurchaseOrderAddonsModel::where('purchase_order_id', $id)
+                                                ->where('name', $addonData['name'])
+                                                ->first();
+
+            if ($existingAddon) {
+                $existingAddon->update([
+                    'amount' => $addonData['amount'],
+                    'tax' => $addonData['tax'],
+                    'hsn' => $addonData['hsn'],
+                    'cgst' => $addonData['cgst'],
+                    'sgst' => $addonData['sgst'],
+                    'igst' => $addonData['igst'],
+                ]);
+            } else {
+                PurchaseOrderAddonsModel::create([
+                    'purchase_order_id' => $id,
+                    'company_id' => Auth::user()->company_id,
+                    'name' => $addonData['name'],
+                    'amount' => $addonData['amount'],
+                    'tax' => $addonData['tax'],
+                    'hsn' => $addonData['hsn'],
+                    'cgst' => $addonData['cgst'],
+                    'sgst' => $addonData['sgst'],
+                    'igst' => $addonData['igst'],
+                ]);
+            }
+        }
+
+        PurchaseOrderAddonsModel::where('purchase_order_id', $id)
+                                    ->where('product_id', $requestAddonIDs)
+                                    ->delete();
+
+        $terms = $request->input('terms');
+        $requestTermsIDs = [];
+
+        foreach ($terms as $termData) {
+            $requestTermsIDs[] = $termData['name'];
+
+            $existingAddon = PurchaseOrderTermsModel::where('purchase_order_id', $id)
+                                                ->where('name', $termData['name'])
+                                                ->first();
+
+            if ($existingAddon) {
+                $existingAddon->update([
+                    'value' => $termData['value'],
+                ]);
+            } else {
+                PurchaseOrderTermsModel::create([
+                    'purchase_order_id' => $id,
+                    'company_id' => Auth::user()->company_id,
+                    'name' => $termData['name'],
+                    'value' => $termData['value'],
+                ]);
+            }
+        }
+
+        PurchaseOrderTermsModel::where('purchase_order_id', $id)
+                                    ->where('product_id', $requestTermsIDs)
+                                    ->delete();
+                                            
 
         unset($purchaseOrder['created_at'], $purchaseOrder['updated_at']);
 

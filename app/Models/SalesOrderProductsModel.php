@@ -10,7 +10,7 @@ class SalesOrderProductsModel extends Model
     protected $table = 't_sales_order_products';
 
     protected $fillable = [
-        'sales_order_id',
+       'sales_order_id',
         'company_id',
         'product_id',
         'product_name',

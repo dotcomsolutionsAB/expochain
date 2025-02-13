@@ -11,11 +11,10 @@ class SalesInvoiceProductsModel extends Model
 
     protected $fillable = [
         'sales_invoice_id',
-        'product_id',
         'company_id',
+        'product_id',
         'product_name',
         'description',
-        // 'brand',
         'quantity',
         'unit',
         'price',
@@ -28,10 +27,10 @@ class SalesInvoiceProductsModel extends Model
         'igst',
         'amount',
         'so_id',
-        'return',
+        'returned',  // Renamed from 'return' to match DB schema ('returned')
         'profit',
         'purchase_invoice_id',
-        'purchase_rate'
+        'purchase_rate',
     ];
 
     public function salesInvoice()

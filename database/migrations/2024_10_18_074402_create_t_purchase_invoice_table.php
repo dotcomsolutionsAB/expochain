@@ -16,21 +16,16 @@ return new class extends Migration
             $table->integer('company_id');
             $table->integer('supplier_id');
             $table->string('name');
-            $table->string('address_line_1');
-            $table->string('address_line_2');
-            $table->string('city');
-            $table->string('pincode');
-            $table->string('state');
-            $table->string('country');
             $table->string('purchase_invoice_no');
             $table->date('purchase_invoice_date');
-            $table->string('purchase_order_no');
+            $table->string('oa_no');
+            $table->string('ref_no');
+            $table->integer('template');
+            $table->integer('user');
             $table->float('cgst');
             $table->float('sgst');
             $table->float('igst');
-            $table->string('currency');
-            $table->integer('template');
-            $table->integer('status');
+            $table->float('total');
             $table->timestamps();
         });
     }

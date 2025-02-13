@@ -11,23 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('t_purchase_order', function (Blueprint $table) {
+        Schema::create('t_purchase_order_addons', function (Blueprint $table) {
             $table->id();
+            $table->integer('purchase_order_id');
             $table->integer('company_id');
-            $table->integer('supplier_id');
             $table->string('name');
-            $table->string('purchase_order_id');
-            $table->date('purchase_order_date');
-            $table->string('oa_no');
-            $table->date('oa_date');
-            $table->integer('template');
-            $table->enum('status', ['pending', 'partial', 'completed', 'short_closed']);
-            $table->integer('user');
+            $table->float('amount');
+            $table->float('tax');
+            $table->string('hsn');
             $table->float('cgst');
             $table->float('sgst');
             $table->float('igst');
-            $table->float('total');
-            $table->string('currency');
             $table->timestamps();
         });
     }
@@ -37,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('t_purchase_order');
+        Schema::dropIfExists('t_purchase_order_addons');
     }
 };

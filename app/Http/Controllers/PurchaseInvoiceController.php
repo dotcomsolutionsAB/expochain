@@ -31,7 +31,7 @@ class PurchaseInvoiceController extends Controller
             'cgst' => 'nullable|numeric|min:0',
             'sgst' => 'nullable|numeric|min:0',
             'igst' => 'nullable|numeric|min:0',
-            'total' => 'required|string|max:10',
+            'total' => 'required|numeric|min:0',
         
             // Product Details (Array Validation)
             'products' => 'required|array',
@@ -50,6 +50,16 @@ class PurchaseInvoiceController extends Controller
             'products.*.sgst' => 'nullable|numeric|min:0',
             'products.*.igst' => 'nullable|numeric|min:0',
             'products.*.amount' => 'nullable|numeric|min:0',
+
+            // for add-ons
+            'addons' => 'nullable|array',
+            'addons.*.name' => 'required|string|max:255',
+            'addons.*.amount' => 'required|numeric|min:0',
+            'addons.*.tax' => 'nullable|numeric|min:0',
+            'addons.*.hsn' => 'nullable|string|max:255',
+            'addons.*.cgst' => 'nullable|numeric|min:0',
+            'addons.*.sgst' => 'nullable|numeric|min:0',
+            'addons.*.igst' => 'nullable|numeric|min:0',
         ]);     
         
         $exists = PurchaseInvoiceModel::where('company_id', Auth::user()->company_id)
@@ -92,7 +102,7 @@ class PurchaseInvoiceController extends Controller
         foreach ($products as $product) 
         {
             PurchaseInvoiceProductsModel::create([
-                'purchase_invoice_number' => $register_purchase_invoice['id'],
+                'purchase_invoice_id' => $register_purchase_invoice['id'],
                 'product_id' => $product['product_id'],
                 'company_id' => Auth::user()->company_id,
                 'product_name' => $product['product_name'],
@@ -111,10 +121,25 @@ class PurchaseInvoiceController extends Controller
             ]);
         }
 
+        // Iterate over the addons array and insert each contact
+        foreach ($request->input('addons', []) as $addon) {
+            PurchaseInvoiceAddonsModel::create([
+                'purchase_invoice_id' => $register_purchase_invoice['id'],
+                'company_id' => Auth::user()->company_id,
+                'name' => $addon['name'],
+                'amount' => $addon['amount'],
+                'tax' => $addon['tax'],
+                'hsn' => $addon['hsn'],
+                'cgst' => $addon['cgst'],
+                'sgst' => $addon['sgst'],
+                'igst' => $addon['igst'],
+            ]);
+        }
+
         unset($register_purchase_invoice['id'], $register_purchase_invoice['created_at'], $register_purchase_invoice['updated_at']);
     
         return isset($register_purchase_invoice) && $register_purchase_invoice !== null
-        ? response()->json(['code' => 201,'success' => true, 'Purchase Invoice registered successfully!', 'data' => $register_purchase_invoice, 'total_cgst' => $total_cgst, 'total_sgst' => $total_sgst, 'total_igst' => $total_igst, 'total_discount' => $total_discount, 'total_amount' => $total_amount], 201)
+        ? response()->json(['code' => 201,'success' => true, 'Purchase Invoice registered successfully!', 'data' => $register_purchase_invoice], 201)
         : response()->json(['code' => 400,'success' => false, 'Failed to register Purchase Invoice record'], 400);
     }
 
@@ -136,9 +161,14 @@ class PurchaseInvoiceController extends Controller
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
 
+        // Get total count of records in `t_purchase_order`
+        $get_purchase_invoice = PurchaseInvoiceModel::count(); 
+
         // Build the query
         $query = PurchaseInvoiceModel::with(['products' => function ($query) {
             $query->select('purchase_invoice_number', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'stock');
+        }, 'addons' => function ($query) {
+            $query->select('quotation_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
         }])
         ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 'purchase_invoice_date', 'oa_no', 'ref_no', 'template', 'user', 'cgst', 'sgst', 'igst', 'total')
         ->where('company_id', Auth::user()->company_id);
@@ -206,7 +236,8 @@ class PurchaseInvoiceController extends Controller
                 'success' => true,
                 'message' => 'Purchase Invoices fetched successfully!',
                 'data' => $get_purchase_invoices,
-                'count' => $get_purchase_invoices->count(),
+                'fetched_records' => $get_purchase_invoice->count(),
+                'count' => $total_purchase_invoices,
             ], 200)
             : response()->json([
                 'code' => 404,
@@ -229,11 +260,10 @@ class PurchaseInvoiceController extends Controller
             'cgst' => 'nullable|numeric|min:0',
             'sgst' => 'nullable|numeric|min:0',
             'igst' => 'nullable|numeric|min:0',
-            'total' => 'required|string|max:10',
+            'total' => 'required|numeric|min:0',
         
             // Product Details (Array Validation)
             'products' => 'required|array',
-            'products.*.purchase_invoice_number' => 'required|string|max:50|exists:t_purchase_invoices,purchase_invoice_no',
             'products.*.product_id' => 'required|integer|exists:t_products,id',
             'products.*.product_name' => 'required|string|max:255',
             'products.*.description' => 'nullable|string',
@@ -248,6 +278,16 @@ class PurchaseInvoiceController extends Controller
             'products.*.sgst' => 'nullable|numeric|min:0',
             'products.*.igst' => 'nullable|numeric|min:0',
             'products.*.amount' => 'nullable|numeric|min:0',
+
+            // for add-ons
+            'addons' => 'nullable|array',
+            'addons.*.name' => 'required|string|max:255',
+            'addons.*.amount' => 'required|numeric|min:0',
+            'addons.*.tax' => 'nullable|numeric|min:0',
+            'addons.*.hsn' => 'nullable|string|max:255',
+            'addons.*.cgst' => 'nullable|numeric|min:0',
+            'addons.*.sgst' => 'nullable|numeric|min:0',
+            'addons.*.igst' => 'nullable|numeric|min:0',
         ]);
 
         $purchaseInvoice = PurchaseInvoiceModel::where('id', $id)->first();
@@ -266,7 +306,7 @@ class PurchaseInvoiceController extends Controller
             'supplier_id' => $request->input('supplier_id'),
             'name' => $request->input('name'),
             'purchase_invoice_no' => $request->input('purchase_invoice_no'),
-            'purchase_invoice_date' => $currentDate,
+            'purchase_invoice_date' => $request->input('purchase_invoice_date'),
             'oa_no' => $request->input('oa_no'),
             'ref_no' => $request->input('ref_no'),
             'template' => $request->input('template'),
@@ -283,7 +323,7 @@ class PurchaseInvoiceController extends Controller
         foreach ($products as $productData) {
             $requestProductIDs[] = $productData['product_id'];
 
-            $existingProduct = PurchaseInvoiceProductsModel::where('purchase_invoice_number', $productData['purchase_invoice_number'])
+            $existingProduct = PurchaseInvoiceProductsModel::where('purchase_invoice_id', $id)
                                                         ->where('product_id', $productData['product_id'])
                                                         ->first();
 
@@ -307,7 +347,7 @@ class PurchaseInvoiceController extends Controller
             } else {
                 // Add new product
                 PurchaseInvoiceProductsModel::create([
-                    'purchase_invoice_number' => $productData['purchase_invoice_number'],
+                    'purchase_invoice_id' => $id,
                     'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
@@ -327,9 +367,47 @@ class PurchaseInvoiceController extends Controller
             }
         }
 
-        $productsDeleted = PurchaseInvoiceProductsModel::where('purchase_invoice_number', $id)
+        $productsDeleted = PurchaseInvoiceProductsModel::where('purchase_invoice_id', $id)
                                                     ->where('product_id', $requestProductIDs)
                                                     ->delete();
+
+        $addons = $request->input('addons');
+        $requestAddonIDs = [];
+
+        foreach ($addons as $addonData) {
+            $requestAddonIDs[] = $addonData['name'];
+
+            $existingAddon = PurchaseInvoiceAddonsModel::where('purchase_invoice_id', $id)
+                                                ->where('name', $addonData['name'])
+                                                ->first();
+
+            if ($existingAddon) {
+                $existingAddon->update([
+                    'amount' => $addonData['amount'],
+                    'tax' => $addonData['tax'],
+                    'hsn' => $addonData['hsn'],
+                    'cgst' => $addonData['cgst'],
+                    'sgst' => $addonData['sgst'],
+                    'igst' => $addonData['igst'],
+                ]);
+            } else {
+                PurchaseInvoiceAddonsModel::create([
+                    'purchase_invoice_id' => $id,
+                    'company_id' => Auth::user()->company_id,
+                    'name' => $addonData['name'],
+                    'amount' => $addonData['amount'],
+                    'tax' => $addonData['tax'],
+                    'hsn' => $addonData['hsn'],
+                    'cgst' => $addonData['cgst'],
+                    'sgst' => $addonData['sgst'],
+                    'igst' => $addonData['igst'],
+                ]);
+            }
+        }
+
+        PurchaseInvoiceAddonsModel::where('purchase_invoice_id', $id)
+                                    ->where('product_id', $requestAddonIDs)
+                                    ->delete();
 
         unset($purchaseInvoice['created_at'], $purchaseInvoice['updated_at']);
 
