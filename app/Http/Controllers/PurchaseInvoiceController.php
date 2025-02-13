@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\PurchaseInvoiceModel;
 use App\Models\PurchaseInvoiceProductsModel;
+use App\Models\PurchaseInvoiceAddonsModel;
 use App\Models\SuppliersModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;

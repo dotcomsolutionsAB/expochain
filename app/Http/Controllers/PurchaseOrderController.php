@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\PurchaseOrderModel;
 use App\Models\PurchaseOrderProductsModel;
+use App\Models\PurchaseOrderAddonsModel;
+use App\Models\PurchaseOrderTermsModel;
 use App\Models\SuppliersModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
