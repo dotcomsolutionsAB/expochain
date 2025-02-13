@@ -197,7 +197,6 @@ class SalesInvoiceController extends Controller
         ], 201);
     }
 
-
     // View Sales Invoices
     // helper function
     private function convertNumberToWords($num) {
@@ -342,6 +341,7 @@ class SalesInvoiceController extends Controller
         $request->validate([
             // Sales Invoice
             'client_id' => 'required|integer|exists:t_clients,id',
+            'name' => 'required|string|exists:t_clients,name',
             'sales_invoice_no' => 'required|string',
             'sales_invoice_date' => 'required|date_format:Y-m-d',
             'sales_order_id' => 'required|string|exists:t_sales_order,id',
@@ -388,7 +388,7 @@ class SalesInvoiceController extends Controller
         $salesInvoiceUpdated = $salesInvoice->update([
             'client_id' => $request->input('client_id'),
             'company_id' => Auth::user()->company_id,
-            'name' => $client->name,
+            'name' => $request->input('name'),
             'sales_invoice_no' => $request->input('sales_invoice_no'),
             'sales_invoice_date' => $currentDate,
             'sales_order_id' => $request->input('sales_order_id'),

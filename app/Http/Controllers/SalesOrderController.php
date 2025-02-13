@@ -319,7 +319,7 @@ class SalesOrderController extends Controller
     {
         $request->validate([
             'client_id' => 'required|integer|exists:t_clients,id',
-            'name' => 'required|string',
+            'name' => 'required|string|exists:t_clients,name',
             'sales_order_no' => 'required|integer',
             'sales_order_date' => 'required|date',
             'ref_no' => 'required|string',

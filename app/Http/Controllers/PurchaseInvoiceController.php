@@ -253,6 +253,7 @@ class PurchaseInvoiceController extends Controller
         $request->validate([
             // Purchase Invoice Fields
             'supplier_id' => 'required|integer|exists:t_suppliers,id',
+            'name' => 'required|string|exists:t_suppliers,name',
             'purchase_invoice_no' => 'required|string|max:255',
             'purchase_invoice_date' => 'required|date_format:Y-m-d',
             'oa_no' => 'required|string|max:50',
@@ -369,7 +370,7 @@ class PurchaseInvoiceController extends Controller
         }
 
         $productsDeleted = PurchaseInvoiceProductsModel::where('purchase_invoice_id', $id)
-                                                    ->where('product_id', $requestProductIDs)
+                                                    ->whereNotIn('product_id', $requestProductIDs)
                                                     ->delete();
 
         $addons = $request->input('addons');
@@ -407,7 +408,7 @@ class PurchaseInvoiceController extends Controller
         }
 
         PurchaseInvoiceAddonsModel::where('purchase_invoice_id', $id)
-                                    ->where('product_id', $requestAddonIDs)
+                                    ->whereNotIn('product_id', $requestAddonIDs)
                                     ->delete();
 
         unset($purchaseInvoice['created_at'], $purchaseInvoice['updated_at']);
@@ -421,6 +422,8 @@ class PurchaseInvoiceController extends Controller
     {
         $purchase_invoice = PurchaseInvoiceModel::find($id);
 
+        $company_id = Auth::user()->company_id;
+
         if (!$purchase_invoice) {
             return response()->json(['message' => 'Purchase Invoice not found.'], 404);
         }
@@ -428,10 +431,14 @@ class PurchaseInvoiceController extends Controller
         // Delete related products first
         $products_deleted = PurchaseInvoiceProductsModel::where('purchase_invoice_number', $id)->delete();
 
+        $delete_products_addons = PurchaseInvoiceAddonsModel::where('purchase_invoice_number', $id)
+                                                        ->where('company_id', $company_id)
+                                                        ->delete();
+
         // Delete the purchase invoice
         $purchase_invoice_deleted = $purchase_invoice->delete();
 
-        return ($products_deleted && $purchase_invoice_deleted)
+        return ($products_deleted && $purchase_invoice_deleted && $delete_products_addons)
             ? response()->json(['code' => 200,'success' => true, 'message' => 'Purchase Invoice and related products deleted successfully!'], 200)
             : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Purchase Invoice.'], 400);
     }

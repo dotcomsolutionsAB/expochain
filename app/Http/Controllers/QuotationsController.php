@@ -380,7 +380,8 @@ class QuotationsController extends Controller
     {
         $request->validate([
             // 'quotation_id' => 'required|integer',
-            'client_id' => 'required|integer',
+            'client_id' => 'required|integer|exists:t_clients,id',
+            'name' => 'required|integer|exists:t_clients,name',
             'quotation_no' => 'nullable|string|max:255',
             'quotation_date' => 'required|date',
             'enquiry_no' => 'required|string',
@@ -437,6 +438,7 @@ class QuotationsController extends Controller
 
         $quotationUpdated = $quotation->update([
             'client_id' => $request->input('client_id'),
+            'name' => $request->input('name'),
             'quotation_no' => $request->input('quotation_no'),
             'quotation_date' => $request->input('quotation_date'),
             'enquiry_no' => $request->input('enquiry_no'),
