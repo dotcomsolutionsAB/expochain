@@ -16,8 +16,8 @@ return new class extends Migration
             $table->string('name');
             $table->unsignedBigInteger('customer_id');
             $table->integer('company_id');
-            $table->string('mobile', 100);
-            $table->string('email');
+            $table->string('mobile', 100)->nullable();
+            $table->string('email')->nullable();
             $table->string('type')->nullable();
             $table->string('category')->nullable();
             $table->string('division')->nullable();

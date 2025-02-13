@@ -99,16 +99,6 @@ class UsersController extends Controller
     }
 
     // view user's record
-    // public function view_user()
-    // {     
-    //     $get_records = User::select('name','email', 'mobile', 'role')
-    //                         ->where('id', Auth::id())
-    //                         ->get();
-
-    //     return isset($get_records) && $get_records !== null
-    //     ? response()->json(['Fetch data successfully!', 'data' => $get_records], 200)
-    //     : response()->json(['Failed to fetch data'], 404); 
-    // }
     public function view_user(Request $request)
     {
         // Get filter inputs
@@ -158,7 +148,6 @@ class UsersController extends Controller
                 'message' => 'No records found!',
             ], 404);
     }
-
 
     // update
     public function update(Request $request, $id)

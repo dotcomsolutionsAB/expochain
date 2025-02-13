@@ -18,7 +18,7 @@ return new class extends Migration
             $table->timestamp('expires_at')->after('otp')->nullable();
             $table->enum('role', ['admin', 'user'])->after('expires_at');
             $table->integer('company_id')->after('role');
-            $table->integer('username')->after('company_id');
+            $table->string('username')->after('company_id');
             $table->dropUnique('users_email_unique');
             $table->unique(['email', 'company_id'], 'unique_email_contact_id');
             $table->unique(['username', 'company_id'], 'users_username_company_id_unique');
