@@ -36,7 +36,7 @@ class UsersController extends Controller
             'mobile' => [
                 'required',
                 'string',
-                'regex:/^\d{13,20}$/',
+                'regex:/^\+?\d{12,19}$/',
             ],
             'password' => 'required|string',
             'username' => [
