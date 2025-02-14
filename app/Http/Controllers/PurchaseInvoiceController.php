@@ -700,7 +700,6 @@ class PurchaseInvoiceController extends Controller
                         'product_id' => $productId,
                         'product_name' => $productName,
                         'description' => $itemsData['desc'][$index] ?? '',
-                        'brand' => $itemsData['group'][$index] ?? '',
                         'quantity' => $itemsData['quantity'][$index] ?? 0,
                         'unit' => $itemsData['unit'][$index] ?? '',
                         'price' => isset($itemsData['price'][$index]) && $itemsData['price'][$index] !== '' ? (float)$itemsData['price'][$index] : 0,
