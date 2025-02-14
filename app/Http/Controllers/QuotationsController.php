@@ -652,6 +652,12 @@ class QuotationsController extends Controller
 
             // Get client data
             $client = ClientsModel::where('name', $record['Client'])->first();
+
+            if (!$client) {
+                Log::error("Client not found: " . ($record['Client'] ?? 'Unknown Client'));
+                continue; // Skip this record and continue processing
+            }
+
             $client_contact = ClientContactsModel::select('id')->where('customer_id', $client->customer_id ?? 0)->first();
 
             $statusMap = [
@@ -667,9 +673,9 @@ class QuotationsController extends Controller
             // Prepare quotation data
             $quotationsBatch[] = [
                 'company_id' => Auth::user()->company_id,
-                'client_id' => $client->id ?? null,
+                'client_id' => $client->id,
                 // 'client_contact_id' => $client_contact->id ?? null,
-                'name' => $record['Client'] ?? null,
+                'name' => $record['Client'],
                 // 'address_line_1' => $client->address_line_1 ?? null,
                 // 'address_line_2' => $client->address_line_2 ?? null,
                 // 'city' => $client->city ?? null,
