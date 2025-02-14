@@ -36,7 +36,7 @@ class PurchaseInvoiceController extends Controller
         
             // Product Details (Array Validation)
             'products' => 'required|array',
-            'products.*.purchase_invoice_number' => 'required|string|max:50|exists:t_purchase_invoices,purchase_invoice_no',
+            'products.*.purchase_invoice_id' => 'required|string|max:50|exists:t_purchase_invoices,purchase_invoice_no',
             'products.*.product_id' => 'required|integer|exists:t_products,id',
             'products.*.product_name' => 'required|string|max:255',
             'products.*.description' => 'nullable|string',
@@ -167,7 +167,7 @@ class PurchaseInvoiceController extends Controller
 
         // Build the query
         $query = PurchaseInvoiceModel::with(['products' => function ($query) {
-            $query->select('purchase_invoice_number', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'stock');
+            $query->select('purchase_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'stock');
         }, 'addons' => function ($query) {
             $query->select('quotation_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
         }])
@@ -429,9 +429,9 @@ class PurchaseInvoiceController extends Controller
         }
 
         // Delete related products first
-        $products_deleted = PurchaseInvoiceProductsModel::where('purchase_invoice_number', $id)->delete();
+        $products_deleted = PurchaseInvoiceProductsModel::where('purchase_invoice_id', $id)->delete();
 
-        $delete_products_addons = PurchaseInvoiceAddonsModel::where('purchase_invoice_number', $id)
+        $delete_products_addons = PurchaseInvoiceAddonsModel::where('purchase_invoice_id', $id)
                                                         ->where('company_id', $company_id)
                                                         ->delete();
 
@@ -560,7 +560,7 @@ class PurchaseInvoiceController extends Controller
     //                 }
 
     //                 PurchaseInvoiceProductsModel::create([
-    //                     'purchase_invoice_number' => $purchaseInvoice->id,
+    //                     'purchase_invoice_id' => $purchaseInvoice->id,
     //                     'product_id' => $productModel->id,
     //                     'product_name' => $product,
     //                     'description' => $itemsData['desc'][$index] ?? '',
