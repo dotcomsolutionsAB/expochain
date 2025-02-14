@@ -396,136 +396,270 @@ class MastersController extends Controller
     //     ], 200);
     // }
 
+    // public function importProducts()
+    // {
+    //     ini_set('max_execution_time', 600); // Reduce execution time to 10 minutes
+    //     ini_set('memory_limit', '1024M');   // Optimize memory usage
+
+    //     // Truncate all related tables before import
+    //     GroupModel::truncate();
+    //     CategoryModel::truncate();
+    //     SubCategoryModel::truncate();
+    //     ProductsModel::truncate();
+
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
+
+    //     try {
+    //         // Fetch data from the external URL
+    //         $response = Http::get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
+    //     }
+
+    //     $data = $response->json('data');
+    //     if (empty($data)) {
+    //         return response()->json(['message' => 'No data found'], 404);
+    //     }
+
+    //     $batchSize = 500; // Optimal batch size for insert
+    //     $productsBatch = [];
+    //     $successfulInserts = 0;
+    //     $errors = [];
+
+    //     // **Store existing records in memory to avoid duplicate queries**
+    //     $existingGroups = GroupModel::pluck('id', 'name')->toArray();
+    //     $existingCategories = CategoryModel::pluck('id', 'name')->toArray();
+    //     $existingSubCategories = SubCategoryModel::pluck('id', 'name')->toArray();
+
+    //     foreach ($data as $record) {
+    //         try {
+    //             // **Handle Group**
+    //             $groupId = $existingGroups[$record['group_name']] ?? null;
+    //             if (!$groupId && !empty($record['group_name'])) {
+    //                 $group = GroupModel::create([
+    //                     'name' => $record['group_name'],
+    //                     'company_id' => Auth::user()->company_id,
+    //                     'serial_number' => random_int(10000, 99999),
+    //                     'logo' => random_int(10000, 99999),
+    //                 ]);
+    //                 $groupId = $group->id;
+    //                 $existingGroups[$record['group_name']] = $groupId;
+    //             }
+
+    //             // **Handle Category**
+    //             $categoryId = $existingCategories[$record['category']] ?? null;
+    //             if (!$categoryId && !empty($record['category'])) {
+    //                 $category = CategoryModel::create([
+    //                     'name' => $record['category'],
+    //                     'company_id' => Auth::user()->company_id,
+    //                     'serial_number' => random_int(10000, 99999),
+    //                 ]);
+    //                 $categoryId = $category->id;
+    //                 $existingCategories[$record['category']] = $categoryId;
+    //             }
+
+    //             // **Handle Sub-Category**
+    //             $subCategoryId = $existingSubCategories[$record['sub_category']] ?? null;
+    //             if (!$subCategoryId && !empty($record['sub_category'])) {
+    //                 $subCategory = SubCategoryModel::create([
+    //                     'name' => $record['sub_category'],
+    //                     'category_id' => $categoryId,
+    //                     'company_id' => Auth::user()->company_id,
+    //                     'serial_number' => random_int(10000, 99999),
+    //                 ]);
+    //                 $subCategoryId = $subCategory->id;
+    //                 $existingSubCategories[$record['sub_category']] = $subCategoryId;
+    //             }
+
+    //             // **Sanitize numeric fields**
+    //             $costPrice = is_numeric($record['cost_price']) ? (float) $record['cost_price'] : 0.0;
+    //             $salePrice = is_numeric($record['sale_price']) ? (float) $record['sale_price'] : 0.0;
+    //             $tax = is_numeric($record['tax']) ? (float) $record['tax'] : 0.0;
+
+    //             // **Prepare product data**
+    //             $productsBatch[] = [
+    //                 'serial_number' => $record['sn'],
+    //                 'company_id' => Auth::user()->company_id,
+    //                 'name' => $record['name'],
+    //                 'alias' => $record['alias'] ?? null,
+    //                 'description' => $record['description'] ?? 'No description available',
+    //                 'type' => $record['type'] ?? null,
+    //                 'group' => $groupId,
+    //                 'category' => $categoryId,
+    //                 'sub_category' => $subCategoryId,
+    //                 'cost_price' => $costPrice,
+    //                 'sale_price' => $salePrice,
+    //                 'unit' => $record['unit'] ?? 'N/A',
+    //                 'hsn' => $record['hsn'] ?? 'N/A',
+    //                 'tax' => $tax,
+    //                 'created_at' => now(),
+    //                 'updated_at' => now(),
+    //             ];
+
+    //             // **Batch insert when batch size is reached**
+    //             if (count($productsBatch) >= $batchSize) {
+    //                 ProductsModel::insert($productsBatch);
+    //                 $successfulInserts += count($productsBatch);
+    //                 $productsBatch = []; // Reset batch
+    //             }
+    //         } catch (\Exception $e) {
+    //             $errors[] = [
+    //                 'record' => $record,
+    //                 'error' => $e->getMessage(),
+    //             ];
+    //         }
+    //     }
+
+    //     // **Insert remaining products in batch**
+    //     if (!empty($productsBatch)) {
+    //         ProductsModel::insert($productsBatch);
+    //         $successfulInserts += count($productsBatch);
+    //     }
+
+    //     // **Return response**
+    //     return response()->json([
+    //         'message' => "Product data import completed. Successful inserts: $successfulInserts.",
+    //         'errors' => $errors,
+    //     ], 200);
+    // }
+
     public function importProducts()
-    {
-        ini_set('max_execution_time', 600); // Reduce execution time to 10 minutes
-        ini_set('memory_limit', '1024M');   // Optimize memory usage
+{
+    ini_set('max_execution_time', 600); // Increase execution time to 10 minutes
+    ini_set('memory_limit', '1024M');   // Optimize memory usage
 
-        // Truncate all related tables before import
-        GroupModel::truncate();
-        CategoryModel::truncate();
-        SubCategoryModel::truncate();
-        ProductsModel::truncate();
+    // Truncate all related tables before import
+    DB::statement('SET FOREIGN_KEY_CHECKS=0'); // Disable foreign key checks for truncation
+    GroupModel::truncate();
+    CategoryModel::truncate();
+    SubCategoryModel::truncate();
+    ProductsModel::truncate();
+    DB::statement('SET FOREIGN_KEY_CHECKS=1'); // Re-enable foreign key checks
 
-        $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
+    $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
 
-        try {
-            // Fetch data from the external URL
-            $response = Http::get($url);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
-        }
-
-        if ($response->failed()) {
-            return response()->json(['error' => 'Failed to fetch data.'], 500);
-        }
-
-        $data = $response->json('data');
-        if (empty($data)) {
-            return response()->json(['message' => 'No data found'], 404);
-        }
-
-        $batchSize = 500; // Optimal batch size for insert
-        $productsBatch = [];
-        $successfulInserts = 0;
-        $errors = [];
-
-        // **Store existing records in memory to avoid duplicate queries**
-        $existingGroups = GroupModel::pluck('id', 'name')->toArray();
-        $existingCategories = CategoryModel::pluck('id', 'name')->toArray();
-        $existingSubCategories = SubCategoryModel::pluck('id', 'name')->toArray();
-
-        foreach ($data as $record) {
-            try {
-                // **Handle Group**
-                $groupId = $existingGroups[$record['group_name']] ?? null;
-                if (!$groupId && !empty($record['group_name'])) {
-                    $group = GroupModel::create([
-                        'name' => $record['group_name'],
-                        'company_id' => Auth::user()->company_id,
-                        'serial_number' => random_int(10000, 99999),
-                        'logo' => random_int(10000, 99999),
-                    ]);
-                    $groupId = $group->id;
-                    $existingGroups[$record['group_name']] = $groupId;
-                }
-
-                // **Handle Category**
-                $categoryId = $existingCategories[$record['category']] ?? null;
-                if (!$categoryId && !empty($record['category'])) {
-                    $category = CategoryModel::create([
-                        'name' => $record['category'],
-                        'company_id' => Auth::user()->company_id,
-                        'serial_number' => random_int(10000, 99999),
-                    ]);
-                    $categoryId = $category->id;
-                    $existingCategories[$record['category']] = $categoryId;
-                }
-
-                // **Handle Sub-Category**
-                $subCategoryId = $existingSubCategories[$record['sub_category']] ?? null;
-                if (!$subCategoryId && !empty($record['sub_category'])) {
-                    $subCategory = SubCategoryModel::create([
-                        'name' => $record['sub_category'],
-                        'category_id' => $categoryId,
-                        'company_id' => Auth::user()->company_id,
-                        'serial_number' => random_int(10000, 99999),
-                    ]);
-                    $subCategoryId = $subCategory->id;
-                    $existingSubCategories[$record['sub_category']] = $subCategoryId;
-                }
-
-                // **Sanitize numeric fields**
-                $costPrice = is_numeric($record['cost_price']) ? (float) $record['cost_price'] : 0.0;
-                $salePrice = is_numeric($record['sale_price']) ? (float) $record['sale_price'] : 0.0;
-                $tax = is_numeric($record['tax']) ? (float) $record['tax'] : 0.0;
-
-                // **Prepare product data**
-                $productsBatch[] = [
-                    'serial_number' => $record['sn'],
-                    'company_id' => Auth::user()->company_id,
-                    'name' => $record['name'],
-                    'alias' => $record['alias'] ?? null,
-                    'description' => $record['description'] ?? 'No description available',
-                    'type' => $record['type'] ?? null,
-                    'group' => $groupId,
-                    'category' => $categoryId,
-                    'sub_category' => $subCategoryId,
-                    'cost_price' => $costPrice,
-                    'sale_price' => $salePrice,
-                    'unit' => $record['unit'] ?? 'N/A',
-                    'hsn' => $record['hsn'] ?? 'N/A',
-                    'tax' => $tax,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-
-                // **Batch insert when batch size is reached**
-                if (count($productsBatch) >= $batchSize) {
-                    ProductsModel::insert($productsBatch);
-                    $successfulInserts += count($productsBatch);
-                    $productsBatch = []; // Reset batch
-                }
-            } catch (\Exception $e) {
-                $errors[] = [
-                    'record' => $record,
-                    'error' => $e->getMessage(),
-                ];
-            }
-        }
-
-        // **Insert remaining products in batch**
-        if (!empty($productsBatch)) {
-            ProductsModel::insert($productsBatch);
-            $successfulInserts += count($productsBatch);
-        }
-
-        // **Return response**
-        return response()->json([
-            'message' => "Product data import completed. Successful inserts: $successfulInserts.",
-            'errors' => $errors,
-        ], 200);
+    try {
+        // Fetch data from the external URL
+        $response = Http::timeout(60)->get($url);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
     }
+
+    if ($response->failed()) {
+        return response()->json(['error' => 'Failed to fetch data.'], 500);
+    }
+
+    $data = $response->json('data');
+    if (empty($data)) {
+        return response()->json(['message' => 'No data found'], 404);
+    }
+
+    $batchSize = 500; // Optimal batch size for insert
+    $productsBatch = [];
+    $successfulInserts = 0;
+    $errors = [];
+
+    // **Preload existing records to avoid duplicate queries**
+    $existingGroups = GroupModel::pluck('id', 'name')->toArray();
+    $existingCategories = CategoryModel::pluck('id', 'name')->toArray();
+    $existingSubCategories = SubCategoryModel::pluck('id', 'name')->toArray();
+
+    foreach ($data as $record) {
+        try {
+            // **Handle Group**
+            $groupId = $existingGroups[$record['group_name']] ?? null;
+            if (!$groupId && !empty($record['group_name'])) {
+                $group = GroupModel::create([
+                    'name' => $record['group_name'],
+                    'company_id' => Auth::user()->company_id,
+                    'serial_number' => random_int(10000, 99999),
+                    'logo' => random_int(10000, 99999),
+                ]);
+                $groupId = $group->id;
+                $existingGroups[$record['group_name']] = $groupId;
+            }
+
+            // **Handle Category**
+            $categoryId = $existingCategories[$record['category']] ?? null;
+            if (!$categoryId && !empty($record['category'])) {
+                $category = CategoryModel::create([
+                    'name' => $record['category'],
+                    'company_id' => Auth::user()->company_id,
+                    'serial_number' => random_int(10000, 99999),
+                ]);
+                $categoryId = $category->id;
+                $existingCategories[$record['category']] = $categoryId;
+            }
+
+            // **Handle Sub-Category**
+            $subCategoryId = $existingSubCategories[$record['sub_category']] ?? null;
+            if (!$subCategoryId && !empty($record['sub_category'])) {
+                $subCategory = SubCategoryModel::create([
+                    'name' => $record['sub_category'],
+                    'category_id' => $categoryId,
+                    'company_id' => Auth::user()->company_id,
+                    'serial_number' => random_int(10000, 99999),
+                ]);
+                $subCategoryId = $subCategory->id;
+                $existingSubCategories[$record['sub_category']] = $subCategoryId;
+            }
+
+            // **Sanitize numeric fields**
+            $costPrice = is_numeric($record['cost_price']) ? (float) $record['cost_price'] : 0.0;
+            $salePrice = is_numeric($record['sale_price']) ? (float) $record['sale_price'] : 0.0;
+            $tax = is_numeric($record['tax']) ? (float) $record['tax'] : 0.0;
+
+            // **Prepare product data**
+            $productsBatch[] = [
+                'serial_number' => $record['sn'],
+                'company_id' => Auth::user()->company_id,
+                'name' => $record['name'],
+                'alias' => $record['alias'] ?? null,
+                'description' => $record['description'] ?? 'No description available',
+                'type' => $record['type'] ?? null,
+                'group' => $groupId,
+                'category' => $categoryId,
+                'sub_category' => $subCategoryId,
+                'cost_price' => $costPrice,
+                'sale_price' => $salePrice,
+                'unit' => $record['unit'] ?? 'N/A',
+                'hsn' => $record['hsn'] ?? 'N/A',
+                'tax' => $tax,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+
+            // **Batch insert when batch size is reached**
+            if (count($productsBatch) >= $batchSize) {
+                ProductsModel::insert($productsBatch);
+                $successfulInserts += count($productsBatch);
+                $productsBatch = []; // Reset batch
+            }
+        } catch (\Exception $e) {
+            $errors[] = [
+                'record' => $record,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    // **Insert remaining products in batch**
+    if (!empty($productsBatch)) {
+        ProductsModel::insert($productsBatch);
+        $successfulInserts += count($productsBatch);
+    }
+
+    // **Return response**
+    return response()->json([
+        'message' => "Product data import completed. Successful inserts: $successfulInserts.",
+        'errors' => $errors,
+    ], 200);
+}
+
 
     // export products
     public function export_products(Request $request)
