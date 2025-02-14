@@ -443,16 +443,163 @@ class PurchaseInvoiceController extends Controller
             : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Purchase Invoice.'], 400);
     }
 
+    // public function importPurchaseInvoices()
+    // {
+    //     set_time_limit(300);
+
+    //     // Clear the PurchaseInvoice and related tables
+    //     PurchaseInvoiceModel::truncate();
+    //     PurchaseInvoiceProductsModel::truncate();
+
+    //     // Define the external URL
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/purchase_invoice.php';  
+
+    //     // Fetch data from the external URL
+    //     try {
+    //         $response = Http::timeout(120)->get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => 'Failed to fetch data: ' . $e->getMessage()], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
+    //     }
+
+    //     $data = $response->json('data');
+
+    //     if (empty($data)) {
+    //         return response()->json(['message' => 'No data found'], 404);
+    //     }
+
+    //     $successfulInserts = 0;
+    //     $errors = [];
+
+    //     foreach ($data as $record) {
+    //         // Decode JSON fields for items, tax, and addons
+    //         $itemsData = json_decode($record['items'] ?? '{}', true);
+    //         $taxData = json_decode($record['tax'] ?? '{}', true);
+    //         $addonsData = json_decode($record['addons'] ?? '{}', true);
+
+    //         // Retrieve supplier ID (you might need to adjust this based on your actual supplier retrieval logic)
+    //         $supplier = SuppliersModel::where('name', $record['supplier'])->first();
+
+    //         if (!$supplier) {
+    //             $errors[] = [
+    //                 'record' => $record,
+    //                 'error' => 'Supplier not found for the provided name: ' . $record['supplier']
+    //             ];
+    //             continue; // Skip to the next record in the loop
+    //         }
+
+    //         // Set up main purchase invoice data
+    //         $purchaseInvoiceData = [
+    //             'supplier_id' => $supplier->id ?? null,
+    //             'name' => $record['supplier'] ?? 'Unnamed Supplier',
+    //             'address_line_1' => $supplier->address_line_1 ?? 'Address Line 1',
+    //             'address_line_2' => $supplier->address_line_2 ?? null,
+    //             'city' => $supplier->city ?? 'City Name',
+    //             'pincode' => $supplier->pincode ?? '000000',
+    //             'state' => $supplier->state ?? 'State Name',
+    //             'country' => $supplier->country ?? 'India',
+    //             'purchase_invoice_no' => $record['pi_no'] ?? 'Unknown',
+    //             'purchase_invoice_date' => $record['pi_date'] ?? now(),
+    //             'purchase_order_no' => !empty($record['oa_no']) ? $record['oa_no'] : 'Unknown',
+    //             'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
+    //             'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
+    //             'igst' => !empty($taxData['igst']) ? $taxData['igst'] : 0,
+    //             'currency' => 'INR',
+    //             'template' => json_decode($record['pdf_template'], true)['id'] ?? 0,
+    //             'status' => $record['status'] ?? 1,
+    //         ];
+
+    //         // Validate main purchase invoice data
+    //         $validator = Validator::make($purchaseInvoiceData, [
+    //             'supplier_id' => 'required|integer',
+    //             'name' => 'required|string',
+    //             'address_line_1' => 'required|string',
+    //             'city' => 'required|string',
+    //             'pincode' => 'required|string',
+    //             'state' => 'required|string',
+    //             'country' => 'required|string',
+    //             'purchase_invoice_no' => 'required|string',
+    //             'purchase_invoice_date' => 'required|date',
+    //             'purchase_order_no' => 'required|string',
+    //             'cgst' => 'required|numeric',
+    //             'sgst' => 'required|numeric',
+    //             'igst' => 'required|numeric',
+    //             'currency' => 'required|string',
+    //             'template' => 'required|integer',
+    //             'status' => 'required|integer',
+    //         ]);
+
+    //         if ($validator->fails()) {
+    //             $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+    //             continue;
+    //         }
+
+    //         try {
+    //             $purchaseInvoice = PurchaseInvoiceModel::create($purchaseInvoiceData);
+    //             $successfulInserts++;
+    //         } catch (\Exception $e) {
+    //             $errors[] = ['record' => $record, 'error' => 'Failed to insert purchase invoice: ' . $e->getMessage()];
+    //             continue;
+    //         }
+
+    //         // Process items (products) associated with the purchase invoice
+    //         if ($itemsData && isset($itemsData['product']) && is_array($itemsData['product'])) {
+    //             foreach ($itemsData['product'] as $index => $product) {
+    //                 $productModel = ProductsModel::where('name', $product)->first();
+
+    //                 // Check if the product exists
+    //                 if (!$productModel) {
+    //                     $errors[] = [
+    //                         'record' => $itemsData,
+    //                         'error' => "Product with name '{$product}' not found."
+    //                     ];
+    //                     continue; // Skip this product if not found
+    //                 }
+
+    //                 PurchaseInvoiceProductsModel::create([
+    //                     'purchase_invoice_number' => $purchaseInvoice->id,
+    //                     'product_id' => $productModel->id,
+    //                     'product_name' => $product,
+    //                     'description' => $itemsData['desc'][$index] ?? '',
+    //                     'brand' => $itemsData['group'][$index] ?? '',
+    //                     'quantity' => $itemsData['quantity'][$index] ?? 0,
+    //                     'unit' => $itemsData['unit'][$index] ?? '',
+    //                     'price' => isset($itemsData['price'][$index]) && $itemsData['price'][$index] !== '' ? (float)$itemsData['price'][$index] : 0,
+    //                     'discount' => (float)($itemsData['discount'][$index] ?? 0),
+    //                     'hsn' => $itemsData['hsn'][$index] ?? '',
+    //                     'tax' => (float)($itemsData['tax'][$index] ?? 0),
+    //                     'cgst' => 0,
+    //                     'sgst' => 0,
+    //                     'igst' => (float)($itemsData['igst'][$index] ?? 0),
+    //                     'godown' => isset($itemsData['place'][$index]) ? $itemsData['place'][$index] : '' // You can adjust this as needed
+    //                 ]);
+    //             }
+    //         }
+    //     }
+
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => "Purchase invoices import completed with $successfulInserts successful inserts.",
+    //         'errors' => $errors,
+    //     ], 200);
+    // }
+
     public function importPurchaseInvoices()
     {
-        set_time_limit(300);
+        ini_set('max_execution_time', 600); // Increase execution time
+        ini_set('memory_limit', '1024M');   // Optimize memory usage
 
-        // Clear the PurchaseInvoice and related tables
+        // Truncate Purchase Invoice and related tables before import
         PurchaseInvoiceModel::truncate();
         PurchaseInvoiceProductsModel::truncate();
+        PurchaseInvoiceAddonsModel::truncate();
 
         // Define the external URL
-        $url = 'https://expo.egsm.in/assets/custom/migrate/purchase_invoice.php';  
+        $url = 'https://expo.egsm.in/assets/custom/migrate/purchase_invoice.php';
 
         // Fetch data from the external URL
         try {
@@ -466,126 +613,180 @@ class PurchaseInvoiceController extends Controller
         }
 
         $data = $response->json('data');
-
         if (empty($data)) {
             return response()->json(['message' => 'No data found'], 404);
         }
 
+        $batchSize = 500; // Optimal batch size for insert
+        $purchaseInvoicesBatch = [];
+        $productsBatch = [];
+        $addonsBatch = [];
         $successfulInserts = 0;
         $errors = [];
 
+        // **Step 1️⃣: Fetch Existing Data in Memory**
+        $existingSuppliers = SuppliersModel::pluck('id', 'name')->toArray();
+        $existingProducts = ProductsModel::pluck('id', 'name')->toArray();
+
         foreach ($data as $record) {
-            // Decode JSON fields for items, tax, and addons
+            // Decode JSON fields
             $itemsData = json_decode($record['items'] ?? '{}', true);
             $taxData = json_decode($record['tax'] ?? '{}', true);
             $addonsData = json_decode($record['addons'] ?? '{}', true);
 
-            // Retrieve supplier ID (you might need to adjust this based on your actual supplier retrieval logic)
-            $supplier = SuppliersModel::where('name', $record['supplier'])->first();
-
-            if (!$supplier) {
+            // Get supplier ID
+            $supplierId = $existingSuppliers[$record['supplier']] ?? null;
+            if (!$supplierId) {
                 $errors[] = [
                     'record' => $record,
-                    'error' => 'Supplier not found for the provided name: ' . $record['supplier']
+                    'error' => 'Supplier not found: ' . $record['supplier']
                 ];
-                continue; // Skip to the next record in the loop
+                continue;
             }
 
-            // Set up main purchase invoice data
-            $purchaseInvoiceData = [
-                'supplier_id' => $supplier->id ?? null,
-                'name' => $record['supplier'] ?? 'Unnamed Supplier',
-                'address_line_1' => $supplier->address_line_1 ?? 'Address Line 1',
-                'address_line_2' => $supplier->address_line_2 ?? null,
-                'city' => $supplier->city ?? 'City Name',
-                'pincode' => $supplier->pincode ?? '000000',
-                'state' => $supplier->state ?? 'State Name',
-                'country' => $supplier->country ?? 'India',
-                'purchase_invoice_no' => $record['pi_no'] ?? 'Unknown',
-                'purchase_invoice_date' => $record['pi_date'] ?? now(),
-                'purchase_order_no' => !empty($record['oa_no']) ? $record['oa_no'] : 'Unknown',
-                'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
-                'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
-                'igst' => !empty($taxData['igst']) ? $taxData['igst'] : 0,
-                'currency' => 'INR',
+            // Prepare purchase invoice data
+            $purchaseInvoicesBatch[] = [
+                'company_id' => Auth::user()->company_id,
+                'supplier_id' => $supplierId,
+                'name' => $record['supplier'] ?? null,
+                'purchase_invoice_no' => $record['pi_no'] ?? null,
+                'purchase_invoice_date' => !empty($record['pi_date']) ? date('Y-m-d', strtotime($record['pi_date'])) : null,
+                'oa_no' => $record['oa_no'] ?? null,
+                'ref_no' => $record['reference_no'] ?? null,
                 'template' => json_decode($record['pdf_template'], true)['id'] ?? 0,
-                'status' => $record['status'] ?? 1,
+                'user' => Auth::user()->id,
+                'cgst' => $taxData['cgst'] ?? 0,
+                'sgst' => $taxData['sgst'] ?? 0,
+                'igst' => $taxData['igst'] ?? 0,
+                'total' => $record['total'] ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
             ];
+        }
 
-            // Validate main purchase invoice data
-            $validator = Validator::make($purchaseInvoiceData, [
-                'supplier_id' => 'required|integer',
-                'name' => 'required|string',
-                'address_line_1' => 'required|string',
-                'city' => 'required|string',
-                'pincode' => 'required|string',
-                'state' => 'required|string',
-                'country' => 'required|string',
-                'purchase_invoice_no' => 'required|string',
-                'purchase_invoice_date' => 'required|date',
-                'purchase_order_no' => 'required|string',
-                'cgst' => 'required|numeric',
-                'sgst' => 'required|numeric',
-                'igst' => 'required|numeric',
-                'currency' => 'required|string',
-                'template' => 'required|integer',
-                'status' => 'required|integer',
-            ]);
+        // **2️⃣ Batch Insert Purchase Invoices and Fetch IDs**
+        foreach (array_chunk($purchaseInvoicesBatch, $batchSize) as $chunk) {
+            PurchaseInvoiceModel::insert($chunk);
+        }
 
-            if ($validator->fails()) {
-                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+        // Fetch newly inserted IDs
+        $purchaseInvoiceIds = PurchaseInvoiceModel::whereIn('purchase_invoice_no', array_column($purchaseInvoicesBatch, 'purchase_invoice_no'))
+            ->pluck('id', 'purchase_invoice_no')
+            ->toArray();
+
+        // **3️⃣ Insert Products and Addons**
+        foreach ($data as $record) {
+            $purchaseInvoiceId = $purchaseInvoiceIds[$record['pi_no']] ?? null;
+            if (!$purchaseInvoiceId) {
                 continue;
             }
 
-            try {
-                $purchaseInvoice = PurchaseInvoiceModel::create($purchaseInvoiceData);
-                $successfulInserts++;
-            } catch (\Exception $e) {
-                $errors[] = ['record' => $record, 'error' => 'Failed to insert purchase invoice: ' . $e->getMessage()];
-                continue;
-            }
+            // **Process Items (Products)**
+            if (!empty($itemsData['product'])) {
+                foreach ($itemsData['product'] as $index => $productName) {
+                    $productId = $existingProducts[$productName] ?? null;
 
-            // Process items (products) associated with the purchase invoice
-            if ($itemsData && isset($itemsData['product']) && is_array($itemsData['product'])) {
-                foreach ($itemsData['product'] as $index => $product) {
-                    $productModel = ProductsModel::where('name', $product)->first();
-
-                    // Check if the product exists
-                    if (!$productModel) {
+                    if (!$productId) {
                         $errors[] = [
-                            'record' => $itemsData,
-                            'error' => "Product with name '{$product}' not found."
+                            'record' => $record,
+                            'error' => "Product not found: {$productName}"
                         ];
-                        continue; // Skip this product if not found
+                        continue;
                     }
 
-                    PurchaseInvoiceProductsModel::create([
-                        'purchase_invoice_number' => $purchaseInvoice->id,
-                        'product_id' => $productModel->id,
-                        'product_name' => $product,
+                    $productsBatch[] = [
+                        'purchase_invoice_id' => $purchaseInvoiceId, // ✅ Assign parent ID
+                        'product_id' => $productId,
+                        'product_name' => $productName,
                         'description' => $itemsData['desc'][$index] ?? '',
                         'brand' => $itemsData['group'][$index] ?? '',
                         'quantity' => $itemsData['quantity'][$index] ?? 0,
                         'unit' => $itemsData['unit'][$index] ?? '',
                         'price' => isset($itemsData['price'][$index]) && $itemsData['price'][$index] !== '' ? (float)$itemsData['price'][$index] : 0,
                         'discount' => (float)($itemsData['discount'][$index] ?? 0),
+                        'discount_type' => "percentage",
                         'hsn' => $itemsData['hsn'][$index] ?? '',
                         'tax' => (float)($itemsData['tax'][$index] ?? 0),
                         'cgst' => 0,
                         'sgst' => 0,
                         'igst' => (float)($itemsData['igst'][$index] ?? 0),
-                        'godown' => isset($itemsData['place'][$index]) ? $itemsData['place'][$index] : '' // You can adjust this as needed
-                    ]);
+                        'amount' => (
+                            (isset($itemsData['quantity'][$index]) ? (float) $itemsData['quantity'][$index] : 0.0) *
+                            (
+                                (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0) -
+                                (
+                                    ((isset($itemsData['discount'][$index]) ? (float) $itemsData['discount'][$index] : 0.0) *
+                                    (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0)) / 100
+                                )
+                            )
+                        ) + (
+                            (isset($itemsData['cgst'][$index]) ? (float) $itemsData['cgst'][$index] : 0.0) +
+                            (isset($itemsData['sgst'][$index]) ? (float) $itemsData['sgst'][$index] : 0.0) +
+                            (isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0.0)
+                        ),
+                        'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index]) 
+                                ? (
+                                    is_numeric($itemsData['channel'][$index]) 
+                                        ? (float)$itemsData['channel'][$index] 
+                                        : (
+                                            strtolower($itemsData['channel'][$index]) === 'standard' ? 1 :
+                                            (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 2 :
+                                            (strtolower($itemsData['channel'][$index]) === 'cbs' ? 3 : null))
+                                        )
+                                ) 
+                                : null,
+                        'stock' => (float)($itemsData['instock'][$index] ?? 0),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
                 }
+            }
+
+            // **Process Addons**
+            if (!empty($addonsData)) {
+                foreach ($addonsData as $name => $values) {
+                    $addonsBatch[] = [
+                        'purchase_invoice_id' => $purchaseInvoiceId, // ✅ Assign parent ID
+                        'name' => $name,
+                        'amount' => (float)($values['cgst'] ?? 0) + (float)($values['sgst'] ?? 0) + (float)($values['igst'] ?? 0),
+                        'tax' => 18,
+                        'hsn' => $values['hsn'] ?? '',
+                        'cgst' => (float)($values['cgst'] ?? 0),
+                        'sgst' => (float)($values['sgst'] ?? 0),
+                        'igst' => (float)($values['igst'] ?? 0),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                }
+            }
+
+            $successfulInserts++;
+
+            // **Batch Insert when batch size is reached**
+            if (count($productsBatch) >= $batchSize) {
+                PurchaseInvoiceProductsModel::insert($productsBatch);
+                $productsBatch = [];
+            }
+            if (count($addonsBatch) >= $batchSize) {
+                PurchaseInvoiceAddonsModel::insert($addonsBatch);
+                $addonsBatch = [];
             }
         }
 
+        // **Insert remaining data**
+        if (!empty($productsBatch)) {
+            PurchaseInvoiceProductsModel::insert($productsBatch);
+        }
+        if (!empty($addonsBatch)) {
+            PurchaseInvoiceAddonsModel::insert($addonsBatch);
+        }
+
+        // **Return response**
         return response()->json([
-            'code' => 200,
-            'success' => true,
             'message' => "Purchase invoices import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
         ], 200);
     }
+
 
 }
