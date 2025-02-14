@@ -31,7 +31,7 @@ return new class extends Migration
             $table->float('igst');
             $table->float('amount');
             $table->integer('channel')->nullable();
-            $table->integer('so_id')->nullable();
+            $table->bigInteger('so_id')->nullable();
             $table->integer('returned')->default(0);
             $table->integer('profit')->default(0);
             $table->integer('purchase_invoice_id')->default(0);
