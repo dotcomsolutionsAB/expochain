@@ -896,10 +896,13 @@ class SuppliersController extends Controller
                     'supplier_id' => $supplier_id,
                     'company_id' => $company_id,
                     'name' => $record['name'],
-                    'gstin' => $record['GSTIN'] ?? 'Random GSTIN' . now()->timestamp . '_' . Str::random(5),
+                    // 'gstin' => $record['GSTIN'] ?? 'Random GSTIN' . now()->timestamp . '_' . Str::random(5),
+                    'gstin' => $record['GSTIN'],
                     'contacts' => json_encode(['mobile' => $rawMobileData, 'email' => $record['email']]), // Store raw contact details as JSON
-                    'mobile' => $primaryMobile, // Store the first parsed mobile number
-                    'email' => $primaryEmail,
+                    // 'mobile' => $primaryMobile, // Store the first parsed mobile number
+                    // 'email' => $primaryEmail,
+                    'mobile' => $record['mobile'], // Store the first parsed mobile number
+                    'email' => $record['email'],
                 ]);
                 $successfulInserts++;
             } catch (\Exception $e) {
