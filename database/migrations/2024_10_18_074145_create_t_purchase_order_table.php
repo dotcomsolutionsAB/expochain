@@ -16,7 +16,7 @@ return new class extends Migration
             $table->integer('company_id');
             $table->integer('supplier_id');
             $table->string('name');
-            $table->string('purchase_order_id');
+            $table->string('purchase_order_no');
             $table->date('purchase_order_date');
             $table->string('oa_no');
             $table->date('oa_date');
@@ -27,7 +27,7 @@ return new class extends Migration
             $table->float('sgst');
             $table->float('igst');
             $table->float('total');
-            $table->string('currency');
+            $table->string('currency')->nullable();
             $table->timestamps();
         });
     }

@@ -779,6 +779,7 @@ class PurchaseOrderController extends Controller
                 'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
                 'igst' => !empty($taxData['igst']) ? $taxData['igst'] : 0,
                 'total' => !empty($record['total']) ?? null,
+                'currency' => !empty($record['currency']) ?? null,
                 'created_at' => now(),
                 'updated_at' => now()
             ];
