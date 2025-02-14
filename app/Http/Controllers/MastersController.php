@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Auth;
-
+use DB;
 
 class MastersController extends Controller
 {
