@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('name');
             $table->float('amount');
             $table->float('tax');
-            $table->string('hsn');
+            $table->string('hsn')->nullable();
             $table->float('cgst');
             $table->float('sgst');
             $table->float('igst');
