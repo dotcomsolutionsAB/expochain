@@ -897,7 +897,7 @@ class SuppliersController extends Controller
                     'company_id' => $company_id,
                     'name' => $record['name'],
                     // 'gstin' => $record['GSTIN'] ?? 'Random GSTIN' . now()->timestamp . '_' . Str::random(5),
-                    'gstin' => $record['GSTIN'],
+                    'gstin' => $record['gstin'],
                     // 'contacts' => json_encode(['mobile' => $rawMobileData, 'email' => $record['email']]), // Store raw contact details as JSON
                     'contacts' => json_encode(['mobile' => $$record['mobile'], 'email' => $record['email']]), // Store raw contact details as JSON
                     // 'mobile' => $primaryMobile, // Store the first parsed mobile number
