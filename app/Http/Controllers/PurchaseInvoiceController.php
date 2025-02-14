@@ -696,6 +696,7 @@ class PurchaseInvoiceController extends Controller
 
                     $productsBatch[] = [
                         'purchase_invoice_id' => $purchaseInvoiceId, // ✅ Assign parent ID
+                        'company_id' => Auth::user()->company_id,
                         'product_id' => $productId,
                         'product_name' => $productName,
                         'description' => $itemsData['desc'][$index] ?? '',
@@ -747,6 +748,7 @@ class PurchaseInvoiceController extends Controller
                 foreach ($addonsData as $name => $values) {
                     $addonsBatch[] = [
                         'purchase_invoice_id' => $purchaseInvoiceId, // ✅ Assign parent ID
+                        'company_id' => Auth::user()->company_id,
                         'name' => $name,
                         'amount' => (float)($values['cgst'] ?? 0) + (float)($values['sgst'] ?? 0) + (float)($values['igst'] ?? 0),
                         'tax' => 18,
