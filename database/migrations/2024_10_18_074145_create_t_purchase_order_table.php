@@ -17,7 +17,7 @@ return new class extends Migration
             $table->integer('supplier_id');
             $table->string('name');
             $table->string('purchase_order_no');
-            $table->date('purchase_order_date');
+            $table->date('purchase_order_date')->nullable();
             $table->string('oa_no');
             $table->date('oa_date');
             $table->integer('template');

@@ -30,7 +30,7 @@ return new class extends Migration
             $table->float('sgst');
             $table->float('igst');
             $table->float('amount')->default('0');
-            $table->integer('channel')->default('0');
+            $table->integer('channel')->default('0')->nullable();
             $table->integer('received')->default('0');
             $table->integer('short_closed')->default('0');
             $table->timestamps();

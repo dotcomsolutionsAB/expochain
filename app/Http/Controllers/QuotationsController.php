@@ -206,7 +206,6 @@ class QuotationsController extends Controller
 
         // Get filter inputs
         $clientId = $request->input('client_id');
-        $clientContactId = $request->input('client_contact_id');
         $name = $request->input('name');
         $quotationNo = $request->input('quotation_no');
         $quotationDate = $request->input('quotation_date');
@@ -247,9 +246,6 @@ class QuotationsController extends Controller
         // Apply filters
         if ($clientId) {
             $query->where('client_id', $clientId);
-        }
-        if ($clientContactId) {
-            $query->where('client_contact_id', $clientContactId);
         }
         if ($name) {
             $query->where('name', 'LIKE', '%' . $name . '%');
