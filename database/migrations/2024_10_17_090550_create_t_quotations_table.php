@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('enquiry_date');
             $table->integer('template');
             $table->integer('contact_person');
-            $table->integer('sales_person');
+            $table->integer('sales_person')->nullable();
             $table->enum('status', ['pending', 'rejected', 'completed'])->default('pending');
             $table->integer('user');
             $table->float('cgst');
