@@ -41,4 +41,9 @@ class PurchaseOrderModel extends Model
     {
         return $this->hasMany(PurchaseOrderTermsModel::class, 'purchase_order_id', 'id');
     }
+
+    public function get_user()
+    {
+        return $this->belongsTo(User::class, 'user', 'id'); 
+    }
 }
