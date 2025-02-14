@@ -953,8 +953,10 @@ class SuppliersController extends Controller
                         'company_id' => $company_id,
                         'name' => $record['name'], // Use supplier name as the default contact name
                         'designation' => 'Default Designation', // Default designation
-                        'mobile' => $mobile, // Store each parsed mobile number
-                        'email' => $primaryEmail, // Use primary email for contacts
+                        // 'mobile' => $mobile, // Store each parsed mobile number
+                        'mobile' => $record['mobile'], // Store each parsed mobile number
+                        // 'email' => $primaryEmail, // Use primary email for contacts
+                        'email' => $record['email'], // Use primary email for contacts
                     ]);
                 } catch (\Exception $e) {
                     $errors[] = ['record' => $mobile, 'error' => 'Failed to insert contact: ' . $e->getMessage()];

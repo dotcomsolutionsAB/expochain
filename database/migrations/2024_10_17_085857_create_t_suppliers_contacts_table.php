@@ -17,8 +17,8 @@ return new class extends Migration
             $table->integer('company_id');
             $table->string('name');
             $table->string('designation');
-            $table->string('mobile');
-            $table->string('email');
+            $table->string('mobile')->nullable();
+            $table->string('email')->nullable();
             $table->timestamps();
         });
     }
