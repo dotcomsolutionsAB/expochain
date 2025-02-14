@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('quotation_no');
             $table->string('quotation_date');
-            $table->string('enquiry_no');
+            $table->string('enquiry_no')->nullable();
             $table->string('enquiry_date')->nullable();
             $table->integer('template');
             $table->integer('contact_person')->nullable();
