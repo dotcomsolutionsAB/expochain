@@ -18,10 +18,10 @@ return new class extends Migration
             $table->string('name');
             $table->string('sales_invoice_no');
             $table->date('sales_invoice_date');
-            $table->integer('sales_order_id');
+            $table->integer('sales_order_id')->nullable();
             $table->date('sales_order_date')->nullable();
             $table->integer('template');
-            $table->integer('contact_person');
+            $table->integer('contact_person')->nullable();
             $table->enum('cash', ['0', '1']);
             $table->integer('user');
             $table->float('cgst');

@@ -689,7 +689,6 @@ class SalesInvoiceController extends Controller
                                 : (isset($itemsData['so_no'][$index]) ? trim($itemsData['so_no'][$index]) : null),
                             'returned' => $itemsData['returned'][$index] ?? 0,
                             'profit' => $itemsData['profit'][$index] ?? 0.0,
-                            'godown' => $itemsData['place'][$index] ?? '',
                             'created_at' => now(),
                             'updated_at' => now()
                         ];
