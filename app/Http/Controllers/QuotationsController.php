@@ -686,7 +686,7 @@ class QuotationsController extends Controller
                 'enquiry_date' => !empty($enquiryData['enquiry_date']) 
                     ? date('Y-m-d', strtotime($enquiryData['enquiry_date'])) 
                     : null,
-                'discount' => is_numeric($record['discount']) ? (float) $record['discount'] : 0,
+                // 'discount' => is_numeric($record['discount']) ? (float) $record['discount'] : 0,
                 'cgst' => $cgst,
                 'sgst' => $sgst,
                 'igst' => $igst,
