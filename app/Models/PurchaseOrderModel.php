@@ -46,4 +46,9 @@ class PurchaseOrderModel extends Model
     {
         return $this->belongsTo(User::class, 'user', 'id'); 
     }
+
+    public function get_template()
+    {
+        return $this->belongsTo(PdfTemplateModel::class, 'template', 'id');
+    }
 }
