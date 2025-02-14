@@ -560,18 +560,168 @@ class PurchaseOrderController extends Controller
         }
     }
 
+    // migration
+    // public function importPurchaseOrders()
+    // {
+    //     PurchaseOrderModel::truncate();  
+        
+    //     PurchaseOrderProductsModel::truncate();  
+
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/purchase_order.php'; // Replace with the actual URL
+
+    //     try {
+    //         $response = Http::get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
+    //     }
+
+    //     $data = $response->json('data');
+
+    //     if (empty($data)) {
+    //         return response()->json(['message' => 'No data found'], 404);
+    //     }
+
+    //     $successfulInserts = 0;
+    //     $errors = [];
+
+    //     foreach ($data as $record) {
+        
+    //         // Parse JSON data for items and tax
+    //         $itemsData = json_decode($record['items'], true);
+    //         $taxData = json_decode($record['tax'], true);
+    //         $addonsData = json_decode($record['addons'], true);
+    //         $topData = json_decode($record['top'], true);
+
+    //         if (!is_array($itemsData) || !is_array($taxData) || !is_array($addonsData) || !is_array($topData)) {
+    //             $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure in one of the fields.'];
+    //             continue;
+    //         }
+
+    //         // Generate dummy sales data and fallback for missing fields
+    //         $supplier = SuppliersModel::where('name', $record['supplier'])->first();
+
+    //         $defaultSupplierId = 0;
+
+    //         if (!empty($record['po_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $record['po_date']) && $record['po_date'] !== '0000-00-00') {
+    //             $purchaseOrderDate = \DateTime::createFromFormat('Y-m-d', $record['po_date']);
+    //         }
+
+    //         $formattedDate = $purchaseOrderDate ? $purchaseOrderDate->format('Y-m-d') : '1970-01-01';
+
+    //         // Prepare purchase order data
+    //         $purchaseOrderData = [
+    //             'company_id' => Auth::user()->company_id,
+    //             'supplier_id' => $supplier->id ?? $defaultSupplierId,
+    //             'name' =>$supplier->name ?? "Random Supplier",
+    //             'address_line_1' => $supplier->address_line_1 ?? 'N/A', // Default, since no specific address is provided in data
+    //             'address_line_2' => $supplier->address_line_2 ?? 'N/A',
+    //             'city' => $supplier->city ?? 'N/A', // Default values
+    //             'pincode' => $supplier->pincode ??'000000',
+    //             'state' => !empty($record['state']) ? $record['state'] : 'Unknown State',
+    //             'country' => $supplier->country ?? 'INDIA',
+    //             'purchase_order_no' => $record['po_no'] ?? '0000',
+    //             'purchase_order_date' => $formattedDate,
+    //             'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
+    //             'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
+    //             'igst' => !empty($taxData['igst']) ? $taxData['igst'] : 0,
+    //             'currency' => !empty($record['currency']) ? $record['currency'] : 'INR',
+    //             'template' => json_decode($record['pdf_template'], true)['id'] ?? 1,
+    //             'status' => $record['status'] ?? 1,
+    //         ];
+
+    //         // print_r($purchaseOrderData);
+
+    //         // Validate purchase order data
+    //         $validator = Validator::make($purchaseOrderData, [
+    //             'supplier_id' => 'required|integer',
+    //             'name' => 'required|string',
+    //             'address_line_1' => 'required|string',
+    //             'address_line_2' => 'nullable|string',
+    //             'city' => 'required|string',
+    //             'pincode' => 'required|string',
+    //             'state' => 'required|string',
+    //             'country' => 'required|string',
+    //             'purchase_order_no' => 'required|string',
+    //             'purchase_order_date' => 'required|date_format:Y-m-d',
+    //             'cgst' => 'required|numeric',
+    //             'sgst' => 'required|numeric',
+    //             'igst' => 'required|numeric',
+    //             'currency' => 'required|string',
+    //             'template' => 'required|integer',
+    //             'status' => 'required|integer',
+    //         ]);
+
+    //         if ($validator->fails()) {
+    //             $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+    //             continue;
+    //         }
+
+    //         // Insert purchase order data
+    //         try {
+    //             $purchaseOrder = PurchaseOrderModel::create($purchaseOrderData);
+    //             $successfulInserts++;
+    //         } catch (\Exception $e) {
+    //             $errors[] = ['record' => $record, 'error' => 'Failed to insert purchase order: ' . $e->getMessage()];
+    //             continue;
+    //         }
+
+    //         // Insert products
+    //         if ($itemsData && is_array($itemsData['product'])) {
+    //             foreach ($itemsData['product'] as $index => $productName) {
+    //                 try {
+    //                     PurchaseOrderProductsModel::create([
+    //                         'purchase_order_number' => $purchaseOrder->id,
+    //                         'company_id' => Auth::user()->company_id,
+    //                         'product_id' => $index + 1,
+    //                         'product_name' => $productName,
+    //                         'description' => $itemsData['desc'][$index] ?? 'No Description',
+    //                         'brand' => 'Unknown', // Default as brand data is missing in the sample
+    //                         'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
+    //                         'unit' => $itemsData['unit'][$index] ?? '',
+    //                         'price' => (float) $itemsData['price'][$index] ?? 0.0,
+    //                         'discount' => isset($itemsData['discount'][$index]) && $itemsData['discount'][$index] !== '' ? (float) $itemsData['discount'][$index] : 0.0,
+    //                         'hsn' => $itemsData['hsn'][$index] ?? '',
+    //                         'tax' => (float) $itemsData['tax'][$index] ?? 0,
+    //                         'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
+    //                         'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
+    //                         'igst' => isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
+    //                     ]);
+    //                 } catch (\Exception $e) {
+    //                     $errors[] = ['record' => $record, 'error' => 'Failed to insert product: ' . $e->getMessage()];
+    //                 }
+    //             }
+    //         }
+    //     }
+
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => "Data import completed with $successfulInserts successful inserts.",
+    //         'errors' => $errors,
+    //     ], 200);
+    // }
+
     public function importPurchaseOrders()
     {
-        PurchaseOrderModel::truncate();  
-        
-        PurchaseOrderProductsModel::truncate();  
+        set_time_limit(300);
 
-        $url = 'https://expo.egsm.in/assets/custom/migrate/purchase_order.php'; // Replace with the actual URL
+        // Truncate tables before import
+        PurchaseOrderModel::truncate();
+        PurchaseOrderProductsModel::truncate();
+        PurchaseOrderAddonsModel::truncate(); // Ensure this exists for addons
 
+        // Define the external URL
+        $url = 'https://expo.egsm.in/assets/custom/migrate/purchase_order.php';
+
+        // Fetch data from the external URL
         try {
-            $response = Http::get($url);
+            $response = Http::timeout(120)->get($url);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+            return response()->json(['error' => 'Failed to fetch data: ' . $e->getMessage()], 500);
         }
 
         if ($response->failed()) {
@@ -584,124 +734,169 @@ class PurchaseOrderController extends Controller
             return response()->json(['message' => 'No data found'], 404);
         }
 
-        $successfulInserts = 0;
+        $batchSize = 500; // Define batch size
+        $purchaseOrdersBatch = [];
+        $purchaseOrderIds = [];
+        $productsBatch = [];
+        $addonsBatch = [];
         $errors = [];
 
         foreach ($data as $record) {
-        
-            // Parse JSON data for items and tax
+            // Decode JSON data
             $itemsData = json_decode($record['items'], true);
             $taxData = json_decode($record['tax'], true);
             $addonsData = json_decode($record['addons'], true);
-            $topData = json_decode($record['top'], true);
 
-            if (!is_array($itemsData) || !is_array($taxData) || !is_array($addonsData) || !is_array($topData)) {
-                $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure in one of the fields.'];
-                continue;
-            }
-
-            // Generate dummy sales data and fallback for missing fields
+            // Get Supplier Data
             $supplier = SuppliersModel::where('name', $record['supplier'])->first();
+            $supplierId = $supplier->id ?? 0;
 
-            $defaultSupplierId = 0;
+            // Format Purchase Order Date
+            $formattedDate = (!empty($record['po_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $record['po_date']) && $record['po_date'] !== '0000-00-00')
+                ? date('Y-m-d', strtotime($record['po_date']))
+                : null;
 
-            if (!empty($record['po_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $record['po_date']) && $record['po_date'] !== '0000-00-00') {
-                $purchaseOrderDate = \DateTime::createFromFormat('Y-m-d', $record['po_date']);
-            }
+            $statusMap = [
+                0 => 'pending',
+                1 => 'partial',
+                2 => 'completed',
+                3 => 'short_closed'
+            ];
 
-            $formattedDate = $purchaseOrderDate ? $purchaseOrderDate->format('Y-m-d') : '1970-01-01';
-
-            // Prepare purchase order data
-            $purchaseOrderData = [
+            // Prepare Purchase Order Data
+            $purchaseOrdersBatch[] = [
                 'company_id' => Auth::user()->company_id,
-                'supplier_id' => $supplier->id ?? $defaultSupplierId,
-                'name' =>$supplier->name ?? "Random Supplier",
-                'address_line_1' => $supplier->address_line_1 ?? 'N/A', // Default, since no specific address is provided in data
-                'address_line_2' => $supplier->address_line_2 ?? 'N/A',
-                'city' => $supplier->city ?? 'N/A', // Default values
-                'pincode' => $supplier->pincode ??'000000',
-                'state' => !empty($record['state']) ? $record['state'] : 'Unknown State',
-                'country' => $supplier->country ?? 'INDIA',
-                'purchase_order_no' => $record['po_no'] ?? '0000',
+                'supplier_id' => $supplierId,
+                'name' => $supplier->name ?? "Unknown Supplier",
+                'purchase_order_no' => $record['po_no'] ?? null,
                 'purchase_order_date' => $formattedDate,
+                'oa_no' => $record['oa'],
+                'oa_date' => $record['oa_date'],
+                'template' => json_decode($record['pdf_template'], true)['id'] ?? null,
+                'status' => $statusMap[$record['Status']] ?? 'pending',
+                'user' => Auth::user()->id,
                 'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
                 'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
                 'igst' => !empty($taxData['igst']) ? $taxData['igst'] : 0,
-                'currency' => !empty($record['currency']) ? $record['currency'] : 'INR',
-                'template' => json_decode($record['pdf_template'], true)['id'] ?? 1,
-                'status' => $record['status'] ?? 1,
+                'total' => !empty($record['total']) ?? null,
+                'created_at' => now(),
+                'updated_at' => now()
             ];
 
-            // print_r($purchaseOrderData);
+            // **Batch Insert Purchase Orders**
+            if (count($purchaseOrdersBatch) >= $batchSize) {
+                PurchaseOrderModel::insert($purchaseOrdersBatch);
+                $purchaseOrdersBatch = []; // Reset batch
+            }
+        }
 
-            // Validate purchase order data
-            $validator = Validator::make($purchaseOrderData, [
-                'supplier_id' => 'required|integer',
-                'name' => 'required|string',
-                'address_line_1' => 'required|string',
-                'address_line_2' => 'nullable|string',
-                'city' => 'required|string',
-                'pincode' => 'required|string',
-                'state' => 'required|string',
-                'country' => 'required|string',
-                'purchase_order_no' => 'required|string',
-                'purchase_order_date' => 'required|date_format:Y-m-d',
-                'cgst' => 'required|numeric',
-                'sgst' => 'required|numeric',
-                'igst' => 'required|numeric',
-                'currency' => 'required|string',
-                'template' => 'required|integer',
-                'status' => 'required|integer',
-            ]);
+        // **Insert Remaining Purchase Orders**
+        if (!empty($purchaseOrdersBatch)) {
+            PurchaseOrderModel::insert($purchaseOrdersBatch);
+        }
 
-            if ($validator->fails()) {
-                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+        // Fetch Newly Inserted Purchase Order IDs
+        $purchaseOrderIds = PurchaseOrderModel::whereIn('purchase_order_no', array_column($purchaseOrdersBatch, 'purchase_order_no'))
+            ->pluck('id', 'purchase_order_no')
+            ->toArray();
+
+        // **Insert Products & Addons**
+        foreach ($data as $record) {
+            $purchaseOrderId = $purchaseOrderIds[$record['po_no']] ?? null;
+            if (!$purchaseOrderId) {
                 continue;
             }
 
-            // Insert purchase order data
-            try {
-                $purchaseOrder = PurchaseOrderModel::create($purchaseOrderData);
-                $successfulInserts++;
-            } catch (\Exception $e) {
-                $errors[] = ['record' => $record, 'error' => 'Failed to insert purchase order: ' . $e->getMessage()];
-                continue;
-            }
+            // Decode JSON fields
+            $itemsData = json_decode($record['items'], true);
+            $addonsData = json_decode($record['addons'], true);
 
-            // Insert products
-            if ($itemsData && is_array($itemsData['product'])) {
+            // Insert Products
+            if (!empty($itemsData['product'])) {
                 foreach ($itemsData['product'] as $index => $productName) {
-                    try {
-                        PurchaseOrderProductsModel::create([
-                            'purchase_order_number' => $purchaseOrder->id,
-                            'company_id' => Auth::user()->company_id,
-                            'product_id' => $index + 1,
-                            'product_name' => $productName,
-                            'description' => $itemsData['desc'][$index] ?? 'No Description',
-                            'brand' => 'Unknown', // Default as brand data is missing in the sample
-                            'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
-                            'unit' => $itemsData['unit'][$index] ?? '',
-                            'price' => (float) $itemsData['price'][$index] ?? 0.0,
-                            'discount' => isset($itemsData['discount'][$index]) && $itemsData['discount'][$index] !== '' ? (float) $itemsData['discount'][$index] : 0.0,
-                            'hsn' => $itemsData['hsn'][$index] ?? '',
-                            'tax' => (float) $itemsData['tax'][$index] ?? 0,
-                            'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
-                            'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
-                            'igst' => isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
-                        ]);
-                    } catch (\Exception $e) {
-                        $errors[] = ['record' => $record, 'error' => 'Failed to insert product: ' . $e->getMessage()];
-                    }
+                    $productsBatch[] = [
+                        'purchase_order_id' => $purchaseOrderId,
+                        'company_id' => Auth::user()->company_id,
+                        'product_id' => $index + 1,
+                        'product_name' => $productName,
+                        'description' => $itemsData['desc'][$index] ?? 'No Description',
+                        'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
+                        'unit' => $itemsData['unit'][$index] ?? '',
+                        'price' => (float) $itemsData['price'][$index] ?? 0.0,
+                        'discount' => isset($itemsData['discount'][$index]) && $itemsData['discount'][$index] !== '' ? (float) $itemsData['discount'][$index] : 0.0,
+                        'discount_type' => "percentage",
+                        'hsn' => $itemsData['hsn'][$index] ?? '',
+                        'tax' => (float) $itemsData['tax'][$index] ?? 0,
+                        'cgst' => !empty($itemsData['cgst'][$index]) ? $itemsData['cgst'][$index] : 0,
+                        'sgst' => !empty($itemsData['sgst'][$index]) ? $itemsData['sgst'][$index] : 0,
+                        'igst' => isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
+                        'amount' => isset($itemsData['amount'][$index]) ? (float) $itemsData['amount'][$index] : 0,
+                        'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index]) 
+                        ? (
+                            is_numeric($itemsData['channel'][$index]) 
+                                ? (float)$itemsData['channel'][$index] 
+                                : (
+                                    strtolower($itemsData['channel'][$index]) === 'standard' ? 1 :
+                                    (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 2 :
+                                    (strtolower($itemsData['channel'][$index]) === 'cbs' ? 3 : null))
+                                )
+                        ) 
+                        : null,
+                        'received' => isset($itemsData['received'][$index]) ? (float) $itemsData['received'][$index] : 0,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
                 }
             }
+
+            // Insert Addons
+            if (!empty($addonsData)) {
+                foreach ($addonsData as $name => $values) {
+                    $addonsBatch[] = [
+                        'purchase_order_id' => $purchaseOrderId,
+                        'company_id' => Auth::user()->company_id,
+                        'name' => $name,
+                        'amount' => (float)($values['cgst'] ?? 0) + (float)($values['sgst'] ?? 0) + (float)($values['igst'] ?? 0),
+                        'tax' => 18,
+                        'hsn' => $values['hsn'] ?? '',
+                        'cgst' => (float)($values['cgst'] ?? 0),
+                        'sgst' => (float)($values['sgst'] ?? 0),
+                        'igst' => (float)($values['igst'] ?? 0),
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+                }
+            }
+
+            // **Batch Insert Products**
+            if (count($productsBatch) >= $batchSize) {
+                PurchaseOrderProductsModel::insert($productsBatch);
+                $productsBatch = []; // Reset batch
+            }
+
+            // **Batch Insert Addons**
+            if (count($addonsBatch) >= $batchSize) {
+                PurchaseOrderAddonsModel::insert($addonsBatch);
+                $addonsBatch = []; // Reset batch
+            }
+        }
+
+        // **Insert Remaining Products & Addons**
+        if (!empty($productsBatch)) {
+            PurchaseOrderProductsModel::insert($productsBatch);
+        }
+
+        if (!empty($addonsBatch)) {
+            PurchaseOrderAddonsModel::insert($addonsBatch);
         }
 
         return response()->json([
             'code' => 200,
             'success' => true,
-            'message' => "Data import completed with $successfulInserts successful inserts.",
+            'message' => "Purchase orders import completed successfully.",
             'errors' => $errors,
         ], 200);
     }
+
 
 }
