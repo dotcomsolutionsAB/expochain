@@ -774,7 +774,6 @@ class SalesOrderController extends Controller
                 'sgst' => (float)($record['tax']['sgst'] ?? 0),
                 'igst' => (float)($record['tax']['igst'] ?? 0),
                 'total' => (float)($record['total'] ?? 0),
-                'currency' => 'INR',
                 'template' => json_decode($record['pdf_template'], true)['id'] ?? '0',
                 'status' => $statusMapping[$record['status']] ?? 'pending',
                 'created_at' => now(),

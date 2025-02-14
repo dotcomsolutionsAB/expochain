@@ -613,6 +613,7 @@ class PurchaseOrderController extends Controller
 
             // Prepare purchase order data
             $purchaseOrderData = [
+                'company_id' => Auth::user()->company_id,
                 'supplier_id' => $supplier->id ?? $defaultSupplierId,
                 'name' =>$supplier->name ?? "Random Supplier",
                 'address_line_1' => $supplier->address_line_1 ?? 'N/A', // Default, since no specific address is provided in data
@@ -673,6 +674,7 @@ class PurchaseOrderController extends Controller
                     try {
                         PurchaseOrderProductsModel::create([
                             'purchase_order_number' => $purchaseOrder->id,
+                            'company_id' => Auth::user()->company_id,
                             'product_id' => $index + 1,
                             'product_name' => $productName,
                             'description' => $itemsData['desc'][$index] ?? 'No Description',
