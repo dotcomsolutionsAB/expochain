@@ -29,7 +29,7 @@ class PurchaseOrderModel extends Model
 
     public function products()
     {
-        return $this->hasMany(PurchaseOrderProductsModel::class, 'purchase_order_number', 'id');
+        return $this->hasMany(PurchaseOrderProductsModel::class, 'purchase_order_id', 'id');
     }
 
     public function addons()
