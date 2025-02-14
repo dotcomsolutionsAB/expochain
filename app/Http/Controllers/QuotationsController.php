@@ -19,6 +19,7 @@ use Auth;
 use Carbon\Carbon;
 use DB;
 use NumberFormatter;
+use Illuminate\Support\Facades\Log;
 
 class QuotationsController extends Controller
 {
