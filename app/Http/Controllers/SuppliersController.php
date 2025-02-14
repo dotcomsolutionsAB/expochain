@@ -875,17 +875,18 @@ class SuppliersController extends Controller
             $addressData = json_decode($record['address'], true) ?? [];
 
             // Process and normalize mobile numbers
-            $rawMobileData = $record['mobile'] ?? '';
-            $mobileList = $this->processMobileNumbers($rawMobileData); // Use helper function to process numbers
-            $primaryMobile = $mobileList[0] ?? '0000000000'; // First number as the primary mobile
+            // $rawMobileData = $record['mobile'] ?? '';
+            // $mobileList = $this->processMobileNumbers($rawMobileData); // Use helper function to process numbers
+            // $primaryMobile = $mobileList[0] ?? '0000000000'; // First number as the primary mobile
 
-            $primaryEmail = filter_var(trim($record['email'] ?? ''), FILTER_VALIDATE_EMAIL)
-                ? trim($record['email'])
-                : 'placeholder_' . now()->timestamp . '@example.com';
+            // $primaryEmail = filter_var(trim($record['email'] ?? ''), FILTER_VALIDATE_EMAIL)
+            //     ? trim($record['email'])
+            //     : 'placeholder_' . now()->timestamp . '@example.com';
 
             // Generate unique supplier ID
             do {
-                $supplier_id = rand(1111111111, 9999999999);
+                // $supplier_id = rand(1111111111, 9999999999);
+                $supplier_id = rand(11111111, 99999999);
                 $exists = SuppliersModel::where('supplier_id', $supplier_id)->exists();
             } while ($exists);
 
@@ -948,41 +949,41 @@ class SuppliersController extends Controller
     }
 
     // Helper function to process and normalize mobile numbers
-    private function processMobileNumbers($rawMobileData)
-    {
-        $mobileList = [];
-        $areaCode = ''; // Variable to track the last detected area code
+    // private function processMobileNumbers($rawMobileData)
+    // {
+    //     $mobileList = [];
+    //     $areaCode = ''; // Variable to track the last detected area code
 
-        if (!empty($rawMobileData)) {
-            // Split the input by commas and slashes
-            $mobileParts = explode(',', $rawMobileData);
+    //     if (!empty($rawMobileData)) {
+    //         // Split the input by commas and slashes
+    //         $mobileParts = explode(',', $rawMobileData);
 
-            foreach ($mobileParts as $group) {
-                $group = trim($group);
-                $subParts = explode('/', $group);
+    //         foreach ($mobileParts as $group) {
+    //             $group = trim($group);
+    //             $subParts = explode('/', $group);
 
-                foreach ($subParts as $part) {
-                    $part = trim($part);
+    //             foreach ($subParts as $part) {
+    //                 $part = trim($part);
 
-                    // If the part contains an area code (e.g., "033 22489216")
-                    if (preg_match('/^\d{2,4}\s\d+$/', $part)) {
-                        $mobileList[] = $part; // Add full number with area code
-                        $areaCode = explode(' ', $part)[0]; // Extract the area code for future use
-                    } elseif (preg_match('/^\d+$/', $part)) {
-                        // If the part is a number without an area code
-                        if (!empty($areaCode)) {
-                            $mobileList[] = $areaCode . ' ' . $part; // Prepend the last known area code
-                        } else {
-                            $mobileList[] = $part; // Add as is if no area code is available
-                        }
-                    }
-                }
-            }
-        }
+    //                 // If the part contains an area code (e.g., "033 22489216")
+    //                 if (preg_match('/^\d{2,4}\s\d+$/', $part)) {
+    //                     $mobileList[] = $part; // Add full number with area code
+    //                     $areaCode = explode(' ', $part)[0]; // Extract the area code for future use
+    //                 } elseif (preg_match('/^\d+$/', $part)) {
+    //                     // If the part is a number without an area code
+    //                     if (!empty($areaCode)) {
+    //                         $mobileList[] = $areaCode . ' ' . $part; // Prepend the last known area code
+    //                     } else {
+    //                         $mobileList[] = $part; // Add as is if no area code is available
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
 
-        // Remove duplicates and ensure clean numbers
-        return array_unique(array_map('trim', $mobileList));
-    }
+    //     // Remove duplicates and ensure clean numbers
+    //     return array_unique(array_map('trim', $mobileList));
+    // }
 
     public function export_suppliers(Request $request)
     {

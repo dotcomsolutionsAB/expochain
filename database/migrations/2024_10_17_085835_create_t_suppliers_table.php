@@ -22,9 +22,9 @@ return new class extends Migration
             // $table->string('pincode');
             // $table->string('state');
             // $table->string('country');
-            $table->string('gstin');
-            $table->string('mobile', 13);
-            $table->string('email');
+            $table->string('gstin')->nullable();
+            $table->string('mobile')->nullable();
+            $table->string('email')->nullable();
             $table->unsignedBigInteger('default_contact');
             $table->timestamps();
 
