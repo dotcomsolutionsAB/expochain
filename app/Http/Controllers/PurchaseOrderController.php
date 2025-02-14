@@ -773,7 +773,7 @@ class PurchaseOrderController extends Controller
                 'oa_no' => $record['oa'],
                 'oa_date' => $record['oa_date'],
                 'template' => json_decode($record['pdf_template'], true)['id'] ?? null,
-                'status' => $statusMap[$record['Status']] ?? 'pending',
+                'status' => $statusMap[$record['status']] ?? 'pending',
                 'user' => Auth::user()->id,
                 'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
                 'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
