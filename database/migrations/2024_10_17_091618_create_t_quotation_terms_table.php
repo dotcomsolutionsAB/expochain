@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('quotation_id');
             $table->integer('company_id');
             $table->string('name');
-            $table->string('value');
+            $table->string('value')->nullable();
             $table->timestamps();
         });
     }
