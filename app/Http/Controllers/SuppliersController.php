@@ -872,8 +872,6 @@ class SuppliersController extends Controller
                 continue; // Skip if supplier already exists
             }
 
-            $addressData = json_decode($record['address'], true) ?? [];
-
             // Process and normalize mobile numbers
             // $rawMobileData = $record['mobile'] ?? '';
             // $mobileList = $this->processMobileNumbers($rawMobileData); // Use helper function to process numbers
@@ -911,17 +909,35 @@ class SuppliersController extends Controller
                 continue;
             }
 
+            // Decode JSON address field safely
+            $addressData = json_decode($record['address'], true);
+
+            // Check if decoding failed and set default values
+            if (!is_array($addressData)) {
+                $addressData = [
+                    'address1' => null,
+                    'address2' => null,
+                    'city' => null,
+                    'pincode' => null
+                ];
+            }
+
             // Insert address into SupplierAddressModel
             try {
                 SupplierAddressModel::create([
                     'company_id' => $company_id,
                     'supplier_id' => $register_supplier->supplier_id,
-                    'address_line_1' => $addressData['address1'] ?? 'Default Address Line 1',
-                    'address_line_2' => $addressData['address2'] ?? 'Default Address Line 2',
-                    'city' => $addressData['city'] ?? 'Default City',
-                    'pincode' => $addressData['pincode'] ?? '000000',
-                    'state' => $record['state'] ?? 'Unknown State',
-                    'country' => $record['country'] ?? 'India',
+                    // 'address_line_1' => $addressData['address1'] ?? 'Default Address Line 1',
+                    // 'address_line_2' => $addressData['address2'] ?? 'Default Address Line 2',
+                    // 'city' => $addressData['city'] ?? 'Default City',
+                    // 'pincode' => $addressData['pincode'] ?? '000000',
+                    // 'state' => $record['state'] ?? 'Unknown State',
+                    'address_line_1' => $addressData['address1'] ?? null,
+                    'address_line_2' => $addressData['address2'] ?? null,
+                    'city' => $addressData['city'] ?? null,
+                    'pincode' => $addressData['pincode'] ?? null,
+                    'state' => $record['state'] ?? null,
+                    'country' => $record['country'] ?? null,
                 ]);
             } catch (\Exception $e) {
                 $errors[] = ['record' => $record, 'error' => 'Failed to insert address: ' . $e->getMessage()];

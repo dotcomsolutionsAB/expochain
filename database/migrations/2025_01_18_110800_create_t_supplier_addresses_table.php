@@ -16,11 +16,11 @@ return new class extends Migration
             $table->integer('company_id')->unsigned();
             $table->enum('type', ['billing', 'shipping'])->default('billing'); // Billing or Shipping
             $table->integer('supplier_id')->unsigned();
-            $table->string('country');
-            $table->string('address_line_1');
+            $table->string('country')->nullable();
+            $table->string('address_line_1')->nullable();
             $table->string('address_line_2')->nullable();
-            $table->string('city');
-            $table->string('state');
+            $table->string('city')->nullable();
+            $table->string('state')->nullable();
             $table->string('pincode');
             $table->timestamps();
         });
