@@ -873,7 +873,7 @@ class SuppliersController extends Controller
             }
 
             // Process and normalize mobile numbers
-            // $rawMobileData = $record['mobile'] ?? '';
+            $rawMobileData = $record['mobile'] ?? '';
             $mobileList = $this->processMobileNumbers($rawMobileData); // Use helper function to process numbers
             // $primaryMobile = $mobileList[0] ?? '0000000000'; // First number as the primary mobile
 
