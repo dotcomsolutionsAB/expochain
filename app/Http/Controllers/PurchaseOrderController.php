@@ -261,7 +261,7 @@ class PurchaseOrderController extends Controller
         $get_purchase_orders->transform(function ($purchase_orders) {
 
             // Convert total to words
-            $purchase_orders->amount_in_words = $this->convertNumberToWords($quotation->total);
+            $purchase_orders->amount_in_words = $this->convertNumberToWords($purchase_orders->total);
 
             // ✅ Format total with comma-separated values
             $purchase_orders->total = is_numeric($purchase_orders->total) ? number_format((float) $purchase_orders->total, 2) : $purchase_orders->total;
