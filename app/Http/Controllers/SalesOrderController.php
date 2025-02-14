@@ -304,7 +304,7 @@ class SalesOrderController extends Controller
                 'success' => true,
                 'message' => 'Sales Orders fetched successfully!',
                 'data' => $get_sales_orders,
-                'fetch_records' => $get_sales_order->count(),
+                'fetch_records' => $get_sales_orders->count(),
                 'count' => $total_sales_order,
             ], 200)
             : response()->json([
