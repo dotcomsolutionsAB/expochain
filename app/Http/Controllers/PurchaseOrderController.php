@@ -713,6 +713,7 @@ class PurchaseOrderController extends Controller
         PurchaseOrderModel::truncate();
         PurchaseOrderProductsModel::truncate();
         PurchaseOrderAddonsModel::truncate(); // Ensure this exists for addons
+        PurchaseOrderTermsModel::truncate(); // New table for `top` data
 
         // Define the external URL
         $url = 'https://expo.egsm.in/assets/custom/migrate/purchase_order.php';
@@ -739,6 +740,7 @@ class PurchaseOrderController extends Controller
         $purchaseOrderIds = [];
         $productsBatch = [];
         $addonsBatch = [];
+        $termsBatch = []; // New batch for `top` data
         $errors = [];
 
         foreach ($data as $record) {
@@ -811,6 +813,7 @@ class PurchaseOrderController extends Controller
             // Decode JSON fields
             $itemsData = json_decode($record['items'], true);
             $addonsData = json_decode($record['addons'], true);
+            $topData = json_decode($record['top'] ?? '{}', true); // Decode `top` JSON again
 
             // Insert Products
             if (!empty($itemsData['product'])) {
@@ -869,6 +872,20 @@ class PurchaseOrderController extends Controller
                 }
             }
 
+            // Insert Terms (`top` Data)
+            if (!empty($topData)) {
+                foreach ($topData as $key => $value) {
+                    $termsBatch[] = [
+                        'purchase_order_id' => $purchaseOrderId,
+                        'company_id' => Auth::user()->company_id,
+                        'name' => $key,
+                        'value' => !empty($value) ? $value : null,
+                        'created_at' => now(),
+                        'updated_at' => now()
+                    ];
+                }
+            }
+
             // **Batch Insert Products**
             if (count($productsBatch) >= $batchSize) {
                 PurchaseOrderProductsModel::insert($productsBatch);
@@ -880,6 +897,12 @@ class PurchaseOrderController extends Controller
                 PurchaseOrderAddonsModel::insert($addonsBatch);
                 $addonsBatch = []; // Reset batch
             }
+
+            // **Batch Insert Terms**
+            if (count($termsBatch) >= $batchSize) {
+                PurchaseOrderTermsModel::insert($termsBatch);
+                $termsBatch = [];
+            }
         }
 
         // **Insert Remaining Products & Addons**
@@ -889,6 +912,11 @@ class PurchaseOrderController extends Controller
 
         if (!empty($addonsBatch)) {
             PurchaseOrderAddonsModel::insert($addonsBatch);
+        }
+
+         // **Insert Remaining Terms**
+        if (!empty($termsBatch)) {
+            PurchaseOrderTermsModel::insert($termsBatch);
         }
 
         return response()->json([
