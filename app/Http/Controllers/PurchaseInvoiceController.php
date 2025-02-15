@@ -51,6 +51,7 @@ class PurchaseInvoiceController extends Controller
             'products.*.sgst' => 'nullable|numeric|min:0',
             'products.*.igst' => 'nullable|numeric|min:0',
             'products.*.amount' => 'nullable|numeric|min:0',
+            'products.*.channel' => 'nullable|exists:t_channels,id',
 
             // for add-ons
             'addons' => 'nullable|array',
@@ -119,6 +120,7 @@ class PurchaseInvoiceController extends Controller
                 'sgst' => $product['sgst'],
                 'igst' => $product['igst'],
                 'amount' => $product['amount'],
+                'channel' => $product['channel'],
             ]);
         }
 
@@ -280,6 +282,7 @@ class PurchaseInvoiceController extends Controller
             'products.*.sgst' => 'nullable|numeric|min:0',
             'products.*.igst' => 'nullable|numeric|min:0',
             'products.*.amount' => 'nullable|numeric|min:0',
+            'products.*.channel' => 'nullable|exists:t_channels,id',
 
             // for add-ons
             'addons' => 'nullable|array',
@@ -345,6 +348,7 @@ class PurchaseInvoiceController extends Controller
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
                     'amount' => $productData['amount'],
+                    'channel' => $productData['channel'],
                 ]);
             } else {
                 // Add new product
@@ -365,6 +369,7 @@ class PurchaseInvoiceController extends Controller
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
                     'amount' => $productData['amount'],
+                    'channel' => $productData['channel'],
                 ]);
             }
         }
