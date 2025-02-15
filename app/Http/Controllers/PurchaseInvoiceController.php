@@ -36,7 +36,6 @@ class PurchaseInvoiceController extends Controller
         
             // Product Details (Array Validation)
             'products' => 'required|array',
-            'products.*.purchase_invoice_id' => 'required|string|max:50|exists:t_purchase_invoices,purchase_invoice_no',
             'products.*.product_id' => 'required|integer|exists:t_products,id',
             'products.*.product_name' => 'required|string|max:255',
             'products.*.description' => 'nullable|string',
@@ -52,6 +51,7 @@ class PurchaseInvoiceController extends Controller
             'products.*.igst' => 'nullable|numeric|min:0',
             'products.*.amount' => 'nullable|numeric|min:0',
             'products.*.channel' => 'nullable|exists:t_channels,id',
+            'products.*.godown' => 'nullable|exists:t_godown,id',
 
             // for add-ons
             'addons' => 'nullable|array',
@@ -121,6 +121,7 @@ class PurchaseInvoiceController extends Controller
                 'igst' => $product['igst'],
                 'amount' => $product['amount'],
                 'channel' => $product['channel'],
+                'godown' => $product['godown'],
             ]);
         }
 
@@ -169,7 +170,7 @@ class PurchaseInvoiceController extends Controller
 
         // Build the query
         $query = PurchaseInvoiceModel::with(['products' => function ($query) {
-            $query->select('purchase_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'stock');
+            $query->select('purchase_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'godown', 'returned', 'stock');
         }, 'addons' => function ($query) {
             $query->select('purchase_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
         }])
@@ -283,6 +284,7 @@ class PurchaseInvoiceController extends Controller
             'products.*.igst' => 'nullable|numeric|min:0',
             'products.*.amount' => 'nullable|numeric|min:0',
             'products.*.channel' => 'nullable|exists:t_channels,id',
+            'products.*.godown' => 'nullable|exists:t_godown,id',
 
             // for add-ons
             'addons' => 'nullable|array',
@@ -349,6 +351,7 @@ class PurchaseInvoiceController extends Controller
                     'igst' => $productData['igst'],
                     'amount' => $productData['amount'],
                     'channel' => $productData['channel'],
+                    'godown' => $productData['godown'],
                 ]);
             } else {
                 // Add new product
@@ -370,6 +373,7 @@ class PurchaseInvoiceController extends Controller
                     'igst' => $productData['igst'],
                     'amount' => $productData['amount'],
                     'channel' => $productData['channel'],
+                    'godown' => $productData['godown'],
                 ]);
             }
         }

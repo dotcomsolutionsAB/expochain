@@ -10,22 +10,26 @@ class PurchaseInvoiceProductsModel extends Model
     protected $table = 't_purchase_invoice_products';
 
     protected $fillable = [
-        'purchase_invoice_number',
-        'product_id',
         'company_id',
+        'purchase_invoice_id', // Updated to match table column
+        'product_id',
         'product_name',
-        'description',
+        'description',  // Using `text` for large descriptions
         'quantity',
         'unit',
         'price',
         'discount',
-        'discount_type',
+        'discount_type', // Enum ('percentage', 'value')
         'hsn',
         'tax',
         'cgst',
         'sgst',
         'igst',
-        'amount'
+        'amount',  // Set default(0)
+        'channel', // Set default(0)
+        'godown',  // Nullable
+        'returned', // Set default(0)
+        'stock', // Set default(0)
     ];
 
     public function purchaseInvoice()

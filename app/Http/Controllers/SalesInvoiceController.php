@@ -58,6 +58,7 @@ class SalesInvoiceController extends Controller
             'products.*.igst' => 'required|numeric|min:0',
             'products.*.amount' => 'required|numeric|min:0',
             'products.*.channel' => 'nullable|integer|exists:t_channels,id',
+            'products.*.godown' => 'nullable|exists:t_godown,id',
 
             // Addons Array Validation
             'addons' => 'required|array',
@@ -147,6 +148,7 @@ class SalesInvoiceController extends Controller
                 'igst' => $product['igst'],
                 'amount' => $product['amount'],
                 'channel' => $product['channel'],
+                'godown' => $product['godown'],
             ]);
         }
 
@@ -226,7 +228,7 @@ class SalesInvoiceController extends Controller
          // Build the query
         $query = SalesInvoiceModel::with([
             'products' => function ($query) {
-                $query->select('sales_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount');
+                $query->select('sales_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'godown', 'so_id', 'returned', 'profit', 'purchase_invoice_id', 'purchase_rate');
             },
             'addons' => function ($query) {
                 $query->select('sales_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
@@ -371,6 +373,7 @@ class SalesInvoiceController extends Controller
             'products.*.igst' => 'required|numeric|min:0',
             'products.*.amount' => 'required|numeric|min:0',
             'products.*.channel' => 'nullable|integer|exists:t_channels,id',
+            'products.*.godown' => 'nullable|exists:t_godown,id',
 
             // Addons Array Validation
             'addons' => 'required|array',
@@ -432,6 +435,7 @@ class SalesInvoiceController extends Controller
                     'igst' => $productData['igst'],
                     'amount' => $productData['amount'],
                     'channel' => $productData['channel'],
+                    'godown' => $productData['godown'],
                 ]);
             } else {
                 SalesInvoiceProductsModel::create([
@@ -451,6 +455,7 @@ class SalesInvoiceController extends Controller
                     'igst' => $productData['igst'],
                     'amount' => $productData['amount'],
                     'channel' => $productData['channel'],
+                    'godown' => $productData['godown'],
                 ]);
             }
         }

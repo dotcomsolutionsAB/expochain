@@ -14,23 +14,25 @@ class SalesInvoiceProductsModel extends Model
         'company_id',
         'product_id',
         'product_name',
-        'description',
+        'description',  // Now properly mapped to `text`
         'quantity',
         'unit',
         'price',
         'discount',
-        'discount_type',
+        'discount_type', // Now supports 'percentage' or 'value'
         'hsn',
         'tax',
         'cgst',
         'sgst',
         'igst',
         'amount',
-        'so_id',
-        'returned',  // Renamed from 'return' to match DB schema ('returned')
-        'profit',
-        'purchase_invoice_id',
-        'purchase_rate',
+        'channel',  // Added based on schema, nullable
+        'godown',   // Added based on schema, nullable
+        'so_id',    // Changed to match `bigInteger`
+        'returned', // Matched schema, default(0)
+        'profit',   // Matched schema, default(0)
+        'purchase_invoice_id',  // Matched schema, default(0)
+        'purchase_rate',  // Matched schema, default(0.00)
     ];
 
     public function salesInvoice()
