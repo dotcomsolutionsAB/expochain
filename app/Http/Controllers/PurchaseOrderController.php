@@ -53,8 +53,9 @@ class PurchaseOrderController extends Controller
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
             'products.*.amount' => 'nullable|numeric',
+            'products.*.channel' => 'nullable|exists:t_channels,id',
 
-            // for add-ons
+            // for add-ons (Array Validation)
             'addons' => 'nullable|array',
             'addons.*.name' => 'required|string|max:255',
             'addons.*.amount' => 'required|numeric|min:0',
@@ -64,7 +65,7 @@ class PurchaseOrderController extends Controller
             'addons.*.sgst' => 'nullable|numeric|min:0',
             'addons.*.igst' => 'nullable|numeric|min:0',
 
-            // for terms
+            // for terms (Array Validation)
             'terms' => 'nullable|array',
             'terms.*.name' => 'required|string|max:255',
             'terms.*.value' => 'required|string|min:0',
@@ -149,6 +150,7 @@ class PurchaseOrderController extends Controller
                 'sgst' => $product['sgst'],
                 'igst' => $product['igst'],
                 'amount' => $product['amount'],
+                'channel' => $product['channel'],
             ]);
         }
 
@@ -361,6 +363,7 @@ class PurchaseOrderController extends Controller
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
             'products.*.amount' => 'nullable|numeric',
+            'products.*.channel' => 'nullable|exists:t_channels,id',
 
             // for add-ons
             'addons' => 'nullable|array',
@@ -432,6 +435,7 @@ class PurchaseOrderController extends Controller
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
                     'amount' => $productData['amount'],
+                    'channel' => $productData['channel'],
                 ]);
             } else {
                 PurchaseOrderProductsModel::create([
@@ -451,6 +455,7 @@ class PurchaseOrderController extends Controller
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
                     'amount' => $productData['amount'],
+                    'channel' => $productData['channel'],
                 ]);
             }
         }
