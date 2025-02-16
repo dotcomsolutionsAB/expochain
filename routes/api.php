@@ -121,10 +121,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/update_status/{id}', [QuotationsController::class, 'updateQuotationStatus']);
 
-    Route::post('/add_sales', [SalesOrderController::class, 'add_sales_order']);
-    Route::post('/sales', [SalesOrderController::class, 'view_sales_order']);
-    Route::post('/update_sales/{id?}', [SalesOrderController::class, 'edit_sales_order']);
-    Route::delete('/sales/{id?}', [SalesOrderController::class, 'delete_sales_order']);
+    Route::post('/add_sales_order', [SalesOrderController::class, 'add_sales_order']);
+    Route::post('/sales_order', [SalesOrderController::class, 'view_sales_order']);
+    Route::post('/update_sales_order/{id?}', [SalesOrderController::class, 'edit_sales_order']);
+    Route::delete('/sales_order/{id?}', [SalesOrderController::class, 'delete_sales_order']);
 
     Route::get('/sales_order_migrate', [SalesOrderController::class, 'importSalesOrders']);
 

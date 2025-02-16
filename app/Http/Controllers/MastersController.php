@@ -153,7 +153,7 @@ class MastersController extends Controller
                 'success' => true,
                 'message' => 'Fetch data successfully!',
                 'data' => $get_products,
-                'count' => $limit,
+                'count' => $get_products->count(),
                 'total_records' => $product_count,
             ], 200)
             : response()->json([
