@@ -23,22 +23,12 @@ class ClientsController extends Controller
     {
         $request->validate([
             'name' => 'required|string|unique:t_clients,name',
-            'mobile' => 'required|string|size:13',
-            'email' => 'required|email',
+            'email' => 'email',
             'type' => 'required|string',
             'category' => 'required|string',
-            'division' => 'required|string',
-            'plant' => 'required|string',
-            'gstin' => 'required|string|unique:t_clients,gstin',
-            'contacts' => 'required|array|min:1',
-            'addresses' => 'required|array|min:1', // Array for addresses
-            'addresses.*.type' => 'required|in:billing,shipping',
-            'addresses.*.address_line_1' => 'required|string',
-            'addresses.*.address_line_2' => 'nullable|string',
-            'addresses.*.city' => 'required|string',
-            'addresses.*.state' => 'required|string',
-            'addresses.*.pincode' => 'required|string',
-            'addresses.*.country' => 'required|string',
+            'division' => 'string',
+            'plant' => 'nullable|string',
+            'gstin' => 'nullable|string|unique:t_clients,gstin'
         ]);
 
         $company_id = Auth::user()->company_id;
