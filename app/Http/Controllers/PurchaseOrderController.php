@@ -320,8 +320,8 @@ class PurchaseOrderController extends Controller
                 'success' => true,
                 'message' => 'Purchase Orders fetched successfully!',
                 'data' => $get_purchase_orders,
-                'fetched_records' => $get_purchase_orders->count(),
-                'count' => $get_purchase_order,
+                'count' => $get_purchase_orders->count(),
+                'total_records' => $get_purchase_order,
             ], 200)
             : response()->json([
                 'code' => 404,

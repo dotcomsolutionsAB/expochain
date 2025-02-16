@@ -360,8 +360,8 @@ class QuotationsController extends Controller
                 'success' => true,
                 'message' => 'Quotations fetched successfully!',
                 'data' => $get_quotations,
-                'fetched_records' => $get_quotations->count(),
-                'count' => $total_quotations,
+                'count' => $get_quotations->count(),
+                'total_records' => $total_quotations,
             ], 200)
             : response()->json([
                 'code' => 200,

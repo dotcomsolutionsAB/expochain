@@ -440,7 +440,6 @@ class SuppliersController extends Controller
                 'success' => true,
                 'message' => 'Suppliers fetched successfully!',
                 'data' => $suppliers,
-                'total_contacts' => $suppliers->sum(fn($supplier) => $supplier->contacts->count()), // Total contact count
                 'count' => $suppliers->count(), // Total suppliers count
                 'total_records' => $total_suppliers,
             ], 200)

@@ -240,8 +240,8 @@ class PurchaseInvoiceController extends Controller
                 'success' => true,
                 'message' => 'Purchase Invoices fetched successfully!',
                 'data' => $get_purchase_invoices,
-                'fetched_records' => $get_purchase_invoices->count(),
-                'count' => $get_purchase_invoice,
+                'count' => $get_purchase_invoices->count(),
+                'total_records' => $get_purchase_invoice,
             ], 200)
             : response()->json([
                 'code' => 404,

@@ -309,7 +309,6 @@ class ClientsController extends Controller
                 'success' => true,
                 'message' => 'Clients fetched successfully',
                 'data' => $clients,
-                'total_contacts' => $clients->sum(fn($client) => $client->contacts->count()), // Sum all contacts
                 'count' => $clients->count(), // Total clients count
                 'total_records' => $total_clients,
             ], 200)
