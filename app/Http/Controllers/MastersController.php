@@ -916,7 +916,7 @@ class MastersController extends Controller
         unset($register_godown['id'], $register_godown['created_at'], $register_godown['updated_at']);
 
         return isset($register_godown) && $register_godown !== null
-        ? response()->json(['code' => 200, 'success' => true, 'message' => 'Godown registered successfully!', 'data' => $register_products], 200)
+        ? response()->json(['code' => 200, 'success' => true, 'message' => 'Godown registered successfully!', 'data' => $register_godown], 200)
         : response()->json(['code' => 404, 'success' => false, 'message' => 'Failed to register Godown record'], 404);
     }
 
