@@ -906,6 +906,7 @@ class MastersController extends Controller
         ]);
 
         $register_godown = GodownModel::create([
+            'company_id' => 1,
             'name' => $request->input('name'),
             'address' => $request->input('address'),
             'mobile' => $request->input('email'),
