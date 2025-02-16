@@ -923,7 +923,7 @@ class MastersController extends Controller
     //view
     public function view_godown()
     {        
-        $get_godown = GodownModel::select('name','address','mobile','email')->get();
+        $get_godown = GodownModel::select('id','name')->get();
 
         return isset($get_godown) && $get_godown !== null
         ? response()->json([
