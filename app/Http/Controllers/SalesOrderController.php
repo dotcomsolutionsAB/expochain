@@ -261,7 +261,7 @@ class SalesOrderController extends Controller
             $query->whereDate('sales_order_date', '<=', $dateTo);
         }
     
-
+        $sales_order_count = $query->count();
         // Apply limit and offset
         $query->offset($offset)->limit($limit);
 
@@ -305,7 +305,7 @@ class SalesOrderController extends Controller
                 'message' => 'Sales Orders fetched successfully!',
                 'data' => $get_sales_orders,
                 'count' => $get_sales_orders->count(),
-                'total_records' => $total_sales_order,
+                'total_records' => $sales_order_count,
             ], 200)
             : response()->json([
                 'code' => 404,
