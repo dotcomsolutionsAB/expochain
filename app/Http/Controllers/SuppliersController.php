@@ -332,6 +332,116 @@ class SuppliersController extends Controller
         }
     }
 
+    // update address
+    public function update_supplier_address(Request $request, $supplier_id)
+    {
+        // Validate the request input
+        $request->validate([
+            'type' => 'required|in:billing,shipping',
+            'address_line_1' => 'required|string',
+            'address_line_2' => 'nullable|string',
+            'city' => 'required|string',
+            'state' => 'required|string',
+            'pincode' => 'required|string',
+            'country' => 'required|string',
+        ]);
+
+        // Fetch the supplier by ID and company_id
+        $supplier = SuppliersModel::where('id', $supplier_id)
+            ->where('company_id', Auth::user()->company_id)
+            ->first();
+
+        if (!$supplier) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'Supplier not found!',
+            ], 404);
+        }
+
+        // Check if an address of this type already exists
+        $existingAddress = SupplierAddressModel::where('supplier_id', $supplier->supplier_id)
+            ->where('type', $request->input('type'))
+            ->first();
+
+        if ($existingAddress) {
+            // Update the existing address
+            $existingAddress->update([
+                'address_line_1' => $request->input('address_line_1'),
+                'address_line_2' => $request->input('address_line_2'),
+                'city' => $request->input('city'),
+                'state' => $request->input('state'),
+                'pincode' => $request->input('pincode'),
+                'country' => $request->input('country'),
+            ]);
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Address updated successfully!',
+                'data' => $existingAddress->makeHidden(['id', 'created_at', 'updated_at']),
+            ], 200);
+        } else {
+            // Create a new address entry
+            $newAddress = SupplierAddressModel::create([
+                'supplier_id' => $supplier->supplier_id,
+                'company_id' => Auth::user()->company_id,
+                'type' => $request->input('type'),
+                'address_line_1' => $request->input('address_line_1'),
+                'address_line_2' => $request->input('address_line_2'),
+                'city' => $request->input('city'),
+                'state' => $request->input('state'),
+                'pincode' => $request->input('pincode'),
+                'country' => $request->input('country'),
+            ]);
+
+            return response()->json([
+                'code' => 201,
+                'success' => true,
+                'message' => 'Address added successfully!',
+                'data' => $newAddress->makeHidden(['id', 'created_at', 'updated_at']),
+            ], 201);
+        }
+    }
+
+    // update gst
+    public function update_supplier_gst(Request $request, $supplier_id)
+    {
+        // Validate the request input
+        $request->validate([
+            'gst' => 'required|string',
+        ]);
+
+        // Fetch the supplier by ID and company_id
+        $supplier = SuppliersModel::where('id', $supplier_id)
+            ->where('company_id', Auth::user()->company_id)
+            ->first();
+
+        if (!$supplier) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'Supplier not found!',
+            ], 404);
+        }
+
+            // ✅ **Update GST if the supplier exists**
+            $supplier->update([
+                'gstin' => $request->input('gst')
+            ]);
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Supplier GST updated successfully!',
+                'data' => [
+                    'id' => $supplier->id,
+                    'name' => $supplier->name,
+                    'gst' => $supplier->gstin
+                ]
+            ], 200);
+    }
+
     // migrate
     public function importSuppliersData()
     {
