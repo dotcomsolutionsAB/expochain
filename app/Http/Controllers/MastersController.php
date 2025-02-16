@@ -593,10 +593,19 @@ class MastersController extends Controller
         ->where('company_id',Auth::user()->company_id)
         ->get();
         
-
         return isset($get_f_year) && $get_f_year !== null
-        ? response()->json(['Fetch data successfully!', 'data' => $get_f_year], 200)
-        : response()->json(['Failed to fetch data'], 404); 
+        ? response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Fetch data successfully!',
+            'data' => $get_f_year,
+        ], 200)
+        : response()->json([
+            'code' => 404,
+            'success' => false,
+            'message' => 'Failed to fetch data',
+            'data' => [],
+        ], 404); 
     }
 
     // update
@@ -691,11 +700,20 @@ class MastersController extends Controller
     public function pdf_template()
     {        
         $get_pdf_template = PdfTemplateModel::select('name','phone_number','mobile','email','address_line_1', 'address_line_2','city','pincode','state','country', 'gstin', 'bank_number', 'bank_account_name', 'bank_account_number', 'bank_ifsc','header', 'footer')->get();
-        
 
         return isset($get_pdf_template) && $get_pdf_template !== null
-        ? response()->json(['Fetch data successfully!', 'data' => $get_pdf_template], 200)
-        : response()->json(['Failed to fetch data'], 404); 
+        ? response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Fetch data successfully!',
+            'data' => $get_pdf_template,
+        ], 200)
+        : response()->json([
+            'code' => 404,
+            'success' => false,
+            'message' => 'Failed to fetch data',
+            'data' => [],
+        ], 404); 
     }
 
     // update
@@ -908,11 +926,20 @@ class MastersController extends Controller
     public function view_godown()
     {        
         $get_godown = GodownModel::select('name','address','mobile','email')->get();
-        
 
         return isset($get_godown) && $get_godown !== null
-        ? response()->json(['Fetch data successfully!', 'data' => $get_godown], 200)
-        : response()->json(['Failed to fetch data'], 404); 
+        ? response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Fetch data successfully!',
+            'data' => $get_godown,
+        ], 200)
+        : response()->json([
+            'code' => 404,
+            'success' => false,
+            'message' => 'Failed to fetch data',
+            'data' => [],
+        ], 404); 
     }
 
     // update
