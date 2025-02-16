@@ -159,6 +159,8 @@ class AuthController extends Controller
                     'password' => 'required'
                 ]);
 
+                $request->company_id = 1;
+
                 if(Auth::attempt(['username' => $request->username, 'password' => $request->password, 'company_id' => $request->company_id]))
                 {
                     $user = Auth::user();
