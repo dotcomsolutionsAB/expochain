@@ -55,10 +55,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/client_migrate', [ClientsController::class, 'importClientsData']);
 
     Route::post('/export_clients', [ClientsController::class, 'export_clients']);
-
-    Route::post('/get_address/{id}', [ClientsController::class, 'update_client_address']);
-
-    Route::post('/update_gst/{id}', [ClientsController::class, 'update_client_gst']);
+    Route::post('/update_client_address/{id}', [ClientsController::class, 'update_client_address']);
+    Route::post('/update_client_gst/{id}', [ClientsController::class, 'update_client_gst']);
 
     Route::post('/suppliers', [SuppliersController::class, 'add_suppliers']);
     Route::post('/get_suppliers', [SuppliersController::class, 'view_suppliers']);
@@ -119,7 +117,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/quotations_migrate', [QuotationsController::class, 'importQuotations']);
 
-    Route::post('/update_status/{id}', [QuotationsController::class, 'updateQuotationStatus']);
+    Route::post('/update_quotation_status/{id}', [QuotationsController::class, 'updateQuotationStatus']);
 
     Route::post('/add_sales_order', [SalesOrderController::class, 'add_sales_order']);
     Route::post('/sales_order', [SalesOrderController::class, 'view_sales_order']);
