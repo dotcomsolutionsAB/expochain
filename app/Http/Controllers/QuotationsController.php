@@ -288,7 +288,7 @@ class QuotationsController extends Controller
             });
         }
 
-        // Apply limit and offset
+        $quotations_count = $query->count();
         $query->offset($offset)->limit($limit);
 
         // Fetch data
@@ -361,7 +361,7 @@ class QuotationsController extends Controller
                 'message' => 'Quotations fetched successfully!',
                 'data' => $get_quotations,
                 'count' => $get_quotations->count(),
-                'total_records' => $total_quotations,
+                'total_records' => $quotations_count,
             ], 200)
             : response()->json([
                 'code' => 200,
