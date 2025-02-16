@@ -905,7 +905,7 @@ class MastersController extends Controller
     }
 
     //view
-    public function pdf_godown()
+    public function view_godown()
     {        
         $get_godown = GodownModel::select('name','address','mobile','email')->get();
         
