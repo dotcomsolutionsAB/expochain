@@ -288,6 +288,7 @@ class SalesInvoiceController extends Controller
             $query->where('user', $user);
         }
 
+        $sales_invoice_count = $query->count();
         // Apply limit and offset
         $query->offset($offset)->limit($limit);
 
@@ -328,7 +329,7 @@ class SalesInvoiceController extends Controller
                 'message' => 'Sales Invoices fetched successfully!',
                 'data' => $get_sales_invoices,
                 'count' => $get_sales_invoices->count(),
-                'total_records' => $total_sales_invoice,
+                'total_records' => $sales_invoice_count,
             ], 200)
             : response()->json([
                 'code' => 404,

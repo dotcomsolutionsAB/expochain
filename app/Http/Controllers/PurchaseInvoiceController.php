@@ -201,6 +201,7 @@ class PurchaseInvoiceController extends Controller
             });
         }
 
+        $purchase_invoice_count = $query->count();
         // Apply limit and offset
         $query->offset($offset)->limit($limit);
 
@@ -241,7 +242,7 @@ class PurchaseInvoiceController extends Controller
                 'message' => 'Purchase Invoices fetched successfully!',
                 'data' => $get_purchase_invoices,
                 'count' => $get_purchase_invoices->count(),
-                'total_records' => $get_purchase_invoice,
+                'total_records' => $purchase_invoice_count,
             ], 200)
             : response()->json([
                 'code' => 404,

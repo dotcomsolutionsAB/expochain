@@ -253,6 +253,7 @@ class PurchaseOrderController extends Controller
             $query->whereDate('user', $user);
         }
 
+        $purchase_order_count = $query->count();
         // Apply limit and offset
         $query->offset($offset)->limit($limit);
 
@@ -321,7 +322,7 @@ class PurchaseOrderController extends Controller
                 'message' => 'Purchase Orders fetched successfully!',
                 'data' => $get_purchase_orders,
                 'count' => $get_purchase_orders->count(),
-                'total_records' => $get_purchase_order,
+                'total_records' => $purchase_order_count,
             ], 200)
             : response()->json([
                 'code' => 404,
