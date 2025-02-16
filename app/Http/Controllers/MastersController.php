@@ -902,9 +902,6 @@ class MastersController extends Controller
     {
         $request->validate([
             'name' => 'required|string',
-            'address' => 'required|string',
-            'mobile' => 'required|string',
-            'email' => 'required|string',
 
         ]);
 
@@ -918,8 +915,8 @@ class MastersController extends Controller
         unset($register_godown['id'], $register_godown['created_at'], $register_godown['updated_at']);
 
         return isset($register_godown) && $register_godown !== null
-        ? response()->json(['Godown registered successfully!', 'data' => $register_products], 201)
-        : response()->json(['Failed to register Godown record'], 400);
+        ? response()->json(['code' => 200, 'success' => true, 'message' => 'Godown registered successfully!', 'data' => $register_products], 200)
+        : response()->json(['code' => 404, 'success' => false, 'message' => 'Failed to register Godown record'], 404);
     }
 
     //view
