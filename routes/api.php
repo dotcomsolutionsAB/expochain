@@ -59,7 +59,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_client_gst/{id}', [ClientsController::class, 'update_client_gst']);
 
     Route::post('/suppliers', [SuppliersController::class, 'add_suppliers']);
-    Route::post('/get_suppliers', [SuppliersController::class, 'view_suppliers']);
+    Route::post('/get_suppliers/{id?}', [SuppliersController::class, 'view_suppliers']);
     Route::post('/update_suppliers/{id}', [SuppliersController::class, 'update_suppliers']);
     Route::delete('/suppliers/{id}', [SuppliersController::class, 'delete_supplier']);
 

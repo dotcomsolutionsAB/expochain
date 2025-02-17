@@ -100,17 +100,112 @@ class SuppliersController extends Controller
 
 
     // view
-    public function view_suppliers(Request $request)
+    // public function view_suppliers(Request $request)
+    // {
+    //     // Get filter inputs
+    //     $search = $request->input('search'); // Search across multiple fields
+    //     $limit = $request->input('limit', 10); // Default limit to 10
+    //     $offset = $request->input('offset', 0); // Default offset to 0
+
+    //     // Get total count of records in `t_suppliers`
+    //     $total_suppliers = SuppliersModel::count(); 
+
+    //     // Build the query
+    //     $suppliersQuery = SuppliersModel::with([
+    //         'contacts' => function ($query) use ($search) {
+    //             if ($search) {
+    //                 $query->where('mobile', 'LIKE', '%' . $search . '%');
+    //             }
+    //             $query->select('supplier_id', 'name', 'designation', 'mobile', 'email');
+    //         },
+    //         'addresses' => function ($query) {
+    //             $query->select('supplier_id', 'type', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode', 'country');
+    //         },
+    //     ])
+    //     ->select('id', 'supplier_id', 'name', 'gstin', 'company_id')
+    //     ->where('company_id', Auth::user()->company_id);
+
+    //     // Apply search filter
+    //     if ($search) {
+    //         $suppliersQuery->where(function ($query) use ($search) {
+    //             $query->where('name', 'LIKE', '%' . $search . '%')
+    //                 ->orWhere('gstin', 'LIKE', '%' . $search . '%')
+    //                 ->orWhereHas('contacts', function ($q) use ($search) {
+    //                     $q->where('mobile', 'LIKE', '%' . $search . '%');
+    //                 });
+    //         });
+    //     }
+
+    //     // Apply limit and offset
+    //     $suppliersQuery->offset($offset)->limit($limit);
+
+    //     // Execute the query
+    //     $suppliers = $suppliersQuery->get();
+
+    //     // Add contact counts and hide unnecessary fields
+    //     $suppliers->each(function ($supplier) {
+    //         $supplier->contact_count = $supplier->contacts->count(); // Add contact count
+    //         $supplier->contacts->each(function ($contact) {
+    //             $contact->makeHidden(['created_at', 'updated_at']);
+    //         });
+    //     });
+
+    //     // Return the response
+    //     return $suppliers->isNotEmpty()
+    //         ? response()->json([
+    //             'code' => 200,
+    //             'success' => true,
+    //             'message' => 'Suppliers fetched successfully!',
+    //             'data' => $suppliers,
+    //             'count' => $suppliers->count(), // Total suppliers count
+    //             'total_records' => $total_suppliers,
+    //         ], 200)
+    //         : response()->json([
+    //             'code' => 404,
+    //             'success' => false,
+    //             'message' => 'No suppliers found!',
+    //         ], 404);
+    // }
+
+    public function view_suppliers(Request $request, $id = null)
     {
-        // Get filter inputs
-        $search = $request->input('search'); // Search across multiple fields
-        $limit = $request->input('limit', 10); // Default limit to 10
-        $offset = $request->input('offset', 0); // Default offset to 0
+        $limit = $request->input('limit', 10);
+        $offset = $request->input('offset', 0);
+        $search = $request->input('search');
 
-        // Get total count of records in `t_suppliers`
-        $total_suppliers = SuppliersModel::count(); 
+        // 🔹 **Fetch Single Supplier by ID**
+        if ($id) {
+            $supplier = SuppliersModel::with([
+                'contacts' => function ($query) {
+                    $query->select('supplier_id', 'name', 'designation', 'mobile', 'email');
+                },
+                'addresses' => function ($query) {
+                    $query->select('supplier_id', 'type', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode', 'country');
+                },
+            ])
+            ->where('company_id', Auth::user()->company_id)
+            ->where('id', $id)
+            ->first();
 
-        // Build the query
+            if (!$supplier) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'Supplier not found!',
+                ], 404);
+            }
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Supplier fetched successfully!',
+                'data' => $supplier,
+            ], 200);
+        }
+
+        // 🔹 **Fetch All Suppliers with Filters**
+        $total_suppliers = SuppliersModel::where('company_id', Auth::user()->company_id)->count(); 
+
         $suppliersQuery = SuppliersModel::with([
             'contacts' => function ($query) use ($search) {
                 if ($search) {
@@ -125,7 +220,6 @@ class SuppliersController extends Controller
         ->select('id', 'supplier_id', 'name', 'gstin', 'company_id')
         ->where('company_id', Auth::user()->company_id);
 
-        // Apply search filter
         if ($search) {
             $suppliersQuery->where(function ($query) use ($search) {
                 $query->where('name', 'LIKE', '%' . $search . '%')
@@ -136,35 +230,33 @@ class SuppliersController extends Controller
             });
         }
 
-        // Apply limit and offset
         $suppliersQuery->offset($offset)->limit($limit);
-
-        // Execute the query
         $suppliers = $suppliersQuery->get();
 
-        // Add contact counts and hide unnecessary fields
+        if ($suppliers->isEmpty()) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No suppliers found!',
+            ], 404);
+        }
+
+        // Add contact counts
         $suppliers->each(function ($supplier) {
-            $supplier->contact_count = $supplier->contacts->count(); // Add contact count
+            $supplier->contact_count = $supplier->contacts->count();
             $supplier->contacts->each(function ($contact) {
                 $contact->makeHidden(['created_at', 'updated_at']);
             });
         });
 
-        // Return the response
-        return $suppliers->isNotEmpty()
-            ? response()->json([
-                'code' => 200,
-                'success' => true,
-                'message' => 'Suppliers fetched successfully!',
-                'data' => $suppliers,
-                'count' => $suppliers->count(), // Total suppliers count
-                'total_records' => $total_suppliers,
-            ], 200)
-            : response()->json([
-                'code' => 404,
-                'success' => false,
-                'message' => 'No suppliers found!',
-            ], 404);
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Suppliers fetched successfully!',
+            'data' => $suppliers,
+            'count' => $suppliers->count(),
+            'total_records' => $total_suppliers,
+        ], 200);
     }
 
     public function update_suppliers(Request $request, $id)
