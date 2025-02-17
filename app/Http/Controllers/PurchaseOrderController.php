@@ -36,6 +36,8 @@ class PurchaseOrderController extends Controller
             'igst' => 'nullable|numeric|min:0', // Made nullable, default 0
             'total' => 'required|numeric|min:0',
             'currency' => 'required|string|max:10',
+            'gross' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric|min:0',
 
             // Product Details (Array Validation)
             'products' => 'required|array', // Validating array of products
@@ -74,7 +76,7 @@ class PurchaseOrderController extends Controller
         // Handle quotation number logic
         $counterController = new CounterController();
         $sendRequest = Request::create('/counter', 'GET', [
-            'name' => 'Purchase Order',
+            'name' => 'purchase_order',
             'company_id' => Auth::user()->company_id,
         ]);
 
@@ -126,6 +128,8 @@ class PurchaseOrderController extends Controller
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
             'currency' => $request->input('currency'),
+            'gross' => $request->input('gross'),
+            'round_off' => $request->input('round_off'),
         ]);
 
         $products = $request->input('products');
@@ -224,7 +228,7 @@ class PurchaseOrderController extends Controller
                 'get_template' => function ($query) { // Fetch template id and name
                 $query->select('id', 'name');
             }])
-        ->select('id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'oa_no', 'oa_date', 'template', 'status', 'user', 'cgst', 'sgst', 'igst', 'total')
+        ->select('id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'oa_no', DB::raw('DATE_FORMAT(oa_date, "%d-%m-%Y") as oa_date'), 'template', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -347,6 +351,8 @@ class PurchaseOrderController extends Controller
             'igst' => 'nullable|numeric|min:0', // Made nullable, default 0
             'total' => 'required|numeric|min:0',
             'currency' => 'required|string|max:10',
+            'gross' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric|min:0',
 
             // Product Details (Array Validation)
             'products' => 'required|array', // Validating array of products
@@ -409,6 +415,8 @@ class PurchaseOrderController extends Controller
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
             'currency' => $request->input('currency'),
+            'gross' => $request->input('gross'),
+            'round_off' => $request->input('round_off'),
         ]);
 
         $products = $request->input('products');

@@ -24,6 +24,8 @@ class SalesOrderModel extends Model
         'sgst',
         'igst',
         'total',
+        'gross',
+        'round_off'
     ];
 
     public function products()

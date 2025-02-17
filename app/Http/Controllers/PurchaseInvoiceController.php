@@ -33,6 +33,8 @@ class PurchaseInvoiceController extends Controller
             'sgst' => 'nullable|numeric|min:0',
             'igst' => 'nullable|numeric|min:0',
             'total' => 'required|numeric|min:0',
+            'gross' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric|min:0',
         
             // Product Details (Array Validation)
             'products' => 'required|array',
@@ -80,14 +82,15 @@ class PurchaseInvoiceController extends Controller
             return response()->json(['message' => 'Supplier not found'], 404);
         }
     
-        $currentDate = Carbon::now()->toDateString();
+        // $currentDate = Carbon::now()->toDateString();
     
         $register_purchase_invoice = PurchaseInvoiceModel::create([
             'supplier_id' => $request->input('supplier_id'),
             'company_id' => Auth::user()->company_id,
             'name' => $supplier->name,
             'purchase_invoice_no' => $request->input('purchase_invoice_no'),
-            'purchase_invoice_date' => $currentDate,
+            // 'purchase_invoice_date' => $currentDate,
+            'purchase_invoice_date' => $request->input('purchase_invoice_date'),
             'oa_no' => $request->input('oa_no'),
             'ref_no' => $request->input('ref_no'),
             'template' => $request->input('template'),
@@ -96,6 +99,8 @@ class PurchaseInvoiceController extends Controller
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
+            'gross' => $request->input('gross'),
+            'round_off' => $request->input('round_off'),
         ]);
         
         $products = $request->input('products');
@@ -174,7 +179,7 @@ class PurchaseInvoiceController extends Controller
         }, 'addons' => function ($query) {
             $query->select('purchase_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
         }])
-        ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 'purchase_invoice_date', 'oa_no', 'ref_no', 'template', 'user', 'cgst', 'sgst', 'igst', 'total')
+        ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', DB::raw('DATE_FORMAT(purchase_invoice_date, "%d-%m-%Y") as purchase_invoice_date'), 'oa_no', 'ref_no', 'template', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -267,6 +272,8 @@ class PurchaseInvoiceController extends Controller
             'sgst' => 'nullable|numeric|min:0',
             'igst' => 'nullable|numeric|min:0',
             'total' => 'required|numeric|min:0',
+            'gross' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric|min:0',
         
             // Product Details (Array Validation)
             'products' => 'required|array',
@@ -323,6 +330,8 @@ class PurchaseInvoiceController extends Controller
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
+            'gross' => $request->input('gross'),
+            'round_off' => $request->input('round_off'),
         ]);
 
         $products = $request->input('products');

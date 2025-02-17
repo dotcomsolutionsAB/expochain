@@ -24,7 +24,9 @@ class PurchaseOrderModel extends Model
         'sgst',
         'igst',
         'total',
-        'currency'
+        'currency',
+        'gross',
+        'round_off'
     ];
 
     public function products()

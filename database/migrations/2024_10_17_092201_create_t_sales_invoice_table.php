@@ -27,7 +27,9 @@ return new class extends Migration
             $table->float('cgst');
             $table->float('sgst');
             $table->float('igst');
-            $table->float('total');            
+            $table->float('total');   
+            $table->float('gross');
+            $table->float('round_off');         
             $table->timestamps();
         });
     }

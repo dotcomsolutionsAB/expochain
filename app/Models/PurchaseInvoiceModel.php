@@ -22,7 +22,9 @@ class PurchaseInvoiceModel extends Model
         'cgst',
         'sgst',
         'igst',
-        'total'
+        'total',
+        'gross',
+        'round_off'
     ];
 
     public function products()

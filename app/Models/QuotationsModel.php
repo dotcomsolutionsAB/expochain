@@ -27,6 +27,8 @@ class QuotationsModel extends Model
         'igst',
         'total',
         'currency',
+        'gross',
+        'round_off'
     ];
 
     public function products()

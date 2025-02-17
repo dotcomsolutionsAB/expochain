@@ -40,6 +40,8 @@ class SalesInvoiceController extends Controller
             'sgst' => 'required|numeric|min:0',
             'igst' => 'required|numeric|min:0',
             'total' => 'required|numeric|min:0',
+            'gross' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric|min:0',
             
             // Products Array Validation
             'products' => 'required|array',
@@ -77,7 +79,7 @@ class SalesInvoiceController extends Controller
         // Handle quotation number logic
         $counterController = new CounterController();
         $sendRequest = Request::create('/counter', 'GET', [
-            'name' => 'Sales Invoice',
+            'name' => 'sales_invoice',
             'company_id' => Auth::user()->company_id,
         ]);
 
@@ -124,6 +126,8 @@ class SalesInvoiceController extends Controller
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
+            'gross' => $request->input('gross'),
+            'round_off' => $request->input('round_off'),
         ]);
 
         // Process and insert products
@@ -237,7 +241,7 @@ class SalesInvoiceController extends Controller
                 $query->select('id', 'name');
             }
         ])
-        ->select('id', 'client_id', 'name', 'user', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_id', 'sales_order_date', 'template', 'contact_person', 'cash', 'user', 'cgst', 'sgst', 'igst', 'total')
+        ->select('id', 'client_id', 'name', 'sales_invoice_no', DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date'), 'user', 'sales_order_id', DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 'template', 'contact_person', 'cash', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -356,6 +360,8 @@ class SalesInvoiceController extends Controller
             'sgst' => 'required|numeric|min:0',
             'igst' => 'required|numeric|min:0',
             'total' => 'required|numeric|min:0',
+            'gross' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric|min:0',
             
             // Products Array Validation
             'products' => 'required|array',
@@ -405,6 +411,8 @@ class SalesInvoiceController extends Controller
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
+            'gross' => $request->input('gross'),
+            'round_off' => $request->input('round_off'),
         ]);
 
         // Handle Products

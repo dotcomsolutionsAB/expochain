@@ -40,6 +40,8 @@ class SalesOrderController extends Controller
             'sgst' => 'nullable|numeric|min:0',
             'igst' => 'nullable|numeric|min:0',
             'total' => 'required|numeric|min:0',
+            'gross' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric|min:0',
         
             // for products 
             'products' => 'required|array',
@@ -76,7 +78,7 @@ class SalesOrderController extends Controller
         // Handle quotation number logic
         $counterController = new CounterController();
         $sendRequest = Request::create('/counter', 'GET', [
-            'name' => 'Sales Order',
+            'name' => 'sales_order',
             'company_id' => Auth::user()->company_id,
         ]);
 
@@ -122,6 +124,8 @@ class SalesOrderController extends Controller
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
+            'gross' => $request->input('gross'),
+            'round_off' => $request->input('round_off'),
         ]);
 
          // **Step 2: Register Sales Order Products**
@@ -219,7 +223,7 @@ class SalesOrderController extends Controller
                 $query->select('id', 'name');
             },
         ])
-        ->select('id', 'client_id', 'name', 'sales_order_no', 'sales_order_date', 'ref_no', 'template', 'contact_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total')
+        ->select('id', 'client_id', 'name', 'sales_order_no', DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 'ref_no', 'template', 'contact_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -329,6 +333,8 @@ class SalesOrderController extends Controller
             'sgst' => 'required|numeric',
             'igst' => 'required|numeric',
             'total' => 'required|numeric',
+            'gross' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric|min:0',
 
             // for products 
             'products' => 'required|array',
@@ -389,6 +395,8 @@ class SalesOrderController extends Controller
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
+            'gross' => $request->input('gross'),
+            'round_off' => $request->input('round_off'),
         ]);
 
         $products = $request->input('products');

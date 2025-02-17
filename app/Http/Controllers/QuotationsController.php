@@ -42,6 +42,8 @@ class QuotationsController extends Controller
             'igst' => 'nullable|numeric|min:0',
             'total' => 'required|numeric|min:0',
             'currency' => 'required|string|max:10',
+            'gross' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric|min:0',
 
             // for products
             'products' => 'required|array|min:1',
@@ -81,7 +83,7 @@ class QuotationsController extends Controller
         // Handle quotation number logic
         $counterController = new CounterController();
         $sendRequest = Request::create('/counter', 'GET', [
-            'name' => 'Quotation',
+            'name' => 'quotation',
             // 'company_id' => Auth::user()->company_id,
         ]);
 
@@ -134,6 +136,8 @@ class QuotationsController extends Controller
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
             'currency' => $request->input('currency'),
+            'gross' => $request->input('gross'),
+            'round_off' => $request->input('round_off'),
         ]);
 
         foreach ($request->input('products') as $product) {
@@ -240,7 +244,7 @@ class QuotationsController extends Controller
                 $query->select('id', 'name');
             }
         ])
-        ->select('id', 'client_id', 'name', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'status', 'user', 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'sales_person', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'contact_person')
+        ->select('id', 'client_id', 'name', 'quotation_no', DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 'enquiry_no', DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 'template', 'contact_person', 'sales_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -376,7 +380,6 @@ class QuotationsController extends Controller
     public function update_quotations(Request $request, $id)
     {
         $request->validate([
-            // 'quotation_id' => 'required|integer',
             'client_id' => 'required|integer|exists:t_clients,id',
             'name' => 'required|integer|exists:t_clients,name',
             'quotation_no' => 'nullable|string|max:255',
@@ -391,6 +394,8 @@ class QuotationsController extends Controller
             'igst' => 'required|numeric',
             'total' => 'required|numeric',
             'currency' => 'required|string',
+            'gross' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric|min:0',
 
             // for products
             'products' => 'required|array',
@@ -447,7 +452,9 @@ class QuotationsController extends Controller
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
-            'currency' => $request->input('currency'),  
+            'currency' => $request->input('currency'),
+            'gross' => $request->input('gross'),
+            'round_off' => $request->input('round_off'),
         ]);
 
         $products = $request->input('products');
