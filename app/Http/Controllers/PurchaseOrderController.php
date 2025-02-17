@@ -1302,6 +1302,11 @@ class PurchaseOrderController extends Controller
                     'company_id' => Auth::user()->company_id,
                     'name' => $name,
                     'amount' => (float)($values['cgst'] ?? 0) + (float)($values['sgst'] ?? 0) + (float)($values['igst'] ?? 0),
+                    'tax' => 18,
+                    'hsn' => $values['hsn'] ?? '',
+                    'cgst' => (float)($values['cgst'] ?? 0),
+                    'sgst' => (float)($values['sgst'] ?? 0),
+                    'igst' => (float)($values['igst'] ?? 0),
                     'created_at' => now(),
                     'updated_at' => now()
                 ];
@@ -1313,7 +1318,7 @@ class PurchaseOrderController extends Controller
                     'purchase_order_id' => $purchaseOrderId,
                     'company_id' => Auth::user()->company_id,
                     'name' => $key,
-                    'value' => $value ?? null,
+                    'value' => !empty($value) ? $value : null,
                     'created_at' => now(),
                     'updated_at' => now()
                 ];
