@@ -69,7 +69,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_supplier_gst/{id}', [SuppliersController::class, 'update_supplier_gst']);
 
     Route::post('/products', [MastersController::class, 'add_products']);
-    Route::post('/get_products', [MastersController::class, 'view_products']);
+    Route::post('/get_products/{id?}', [MastersController::class, 'view_products']);
     Route::post('/update_products/{id}', [MastersController::class, 'edit_products']);
     Route::delete('/products/{id}', [MastersController::class, 'delete_products']);
 
