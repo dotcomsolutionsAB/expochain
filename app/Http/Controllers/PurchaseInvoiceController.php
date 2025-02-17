@@ -158,7 +158,104 @@ class PurchaseInvoiceController extends Controller
         $formatter = new NumberFormatter("en", NumberFormatter::SPELLOUT);
         return ucfirst($formatter->format($num)) . ' Only';
     }
-    public function view_purchase_invoice(Request $request)
+    // public function view_purchase_invoice(Request $request)
+    // {
+    //     // Get filter inputs
+    //     $supplierId = $request->input('supplier_id');
+    //     $name = $request->input('name');
+    //     $purchaseInvoiceNo = $request->input('purchase_invoice_no');
+    //     $purchaseInvoiceDate = $request->input('purchase_invoice_date');
+    //     $purchaseOrderNo = $request->input('purchase_order_no');
+    //     $productIds = $request->input('product_ids'); 
+    //     $limit = $request->input('limit', 10); // Default limit to 10
+    //     $offset = $request->input('offset', 0); // Default offset to 0
+
+    //     // Get total count of records in `t_purchase_order`
+    //     $get_purchase_invoice = PurchaseInvoiceModel::count(); 
+
+    //     // Build the query
+    //     $query = PurchaseInvoiceModel::with(['products' => function ($query) {
+    //         $query->select('purchase_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'godown', 'returned', 'stock');
+    //     }, 'addons' => function ($query) {
+    //         $query->select('purchase_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
+    //     }])
+    //     ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', DB::raw('DATE_FORMAT(purchase_invoice_date, "%d-%m-%Y") as purchase_invoice_date'), 'oa_no', 'ref_no', 'template', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off')
+    //     ->where('company_id', Auth::user()->company_id);
+
+    //     // Apply filters
+    //     if ($supplierId) {
+    //         $query->where('supplier_id', $supplierId);
+    //     }
+    //     if ($name) {
+    //         $query->where('name', 'LIKE', '%' . $name . '%');
+    //     }
+    //     if ($purchaseInvoiceNo) {
+    //         $query->where('purchase_invoice_no', 'LIKE', '%' . $purchaseInvoiceNo . '%');
+    //     }
+    //     if ($purchaseInvoiceDate) {
+    //         $query->whereDate('purchase_invoice_date', $purchaseInvoiceDate);
+    //     }
+    //     if ($purchaseOrderNo) {
+    //         $query->where('purchase_order_no', 'LIKE', '%' . $purchaseOrderNo . '%');
+    //     }
+    //         // ✅ **Filter by comma-separated product IDs**
+    //         if (!empty($productIds)) {
+    //         $productIdArray = explode(',', $productIds); // Convert CSV to array
+    //         $query->whereHas('products', function ($query) use ($productIdArray) {
+    //             $query->whereIn('product_id', $productIdArray);
+    //         });
+    //     }
+
+    //     $purchase_invoice_count = $query->count();
+    //     // Apply limit and offset
+    //     $query->offset($offset)->limit($limit);
+
+    //     // Fetch data
+    //     $get_purchase_invoices = $query->get();
+
+    //     // Transform Data
+    //     $get_purchase_invoices->transform(function ($invoice) {
+
+    //         // Convert total to words
+    //         $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
+
+    //         // ✅ Format total with comma-separated values
+    //         $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
+
+    //         // Replace user ID with corresponding contact_person object
+    //         $invoice->contact_person = isset($invoice->get_user) ? [
+    //             'id' => $invoice->get_user->id,
+    //             'name' => $invoice->get_user->name
+    //         ] : ['id' => null, 'name' => 'Unknown'];
+
+    //         // Convert user ID into an object with `id` and `name`
+    //         $invoice->user = isset($invoice->get_user) ? [
+    //             'id' => $invoice->get_user->id,
+    //             'name' => $invoice->get_user->name
+    //         ] : ['id' => null, 'name' => 'Unknown'];
+
+    //         unset($invoice->get_user); // Remove original relationship data
+
+    //         return $invoice;
+    //     });
+
+    //     // Return response
+    //     return $get_purchase_invoices->isNotEmpty()
+    //         ? response()->json([
+    //             'code' => 200,
+    //             'success' => true,
+    //             'message' => 'Purchase Invoices fetched successfully!',
+    //             'data' => $get_purchase_invoices,
+    //             'count' => $get_purchase_invoices->count(),
+    //             'total_records' => $purchase_invoice_count,
+    //         ], 200)
+    //         : response()->json([
+    //             'code' => 404,
+    //             'success' => false,
+    //             'message' => 'No Purchase Invoices found!',
+    //         ], 404);
+    // }
+    public function view_purchase_invoice(Request $request, $id = null)
     {
         // Get filter inputs
         $supplierId = $request->input('supplier_id');
@@ -166,23 +263,57 @@ class PurchaseInvoiceController extends Controller
         $purchaseInvoiceNo = $request->input('purchase_invoice_no');
         $purchaseInvoiceDate = $request->input('purchase_invoice_date');
         $purchaseOrderNo = $request->input('purchase_order_no');
-        $productIds = $request->input('product_ids'); 
-        $limit = $request->input('limit', 10); // Default limit to 10
-        $offset = $request->input('offset', 0); // Default offset to 0
+        $productIds = $request->input('product_ids');
+        $limit = $request->input('limit', 10);
+        $offset = $request->input('offset', 0);
 
-        // Get total count of records in `t_purchase_order`
-        $get_purchase_invoice = PurchaseInvoiceModel::count(); 
-
-        // Build the query
-        $query = PurchaseInvoiceModel::with(['products' => function ($query) {
-            $query->select('purchase_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'godown', 'returned', 'stock');
-        }, 'addons' => function ($query) {
-            $query->select('purchase_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
-        }])
-        ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', DB::raw('DATE_FORMAT(purchase_invoice_date, "%d-%m-%Y") as purchase_invoice_date'), 'oa_no', 'ref_no', 'template', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off')
+        // Query Purchase Invoices
+        $query = PurchaseInvoiceModel::with([
+            'products' => function ($query) {
+                $query->select('purchase_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',
+                    DB::raw('(tax / 2) as cgst_rate'),
+                    DB::raw('(tax / 2) as sgst_rate'),
+                    DB::raw('(tax) as igst_rate'),
+                    'amount', 'channel', 'godown', 'returned', 'stock');
+            },
+            'addons' => function ($query) {
+                $query->select('purchase_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
+            },
+            'get_user:id,name'
+        ])
+        ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 
+            DB::raw('DATE_FORMAT(purchase_invoice_date, "%d-%m-%Y") as purchase_invoice_date'),
+            'oa_no', 'ref_no', 'template', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
+        )
         ->where('company_id', Auth::user()->company_id);
 
-        // Apply filters
+        // 🔹 **Fetch Single Purchase Invoice by ID**
+        if ($id) {
+            $purchaseInvoice = $query->where('id', $id)->first();
+            if (!$purchaseInvoice) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'Purchase Invoice not found!',
+                ], 404);
+            }
+
+            // Transform Single Purchase Invoice
+            $purchaseInvoice->amount_in_words = $this->convertNumberToWords($purchaseInvoice->total);
+            $purchaseInvoice->total = is_numeric($purchaseInvoice->total) ? number_format((float) $purchaseInvoice->total, 2) : $purchaseInvoice->total;
+            $purchaseInvoice->contact_person = $purchaseInvoice->get_user ? ['id' => $purchaseInvoice->get_user->id, 'name' => $purchaseInvoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            $purchaseInvoice->user = $purchaseInvoice->get_user ? ['id' => $purchaseInvoice->get_user->id, 'name' => $purchaseInvoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            unset($purchaseInvoice->get_user);
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Purchase Invoice fetched successfully!',
+                'data' => $purchaseInvoice,
+            ], 200);
+        }
+
+        // 🔹 **Apply Filters for Listing**
         if ($supplierId) {
             $query->where('supplier_id', $supplierId);
         }
@@ -198,63 +329,50 @@ class PurchaseInvoiceController extends Controller
         if ($purchaseOrderNo) {
             $query->where('purchase_order_no', 'LIKE', '%' . $purchaseOrderNo . '%');
         }
-            // ✅ **Filter by comma-separated product IDs**
-            if (!empty($productIds)) {
-            $productIdArray = explode(',', $productIds); // Convert CSV to array
+        if (!empty($productIds)) {
+            $productIdArray = explode(',', $productIds);
             $query->whereHas('products', function ($query) use ($productIdArray) {
                 $query->whereIn('product_id', $productIdArray);
             });
         }
 
-        $purchase_invoice_count = $query->count();
-        // Apply limit and offset
+        // Get total record count before applying limit
+        $totalRecords = $query->count();
         $query->offset($offset)->limit($limit);
 
-        // Fetch data
+        // Fetch paginated results
         $get_purchase_invoices = $query->get();
 
-        // Transform Data
-        $get_purchase_invoices->transform(function ($invoice) {
-
-            // Convert total to words
-            $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
-
-            // ✅ Format total with comma-separated values
-            $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
-
-            // Replace user ID with corresponding contact_person object
-            $invoice->contact_person = isset($invoice->get_user) ? [
-                'id' => $invoice->get_user->id,
-                'name' => $invoice->get_user->name
-            ] : ['id' => null, 'name' => 'Unknown'];
-
-            // Convert user ID into an object with `id` and `name`
-            $invoice->user = isset($invoice->get_user) ? [
-                'id' => $invoice->get_user->id,
-                'name' => $invoice->get_user->name
-            ] : ['id' => null, 'name' => 'Unknown'];
-
-            unset($invoice->get_user); // Remove original relationship data
-
-            return $invoice;
-        });
-
-        // Return response
-        return $get_purchase_invoices->isNotEmpty()
-            ? response()->json([
-                'code' => 200,
-                'success' => true,
-                'message' => 'Purchase Invoices fetched successfully!',
-                'data' => $get_purchase_invoices,
-                'count' => $get_purchase_invoices->count(),
-                'total_records' => $purchase_invoice_count,
-            ], 200)
-            : response()->json([
+        if ($get_purchase_invoices->isEmpty()) {
+            return response()->json([
                 'code' => 404,
                 'success' => false,
                 'message' => 'No Purchase Invoices found!',
             ], 404);
+        }
+
+        // Transform Data
+        $get_purchase_invoices->transform(function ($invoice) {
+            $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
+            $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
+            $invoice->contact_person = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            $invoice->user = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            unset($invoice->get_user);
+
+            return $invoice;
+        });
+
+        // Return response for list
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Purchase Invoices fetched successfully!',
+            'data' => $get_purchase_invoices,
+            'count' => $get_purchase_invoices->count(),
+            'total_records' => $totalRecords,
+        ], 200);
     }
+
 
     // update
     public function edit_purchase_invoice(Request $request, $id)
