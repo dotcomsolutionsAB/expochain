@@ -1187,6 +1187,9 @@ class PurchaseOrderController extends Controller
 
         // Step 1: Insert Purchase Orders
         foreach ($data as $record) {
+
+            $taxData = json_decode($record['tax'], true);
+            
             $supplier = SuppliersModel::where('name', $record['supplier'])->first();
             $supplierId = $supplier->id ?? 0;
 
@@ -1194,7 +1197,7 @@ class PurchaseOrderController extends Controller
             $formattedDate = (!empty($record['po_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $record['po_date']) && $record['po_date'] !== '0000-00-00')
                 ? date('Y-m-d', strtotime($record['po_date']))
                 : null;
-                
+
             $statusMap = [
                 0 => 'pending',
                 1 => 'partial',
