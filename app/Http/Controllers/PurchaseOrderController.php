@@ -1152,16 +1152,16 @@ class PurchaseOrderController extends Controller
 
     try {
         // Reset Tables & Auto-Increment Properly
-        DB::statement("SET FOREIGN_KEY_CHECKS=0;");
+        // DB::statement("SET FOREIGN_KEY_CHECKS=0;");
         PurchaseOrderModel::truncate();
         PurchaseOrderProductsModel::truncate();
         PurchaseOrderAddonsModel::truncate();
         PurchaseOrderTermsModel::truncate();
-        DB::statement("ALTER TABLE purchase_orders AUTO_INCREMENT = 1;");
-        DB::statement("ALTER TABLE purchase_order_products AUTO_INCREMENT = 1;");
-        DB::statement("ALTER TABLE purchase_order_addons AUTO_INCREMENT = 1;");
-        DB::statement("ALTER TABLE purchase_order_terms AUTO_INCREMENT = 1;");
-        DB::statement("SET FOREIGN_KEY_CHECKS=1;");
+        // DB::statement("ALTER TABLE purchase_orders AUTO_INCREMENT = 1;");
+        // DB::statement("ALTER TABLE purchase_order_products AUTO_INCREMENT = 1;");
+        // DB::statement("ALTER TABLE purchase_order_addons AUTO_INCREMENT = 1;");
+        // DB::statement("ALTER TABLE purchase_order_terms AUTO_INCREMENT = 1;");
+        // DB::statement("SET FOREIGN_KEY_CHECKS=1;");
 
         // Fetch Data from External API
         $url = 'https://expo.egsm.in/assets/custom/migrate/purchase_order.php';
