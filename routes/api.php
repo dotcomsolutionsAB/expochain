@@ -158,7 +158,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/test_certificate_migrate', [TestCertificateController::class, 'importTestCertificates']);
 
     Route::post('/add_purchase_order', [PurchaseOrderController::class, 'add_purchase_order']);
-    Route::post('/purchase_order', [PurchaseOrderController::class, 'view_purchase_order']);
+    Route::post('/purchase_order/{id?}', [PurchaseOrderController::class, 'view_purchase_order']);
     Route::post('/update_purchase_order/{id?}', [PurchaseOrderController::class, 'edit_purchase_order']);
     Route::delete('/purchase_order/{id?}', [PurchaseOrderController::class, 'delete_purchase_order']);
     Route::get('/purchaseorder_migrate', [PurchaseOrderController::class, 'importPurchaseOrders']);

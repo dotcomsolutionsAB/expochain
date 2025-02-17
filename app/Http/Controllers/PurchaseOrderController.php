@@ -196,7 +196,147 @@ class PurchaseOrderController extends Controller
         $formatter = new NumberFormatter("en", NumberFormatter::SPELLOUT);
         return ucfirst($formatter->format($num)) . ' Only';
     }
-    public function view_purchase_order(Request $request)
+    // public function view_purchase_order(Request $request, $id = null)
+    // {
+    //     // Get filter inputs
+    //     $supplierId = $request->input('supplier_id');
+    //     $name = $request->input('name');
+    //     $purchaseOrderNo = $request->input('purchase_order_no');
+    //     $purchaseOrderDate = $request->input('purchase_order_date');
+    //     $dateFrom = $request->input('date_from');
+    //     $dateTo = $request->input('date_to');
+    //     $user = $request->input('user');
+    //     $status = $request->input('status');
+    //     $productIds = $request->input('product_ids');
+    //     $limit = $request->input('limit', 10); // Default limit to 10
+    //     $offset = $request->input('offset', 0); // Default offset to 0
+
+    //     // Get total count of records in `t_purchase_order`
+    //     $get_purchase_order = PurchaseOrderModel::count(); 
+
+    //     // Build the query
+    //     $query = PurchaseOrderModel::with(['products' => function ($query) {
+    //         $query->select('purchase_order_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount',  'discount_type', 'hsn', 'tax', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'cgst', 'sgst', 'igst', 'amount', 'channel', 'received', 'short_closed');
+    //         },'addons' => function ($query) {
+    //             $query->select('purchase_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
+    //         }, 'terms' => function ($query) {
+    //             $query->select('purchase_order_id', 'name', 'value');
+    //         },
+    //             'get_user' => function ($query) { // Fetch only user name
+    //                 $query->select('id', 'name');
+    //         },
+    //             'get_template' => function ($query) { // Fetch template id and name
+    //             $query->select('id', 'name');
+    //         }])
+    //     ->select('id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'oa_no', DB::raw('DATE_FORMAT(oa_date, "%d-%m-%Y") as oa_date'), 'template', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off')
+    //     ->where('company_id', Auth::user()->company_id);
+        
+
+    //     // Apply filters
+    //     if ($supplierId) {
+    //         $query->where('supplier_id', $supplierId);
+    //     }
+    //     if ($name) {
+    //         $query->where('name', 'LIKE', '%' . $name . '%');
+    //     }
+    //     if ($purchaseOrderNo) {
+    //         $query->where('purchase_order_no', 'LIKE', '%' . $purchaseOrderNo . '%');
+    //     }
+    //     if ($purchaseOrderDate) {
+    //         $query->whereDate('purchase_order_date', $purchaseOrderDate);
+    //     }
+
+    //     if ($dateFrom && $dateTo) {
+    //         $query->whereBetween('purchase_order_date', [$dateFrom, $dateTo]);
+    //     } elseif ($dateFrom) {
+    //         $query->whereDate('purchase_order_date', '>=', $dateFrom);
+    //     } elseif ($dateTo) {
+    //         $query->whereDate('purchase_order_date', '<=', $dateTo);
+    //     }
+
+    //     if ($user) {
+    //         $query->whereDate('user', $user);
+    //     }
+
+    //     $purchase_order_count = $query->count();
+    //     // Apply limit and offset
+    //     $query->offset($offset)->limit($limit);
+
+    //     // Fetch data
+    //     $get_purchase_orders = $query->get();
+
+    //     // Transform Data
+    //     $get_purchase_orders->transform(function ($purchase_orders) {
+
+    //         // Convert total to words
+    //         $purchase_orders->amount_in_words = $this->convertNumberToWords($purchase_orders->total);
+
+    //         // ✅ Format total with comma-separated values
+    //         $purchase_orders->total = is_numeric($purchase_orders->total) ? number_format((float) $purchase_orders->total, 2) : $purchase_orders->total;
+
+    //         // Capitalize the first letter of status
+    //         $purchase_orders->status = ucfirst($purchase_orders->status);
+
+    //         // Replace user ID with user object
+    //         $purchase_orders->user = isset($purchase_orders->get_user) ? [
+    //             'id' => $purchase_orders->get_user->id,
+    //             'name' => $purchase_orders->get_user->name
+    //         ] : ['id' => null, 'name' => 'Unknown'];
+    //         unset($purchase_orders->get_user);
+
+    //         // ✅ New Fix for sales_person
+    //         $purchase_orders->sales_person = isset($purchase_orders->salesPerson) ? [
+    //             'id' => $purchase_orders->salesPerson->id,
+    //             'name' => $purchase_orders->salesPerson->name
+    //         ] : ['id' => null, 'name' => 'Unknown'];
+    //         unset($purchase_orders->salesPerson);
+
+    //         // Replace template ID with template object
+    //         $purchase_orders->template = isset($purchase_orders->get_template) ? [
+    //             'id' => $purchase_orders->get_template->id,
+    //             'name' => $purchase_orders->get_template->name
+    //         ] : ['id' => null, 'name' => 'Unknown'];
+    //         unset($purchase_orders->get_template); // Remove user object after fetching the name
+
+    //         // **Remove `purchase_orders_id` from products**
+    //         $purchase_orders->products->transform(function ($product) {
+    //             unset($product->purchase_orders_id);
+    //             return $product;
+    //         });
+
+    //         // **Remove `purchase_orders_id` from addons**
+    //         $purchase_orders->addons->transform(function ($addon) {
+    //             unset($addon->purchase_orders_id);
+    //             return $addon;
+    //         });
+
+    //         // **Remove `purchase_orders_id` from terms**
+    //         $purchase_orders->terms->transform(function ($term) {
+    //             unset($term->purchase_orders_id);
+    //             return $term;
+    //         });
+
+    //         return $purchase_orders;
+    //     });
+
+    //     // Return response
+    //     return $get_purchase_orders->isNotEmpty()
+    //         ? response()->json([
+    //             'code' => 200,
+    //             'success' => true,
+    //             'message' => 'Purchase Orders fetched successfully!',
+    //             'data' => $get_purchase_orders,
+    //             'count' => $get_purchase_orders->count(),
+    //             'total_records' => $purchase_order_count,
+    //         ], 200)
+    //         : response()->json([
+    //             'code' => 404,
+    //             'success' => false,
+    //             'message' => 'No Purchase Orders found!',
+    //         ], 404);
+    // }
+
+    public function view_purchase_order(Request $request, $id = null)
     {
         // Get filter inputs
         $supplierId = $request->input('supplier_id');
@@ -208,30 +348,65 @@ class PurchaseOrderController extends Controller
         $user = $request->input('user');
         $status = $request->input('status');
         $productIds = $request->input('product_ids');
-        $limit = $request->input('limit', 10); // Default limit to 10
-        $offset = $request->input('offset', 0); // Default offset to 0
+        $limit = $request->input('limit', 10);
+        $offset = $request->input('offset', 0);
 
-        // Get total count of records in `t_purchase_order`
-        $get_purchase_order = PurchaseOrderModel::count(); 
-
-        // Build the query
-        $query = PurchaseOrderModel::with(['products' => function ($query) {
-            $query->select('purchase_order_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount',  'discount_type', 'hsn', 'tax', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'cgst', 'sgst', 'igst', 'amount', 'channel', 'received', 'short_closed');
-            },'addons' => function ($query) {
+        // Query Purchase Orders
+        $query = PurchaseOrderModel::with([
+            'products' => function ($query) {
+                $query->select('purchase_order_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 
+                    DB::raw('(tax / 2) as cgst_rate'), 
+                    DB::raw('(tax / 2) as sgst_rate'), 
+                    DB::raw('(tax) as igst_rate'), 'cgst', 'sgst', 'igst', 'amount', 'channel', 'received', 'short_closed');
+            },
+            'addons' => function ($query) {
                 $query->select('purchase_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
-            }, 'terms' => function ($query) {
+            },
+            'terms' => function ($query) {
                 $query->select('purchase_order_id', 'name', 'value');
             },
-                'get_user' => function ($query) { // Fetch only user name
-                    $query->select('id', 'name');
-            },
-                'get_template' => function ($query) { // Fetch template id and name
-                $query->select('id', 'name');
-            }])
-        ->select('id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'oa_no', DB::raw('DATE_FORMAT(oa_date, "%d-%m-%Y") as oa_date'), 'template', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off')
+            'get_user:id,name',
+            'get_template:id,name'
+        ])
+        ->select(
+            'id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'oa_no', 
+            DB::raw('DATE_FORMAT(oa_date, "%d-%m-%Y") as oa_date'), 'template', 'status', 
+            'user', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off'
+        )
         ->where('company_id', Auth::user()->company_id);
 
-        // Apply filters
+        // 🔹 **Fetch Single Purchase Order by ID**
+        if ($id) {
+            $purchaseOrder = $query->where('id', $id)->first();
+            if (!$purchaseOrder) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'Purchase Order not found!',
+                ], 404);
+            }
+
+            // Transform Single Purchase Order
+            $purchaseOrder->amount_in_words = $this->convertNumberToWords($purchaseOrder->total);
+            $purchaseOrder->total = is_numeric($purchaseOrder->total) ? number_format((float) $purchaseOrder->total, 2) : $purchaseOrder->total;
+            $purchaseOrder->status = ucfirst($purchaseOrder->status);
+            $purchaseOrder->user = $purchaseOrder->get_user ? ['id' => $purchaseOrder->get_user->id, 'name' => $purchaseOrder->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            unset($purchaseOrder->get_user);
+            $purchaseOrder->template = $purchaseOrder->get_template ? ['id' => $purchaseOrder->get_template->id, 'name' => $purchaseOrder->get_template->name] : ['id' => null, 'name' => 'Unknown'];
+            unset($purchaseOrder->get_template);
+            $purchaseOrder->products->transform(fn($product) => collect($product)->except(['purchase_order_id']));
+            $purchaseOrder->addons->transform(fn($addon) => collect($addon)->except(['purchase_order_id']));
+            $purchaseOrder->terms->transform(fn($term) => collect($term)->except(['purchase_order_id']));
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Purchase Order fetched successfully!',
+                'data' => $purchaseOrder,
+            ], 200);
+        }
+
+        // 🔹 **Apply Filters for Listing**
         if ($supplierId) {
             $query->where('supplier_id', $supplierId);
         }
@@ -244,7 +419,6 @@ class PurchaseOrderController extends Controller
         if ($purchaseOrderDate) {
             $query->whereDate('purchase_order_date', $purchaseOrderDate);
         }
-
         if ($dateFrom && $dateTo) {
             $query->whereBetween('purchase_order_date', [$dateFrom, $dateTo]);
         } elseif ($dateFrom) {
@@ -252,88 +426,52 @@ class PurchaseOrderController extends Controller
         } elseif ($dateTo) {
             $query->whereDate('purchase_order_date', '<=', $dateTo);
         }
-
         if ($user) {
-            $query->whereDate('user', $user);
+            $query->where('user', $user);
         }
 
-        $purchase_order_count = $query->count();
-        // Apply limit and offset
+        // Get total record count before applying limit
+        $totalRecords = $query->count();
         $query->offset($offset)->limit($limit);
 
-        // Fetch data
+        // Fetch paginated results
         $get_purchase_orders = $query->get();
 
-        // Transform Data
-        $get_purchase_orders->transform(function ($purchase_orders) {
-
-            // Convert total to words
-            $purchase_orders->amount_in_words = $this->convertNumberToWords($purchase_orders->total);
-
-            // ✅ Format total with comma-separated values
-            $purchase_orders->total = is_numeric($purchase_orders->total) ? number_format((float) $purchase_orders->total, 2) : $purchase_orders->total;
-
-            // Capitalize the first letter of status
-            $purchase_orders->status = ucfirst($purchase_orders->status);
-
-            // Replace user ID with user object
-            $purchase_orders->user = isset($purchase_orders->get_user) ? [
-                'id' => $purchase_orders->get_user->id,
-                'name' => $purchase_orders->get_user->name
-            ] : ['id' => null, 'name' => 'Unknown'];
-            unset($purchase_orders->get_user);
-
-            // ✅ New Fix for sales_person
-            $purchase_orders->sales_person = isset($purchase_orders->salesPerson) ? [
-                'id' => $purchase_orders->salesPerson->id,
-                'name' => $purchase_orders->salesPerson->name
-            ] : ['id' => null, 'name' => 'Unknown'];
-            unset($purchase_orders->salesPerson);
-
-            // Replace template ID with template object
-            $purchase_orders->template = isset($purchase_orders->get_template) ? [
-                'id' => $purchase_orders->get_template->id,
-                'name' => $purchase_orders->get_template->name
-            ] : ['id' => null, 'name' => 'Unknown'];
-            unset($purchase_orders->get_template); // Remove user object after fetching the name
-
-            // **Remove `purchase_orders_id` from products**
-            $purchase_orders->products->transform(function ($product) {
-                unset($product->purchase_orders_id);
-                return $product;
-            });
-
-            // **Remove `purchase_orders_id` from addons**
-            $purchase_orders->addons->transform(function ($addon) {
-                unset($addon->purchase_orders_id);
-                return $addon;
-            });
-
-            // **Remove `purchase_orders_id` from terms**
-            $purchase_orders->terms->transform(function ($term) {
-                unset($term->purchase_orders_id);
-                return $term;
-            });
-
-            return $purchase_orders;
-        });
-
-        // Return response
-        return $get_purchase_orders->isNotEmpty()
-            ? response()->json([
-                'code' => 200,
-                'success' => true,
-                'message' => 'Purchase Orders fetched successfully!',
-                'data' => $get_purchase_orders,
-                'count' => $get_purchase_orders->count(),
-                'total_records' => $purchase_order_count,
-            ], 200)
-            : response()->json([
+        if ($get_purchase_orders->isEmpty()) {
+            return response()->json([
                 'code' => 404,
                 'success' => false,
                 'message' => 'No Purchase Orders found!',
             ], 404);
+        }
+
+        // Transform Data
+        $get_purchase_orders->transform(function ($purchase_orders) {
+            $purchase_orders->amount_in_words = $this->convertNumberToWords($purchase_orders->total);
+            $purchase_orders->total = is_numeric($purchase_orders->total) ? number_format((float) $purchase_orders->total, 2) : $purchase_orders->total;
+            $purchase_orders->status = ucfirst($purchase_orders->status);
+            $purchase_orders->user = $purchase_orders->get_user ? ['id' => $purchase_orders->get_user->id, 'name' => $purchase_orders->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            unset($purchase_orders->get_user);
+            $purchase_orders->template = $purchase_orders->get_template ? ['id' => $purchase_orders->get_template->id, 'name' => $purchase_orders->get_template->name] : ['id' => null, 'name' => 'Unknown'];
+            unset($purchase_orders->get_template);
+            $purchase_orders->products->transform(fn($product) => collect($product)->except(['purchase_order_id']));
+            $purchase_orders->addons->transform(fn($addon) => collect($addon)->except(['purchase_order_id']));
+            $purchase_orders->terms->transform(fn($term) => collect($term)->except(['purchase_order_id']));
+
+            return $purchase_orders;
+        });
+
+        // Return response for list
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Purchase Orders fetched successfully!',
+            'data' => $get_purchase_orders,
+            'count' => $get_purchase_orders->count(),
+            'total_records' => $totalRecords,
+        ], 200);
     }
+
 
     // update
     public function edit_purchase_order(Request $request, $id)
@@ -575,576 +713,6 @@ class PurchaseOrderController extends Controller
     }
 
     // migration
-    // public function importPurchaseOrders()
-    // {
-    //     PurchaseOrderModel::truncate();  
-        
-    //     PurchaseOrderProductsModel::truncate();  
-
-    //     $url = 'https://expo.egsm.in/assets/custom/migrate/purchase_order.php'; // Replace with the actual URL
-
-    //     try {
-    //         $response = Http::get($url);
-    //     } catch (\Exception $e) {
-    //         return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
-    //     }
-
-    //     if ($response->failed()) {
-    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
-    //     }
-
-    //     $data = $response->json('data');
-
-    //     if (empty($data)) {
-    //         return response()->json(['message' => 'No data found'], 404);
-    //     }
-
-    //     $successfulInserts = 0;
-    //     $errors = [];
-
-    //     foreach ($data as $record) {
-        
-    //         // Parse JSON data for items and tax
-    //         $itemsData = json_decode($record['items'], true);
-    //         $taxData = json_decode($record['tax'], true);
-    //         $addonsData = json_decode($record['addons'], true);
-    //         $topData = json_decode($record['top'], true);
-
-    //         if (!is_array($itemsData) || !is_array($taxData) || !is_array($addonsData) || !is_array($topData)) {
-    //             $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure in one of the fields.'];
-    //             continue;
-    //         }
-
-    //         // Generate dummy sales data and fallback for missing fields
-    //         $supplier = SuppliersModel::where('name', $record['supplier'])->first();
-
-    //         $defaultSupplierId = 0;
-
-    //         if (!empty($record['po_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $record['po_date']) && $record['po_date'] !== '0000-00-00') {
-    //             $purchaseOrderDate = \DateTime::createFromFormat('Y-m-d', $record['po_date']);
-    //         }
-
-    //         $formattedDate = $purchaseOrderDate ? $purchaseOrderDate->format('Y-m-d') : '1970-01-01';
-
-    //         // Prepare purchase order data
-    //         $purchaseOrderData = [
-    //             'company_id' => Auth::user()->company_id,
-    //             'supplier_id' => $supplier->id ?? $defaultSupplierId,
-    //             'name' =>$supplier->name ?? "Random Supplier",
-    //             'address_line_1' => $supplier->address_line_1 ?? 'N/A', // Default, since no specific address is provided in data
-    //             'address_line_2' => $supplier->address_line_2 ?? 'N/A',
-    //             'city' => $supplier->city ?? 'N/A', // Default values
-    //             'pincode' => $supplier->pincode ??'000000',
-    //             'state' => !empty($record['state']) ? $record['state'] : 'Unknown State',
-    //             'country' => $supplier->country ?? 'INDIA',
-    //             'purchase_order_no' => $record['po_no'] ?? '0000',
-    //             'purchase_order_date' => $formattedDate,
-    //             'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
-    //             'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
-    //             'igst' => !empty($taxData['igst']) ? $taxData['igst'] : 0,
-    //             'currency' => !empty($record['currency']) ? $record['currency'] : 'INR',
-    //             'template' => json_decode($record['pdf_template'], true)['id'] ?? 1,
-    //             'status' => $record['status'] ?? 1,
-    //         ];
-
-    //         // print_r($purchaseOrderData);
-
-    //         // Validate purchase order data
-    //         $validator = Validator::make($purchaseOrderData, [
-    //             'supplier_id' => 'required|integer',
-    //             'name' => 'required|string',
-    //             'address_line_1' => 'required|string',
-    //             'address_line_2' => 'nullable|string',
-    //             'city' => 'required|string',
-    //             'pincode' => 'required|string',
-    //             'state' => 'required|string',
-    //             'country' => 'required|string',
-    //             'purchase_order_no' => 'required|string',
-    //             'purchase_order_date' => 'required|date_format:Y-m-d',
-    //             'cgst' => 'required|numeric',
-    //             'sgst' => 'required|numeric',
-    //             'igst' => 'required|numeric',
-    //             'currency' => 'required|string',
-    //             'template' => 'required|integer',
-    //             'status' => 'required|integer',
-    //         ]);
-
-    //         if ($validator->fails()) {
-    //             $errors[] = ['record' => $record, 'errors' => $validator->errors()];
-    //             continue;
-    //         }
-
-    //         // Insert purchase order data
-    //         try {
-    //             $purchaseOrder = PurchaseOrderModel::create($purchaseOrderData);
-    //             $successfulInserts++;
-    //         } catch (\Exception $e) {
-    //             $errors[] = ['record' => $record, 'error' => 'Failed to insert purchase order: ' . $e->getMessage()];
-    //             continue;
-    //         }
-
-    //         // Insert products
-    //         if ($itemsData && is_array($itemsData['product'])) {
-    //             foreach ($itemsData['product'] as $index => $productName) {
-    //                 try {
-    //                     PurchaseOrderProductsModel::create([
-    //                         'purchase_order_number' => $purchaseOrder->id,
-    //                         'company_id' => Auth::user()->company_id,
-    //                         'product_id' => $index + 1,
-    //                         'product_name' => $productName,
-    //                         'description' => $itemsData['desc'][$index] ?? 'No Description',
-    //                         'brand' => 'Unknown', // Default as brand data is missing in the sample
-    //                         'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
-    //                         'unit' => $itemsData['unit'][$index] ?? '',
-    //                         'price' => (float) $itemsData['price'][$index] ?? 0.0,
-    //                         'discount' => isset($itemsData['discount'][$index]) && $itemsData['discount'][$index] !== '' ? (float) $itemsData['discount'][$index] : 0.0,
-    //                         'hsn' => $itemsData['hsn'][$index] ?? '',
-    //                         'tax' => (float) $itemsData['tax'][$index] ?? 0,
-    //                         'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
-    //                         'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
-    //                         'igst' => isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
-    //                     ]);
-    //                 } catch (\Exception $e) {
-    //                     $errors[] = ['record' => $record, 'error' => 'Failed to insert product: ' . $e->getMessage()];
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     return response()->json([
-    //         'code' => 200,
-    //         'success' => true,
-    //         'message' => "Data import completed with $successfulInserts successful inserts.",
-    //         'errors' => $errors,
-    //     ], 200);
-    // }
-
-    // public function importPurchaseOrders()
-    // {
-    //     set_time_limit(300);
-
-    //     // Truncate tables before import
-    //     PurchaseOrderModel::truncate();
-    //     PurchaseOrderProductsModel::truncate();
-    //     PurchaseOrderAddonsModel::truncate(); // Ensure this exists for addons
-    //     PurchaseOrderTermsModel::truncate(); // New table for `top` data
-
-    //     // Define the external URL
-    //     $url = 'https://expo.egsm.in/assets/custom/migrate/purchase_order.php';
-
-    //     // Fetch data from the external URL
-    //     try {
-    //         $response = Http::timeout(120)->get($url);
-    //     } catch (\Exception $e) {
-    //         return response()->json(['error' => 'Failed to fetch data: ' . $e->getMessage()], 500);
-    //     }
-
-    //     if ($response->failed()) {
-    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
-    //     }
-
-    //     $data = $response->json('data');
-
-    //     if (empty($data)) {
-    //         return response()->json(['message' => 'No data found'], 404);
-    //     }
-
-    //     $batchSize = 500; // Define batch size
-    //     $purchaseOrdersBatch = [];
-    //     $purchaseOrderIds = [];
-    //     $productsBatch = [];
-    //     $addonsBatch = [];
-    //     $termsBatch = []; // New batch for `top` data
-    //     $errors = [];
-
-    //     foreach ($data as $record) {
-    //         // Decode JSON data
-    //         // $itemsData = json_decode($record['items'], true);
-    //         // $taxData = json_decode($record['tax'], true);
-    //         // $addonsData = json_decode($record['addons'], true);
-    //         // $addonsData = json_decode($record['top'], true);
-
-    //         // Get Supplier Data
-    //         $supplier = SuppliersModel::where('name', $record['supplier'])->first();
-    //         $supplierId = $supplier->id ?? 0;
-
-    //         // Format Purchase Order Date
-    //         $formattedDate = (!empty($record['po_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $record['po_date']) && $record['po_date'] !== '0000-00-00')
-    //             ? date('Y-m-d', strtotime($record['po_date']))
-    //             : null;
-
-    //         $statusMap = [
-    //             0 => 'pending',
-    //             1 => 'partial',
-    //             2 => 'completed',
-    //             3 => 'short_closed'
-    //         ];
-
-    //         // Prepare Purchase Order Data
-    //         $purchaseOrdersBatch[] = [
-    //             'company_id' => Auth::user()->company_id,
-    //             'supplier_id' => $supplierId,
-    //             'name' => $supplier->name ?? "Unknown Supplier",
-    //             'purchase_order_no' => $record['po_no'] ?? null,
-    //             'purchase_order_date' => $formattedDate,
-    //             'oa_no' => $record['oa'],
-    //             'oa_date' => $record['oa_date'],
-    //             'template' => json_decode($record['pdf_template'], true)['id'] ?? null,
-    //             'status' => $statusMap[$record['status']] ?? 'pending',
-    //             'user' => Auth::user()->id,
-    //             'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
-    //             'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
-    //             'igst' => !empty($taxData['igst']) ? $taxData['igst'] : 0,
-    //             'total' => !empty($record['total']) ?? null,
-    //             'currency' => !empty($record['currency']) ?? null,
-    //             'gross' => 0,
-    //             'round_off' => 0,
-    //             'created_at' => now(),
-    //             'updated_at' => now()
-    //         ];
-
-    //         // **Batch Insert Purchase Orders**
-    //         if (count($purchaseOrdersBatch) >= $batchSize) {
-    //             PurchaseOrderModel::insert($purchaseOrdersBatch);
-    //             $purchaseOrdersBatch = []; // Reset batch
-    //         }
-    //     }
-
-    //     // **Insert Remaining Purchase Orders**
-    //     if (!empty($purchaseOrdersBatch)) {
-    //         PurchaseOrderModel::insert($purchaseOrdersBatch);
-    //     }
-
-    //     // Fetch Newly Inserted Purchase Order IDs
-    //     $purchaseOrderIds = PurchaseOrderModel::whereIn('purchase_order_no', array_column($purchaseOrdersBatch, 'purchase_order_no'))
-    //         ->pluck('id', 'purchase_order_no')
-    //         ->toArray();
-
-    //     // **Insert Products & Addons**
-    //     foreach ($data as $record) {
-    //         $purchaseOrderId = $purchaseOrderIds[$record['po_no']] ?? null;
-    //         if (!$purchaseOrderId) {
-    //             continue;
-    //         }
-
-    //         // Decode JSON fields
-    //         $itemsData = json_decode($record['items'] ?? '{}', true);
-    //         $addonsData = json_decode($record['addons'] ?? '{}', true);
-    //         $topData = json_decode($record['top'] ?? '{}', true); // Decode `top` JSON again
-
-    //         // Insert Products
-    //         if (!empty($itemsData['product'])) {
-    //             foreach ($itemsData['product'] as $index => $productName) {
-    //                 $productsBatch[] = [
-    //                     'purchase_order_id' => $purchaseOrderId,
-    //                     'company_id' => Auth::user()->company_id,
-    //                     'product_id' => $index + 1,
-    //                     'product_name' => $productName,
-    //                     'description' => $itemsData['desc'][$index] ?? 'No Description',
-    //                     'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
-    //                     'unit' => $itemsData['unit'][$index] ?? '',
-    //                     'price' => (float) $itemsData['price'][$index] ?? 0.0,
-    //                     'discount' => isset($itemsData['discount'][$index]) && $itemsData['discount'][$index] !== '' ? (float) $itemsData['discount'][$index] : 0.0,
-    //                     'discount_type' => "percentage",
-    //                     'hsn' => $itemsData['hsn'][$index] ?? '',
-    //                     'tax' => (float) $itemsData['tax'][$index] ?? 0,
-    //                     'cgst' => !empty($itemsData['cgst'][$index]) ? $itemsData['cgst'][$index] : 0,
-    //                     'sgst' => !empty($itemsData['sgst'][$index]) ? $itemsData['sgst'][$index] : 0,
-    //                     'igst' => isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
-    //                     'amount' => isset($itemsData['amount'][$index]) ? (float) $itemsData['amount'][$index] : 0,
-    //                     'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index]) 
-    //                     ? (
-    //                         is_numeric($itemsData['channel'][$index]) 
-    //                             ? (float)$itemsData['channel'][$index] 
-    //                             : (
-    //                                 strtolower($itemsData['channel'][$index]) === 'standard' ? 1 :
-    //                                 (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 2 :
-    //                                 (strtolower($itemsData['channel'][$index]) === 'cbs' ? 3 : null))
-    //                             )
-    //                     ) 
-    //                     : null,
-    //                     'received' => isset($itemsData['received'][$index]) ? (float) $itemsData['received'][$index] : 0,
-    //                     'created_at' => now(),
-    //                     'updated_at' => now()
-    //                 ];
-    //             }
-    //         }
-
-    //         // Insert Addons
-    //         if (!empty($addonsData)) {
-    //             foreach ($addonsData as $name => $values) {
-    //                 $addonsBatch[] = [
-    //                     'purchase_order_id' => $purchaseOrderId,
-    //                     'company_id' => Auth::user()->company_id,
-    //                     'name' => $name,
-    //                     'amount' => (float)($values['cgst'] ?? 0) + (float)($values['sgst'] ?? 0) + (float)($values['igst'] ?? 0),
-    //                     'tax' => 18,
-    //                     'hsn' => $values['hsn'] ?? '',
-    //                     'cgst' => (float)($values['cgst'] ?? 0),
-    //                     'sgst' => (float)($values['sgst'] ?? 0),
-    //                     'igst' => (float)($values['igst'] ?? 0),
-    //                     'created_at' => now(),
-    //                     'updated_at' => now()
-    //                 ];
-    //             }
-    //         }
-
-    //         // Insert Terms (`top` Data)
-    //         if (!empty($topData)) {
-    //             foreach ($topData as $key => $value) {
-    //                 $termsBatch[] = [
-    //                     'purchase_order_id' => $purchaseOrderId,
-    //                     'company_id' => Auth::user()->company_id,
-    //                     'name' => $key,
-    //                     'value' => !empty($value) ? $value : null,
-    //                     'created_at' => now(),
-    //                     'updated_at' => now()
-    //                 ];
-    //             }
-    //         }
-
-    //         // **Batch Insert Products**
-    //         if (count($productsBatch) >= $batchSize) {
-    //             PurchaseOrderProductsModel::insert($productsBatch);
-    //             $productsBatch = []; // Reset batch
-    //         }
-
-    //         // **Batch Insert Addons**
-    //         if (count($addonsBatch) >= $batchSize) {
-    //             PurchaseOrderAddonsModel::insert($addonsBatch);
-    //             $addonsBatch = []; // Reset batch
-    //         }
-
-    //         // **Batch Insert Terms**
-    //         if (count($termsBatch) >= $batchSize) {
-    //             PurchaseOrderTermsModel::insert($termsBatch);
-    //             $termsBatch = [];
-    //         }
-    //     }
-
-    //     // **Insert Remaining Products & Addons**
-    //     if (!empty($productsBatch)) {
-    //         PurchaseOrderProductsModel::insert($productsBatch);
-    //     }
-
-    //     if (!empty($addonsBatch)) {
-    //         PurchaseOrderAddonsModel::insert($addonsBatch);
-    //     }
-
-    //      // **Insert Remaining Terms**
-    //     if (!empty($termsBatch)) {
-    //         PurchaseOrderTermsModel::insert($termsBatch);
-    //     }
-
-    //     return response()->json([
-    //         'code' => 200,
-    //         'success' => true,
-    //         'message' => "Purchase orders import completed successfully.",
-    //         'errors' => $errors,
-    //     ], 200);
-    // }
-
-    // public function importPurchaseOrders()
-    // {
-    //     set_time_limit(300);
-    //     DB::beginTransaction();
-
-    //     try {
-    //         // Step 1: Reset Tables Before Importing (Truncate + Reset Auto-increment)
-    //         // DB::statement("SET FOREIGN_KEY_CHECKS=0;");
-    //         PurchaseOrderModel::truncate();
-    //         PurchaseOrderProductsModel::truncate();
-    //         PurchaseOrderAddonsModel::truncate();
-    //         PurchaseOrderTermsModel::truncate();
-    //         // DB::statement("ALTER TABLE purchase_orders AUTO_INCREMENT = 1;");
-    //         // DB::statement("SET FOREIGN_KEY_CHECKS=1;");
-
-    //         // Step 2: Fetch Data from External API
-    //         $url = 'https://expo.egsm.in/assets/custom/migrate/purchase_order.php';
-    //         $response = Http::timeout(120)->get($url);
-
-    //         if ($response->failed()) {
-    //             return response()->json(['error' => 'Failed to fetch data.'], 500);
-    //         }
-
-    //         $data = $response->json('data');
-
-    //         if (empty($data)) {
-    //             return response()->json(['message' => 'No data found'], 404);
-    //         }
-
-    //         // Step 3: Define Batching Variables
-    //         $batchSize = 500;
-    //         $purchaseOrdersBatch = [];
-    //         $purchaseOrderNos = [];
-    //         $productsBatch = [];
-    //         $addonsBatch = [];
-    //         $termsBatch = [];
-
-    //         // Step 4: Process Purchase Orders
-    //         foreach ($data as $record) {
-    //             // Decode JSON Fields
-    //             $itemsData = json_decode($record['items'], true);
-    //             $taxData = json_decode($record['tax'], true);
-    //             $addonsData = json_decode($record['addons'], true);
-
-    //             // Get Supplier Data
-    //             $supplier = SuppliersModel::where('name', $record['supplier'])->first();
-    //             $supplierId = $supplier->id ?? 0;
-
-    //             $formattedDate = (!empty($record['po_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $record['po_date']) && $record['po_date'] !== '0000-00-00')
-    //             ? date('Y-m-d', strtotime($record['po_date']))
-    //             : null;
-
-    //             // Status Mapping
-    //             $statusMap = [
-    //                 0 => 'pending',
-    //                 1 => 'partial',
-    //                 2 => 'completed',
-    //                 3 => 'short_closed'
-    //             ];
-
-    //             // Prepare Purchase Order Data
-    //             $purchaseOrdersBatch[] = [
-    //                 'company_id' => Auth::user()->company_id,
-    //                 'supplier_id' => $supplierId,
-    //                 'name' => $supplier->name ?? "Unknown Supplier",
-    //                 'purchase_order_no' => $record['po_no'] ?? null,
-    //                 // 'purchase_order_date' => !empty($record['po_date']) ? date('Y-m-d', strtotime($record['po_date'])) : null,
-    //                 'purchase_order_date' => $formattedDate,
-    //                 'oa_no' => $record['oa'],
-    //                 'oa_date' => $record['oa_date'],
-    //                 'template' => json_decode($record['pdf_template'], true)['id'] ?? null,
-    //                 'status' => $statusMap[$record['status']] ?? 'pending',
-    //                 'user' => Auth::user()->id,
-    //                 'cgst' => $taxData['cgst'] ?? 0,
-    //                 'sgst' => $taxData['sgst'] ?? 0,
-    //                 'igst' => $taxData['igst'] ?? 0,
-    //                 'total' => $record['total'] ?? 0,
-    //                 'currency' => $record['currency'] ?? 'INR',
-    //                 'created_at' => now(),
-    //                 'updated_at' => now()
-    //             ];
-
-    //             $purchaseOrderNos[] = $record['po_no'];
-
-    //             // Insert in batches
-    //             if (count($purchaseOrdersBatch) >= $batchSize) {
-    //                 PurchaseOrderModel::insert($purchaseOrdersBatch);
-    //                 $purchaseOrdersBatch = [];
-    //             }
-    //         }
-
-    //         // Insert Remaining Purchase Orders
-    //         if (!empty($purchaseOrdersBatch)) {
-    //             PurchaseOrderModel::insert($purchaseOrdersBatch);
-    //         }
-
-    //         // Step 5: Fetch Newly Inserted Purchase Order IDs
-    //         $purchaseOrderIds = PurchaseOrderModel::whereIn('purchase_order_no', $purchaseOrderNos)
-    //             ->pluck('id', 'purchase_order_no')
-    //             ->toArray();
-
-    //         // Step 6: Process Products, Addons, and Terms
-    //         foreach ($data as $record) {
-    //             $purchaseOrderId = $purchaseOrderIds[$record['po_no']] ?? null;
-    //             if (!$purchaseOrderId) {
-    //                 continue;
-    //             }
-
-    //             // Decode JSON fields
-    //             $itemsData = json_decode($record['items'], true);
-    //             $addonsData = json_decode($record['addons'], true);
-    //             $termsData = json_decode($record['top'] ?? '{}', true);
-
-    //             // Insert Products
-    //             foreach ($itemsData['product'] as $index => $productName) {
-    //                 $productsBatch[] = [
-    //                     'purchase_order_id' => $purchaseOrderId,
-    //                     'company_id' => Auth::user()->company_id,
-    //                     'product_id' => $index + 1,
-    //                     'product_name' => $productName,
-    //                     'description' => $itemsData['desc'][$index] ?? 'No Description',
-    //                     'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
-    //                     'unit' => $itemsData['unit'][$index] ?? '',
-    //                     'price' => (float) $itemsData['price'][$index] ?? 0.0,
-    //                     'discount' => isset($itemsData['discount'][$index]) && $itemsData['discount'][$index] !== '' ? (float) $itemsData['discount'][$index] : 0.0,
-    //                     'discount_type' => "percentage",
-    //                     'hsn' => $itemsData['hsn'][$index] ?? '',
-    //                     'tax' => (float) $itemsData['tax'][$index] ?? 0,
-    //                     'cgst' => !empty($itemsData['cgst'][$index]) ? $itemsData['cgst'][$index] : 0,
-    //                     'sgst' => !empty($itemsData['sgst'][$index]) ? $itemsData['sgst'][$index] : 0,
-    //                     'igst' => isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
-    //                     'amount' => isset($itemsData['amount'][$index]) ? (float) $itemsData['amount'][$index] : 0,
-    //                     'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index]) 
-    //                     ? (
-    //                         is_numeric($itemsData['channel'][$index]) 
-    //                             ? (float)$itemsData['channel'][$index] 
-    //                             : (
-    //                                 strtolower($itemsData['channel'][$index]) === 'standard' ? 1 :
-    //                                 (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 2 :
-    //                                 (strtolower($itemsData['channel'][$index]) === 'cbs' ? 3 : null))
-    //                             )
-    //                     ) 
-    //                     : null,
-    //                     'received' => isset($itemsData['received'][$index]) ? (float) $itemsData['received'][$index] : 0,
-    //                     'created_at' => now(),
-    //                     'updated_at' => now()
-    //                 ];
-    //             }
-
-    //             // Insert Addons
-    //             foreach ($addonsData as $name => $values) {
-    //                 $addonsBatch[] = [
-    //                     'purchase_order_id' => $purchaseOrderId,
-    //                     'company_id' => Auth::user()->company_id,
-    //                     'name' => $name,
-    //                     'amount' => (float)($values['cgst'] ?? 0) + (float)($values['sgst'] ?? 0) + (float)($values['igst'] ?? 0),
-    //                     'tax' => 18,
-    //                     'hsn' => $values['hsn'] ?? '',
-    //                     'cgst' => (float)($values['cgst'] ?? 0),
-    //                     'sgst' => (float)($values['sgst'] ?? 0),
-    //                     'igst' => (float)($values['igst'] ?? 0),
-    //                     'created_at' => now(),
-    //                     'updated_at' => now()
-    //                 ];
-    //             }
-
-    //             // Insert Terms (`top` Data)
-    //             if (!empty($topData)) {
-    //                 foreach ($topData as $key => $value) {
-    //                     $termsBatch[] = [
-    //                         'purchase_order_id' => $purchaseOrderId,
-    //                         'company_id' => Auth::user()->company_id,
-    //                         'name' => $key,
-    //                         'value' => !empty($value) ? $value : null,
-    //                         'created_at' => now(),
-    //                         'updated_at' => now()
-    //                     ];
-    //                 }
-    //             }
-    //         }
-
-    //         // Insert in Batches
-    //         foreach (array_chunk($productsBatch, $batchSize) as $chunk) {
-    //             PurchaseOrderProductsModel::insert($chunk);
-    //         }
-    //         foreach (array_chunk($addonsBatch, $batchSize) as $chunk) {
-    //             PurchaseOrderAddonsModel::insert($chunk);
-    //         }
-    //         foreach (array_chunk($termsBatch, $batchSize) as $chunk) {
-    //             PurchaseOrderTermsModel::insert($chunk);
-    //         }
-
-    //         DB::commit();
-    //         return response()->json(['success' => true, 'message' => "Purchase orders import completed successfully."], 200);
-
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-    //         return response()->json(['error' => 'Something went wrong: ' . $e->getMessage()], 500);
-    //     }
-    // }
-
     public function importPurchaseOrders()
     {
         set_time_limit(300);
