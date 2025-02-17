@@ -187,7 +187,138 @@ class SalesOrderController extends Controller
         return ucfirst($formatter->format($num)) . ' Only';
     }
 
-    public function view_sales_order(Request $request)
+    // public function view_sales_order(Request $request)
+    // {
+    //     // Get filter inputs
+    //     $clientId = $request->input('client_id');
+    //     $clientContactId = $request->input('client_contact_id');
+    //     $name = $request->input('name');
+    //     $salesOrderNo = $request->input('sales_order_no');
+    //     $salesOrderDate = $request->input('sales_order_date');
+    //     $user = $request->input('user'); // New filter for user
+    //     $dateFrom = $request->input('date_from');
+    //     $dateTo = $request->input('date_to');
+    //     $status = $request->input('status');
+    //     $productIds = $request->input('product_ids'); 
+    //     $limit = $request->input('limit', 10); // Default limit to 10
+    //     $offset = $request->input('offset', 0); // Default offset to 0
+
+    //     // Get total count of records in `t_sales_order`
+    //     $total_sales_order = SalesOrderModel::count(); 
+
+    //     // Build the query
+    //     $query = SalesOrderModel::with([
+    //         'products' => function ($query) {
+    //             $query->select(
+    //                 'sales_order_id', 'product_id', 'product_name', 'description',
+    //                 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'sent', 'short_closed', 
+    //             )->with(['channel' => function ($channelQuery) {
+    //                 $channelQuery->select('id', 'name'); // Fetch channel name
+    //             }]);
+    //         },
+    //         'addons' => function ($query) {
+    //             $query->select('sales_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
+    //         },
+    //         'get_user' => function ($query) { // Fetch only user name
+    //             $query->select('id', 'name');
+    //         },
+    //     ])
+    //     ->select('id', 'client_id', 'name', 'sales_order_no', DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 'ref_no', 'template', 'contact_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off')
+    //     ->where('company_id', Auth::user()->company_id);
+
+    //     // Apply filters
+    //     if ($clientId) {
+    //         $query->where('client_id', $clientId);
+    //     }
+    //     if ($clientContactId) {
+    //         $query->where('client_contact_id', $clientContactId);
+    //     }
+    //     if ($name) {
+    //         $query->where('name', 'LIKE', '%' . $name . '%');
+    //     }
+    //     if ($salesOrderNo) {
+    //         $query->where('sales_order_no', 'LIKE', '%' . $salesOrderNo . '%');
+    //     }
+    //     if ($salesOrderDate) {
+    //         $query->whereDate('sales_order_date', $salesOrderDate);
+    //     }
+    //     // ✅ **Filter by comma-separated statuses**
+    //     if (!empty($status)) {
+    //         $statusArray = explode(',', $status); // Convert CSV to array
+    //         $query->whereIn('status', $statusArray);
+    //     }
+
+    //     // ✅ **Filter by comma-separated product IDs**
+    //     if (!empty($productIds)) {
+    //         $productIdArray = explode(',', $productIds); // Convert CSV to array
+    //         $query->whereHas('products', function ($query) use ($productIdArray) {
+    //             $query->whereIn('product_id', $productIdArray);
+    //         });
+    //     }      
+    
+    //     // Apply Date Range Filter
+    //     if ($dateFrom && $dateTo) {
+    //         $query->whereBetween('sales_order_date', [$dateFrom, $dateTo]);
+    //     } elseif ($dateFrom) {
+    //         $query->whereDate('sales_order_date', '>=', $dateFrom);
+    //     } elseif ($dateTo) {
+    //         $query->whereDate('sales_order_date', '<=', $dateTo);
+    //     }
+    
+    //     $sales_order_count = $query->count();
+    //     // Apply limit and offset
+    //     $query->offset($offset)->limit($limit);
+
+    //     // Fetch data
+    //     $get_sales_orders = $query->get();
+
+    //     // Transform Data
+    //     $get_sales_orders->transform(function ($order) {
+
+    //         // Convert total to words
+    //         $order->amount_in_words = $this->convertNumberToWords($order->total);
+
+    //         // ✅ Format total with comma-separated values
+    //         $order->total = is_numeric($order->total) ? number_format((float) $order->total, 2) : $order->total;
+
+    //         // Capitalize the first letter of status
+    //         $order->status = ucfirst($order->status);
+
+    //         // Replace user ID with corresponding contact_person object
+    //         $order->contact_person = isset($order->get_user) ? [
+    //             'id' => $order->get_user->id,
+    //             'name' => $order->get_user->name
+    //         ] : ['id' => null, 'name' => 'Unknown'];
+
+    //         // Replace user ID with corresponding user object
+    //         $order->user = isset($order->get_user) ? [
+    //             'id' => $order->get_user->id,
+    //             'name' => $order->get_user->name
+    //         ] : ['id' => null, 'name' => 'Unknown'];
+
+    //         unset($order->get_user); // Remove raw user data
+
+    //         return $order;
+    //     });
+
+    //     // Return response
+    //     return $get_sales_orders->isNotEmpty()
+    //         ? response()->json([
+    //             'code' => 200,
+    //             'success' => true,
+    //             'message' => 'Sales Orders fetched successfully!',
+    //             'data' => $get_sales_orders,
+    //             'count' => $get_sales_orders->count(),
+    //             'total_records' => $sales_order_count,
+    //         ], 200)
+    //         : response()->json([
+    //             'code' => 404,
+    //             'success' => false,
+    //             'message' => 'No Sales Orders found!',
+    //         ], 404);
+    // }
+
+    public function view_sales_order(Request $request, $id = null)
     {
         // Get filter inputs
         $clientId = $request->input('client_id');
@@ -195,38 +326,66 @@ class SalesOrderController extends Controller
         $name = $request->input('name');
         $salesOrderNo = $request->input('sales_order_no');
         $salesOrderDate = $request->input('sales_order_date');
-        $user = $request->input('user'); // New filter for user
+        $user = $request->input('user'); 
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
         $status = $request->input('status');
         $productIds = $request->input('product_ids'); 
-        $limit = $request->input('limit', 10); // Default limit to 10
-        $offset = $request->input('offset', 0); // Default offset to 0
+        $limit = $request->input('limit', 10);
+        $offset = $request->input('offset', 0);
 
-        // Get total count of records in `t_sales_order`
-        $total_sales_order = SalesOrderModel::count(); 
-
-        // Build the query
+        // Query Sales Orders
         $query = SalesOrderModel::with([
             'products' => function ($query) {
                 $query->select(
                     'sales_order_id', 'product_id', 'product_name', 'description',
-                    'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'sent', 'short_closed', 
+                    'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 
+                    DB::raw('(tax / 2) as cgst_rate'), 
+                    DB::raw('(tax / 2) as sgst_rate'), 
+                    DB::raw('(tax) as igst_rate'), 
+                    'amount', 'channel', 'sent', 'short_closed'
                 )->with(['channel' => function ($channelQuery) {
-                    $channelQuery->select('id', 'name'); // Fetch channel name
+                    $channelQuery->select('id', 'name');
                 }]);
             },
             'addons' => function ($query) {
                 $query->select('sales_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
             },
-            'get_user' => function ($query) { // Fetch only user name
-                $query->select('id', 'name');
-            },
+            'get_user:id,name'
         ])
-        ->select('id', 'client_id', 'name', 'sales_order_no', DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 'ref_no', 'template', 'contact_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off')
+        ->select('id', 'client_id', 'name', 'sales_order_no', 
+            DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 
+            'ref_no', 'template', 'contact_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
+        )
         ->where('company_id', Auth::user()->company_id);
 
-        // Apply filters
+        // 🔹 **Fetch Single Sales Order by ID**
+        if ($id) {
+            $salesOrder = $query->where('id', $id)->first();
+            if (!$salesOrder) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'Sales Order not found!',
+                ], 404);
+            }
+
+            // Transform Single Sales Order
+            $salesOrder->amount_in_words = $this->convertNumberToWords($salesOrder->total);
+            $salesOrder->total = is_numeric($salesOrder->total) ? number_format((float) $salesOrder->total, 2) : $salesOrder->total;
+            $salesOrder->contact_person = $salesOrder->get_user ? ['id' => $salesOrder->get_user->id, 'name' => $salesOrder->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            $salesOrder->user = $salesOrder->get_user ? ['id' => $salesOrder->get_user->id, 'name' => $salesOrder->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            unset($salesOrder->get_user);
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Sales Order fetched successfully!',
+                'data' => $salesOrder,
+            ], 200);
+        }
+
+        // 🔹 **Apply Filters for Listing**
         if ($clientId) {
             $query->where('client_id', $clientId);
         }
@@ -242,21 +401,16 @@ class SalesOrderController extends Controller
         if ($salesOrderDate) {
             $query->whereDate('sales_order_date', $salesOrderDate);
         }
-        // ✅ **Filter by comma-separated statuses**
         if (!empty($status)) {
-            $statusArray = explode(',', $status); // Convert CSV to array
+            $statusArray = explode(',', $status);
             $query->whereIn('status', $statusArray);
         }
-
-        // ✅ **Filter by comma-separated product IDs**
         if (!empty($productIds)) {
-            $productIdArray = explode(',', $productIds); // Convert CSV to array
+            $productIdArray = explode(',', $productIds);
             $query->whereHas('products', function ($query) use ($productIdArray) {
                 $query->whereIn('product_id', $productIdArray);
             });
         }      
-    
-        // Apply Date Range Filter
         if ($dateFrom && $dateTo) {
             $query->whereBetween('sales_order_date', [$dateFrom, $dateTo]);
         } elseif ($dateFrom) {
@@ -264,59 +418,44 @@ class SalesOrderController extends Controller
         } elseif ($dateTo) {
             $query->whereDate('sales_order_date', '<=', $dateTo);
         }
-    
-        $sales_order_count = $query->count();
-        // Apply limit and offset
+
+        // Get total record count before applying limit
+        $totalRecords = $query->count();
         $query->offset($offset)->limit($limit);
 
-        // Fetch data
+        // Fetch paginated results
         $get_sales_orders = $query->get();
 
-        // Transform Data
-        $get_sales_orders->transform(function ($order) {
-
-            // Convert total to words
-            $order->amount_in_words = $this->convertNumberToWords($order->total);
-
-            // ✅ Format total with comma-separated values
-            $order->total = is_numeric($order->total) ? number_format((float) $order->total, 2) : $order->total;
-
-            // Capitalize the first letter of status
-            $order->status = ucfirst($order->status);
-
-            // Replace user ID with corresponding contact_person object
-            $order->contact_person = isset($order->get_user) ? [
-                'id' => $order->get_user->id,
-                'name' => $order->get_user->name
-            ] : ['id' => null, 'name' => 'Unknown'];
-
-            // Replace user ID with corresponding user object
-            $order->user = isset($order->get_user) ? [
-                'id' => $order->get_user->id,
-                'name' => $order->get_user->name
-            ] : ['id' => null, 'name' => 'Unknown'];
-
-            unset($order->get_user); // Remove raw user data
-
-            return $order;
-        });
-
-        // Return response
-        return $get_sales_orders->isNotEmpty()
-            ? response()->json([
-                'code' => 200,
-                'success' => true,
-                'message' => 'Sales Orders fetched successfully!',
-                'data' => $get_sales_orders,
-                'count' => $get_sales_orders->count(),
-                'total_records' => $sales_order_count,
-            ], 200)
-            : response()->json([
+        if ($get_sales_orders->isEmpty()) {
+            return response()->json([
                 'code' => 404,
                 'success' => false,
                 'message' => 'No Sales Orders found!',
             ], 404);
+        }
+
+        // Transform Data
+        $get_sales_orders->transform(function ($order) {
+            $order->amount_in_words = $this->convertNumberToWords($order->total);
+            $order->total = is_numeric($order->total) ? number_format((float) $order->total, 2) : $order->total;
+            $order->contact_person = $order->get_user ? ['id' => $order->get_user->id, 'name' => $order->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            $order->user = $order->get_user ? ['id' => $order->get_user->id, 'name' => $order->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            unset($order->get_user);
+
+            return $order;
+        });
+
+        // Return response for list
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Sales Orders fetched successfully!',
+            'data' => $get_sales_orders,
+            'count' => $get_sales_orders->count(),
+            'total_records' => $totalRecords,
+        ], 200);
     }
+
 
     // Update Sales Order
     public function edit_sales_order(Request $request, $id)
