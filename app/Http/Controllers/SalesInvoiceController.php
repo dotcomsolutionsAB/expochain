@@ -209,7 +209,140 @@ class SalesInvoiceController extends Controller
         $formatter = new NumberFormatter("en", NumberFormatter::SPELLOUT);
         return ucfirst($formatter->format($num)) . ' Only';
     }
-    public function view_sales_invoice(Request $request)
+    // public function view_sales_invoice(Request $request)
+    // {
+    //     // Get filter inputs
+    //     $clientId = $request->input('client_id');
+    //     $clientContactId = $request->input('client_contact_id');
+    //     $name = $request->input('name');
+    //     $salesInvoiceNo = $request->input('sales_invoice_no');
+    //     $salesInvoiceDate = $request->input('sales_invoice_date');
+    //     $salesOrderNo = $request->input('sales_order_no');
+    //     $product = $request->input('product');
+    //     $dateFrom = $request->input('date_from');
+    //     $dateTo = $request->input('date_to');
+    //     $user = $request->input('user');
+    //     $productIds = $request->input('product_ids'); 
+    //     $limit = $request->input('limit', 10); // Default limit to 10
+    //     $offset = $request->input('offset', 0); // Default offset to 0
+
+    //     // Get total count of records in `t_sales_invoice`
+    //     $total_sales_invoice = SalesInvoiceModel::count(); 
+
+    //      // Build the query
+    //     $query = SalesInvoiceModel::with([
+    //         'products' => function ($query) {
+    //             $query->select('sales_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'godown', 'so_id', 'returned', 'profit', 'purchase_invoice_id', 'purchase_rate');
+    //         },
+    //         'addons' => function ($query) {
+    //             $query->select('sales_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
+    //         },
+    //         'get_user' => function ($query) { // Fetch user name and ID
+    //             $query->select('id', 'name');
+    //         }
+    //     ])
+    //     ->select('id', 'client_id', 'name', 'sales_invoice_no', DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date'), 'user', 'sales_order_id', DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 'template', 'contact_person', 'cash', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off')
+    //     ->where('company_id', Auth::user()->company_id);
+
+    //     // Apply filters
+    //     if ($clientId) {
+    //         $query->where('client_id', $clientId);
+    //     }
+    //     if ($clientContactId) {
+    //         $query->where('client_contact_id', $clientContactId);
+    //     }
+    //     if ($name) {
+    //         $query->where('name', 'LIKE', '%' . $name . '%');
+    //     }
+    //     if ($salesInvoiceNo) {
+    //         $query->where('sales_invoice_no', 'LIKE', '%' . $salesInvoiceNo . '%');
+    //     }
+    //     if ($salesInvoiceDate) {
+    //         $query->whereDate('sales_invoice_date', $salesInvoiceDate);
+    //     }
+    //     if ($salesOrderNo) {
+    //         $query->where('sales_order_no', 'LIKE', '%' . $salesOrderNo . '%');
+    //     }
+
+    //     // ✅ **Filter by comma-separated product IDs**
+    //     if (!empty($productIds)) {
+    //         $productIdArray = explode(',', $productIds); // Convert CSV to array
+    //         $query->whereHas('products', function ($query) use ($productIdArray) {
+    //             $query->whereIn('product_id', $productIdArray);
+    //         });
+    //     }      
+
+    //     if ($dateFrom && $dateTo) {
+    //         $query->whereBetween('sales_invoice_date', [$dateFrom, $dateTo]);
+    //     } elseif ($dateFrom) {
+    //         $query->whereDate('sales_invoice_date', '>=', $dateFrom);
+    //     } elseif ($dateTo) {
+    //         $query->whereDate('sales_invoice_date', '<=', $dateTo);
+    //     }
+
+    //     // 🔹 **Filter by Product Name or Product ID**
+    //     if ($product) {
+    //         $query->whereHas('products', function ($q) use ($product) {
+    //             $q->where('product_name', 'LIKE', '%' . $product . '%')
+    //             ->orWhere('product_id', $product);
+    //         });
+    //     }
+
+    //     if ($user) {
+    //         $query->where('user', $user);
+    //     }
+
+    //     $sales_invoice_count = $query->count();
+    //     // Apply limit and offset
+    //     $query->offset($offset)->limit($limit);
+
+    //     // Fetch data
+    //     $get_sales_invoices = $query->get();
+
+    //     // Transform Data
+    //     $get_sales_invoices->transform(function ($invoice) {
+
+    //         // Convert total to words
+    //         $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
+
+    //         // ✅ Format total with comma-separated values
+    //         $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
+
+    //         // Replace user ID with corresponding contact_person object
+    //         $invoice->contact_person = isset($invoice->get_user) ? [
+    //             'id' => $invoice->get_user->id,
+    //             'name' => $invoice->get_user->name
+    //         ] : ['id' => null, 'name' => 'Unknown'];
+
+    //         // Convert user ID into an object with `id` and `name`
+    //         $invoice->user = isset($invoice->get_user) ? [
+    //             'id' => $invoice->get_user->id,
+    //             'name' => $invoice->get_user->name
+    //         ] : ['id' => null, 'name' => 'Unknown'];
+
+    //         unset($invoice->get_user); // Remove original relationship data
+
+    //         return $invoice;
+    //     });
+
+    //     // Return response
+    //     return $get_sales_invoices->isNotEmpty()
+    //         ? response()->json([
+    //             'code' => 200,
+    //             'success' => true,
+    //             'message' => 'Sales Invoices fetched successfully!',
+    //             'data' => $get_sales_invoices,
+    //             'count' => $get_sales_invoices->count(),
+    //             'total_records' => $sales_invoice_count,
+    //         ], 200)
+    //         : response()->json([
+    //             'code' => 404,
+    //             'success' => false,
+    //             'message' => 'No Sales Invoices found!',
+    //         ], 404);
+    // }
+
+    public function view_sales_invoice(Request $request, $id = null)
     {
         // Get filter inputs
         $clientId = $request->input('client_id');
@@ -222,29 +355,60 @@ class SalesInvoiceController extends Controller
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
         $user = $request->input('user');
-        $productIds = $request->input('product_ids'); 
-        $limit = $request->input('limit', 10); // Default limit to 10
-        $offset = $request->input('offset', 0); // Default offset to 0
+        $productIds = $request->input('product_ids');
+        $limit = $request->input('limit', 10);
+        $offset = $request->input('offset', 0);
 
-        // Get total count of records in `t_sales_invoice`
-        $total_sales_invoice = SalesInvoiceModel::count(); 
-
-         // Build the query
+        // Query Sales Invoices
         $query = SalesInvoiceModel::with([
             'products' => function ($query) {
-                $query->select('sales_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'godown', 'so_id', 'returned', 'profit', 'purchase_invoice_id', 'purchase_rate');
+                $query->select('sales_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 
+                    DB::raw('(tax / 2) as cgst_rate'), 
+                    DB::raw('(tax / 2) as sgst_rate'), 
+                    DB::raw('(tax) as igst_rate'), 
+                    'amount', 'channel', 'godown', 'so_id', 'returned', 'profit', 'purchase_invoice_id', 'purchase_rate'
+                );
             },
             'addons' => function ($query) {
                 $query->select('sales_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
             },
-            'get_user' => function ($query) { // Fetch user name and ID
-                $query->select('id', 'name');
-            }
+            'get_user:id,name'
         ])
-        ->select('id', 'client_id', 'name', 'sales_invoice_no', DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date'), 'user', 'sales_order_id', DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 'template', 'contact_person', 'cash', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off')
+        ->select('id', 'client_id', 'name', 'sales_invoice_no', 
+            DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date'), 
+            'user', 'sales_order_id', 
+            DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 
+            'template', 'contact_person', 'cash', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
+        )
         ->where('company_id', Auth::user()->company_id);
 
-        // Apply filters
+        // 🔹 **Fetch Single Sales Invoice by ID**
+        if ($id) {
+            $salesInvoice = $query->where('id', $id)->first();
+            if (!$salesInvoice) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'Sales Invoice not found!',
+                ], 404);
+            }
+
+            // Transform Single Sales Invoice
+            $salesInvoice->amount_in_words = $this->convertNumberToWords($salesInvoice->total);
+            $salesInvoice->total = is_numeric($salesInvoice->total) ? number_format((float) $salesInvoice->total, 2) : $salesInvoice->total;
+            $salesInvoice->contact_person = $salesInvoice->get_user ? ['id' => $salesInvoice->get_user->id, 'name' => $salesInvoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            $salesInvoice->user = $salesInvoice->get_user ? ['id' => $salesInvoice->get_user->id, 'name' => $salesInvoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            unset($salesInvoice->get_user);
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Sales Invoice fetched successfully!',
+                'data' => $salesInvoice,
+            ], 200);
+        }
+
+        // 🔹 **Apply Filters for Listing**
         if ($clientId) {
             $query->where('client_id', $clientId);
         }
@@ -263,15 +427,12 @@ class SalesInvoiceController extends Controller
         if ($salesOrderNo) {
             $query->where('sales_order_no', 'LIKE', '%' . $salesOrderNo . '%');
         }
-
-        // ✅ **Filter by comma-separated product IDs**
         if (!empty($productIds)) {
-            $productIdArray = explode(',', $productIds); // Convert CSV to array
+            $productIdArray = explode(',', $productIds);
             $query->whereHas('products', function ($query) use ($productIdArray) {
                 $query->whereIn('product_id', $productIdArray);
             });
-        }      
-
+        }
         if ($dateFrom && $dateTo) {
             $query->whereBetween('sales_invoice_date', [$dateFrom, $dateTo]);
         } elseif ($dateFrom) {
@@ -279,68 +440,53 @@ class SalesInvoiceController extends Controller
         } elseif ($dateTo) {
             $query->whereDate('sales_invoice_date', '<=', $dateTo);
         }
-
-        // 🔹 **Filter by Product Name or Product ID**
         if ($product) {
             $query->whereHas('products', function ($q) use ($product) {
                 $q->where('product_name', 'LIKE', '%' . $product . '%')
                 ->orWhere('product_id', $product);
             });
         }
-
         if ($user) {
             $query->where('user', $user);
         }
 
-        $sales_invoice_count = $query->count();
-        // Apply limit and offset
+        // Get total record count before applying limit
+        $totalRecords = $query->count();
         $query->offset($offset)->limit($limit);
 
-        // Fetch data
+        // Fetch paginated results
         $get_sales_invoices = $query->get();
 
-        // Transform Data
-        $get_sales_invoices->transform(function ($invoice) {
-
-            // Convert total to words
-            $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
-
-            // ✅ Format total with comma-separated values
-            $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
-
-            // Replace user ID with corresponding contact_person object
-            $invoice->contact_person = isset($invoice->get_user) ? [
-                'id' => $invoice->get_user->id,
-                'name' => $invoice->get_user->name
-            ] : ['id' => null, 'name' => 'Unknown'];
-
-            // Convert user ID into an object with `id` and `name`
-            $invoice->user = isset($invoice->get_user) ? [
-                'id' => $invoice->get_user->id,
-                'name' => $invoice->get_user->name
-            ] : ['id' => null, 'name' => 'Unknown'];
-
-            unset($invoice->get_user); // Remove original relationship data
-
-            return $invoice;
-        });
-
-        // Return response
-        return $get_sales_invoices->isNotEmpty()
-            ? response()->json([
-                'code' => 200,
-                'success' => true,
-                'message' => 'Sales Invoices fetched successfully!',
-                'data' => $get_sales_invoices,
-                'count' => $get_sales_invoices->count(),
-                'total_records' => $sales_invoice_count,
-            ], 200)
-            : response()->json([
+        if ($get_sales_invoices->isEmpty()) {
+            return response()->json([
                 'code' => 404,
                 'success' => false,
                 'message' => 'No Sales Invoices found!',
             ], 404);
+        }
+
+        // Transform Data
+        $get_sales_invoices->transform(function ($invoice) {
+            $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
+            $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
+            $invoice->contact_person = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            $invoice->user = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            unset($invoice->get_user);
+
+            return $invoice;
+        });
+
+        // Return response for list
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Sales Invoices fetched successfully!',
+            'data' => $get_sales_invoices,
+            'count' => $get_sales_invoices->count(),
+            'total_records' => $totalRecords,
+        ], 200);
     }
+
 
     // Update Sales Invoice
     public function edit_sales_invoice(Request $request, $id)
