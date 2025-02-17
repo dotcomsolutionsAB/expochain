@@ -1189,7 +1189,7 @@ class PurchaseOrderController extends Controller
         foreach ($data as $record) {
 
             $taxData = json_decode($record['tax'], true);
-            
+
             $supplier = SuppliersModel::where('name', $record['supplier'])->first();
             $supplierId = $supplier->id ?? 0;
 
@@ -1265,19 +1265,31 @@ class PurchaseOrderController extends Controller
                     'purchase_order_id' => $purchaseOrderId,
                     'company_id' => Auth::user()->company_id,
                     'product_id' => $index + 1,
-                    'product_name' => $productName,
-                    'description' => $itemsData['desc'][$index] ?? 'No Description',
-                    'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
-                    'unit' => $itemsData['unit'][$index] ?? '',
-                    'price' => (float) $itemsData['price'][$index] ?? 0.0,
-                    'discount' => isset($itemsData['discount'][$index]) ? (float) $itemsData['discount'][$index] : 0.0,
-                    'discount_type' => "percentage",
-                    'hsn' => $itemsData['hsn'][$index] ?? '',
-                    'tax' => (float) $itemsData['tax'][$index] ?? 0,
-                    'cgst' => (float) $itemsData['cgst'][$index] ?? 0,
-                    'sgst' => (float) $itemsData['sgst'][$index] ?? 0,
-                    'igst' => (float) $itemsData['igst'][$index] ?? 0,
-                    'amount' => (float) $itemsData['amount'][$index] ?? 0,
+                     'product_name' => $productName,
+                        'description' => $itemsData['desc'][$index] ?? 'No Description',
+                        'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
+                        'unit' => $itemsData['unit'][$index] ?? '',
+                        'price' => (float) $itemsData['price'][$index] ?? 0.0,
+                        'discount' => isset($itemsData['discount'][$index]) && $itemsData['discount'][$index] !== '' ? (float) $itemsData['discount'][$index] : 0.0,
+                        'discount_type' => "percentage",
+                        'hsn' => $itemsData['hsn'][$index] ?? '',
+                        'tax' => (float) $itemsData['tax'][$index] ?? 0,
+                        'cgst' => !empty($itemsData['cgst'][$index]) ? $itemsData['cgst'][$index] : 0,
+                        'sgst' => !empty($itemsData['sgst'][$index]) ? $itemsData['sgst'][$index] : 0,
+                        'igst' => isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
+                        'amount' => isset($itemsData['amount'][$index]) ? (float) $itemsData['amount'][$index] : 0,
+                        'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index]) 
+                        ? (
+                            is_numeric($itemsData['channel'][$index]) 
+                                ? (float)$itemsData['channel'][$index] 
+                                : (
+                                    strtolower($itemsData['channel'][$index]) === 'standard' ? 1 :
+                                    (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 2 :
+                                    (strtolower($itemsData['channel'][$index]) === 'cbs' ? 3 : null))
+                                )
+                        ) 
+                        : null,
+                        'received' => isset($itemsData['received'][$index]) ? (float) $itemsData['received'][$index] : 0,
                     'created_at' => now(),
                     'updated_at' => now()
                 ];
