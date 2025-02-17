@@ -1157,7 +1157,7 @@ class PurchaseOrderController extends Controller
         PurchaseOrderProductsModel::truncate();
         PurchaseOrderAddonsModel::truncate();
         PurchaseOrderTermsModel::truncate();
-        DB::statement("ALTER TABLE t_purchase_orders AUTO_INCREMENT = 1;");
+        DB::statement("ALTER TABLE t_purchase_order AUTO_INCREMENT = 1;");
         DB::statement("ALTER TABLE t_purchase_order_products AUTO_INCREMENT = 1;");
         DB::statement("ALTER TABLE t_purchase_order_addons AUTO_INCREMENT = 1;");
         DB::statement("ALTER TABLE t_purchase_order_terms AUTO_INCREMENT = 1;");
