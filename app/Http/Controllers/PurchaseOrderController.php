@@ -1190,6 +1190,11 @@ class PurchaseOrderController extends Controller
             $supplier = SuppliersModel::where('name', $record['supplier'])->first();
             $supplierId = $supplier->id ?? 0;
 
+            // Format Purchase Order Date
+            $formattedDate = (!empty($record['po_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $record['po_date']) && $record['po_date'] !== '0000-00-00')
+                ? date('Y-m-d', strtotime($record['po_date']))
+                : null;
+                
             $statusMap = [
                 0 => 'pending',
                 1 => 'partial',
@@ -1203,17 +1208,17 @@ class PurchaseOrderController extends Controller
                 'supplier_id' => $supplierId,
                 'name' => $supplier->name ?? "Unknown Supplier",
                 'purchase_order_no' => $record['po_no'] ?? null,
-                'purchase_order_date' => !empty($record['po_date']) ? date('Y-m-d', strtotime($record['po_date'])) : null,
+                'purchase_order_date' => $formattedDate,
                 'oa_no' => $record['oa'],
                 'oa_date' => $record['oa_date'],
                 'template' => json_decode($record['pdf_template'], true)['id'] ?? null,
                 'status' => $statusMap[$record['status']] ?? 'pending',
                 'user' => Auth::user()->id,
-                'cgst' => $record['cgst'] ?? 0,
-                'sgst' => $record['sgst'] ?? 0,
-                'igst' => $record['igst'] ?? 0,
-                'total' => $record['total'] ?? 0,
-                'currency' => $record['currency'] ?? 'INR',
+                'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
+                'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
+                'igst' => !empty($taxData['igst']) ? $taxData['igst'] : 0,
+                'total' => !empty($record['total']) ?? null,
+                'currency' => !empty($record['currency']) ?? null,
                 'gross' => 0,
                 'round_off' => 0,
                 'created_at' => now(),
