@@ -81,6 +81,7 @@ class MastersController extends Controller
         // Query Products
         $query = ProductsModel::with(['group', 'category', 'subCategory'])
             ->select(
+                'id',
                 'serial_number',
                 'company_id',
                 'name',
