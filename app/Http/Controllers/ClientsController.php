@@ -36,12 +36,12 @@ class ClientsController extends Controller
             'division' => 'nullable|string',
             'plant' => 'nullable|string',
             'gstin' => 'nullable|string|unique:t_clients,gstin',
-            'contacts' => 'required|array|min:1', // ✅ Contacts must be an array with at least 1 contact
+            'contacts' => 'nullable|array|min:1', // ✅ Contacts must be an array with at least 1 contact
             'contacts.*.name' => 'required|string',
             'contacts.*.designation' => 'nullable|string',
             'contacts.*.mobile' => 'required|string|min:10|max:15|unique:t_client_contacts,mobile',
             'contacts.*.email' => 'nullable|email',
-            'addresses' => 'required|array|min:1', // ✅ Addresses must be an array with at least 1 address
+            'addresses' => 'nullable|array|min:1', // ✅ Addresses must be an array with at least 1 address
             'addresses.*.type' => 'required|string|in:Billing,Shipping', // ✅ Must be "Billing" or "Shipping"
             'addresses.*.country' => 'required|string',
             'addresses.*.address_line_1' => 'required|string',
