@@ -16,12 +16,6 @@ return new class extends Migration
             $table->unsignedBigInteger('supplier_id');
             $table->integer('company_id');
             $table->string('name');
-            // $table->string('address_line_1');
-            // $table->string('address_line_2');
-            // $table->string('city');
-            // $table->string('pincode');
-            // $table->string('state');
-            // $table->string('country');
             $table->string('gstin')->nullable();
             $table->string('mobile')->nullable();
             $table->string('email')->nullable();

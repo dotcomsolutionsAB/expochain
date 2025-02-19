@@ -21,8 +21,26 @@ class SuppliersController extends Controller
     {
         $request->validate([
             'name' => 'required|string|unique:t_suppliers,name',
-            'gstin' => 'required|string|unique:t_suppliers,gstin',
-            'email' => 'email',
+            'gstin' => 'nullable|string|unique:t_suppliers,gstin',
+            'mobile' => 'nullable|string|min:10|max:15',
+            'email' => 'nullable|email',
+
+            // Contacts Validation
+            'contacts' => 'nullable|array|min:1', // Must be an array if provided
+            'contacts.*.name' => 'required_with:contacts|string',
+            'contacts.*.designation' => 'nullable|string',
+            'contacts.*.mobile' => 'nullable|string|min:10|max:15|unique:t_supplier_contacts,mobile',
+            'contacts.*.email' => 'nullable|email',
+
+            // Addresses Validation
+            'addresses' => 'nullable|array|min:1', // Must be an array if provided
+            'addresses.*.type' => 'required_with:addresses|string|in:billing,shipping', // Must be either "billing" or "shipping"
+            'addresses.*.country' => 'nullable|string',
+            'addresses.*.address_line_1' => 'required_with:addresses|string',
+            'addresses.*.address_line_2' => 'nullable|string',
+            'addresses.*.city' => 'nullable|string',
+            'addresses.*.state' => 'nullable|string',
+            'addresses.*.pincode' => 'nullable|string|min:4|max:10',
         ]);
 
         $company_id = Auth::user()->company_id;

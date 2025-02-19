@@ -38,22 +38,20 @@ class ClientsController extends Controller
             'gstin' => 'nullable|string|unique:t_clients,gstin',
 
             'contacts' => 'nullable|array|min:1', // ✅ Contacts must be an array with at least 1 contact
-            'contacts.*.name' => 'nullable|string',
+            'contacts.*.name' => 'required_with:contacts|string',
             'contacts.*.designation' => 'nullable|string',
-            'contacts.*.mobile' => 'nullable|string|min:10|max:15|unique:t_client_contacts,mobile',
+            'contacts.*.mobile' => 'required_with:contacts|string|min:10|max:15|unique:t_client_contacts,mobile',
             'contacts.*.email' => 'nullable|email',
 
             'addresses' => 'nullable|array|min:1', // ✅ Addresses must be an array with at least 1 address
-            'addresses.*.type' => 'nullable|string|in:Billing,Shipping', // ✅ Must be "Billing" or "Shipping"
-            'addresses.*.country' => 'nullable|string',
-            'addresses.*.address_line_1' => 'nullable|string',
+            'addresses.*.type' => 'required_with:addresses|string|in:Billing,Shipping', // ✅ Must be "Billing" or "Shipping"
+            'addresses.*.country' => 'required_with:addresses|string',
+            'addresses.*.address_line_1' => 'required_with:addresses|string',
             'addresses.*.address_line_2' => 'nullable|string',
-            'addresses.*.city' => 'nullable|string',
-            'addresses.*.state' => 'nullable|string',
-            'addresses.*.pincode' => 'nullable|string|min:4|max:10',
+            'addresses.*.city' => 'required_with:addresses|string',
+            'addresses.*.state' => 'required_with:addresses|string',
+            'addresses.*.pincode' => 'required_with:addresses|string|min:4|max:10',
         ]);
-
-        dd($request->toArray());
 
         $company_id = Auth::user()->company_id;
 
