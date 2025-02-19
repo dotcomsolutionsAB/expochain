@@ -43,7 +43,7 @@ class QuotationsController extends Controller
             'total' => 'required|numeric|min:0',
             'currency' => 'required|string|max:10',
             'gross' => 'required|numeric|min:0',
-            'round_off' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric',
 
             // for products
             'products' => 'required|array|min:1',
