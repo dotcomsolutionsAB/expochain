@@ -42,7 +42,7 @@ class ClientsController extends Controller
             'contacts.*.designation' => 'nullable|string',
             'contacts.*.mobile' => 'required_with:contacts|string|min:10|max:15|unique:t_client_contacts,mobile',
             'contacts.*.email' => 'nullable|email',
-            
+
             'addresses' => 'nullable|array|min:1', // ✅ Addresses must be an array with at least 1 address
             'addresses.*.type' => 'required_with:addresses|string|in:Billing,Shipping', // ✅ Must be "Billing" or "Shipping"
             'addresses.*.country' => 'required_with:addresses|string',
@@ -52,6 +52,8 @@ class ClientsController extends Controller
             'addresses.*.state' => 'required_with:addresses|string',
             'addresses.*.pincode' => 'required_with:addresses|string|min:4|max:10',
         ]);
+
+        dd($request->toArray());
 
         $company_id = Auth::user()->company_id;
 
