@@ -202,7 +202,7 @@ class ClientsController extends Controller
                 'count' => $clients->count(), // Total clients count
                 'total_records' => $total_clients,
             ], 200)
-            : response()->json(['code' => 404, 'success' => false, 'message' => 'No clients available'], 404);
+            : response()->json(['code' => 200, 'success' => false, 'message' => 'No clients available'], 200);
 
         }
     }
