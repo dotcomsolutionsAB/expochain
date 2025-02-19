@@ -30,6 +30,7 @@ class ClientsController extends Controller
             // 'plant' => 'nullable|string',
             // 'gstin' => 'nullable|string|unique:t_clients,gstin'
             'name' => 'required|string|unique:t_clients,name',
+            'mobile' => 'nullable|mobile',
             'email' => 'nullable|email',
             'type' => 'required|string',
             'category' => 'required|string',
@@ -44,7 +45,7 @@ class ClientsController extends Controller
             'contacts.*.email' => 'nullable|email',
 
             'addresses' => 'nullable|array|min:1', // ✅ Addresses must be an array with at least 1 address
-            'addresses.*.type' => 'required_with:addresses|string|in:Billing,Shipping', // ✅ Must be "Billing" or "Shipping"
+            'addresses.*.type' => 'required_with:addresses|string|in:billing,shipping', // ✅ Must be "Billing" or "Shipping"
             'addresses.*.country' => 'required_with:addresses|string',
             'addresses.*.address_line_1' => 'required_with:addresses|string',
             'addresses.*.address_line_2' => 'nullable|string',
