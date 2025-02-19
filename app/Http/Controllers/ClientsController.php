@@ -30,7 +30,7 @@ class ClientsController extends Controller
             // 'plant' => 'nullable|string',
             // 'gstin' => 'nullable|string|unique:t_clients,gstin'
             'name' => 'required|string|unique:t_clients,name',
-            'mobile' => 'nullable|mobile',
+            'mobile' => 'nullable|string',
             'email' => 'nullable|email',
             'type' => 'required|string',
             'category' => 'required|string',
