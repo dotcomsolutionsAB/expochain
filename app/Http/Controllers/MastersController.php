@@ -20,6 +20,7 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Auth;
 use DB;
+use Illuminate\Validation\Rule;
 
 class MastersController extends Controller
 {
@@ -29,13 +30,13 @@ class MastersController extends Controller
     {
         $request->validate([
             'serial_number' => 'required|integer',
-            'name' => 'required|string|unique:products,name',
+            'name' => 'required|string|unique:t_products,name',
             'alias' => 'nullable|string',
             'description' => 'nullable|string',
             'type' => 'required|string',
-            'group' => 'required|integer',
-            'category' => 'required|integer',
-            'sub_category' => 'nullable|integer',
+            'group' => 'required|integer|exists:t_group,id',
+            'category' => 'required|integer|exists:t_category,id',
+            'sub_category' => 'nullable|integer|exists:t_sub_category,id',
             'cost_price' => 'required|numeric|min:0',
             'sale_price' => 'required|numeric|min:0',
             'unit' => 'required|string',
@@ -68,103 +69,6 @@ class MastersController extends Controller
     }
 
     // fetch
-    // public function view_products(Request $request)
-    // {
-    //     $offset = $request->input('offset', 0);
-    //     $limit = $request->input('limit', 10);
-    //     $productName = $request->input('product_name');
-    //     $group = $request->input('group_id') ? explode(',', $request->input('group_id')) : null;
-    //     $category = $request->input('category_id') ? explode(',', $request->input('category_id')) : null;
-    //     $subCategory = $request->input('sub_category_id') ? explode(',', $request->input('sub_category_id')) : null;
-
-    //     // Get total count of records in `t_products`
-    //     $total_products = ProductsModel::count(); 
-
-    //     $query = ProductsModel::with(['group', 'category', 'subCategory'])
-    //         ->select(
-    //             'serial_number',
-    //             'company_id',
-    //             'name',
-    //             'alias',
-    //             'description',
-    //             'type',
-    //             'group',
-    //             'category',
-    //             'sub_category',
-    //             'cost_price',
-    //             'sale_price',
-    //             'unit',
-    //             'hsn',
-    //             'tax'
-    //         );
-
-    //     if ($productName) {
-    //         $normalizedInput = strtolower(preg_replace('/[^a-zA-Z0-9]/', ' ', $productName));
-    //         $tokens = preg_split('/\s+/', $normalizedInput);
-
-    //         $query->where(function ($q) use ($tokens) {
-    //             foreach ($tokens as $token) {
-    //                 $q->where(function ($subQuery) use ($token) {
-    //                     $subQuery->whereRaw(
-    //                         "LOWER(REPLACE(REPLACE(REPLACE(name, ' ', ''), '-', ''), 'x', '')) LIKE ?",
-    //                         ['%' . $token . '%']
-    //                     )
-    //                     ->orWhereRaw(
-    //                         "LOWER(REPLACE(REPLACE(REPLACE(alias, ' ', ''), '-', ''), 'x', '')) LIKE ?",
-    //                         ['%' . $token . '%']
-    //                     );
-    //                 });
-    //             }
-    //         });
-    //     }
-
-    //     if ($group) {
-    //         $query->whereIn('group', $group);
-    //     }
-    //     if ($category) {
-    //         $query->whereIn('category', $category);
-    //     }
-    //     if ($subCategory) {
-    //         $query->whereIn('sub_category', $subCategory);
-    //     }
-
-    //     $product_count = $query->count();
-    //     $query->offset($offset)->limit($limit);
-
-    //     $get_products = $query->get();
-
-    //     $stockDetails = "Opening Stock as on 01-04-2024 : Office - 30 SETS | Kushtia - 10 SETS | ANK - 25 SETS";
-    //     $get_products->transform(function ($product) use ($stockDetails) {
-    //         $product->stock_details = $stockDetails;
-    //         // Extract only the names for group, category, and sub-category
-    //         $product->group_name = $product->Group->name ?? null;
-    //         $product->category_name = $product->Category->name ?? null;
-    //         $product->sub_category_name = $product->subCategory->name ?? null;
-
-    //         // Remove the loaded relationship objects
-    //         unset($product->group,$product->category,$product->subCategory);
-
-    //         return $product;
-    //     });
-
-    //     return $get_products->isNotEmpty()
-    //         ? response()->json([
-    //             'code' => 200,
-    //             'success' => true,
-    //             'message' => 'Fetch data successfully!',
-    //             'data' => $get_products,
-    //             'count' => $get_products->count(),
-    //             'total_records' => $product_count,
-    //         ], 200)
-    //         : response()->json([
-    //             'code' => 200,
-    //             'success' => true,
-    //             'data' => [],
-    //             'message' => 'Sorry, No products found!',
-    //             'count' => 0,
-    //         ], 200);
-    // }
-
     public function view_products(Request $request, $id = null)
     {
         $offset = $request->input('offset', 0);
@@ -323,11 +227,22 @@ class MastersController extends Controller
     {
         $request->validate([
             'serial_number' => 'required|integer',
-            'name' => 'required|string',
-            'alias' => 'required|string',
-            'group' => 'required|string',
-            'category' => 'required|string',
-            'sub_category' => 'required|string',
+            'name' => [
+            'required',
+            'string',
+            Rule::unique('t_products')->ignore($id, 'id') // ✅ Check uniqueness except this product
+        ],
+            'alias' => 'nullable|string',
+            'description' => 'nullable|string',
+            'type' => 'required|string',
+            'group' => 'required|integer|exists:t_group,id',
+            'category' => 'required|integer|exists:t_category,id',
+            'sub_category' => 'nullable|integer|exists:t_sub_category,id',
+            'cost_price' => 'required|numeric|min:0',
+            'sale_price' => 'required|numeric|min:0',
+            'unit' => 'required|string',
+            'hsn' => 'required|string',
+            'tax' => 'required|numeric|min:0|max:100',
         ]);
 
         $update_products = ProductsModel::where('id', $id)
