@@ -19,6 +19,7 @@ class SuppliersController extends Controller
     // suppliers table
     public function add_suppliers(Request $request)
     {
+        dd($request->toArray());
         $request->validate([
             'name' => 'required|string|unique:t_suppliers,name',
             'gstin' => 'nullable|string|unique:t_suppliers,gstin',
