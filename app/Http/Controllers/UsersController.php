@@ -79,10 +79,11 @@ class UsersController extends Controller
         {
             $query->select('id', 'company_name');
         }])
-        ->select('name','email', 'mobile', 'role', 'company_id')
+        ->select('id', 'name','email', 'mobile', 'role', 'company_id')
         ->get()
         ->map(function ($get_user_records) {
             return [
+                'id' => $get_user_records->id,
                 'name' => $get_user_records->name,
                 'email' => $get_user_records->email,
                 'mobile' => $get_user_records->mobile,
