@@ -29,7 +29,7 @@ class SuppliersController extends Controller
             'contacts' => 'nullable|array|min:1', // Must be an array if provided
             'contacts.*.name' => 'required_with:contacts|string',
             'contacts.*.designation' => 'nullable|string',
-            'contacts.*.mobile' => 'nullable|string|min:10|max:15|unique:t_supplier_contacts,mobile',
+            'contacts.*.mobile' => 'nullable|string|min:10|max:15|unique:t_suppliers_contacts,mobile',
             'contacts.*.email' => 'nullable|email',
 
             // Addresses Validation
