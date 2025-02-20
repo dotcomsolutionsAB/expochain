@@ -103,18 +103,18 @@ class QuotationsController extends Controller
             $quotation_no = $request->input('quotation_no');
         }
 
-        \DB::enableQueryLog();
+        // \DB::enableQueryLog();
         $exists = QuotationsModel::where('company_id', Auth::user()->company_id)
             ->where('quotation_no', $quotation_no)
             ->exists();
-            dd(\DB::getQueryLog());
-            dd($exists);
+            // dd(\DB::getQueryLog());
+            // dd($exists);
 
-        // if ($exists) {
-        //     return response()->json([
-        //         'error' => 'The combination of company_id and quotation_no must be unique.',
-        //     ], 422);
-        // }
+        if ($exists) {
+            return response()->json([
+                'error' => 'The combination of company_id and quotation_no must be unique.',
+            ], 422);
+        }
 
         $get_customer_data = ClientsModel::select('name', 'customer_id')
             ->where('id', $request->input('client_id'))
