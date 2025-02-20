@@ -105,7 +105,7 @@ class QuotationsController extends Controller
 
         $exists = QuotationsModel::where('company_id', Auth::user()->company_id)
             ->where('quotation_no', $quotation_no)
-            ->exists();
+            ->toSql();
 
         if ($exists) {
             return response()->json([
