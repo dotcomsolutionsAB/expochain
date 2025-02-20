@@ -103,10 +103,11 @@ class QuotationsController extends Controller
             $quotation_no = $request->input('quotation_no');
         }
 
+        \DB::enableQueryLog();
         $exists = QuotationsModel::where('company_id', Auth::user()->company_id)
             ->where('quotation_no', $quotation_no)
             ->exists();
-
+            dd(\DB::getQueryLog());
             dd($exists);
 
         // if ($exists) {
