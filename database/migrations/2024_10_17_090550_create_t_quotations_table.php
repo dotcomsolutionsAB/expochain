@@ -30,8 +30,8 @@ return new class extends Migration
             $table->float('igst');
             $table->float('total');
             $table->string('currency');
-            $table->float('gross');
-            $table->float('round_off');
+            $table->float('gross')->nullable();
+            $table->float('round_off')->nullable();
             $table->timestamps();
         });
     }
