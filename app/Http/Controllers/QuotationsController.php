@@ -109,11 +109,11 @@ class QuotationsController extends Controller
 
             dd($exists);
 
-        if ($exists) {
-            return response()->json([
-                'error' => 'The combination of company_id and quotation_no must be unique.',
-            ], 422);
-        }
+        // if ($exists) {
+        //     return response()->json([
+        //         'error' => 'The combination of company_id and quotation_no must be unique.',
+        //     ], 422);
+        // }
 
         $get_customer_data = ClientsModel::select('name', 'customer_id')
             ->where('id', $request->input('client_id'))
