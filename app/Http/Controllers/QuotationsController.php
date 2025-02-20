@@ -107,6 +107,8 @@ class QuotationsController extends Controller
             ->where('quotation_no', $quotation_no)
             ->toSql();
 
+            dd($exists);
+
         if ($exists) {
             return response()->json([
                 'error' => 'The combination of company_id and quotation_no must be unique.',
