@@ -169,10 +169,11 @@ class MastersController extends Controller
 
         if ($get_products->isEmpty()) {
             return response()->json([
-                'code' => 404,
+                'code' => 200,
                 'success' => false,
                 'message' => 'No products found!',
-            ], 404);
+                'date' => [],
+            ], 200);
         }
 
         // Add Stock Details & Transform Data
