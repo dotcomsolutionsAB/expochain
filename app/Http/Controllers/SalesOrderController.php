@@ -337,7 +337,7 @@ class SalesOrderController extends Controller
         // Query Sales Orders
         $query = SalesOrderModel::with([
             'client:id, customer_id, name,mobile,email,gstin', // Fetch client details
-            'clientAddress:id,customer_id,country,address_line_1,address_line_2,city,state,pincode', // Fetch client address
+            'clientAddress:customer_id,country,address_line_1,address_line_2,city,state,pincode', // Fetch client address
             'products' => function ($query) {
                 $query->select(
                     'sales_order_id', 'product_id', 'product_name', 'description',
