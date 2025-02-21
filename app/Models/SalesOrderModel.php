@@ -45,13 +45,25 @@ class SalesOrderModel extends Model
 
     public function client()
     {
-        return $this->belongsTo(ClientsModel::class, 'customer_id', 'id');
+        return $this->belongsTo(ClientsModel::class, 'customer_id', 'client_id');
     }
 
+    // public function clientAddress()
+    // {
+    //     return $this->hasOne(ClientAddressModel::class, 'customer_id', 'client_id');
+    // }
+
+     // Join Sales Orders with Client Addresses using `customer_id` from `clients`
     public function clientAddress()
     {
-        return $this->hasOne(ClientAddressModel::class, 'customer_id', 'customer_id');
+        return $this->hasOneThrough(
+            ClientAddressModel::class,  // Final table
+            ClientModel::class,         // Intermediate table
+            'id',                       // Foreign key on `clients` (id)
+            'customer_id',              // Foreign key on `client_addresses` (customer_id)
+            'client_id',                // Local key on `sales_orders` (client_id)
+            'customer_id'               // Local key on `clients` (customer_id)
+        );
     }
-
 
 }
