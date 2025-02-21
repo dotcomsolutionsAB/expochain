@@ -45,7 +45,7 @@ class SalesOrderModel extends Model
 
     public function client()
     {
-        return $this->belongsTo(ClientsModel::class, 'customer_id', 'client_id');
+        return $this->belongsTo(ClientsModel::class, 'client_id', 'id');
     }
 
     // public function clientAddress()
@@ -53,17 +53,17 @@ class SalesOrderModel extends Model
     //     return $this->hasOne(ClientAddressModel::class, 'customer_id', 'client_id');
     // }
 
-     // Join Sales Orders with Client Addresses using `customer_id` from `clients`
+    // Join Sales Orders with Client Addresses using `customer_id` from `clients`
     public function clientAddress()
     {
         return $this->hasOneThrough(
-            ClientAddressModel::class,  // Final table
-            ClientsModel::class,         // Intermediate table
-            'id',                       // Foreign key on `clients` (id)
-            'customer_id',              // Foreign key on `client_addresses` (customer_id)
-            'client_id',                // Local key on `sales_orders` (client_id)
-            'customer_id'               // Local key on `clients` (customer_id)
-        );
+            ClientAddressModel::class, // Final table
+            ClientsModel::class,        // Intermediate table
+            'id',                       // Foreign key on Clients that links to SalesOrder (Clients.id = SalesOrder.client_id)
+            'customer_id',              // Foreign key on ClientAddress that links to Clients (Clients.customer_id = ClientAddress.customer_id)
+            'client_id',                // Local key on SalesOrder
+            'customer_id'               // Local key on Clients
+        )->selectRaw('t_client_addresses.customer_id as address_customer_id, t_client_addresses.country, t_client_addresses.address_line_1, t_client_addresses.address_line_2, t_client_addresses.city, t_client_addresses.state, t_client_addresses.pincode');
     }
 
 }
