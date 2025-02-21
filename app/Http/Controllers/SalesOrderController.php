@@ -336,6 +336,8 @@ class SalesOrderController extends Controller
 
         // Query Sales Orders
         $query = SalesOrderModel::with([
+            'client:id,name,mobile,email,gstin', // Fetch client details
+            'clientAddress:id,client_id,country,address_line_1,address_line_2,city,state,pincode', // Fetch client address
             'products' => function ($query) {
                 $query->select(
                     'sales_order_id', 'product_id', 'product_name', 'description',
@@ -376,6 +378,24 @@ class SalesOrderController extends Controller
             $salesOrder->contact_person = $salesOrder->get_user ? ['id' => $salesOrder->get_user->id, 'name' => $salesOrder->get_user->name] : ['id' => null, 'name' => 'Unknown'];
             $salesOrder->user = $salesOrder->get_user ? ['id' => $salesOrder->get_user->id, 'name' => $salesOrder->get_user->name] : ['id' => null, 'name' => 'Unknown'];
             unset($salesOrder->get_user);
+
+            // Add client details
+            $salesOrder->client = $salesOrder->client ? [
+                'name' => $salesOrder->client->name,
+                'mobile' => $salesOrder->client->mobile,
+                'email' => $salesOrder->client->email,
+                'gstin' => $salesOrder->client->gstin
+            ] : null;
+
+             // Add client address details
+            $salesOrder->client_address = $salesOrder->clientAddress ? [
+                'country' => $salesOrder->clientAddress->country,
+                'address_line_1' => $salesOrder->clientAddress->address_line_1,
+                'address_line_2' => $salesOrder->clientAddress->address_line_2,
+                'city' => $salesOrder->clientAddress->city,
+                'state' => $salesOrder->clientAddress->state,
+                'pincode' => $salesOrder->clientAddress->pincode
+            ] : null;
 
             return response()->json([
                 'code' => 200,

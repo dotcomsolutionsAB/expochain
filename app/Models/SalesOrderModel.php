@@ -43,4 +43,15 @@ class SalesOrderModel extends Model
         return $this->belongsTo(User::class, 'user', 'id'); 
     }
 
+    public function client()
+    {
+        return $this->belongsTo(ClientModel::class, 'client_id', 'id');
+    }
+
+    public function clientAddress()
+    {
+        return $this->hasOne(ClientAddressModel::class, 'client_id', 'client_id');
+    }
+
+
 }
