@@ -45,7 +45,7 @@ class SalesOrderModel extends Model
 
     public function client()
     {
-        return $this->belongsTo(ClientModel::class, 'client_id', 'id');
+        return $this->belongsTo(ClientsModel::class, 'client_id', 'id');
     }
 
     public function clientAddress()
