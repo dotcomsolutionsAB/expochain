@@ -58,7 +58,7 @@ class SalesOrderModel extends Model
     {
         return $this->hasOneThrough(
             ClientAddressModel::class,  // Final table
-            ClientModel::class,         // Intermediate table
+            ClientsModel::class,         // Intermediate table
             'id',                       // Foreign key on `clients` (id)
             'customer_id',              // Foreign key on `client_addresses` (customer_id)
             'client_id',                // Local key on `sales_orders` (client_id)
