@@ -501,6 +501,11 @@ class SalesReturnController extends Controller
         $supplierNames = collect($data)->pluck('supplier')->unique();
         $suppliers = ClientsModel::whereIn('name', $supplierNames)->get()->keyBy('name');
 
+        // ✅ Pre-fetch all Sales Invoices to map sales_invoice_no to sales_invoice_id
+        $invoiceNumbers = collect($data)->pluck('reference_no')->unique();
+        $salesInvoices = SalesInvoiceModel::whereIn('sales_invoice_no', $invoiceNumbers)
+            ->pluck('id', 'sales_invoice_no'); // Key: sales_invoice_no, Value: id
+
         // ✅ Store Sales Return Data in a Batch Array
         $salesReturnDataBatch = [];
         $salesReturnProductsBatch = [];
@@ -522,6 +527,9 @@ class SalesReturnController extends Controller
                 continue;
             }
 
+            // ✅ Get Sales Invoice ID based on sales_invoice_no
+            $salesInvoiceId = $salesInvoices[$record['reference_no']] ?? null; // If not found, store NULL
+
             // ✅ Prepare sales return data for batch insert
             $salesReturnDataBatch[] = [
                 'company_id' => Auth::user()->company_id,
@@ -529,7 +537,7 @@ class SalesReturnController extends Controller
                 'name' => $record['supplier'],
                 'sales_return_no' => $record['pi_no'] ?? 'Unknown',
                 'sales_return_date' => $record['pi_date'] ?? now()->format('Y-m-d'),
-                'sales_invoice_id' => $record['reference_no'] ?? 'Unknown',
+                'sales_invoice_id' => $salesInvoiceId,
                 'remarks' => $record['remarks'] ?? null,
                 'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
                 'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
