@@ -15,7 +15,7 @@ class SalesReturnModel extends Model
         'name',
         'sales_return_no',
         'sales_return_date',
-        'sales_invoice_no',
+        'sales_invoice_id',
         'remarks',
         'cgst',
         'sgst',

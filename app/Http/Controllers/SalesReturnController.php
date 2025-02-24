@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\SalesReturnModel;
 use App\Models\SalesReturnProductsModel;
+use App\Models\SalesInvoiceModel;
 use App\Models\ClientsModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
@@ -23,49 +24,88 @@ class SalesReturnController extends Controller
             'name' => 'required|string',
             'sales_return_no' => 'required|string',
             'sales_return_date' => 'required|date',
-            'sales_invoice_no' => 'required|string',
+            'sales_invoice_id' => 'required|integer|exists:t_sales_invoice,id',
             'remarks' => 'nullable|string',
             'cgst' => 'required|numeric',
             'sgst' => 'required|numeric',
             'igst' => 'required|numeric',
             'total' => 'required|numeric',
-            'currency' => 'required|string',
-            'template' => 'required|integer',
-            'status' => 'required|integer',
+            'gross' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric',
+
             'products' => 'required|array', // For validating array of products
             'products.*.sales_return_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
-            'products.*.brand' => 'required|string',
             'products.*.quantity' => 'required|integer',
             'products.*.unit' => 'required|integer',
             'products.*.price' => 'required|numeric',
             'products.*.discount' => 'nullable|numeric',
+            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.hsn' => 'required|string',
             'products.*.tax' => 'required|numeric',
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
-            'products.*.godown' => 'required|integer'
+            'products.*.godown' => 'required|integer|exists:t_godown,id'
         ]);
     
+        // Handle quotation number logic
+        $counterController = new CounterController();
+        $sendRequest = Request::create('/counter', 'GET', [
+            'name' => 'sales_return',
+            // 'company_id' => Auth::user()->company_id,
+        ]);
+
+        $response = $counterController->view_counter($sendRequest);
+        $decodedResponse = json_decode($response->getContent(), true);
+
+        if ($decodedResponse['code'] === 200) {
+            $data = $decodedResponse['data'];
+            $get_customer_type = $data[0]['type'];
+        }
+
+        if ($get_customer_type == "auto") {
+            $sales_return_no = $decodedResponse['data'][0]['prefix'] .
+                str_pad($decodedResponse['data'][0]['next_number'], 3, '0', STR_PAD_LEFT) .
+                $decodedResponse['data'][0]['postfix'];
+        } else {
+            $sales_return_no = $request->input('sales_return_no');
+        }
+
+        // \DB::enableQueryLog();
+        $exists = DebitNoteModel::where('company_id', Auth::user()->company_id)
+            ->where('sales_return_no', $sales_return_no)
+            ->exists();
+            // dd(\DB::getQueryLog());
+            // dd($exists);
+
+        if ($exists) {
+            return response()->json([
+                'error' => 'The combination of company_id and sales_return_no must be unique.',
+            ], 422);
+        }
     
+        $salesInvoiceId = $request->input('sales_invoice_id');
+        $template = SalesInvoiceModel::where('id', $salesInvoiceId)->value('template') ?? null;
+
         $register_sales_return = SalesReturnModel::create([
             'client_id' => $request->input('client_id'),
             'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'sales_return_no' => $request->input('sales_return_no'),
             'sales_return_date' => $request->input('sales_return_date'),
-            'sales_invoice_no' => $request->input('sales_invoice_no'),
+            'sales_invoice_id' => $request->input('sales_invoice_id'),
             'remarks' => $request->input('remarks'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
-            'currency' => $request->input('currency'),
-            'template' => $request->input('template'),
-            'status' => $request->input('status'),
+            'currency' => "INR",
+            'template' => $template,
+            'gross' => $request->input('gross'),
+            'round_off' => $request->input('round_off'),
         ]);
         
         $products = $request->input('products');
@@ -79,11 +119,11 @@ class SalesReturnController extends Controller
                 'product_id' => $product['product_id'],
                 'product_name' => $product['product_name'],
                 'description' => $product['description'],
-                'brand' => $product['brand'],
                 'quantity' => $product['quantity'],
                 'unit' => $product['unit'],
                 'price' => $product['price'],
                 'discount' => $product['discount'],
+                'discount_type' => $product['discount_type'],
                 'hsn' => $product['hsn'],
                 'tax' => $product['tax'],
                 'cgst' => $product['cgst'],
@@ -92,6 +132,11 @@ class SalesReturnController extends Controller
                 'godown' => $product['godown'],
             ]);
         }
+
+        // increment the `next_number` by 1
+        CounterModel::where('name', 'sales_return')
+        ->where('company_id', Auth::user()->company_id)
+        ->increment('next_number');
 
         unset($register_sales_return['id'], $register_sales_return['created_at'], $register_sales_return['updated_at']);
     
@@ -111,7 +156,7 @@ class SalesReturnController extends Controller
 
         // Build the query
         $query = SalesReturnModel::with(['products' => function ($query) use ($productId, $productName) {
-            $query->select('sales_return_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
+            $query->select('sales_return_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
             
             // Apply product-related filters
             if ($productId) {
@@ -121,7 +166,7 @@ class SalesReturnController extends Controller
                 $query->where('product_name', 'LIKE', '%' . $productName . '%');
             }
         }])
-        ->select('id', 'client_id', 'name', 'sales_return_no', 'sales_return_date', 'sales_invoice_no', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
+        ->select('id', 'client_id', 'name', 'sales_return_no', 'sales_return_date', 'sales_invoice_id', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply sales_return_id filter
@@ -160,7 +205,7 @@ class SalesReturnController extends Controller
             'name' => 'required|string',
             'sales_return_no' => 'required|string',
             'sales_return_date' => 'required|date',
-            'sales_invoice_no' => 'required|string',
+            'sales_invoice_id' => 'required|integer|exists:t_sales_invoice,id',
             'remarks' => 'nullable|string',
             'cgst' => 'required|numeric',
             'sgst' => 'required|numeric',
@@ -168,23 +213,25 @@ class SalesReturnController extends Controller
             'total' => 'required|numeric',
             'currency' => 'required|string',
             'template' => 'required|integer',
-            'status' => 'required|integer',
-            'products' => 'required|array',
+            'gross' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric',
+
+            'products' => 'required|array',// Validating array of products
             'products.*.sales_return_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
-            'products.*.brand' => 'required|string',
             'products.*.quantity' => 'required|integer',
             'products.*.unit' => 'required|integer',
             'products.*.price' => 'required|numeric',
             'products.*.discount' => 'nullable|numeric',
+            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.hsn' => 'required|string',
             'products.*.tax' => 'required|numeric',
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
-            'products.*.godown' => 'required|integer',
+            'products.*.godown' => 'required|exists:t_godown,id'
         ]);
 
         $salesReturn = SalesReturnModel::where('id', $id)->first();
@@ -194,7 +241,7 @@ class SalesReturnController extends Controller
             'name' => $request->input('name'),
             'sales_return_no' => $request->input('sales_return_no'),
             'sales_return_date' => $request->input('sales_return_date'),
-            'sales_invoice_no' => $request->input('sales_invoice_no'),
+            'sales_invoice_id' => $request->input('sales_invoice_id'),
             'remarks' => $request->input('remarks'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
@@ -202,7 +249,8 @@ class SalesReturnController extends Controller
             'total' => $request->input('total'),
             'currency' => $request->input('currency'),
             'template' => $request->input('template'),
-            'status' => $request->input('status'),
+            'gross' => $request->input('gross'),
+            'round_off' => $request->input('round_off'),
         ]);
 
         $products = $request->input('products');
@@ -220,11 +268,11 @@ class SalesReturnController extends Controller
                 $existingProduct->update([
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    'brand' => $productData['brand'],
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
                     'discount' => $productData['discount'],
+                    'discount_type' => $productData['discount_type'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
                     'cgst' => $productData['cgst'],
@@ -240,11 +288,11 @@ class SalesReturnController extends Controller
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    'brand' => $productData['brand'],
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
                     'discount' => $productData['discount'],
+                    'discount_type' => $productData['discount_type'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
                     'cgst' => $productData['cgst'],
@@ -284,18 +332,154 @@ class SalesReturnController extends Controller
     }
 
     // migration
+    // public function importSalesReturns()
+    // {
+    //     // Clear the SalesReturn and related tables
+    //     SalesReturnModel::truncate();
+    //     SalesReturnProductsModel::truncate();
+
+    //     // Example URL to fetch the data from
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/sales_return.php'; // Replace with the actual URL
+
+    //     // Fetch data from the external URL
+    //     try {
+    //         $response = Http::get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => 'Failed to fetch data from the external source: ' . $e->getMessage()], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
+    //     }
+
+    //     $data = $response->json('data');
+
+    //     if (empty($data)) {
+    //         return response()->json(['message' => 'No data found'], 404);
+    //     }
+
+    //     $successfulInserts = 0;
+    //     $errors = [];
+
+    //     foreach ($data as $record) {
+    //         // Decode JSON fields for items
+    //         $itemsData = json_decode($record['items'], true);
+    //         $taxData = json_decode($record['tax'], true);
+    //         // $addonsData = json_decode($record['addons'], true);
+
+    //         if (!is_array($itemsData)) {
+    //             $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure for items.'];
+    //             continue;
+    //         }
+
+    //         // Retrieve supplier information
+    //         $supplier = ClientsModel::where('name', $record['supplier'])->first();
+    //         if (!$supplier) {
+    //             $errors[] = ['record' => $record, 'error' => 'Supplier not found: ' . $record['supplier']];
+    //             continue;
+    //         }
+
+    //         // Prepare sales return data
+    //         $salesReturnData = [
+    //             'client_id' => $supplier->id,
+    //             'name' => $record['supplier'],
+    //             'sales_return_no' => $record['pi_no'] ?? 'Unknown', // Generate a random sales return number
+    //             'sales_return_date' => $record['pi_date'] ?? now()->format('Y-m-d'),
+    //             'sales_invoice_id' => $record['reference_no'] ?? 'Unknown',
+    //             'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
+    //             'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
+    //             'igst' => !empty($taxData['igst']) ? $taxData['igst'] : 0,
+    //             'total' => $record['total'] ?? 0,
+    //             'currency' => 'INR', // Default currency
+    //             'template' => json_decode($record['pdf_template'], true)['id'] ?? 0, // Default template ID
+    //             'status' => $record['status'] ?? 0,
+    //         ];
+
+    //         // Validate and insert sales return data
+    //         $validator = Validator::make($salesReturnData, [
+    //             'client_id' => 'required|integer',
+    //             'name' => 'required|string',
+    //             'sales_return_no' => 'required|string',
+    //             'sales_return_date' => 'required|date',
+    //             'sales_invoice_id' => 'required|string',
+    //             'cgst' => 'required|numeric',
+    //             'sgst' => 'required|numeric',
+    //             'igst' => 'required|numeric',
+    //             'total' => 'required|numeric',
+    //             'currency' => 'required|string',
+    //             'template' => 'required|integer',
+    //             'status' => 'required|integer',
+    //         ]);
+
+    //         if ($validator->fails()) {
+    //             $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+    //             continue;
+    //         }
+
+    //         try {
+    //             $salesReturn = SalesReturnModel::create($salesReturnData);
+    //             $successfulInserts++;
+    //         } catch (\Exception $e) {
+    //             $errors[] = ['record' => $record, 'error' => 'Failed to insert sales return: ' . $e->getMessage()];
+    //             continue;
+    //         }
+
+    //         // Insert products data
+    //         foreach ($itemsData['product'] as $index => $productName) {
+    //             $product = ProductsModel::where('name', $productName)->first();
+
+    //             if (!$product) {
+    //                 $errors[] = ['record' => $record, 'error' => "Product not found: {$productName}"];
+    //                 continue;
+    //             }
+
+    //             try {
+    //                 SalesReturnProductsModel::create([
+    //                     'sales_return_id' => $salesReturn->id,
+    //                     'product_id' => $product->id,
+    //                     'product_name' => $productName,
+    //                     'description' => !empty($itemsData['desc'][$index]) ? $itemsData['desc'][$index] : 'No Desc',
+    //                     'brand' => 'DefaultBrand/ No brand available', // Replace with actual brand if available
+    //                     'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
+    //                     'unit' => $itemsData['unit'][$index] ?? '',
+    //                     'price' => (float) $itemsData['price'][$index] ?? 0,
+    //                     'discount' => (float) $itemsData['discount'][$index] ?? 0,
+    //                     'hsn' => $itemsData['hsn'][$index] ?? '',
+    //                     'tax' => (float) $itemsData['tax'][$index] ?? 0,
+    //                     'cgst' => (float) ($itemsData['cgst'][$index] ?? 0),
+    //                     'sgst' => (float) ($itemsData['sgst'][$index] ?? 0),
+    //                     'igst' => 0,
+    //                     'godown' => 'DefaultGodown', // Replace with actual godown if available
+    //                 ]);
+    //             } catch (\Exception $e) {
+    //                 $errors[] = ['record' => $record, 'error' => 'Failed to insert product: ' . $e->getMessage()];
+    //             }
+    //         }
+    //     }
+
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => "Data import completed with $successfulInserts successful inserts.",
+    //         'errors' => $errors,
+    //     ], 200);
+    // }
+
     public function importSalesReturns()
     {
-        // Clear the SalesReturn and related tables
+        // Increase execution time for large data sets
+        set_time_limit(300);
+
+        // Clear existing records before importing
         SalesReturnModel::truncate();
         SalesReturnProductsModel::truncate();
 
-        // Example URL to fetch the data from
-        $url = 'https://expo.egsm.in/assets/custom/migrate/sales_return.php'; // Replace with the actual URL
+        // Define the external URL
+        $url = 'https://expo.egsm.in/assets/custom/migrate/sales_return.php';
 
         // Fetch data from the external URL
         try {
-            $response = Http::get($url);
+            $response = Http::timeout(120)->get($url);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Failed to fetch data from the external source: ' . $e->getMessage()], 500);
         }
@@ -313,100 +497,102 @@ class SalesReturnController extends Controller
         $successfulInserts = 0;
         $errors = [];
 
+        // ✅ Pre-fetch all required clients (Suppliers)
+        $supplierNames = collect($data)->pluck('supplier')->unique();
+        $suppliers = ClientsModel::whereIn('name', $supplierNames)->get()->keyBy('name');
+
+        // ✅ Store Sales Return Data in a Batch Array
+        $salesReturnDataBatch = [];
+        $salesReturnProductsBatch = [];
+
         foreach ($data as $record) {
-            // Decode JSON fields for items
+            // Decode JSON fields for items and tax
             $itemsData = json_decode($record['items'], true);
             $taxData = json_decode($record['tax'], true);
-            // $addonsData = json_decode($record['addons'], true);
 
             if (!is_array($itemsData)) {
                 $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure for items.'];
                 continue;
             }
 
-            // Retrieve supplier information
-            $supplier = ClientsModel::where('name', $record['supplier'])->first();
+            // ✅ Get Supplier (Client)
+            $supplier = $suppliers[$record['supplier']] ?? null;
             if (!$supplier) {
                 $errors[] = ['record' => $record, 'error' => 'Supplier not found: ' . $record['supplier']];
                 continue;
             }
 
-            // Prepare sales return data
-            $salesReturnData = [
+            // ✅ Prepare sales return data for batch insert
+            $salesReturnDataBatch[] = [
+                'company_id' => Auth::user()->company_id,
                 'client_id' => $supplier->id,
                 'name' => $record['supplier'],
-                'sales_return_no' => $record['pi_no'] ?? 'Unknown', // Generate a random sales return number
+                'sales_return_no' => $record['pi_no'] ?? 'Unknown',
                 'sales_return_date' => $record['pi_date'] ?? now()->format('Y-m-d'),
-                'sales_invoice_no' => $record['reference_no'] ?? 'Unknown',
+                'sales_invoice_id' => $record['reference_no'] ?? 'Unknown',
+                'remarks' => $record['remarks'] ?? null,
                 'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
                 'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
                 'igst' => !empty($taxData['igst']) ? $taxData['igst'] : 0,
                 'total' => $record['total'] ?? 0,
-                'currency' => 'INR', // Default currency
-                'template' => json_decode($record['pdf_template'], true)['id'] ?? 0, // Default template ID
-                'status' => $record['status'] ?? 0,
+                'currency' => 'INR',
+                'template' => json_decode($record['pdf_template'], true)['id'] ?? 0,
+                'created_at' => now(),
+                'updated_at' => now(),
             ];
+        }
 
-            // Validate and insert sales return data
-            $validator = Validator::make($salesReturnData, [
-                'client_id' => 'required|integer',
-                'name' => 'required|string',
-                'sales_return_no' => 'required|string',
-                'sales_return_date' => 'required|date',
-                'sales_invoice_no' => 'required|string',
-                'cgst' => 'required|numeric',
-                'sgst' => 'required|numeric',
-                'igst' => 'required|numeric',
-                'total' => 'required|numeric',
-                'currency' => 'required|string',
-                'template' => 'required|integer',
-                'status' => 'required|integer',
-            ]);
+        // ✅ Batch Insert Sales Returns (Insert in Chunks)
+        $salesReturnIds = [];
+        foreach (array_chunk($salesReturnDataBatch, 100) as $batch) {
+            $insertedIds = SalesReturnModel::insert($batch);
+            $salesReturnIds = array_merge($salesReturnIds, $insertedIds);
+        }
 
-            if ($validator->fails()) {
-                $errors[] = ['record' => $record, 'errors' => $validator->errors()];
-                continue;
-            }
+        // ✅ Fetch all products in one query to prevent duplicate lookups
+        $productNames = collect($data)->pluck('items')->map(fn($items) => json_decode($items, true)['product'] ?? [])->flatten()->unique();
+        $products = ProductsModel::whereIn('name', $productNames)->get()->keyBy('name');
 
-            try {
-                $salesReturn = SalesReturnModel::create($salesReturnData);
-                $successfulInserts++;
-            } catch (\Exception $e) {
-                $errors[] = ['record' => $record, 'error' => 'Failed to insert sales return: ' . $e->getMessage()];
-                continue;
-            }
+        foreach ($data as $index => $record) {
+            $itemsData = json_decode($record['items'], true);
+            if (!isset($salesReturnIds[$index]) || !is_array($itemsData)) continue;
 
-            // Insert products data
-            foreach ($itemsData['product'] as $index => $productName) {
-                $product = ProductsModel::where('name', $productName)->first();
+            $salesReturnId = $salesReturnIds[$index];
 
+            foreach ($itemsData['product'] as $i => $productName) {
+                $product = $products[$productName] ?? null;
                 if (!$product) {
                     $errors[] = ['record' => $record, 'error' => "Product not found: {$productName}"];
                     continue;
                 }
 
-                try {
-                    SalesReturnProductsModel::create([
-                        'sales_return_id' => $salesReturn->id,
-                        'product_id' => $product->id,
-                        'product_name' => $productName,
-                        'description' => !empty($itemsData['desc'][$index]) ? $itemsData['desc'][$index] : 'No Desc',
-                        'brand' => 'DefaultBrand/ No brand available', // Replace with actual brand if available
-                        'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
-                        'unit' => $itemsData['unit'][$index] ?? '',
-                        'price' => (float) $itemsData['price'][$index] ?? 0,
-                        'discount' => (float) $itemsData['discount'][$index] ?? 0,
-                        'hsn' => $itemsData['hsn'][$index] ?? '',
-                        'tax' => (float) $itemsData['tax'][$index] ?? 0,
-                        'cgst' => (float) ($itemsData['cgst'][$index] ?? 0),
-                        'sgst' => (float) ($itemsData['sgst'][$index] ?? 0),
-                        'igst' => 0,
-                        'godown' => 'DefaultGodown', // Replace with actual godown if available
-                    ]);
-                } catch (\Exception $e) {
-                    $errors[] = ['record' => $record, 'error' => 'Failed to insert product: ' . $e->getMessage()];
-                }
+                // ✅ Prepare Sales Return Products for batch insert
+                $salesReturnProductsBatch[] = [
+                    'sales_return_id' => $salesReturnId,
+                    'company_id' => Auth::user()->company_id,
+                    'product_id' => $product->id,
+                    'product_name' => $productName,
+                    'description' => !empty($itemsData['desc'][$i]) ? $itemsData['desc'][$i] : 'No Desc',
+                    'quantity' => (int) $itemsData['quantity'][$i] ?? 0,
+                    'unit' => $itemsData['unit'][$i] ?? '',
+                    'price' => (float) $itemsData['price'][$i] ?? 0,
+                    'discount' => (float) $itemsData['discount'][$i] ?? 0,
+                    'discount_type' => "percentage",
+                    'hsn' => $itemsData['hsn'][$i] ?? '',
+                    'tax' => (float) $itemsData['tax'][$i] ?? 0,
+                    'cgst' => (float) ($itemsData['cgst'][$i] ?? 0),
+                    'sgst' => (float) ($itemsData['sgst'][$i] ?? 0),
+                    'igst' => 0,
+                    'godown' => 'DefaultGodown',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
             }
+        }
+
+        // ✅ Batch Insert Sales Return Products (Insert in Chunks)
+        foreach (array_chunk($salesReturnProductsBatch, 100) as $batch) {
+            SalesReturnProductsModel::insert($batch);
         }
 
         return response()->json([
