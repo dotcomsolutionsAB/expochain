@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\DebitNoteModel;
 use App\Models\DebitNoteProductsModel;
 use App\Models\SuppliersModel;
+use App\Models\CounterModel;
 use Auth;
 
 class DebitNoteController extends Controller
@@ -25,9 +26,9 @@ class DebitNoteController extends Controller
             'sgst' => 'required|numeric',
             'igst' => 'required|numeric',
             'total' => 'required|numeric',
+            'template' => 'required|integer|exists:t_pdf_template,id',
             'gross' => 'required|numeric|min:0',
             'round_off' => 'required|numeric',
-            'template' => 'required|integer',
             
             'products' => 'required|array', // Validating array of products
             'products.*.product_id' => 'required|integer',
@@ -42,8 +43,7 @@ class DebitNoteController extends Controller
             'products.*.tax' => 'required|numeric',
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
-            'products.*.igst' => 'required|numeric',
-            'products.*.godown' => 'required|integer'         
+            'products.*.igst' => 'required|numeric',    
         ]);
     
         // Handle quotation number logic
@@ -201,7 +201,7 @@ class DebitNoteController extends Controller
             'sgst' => 'required|numeric',
             'igst' => 'required|numeric',
             'total' => 'required|numeric',
-            'template' => 'required|integer',
+            'template' => 'required|integer|exists:t_pdf_template,id',
             'gross' => 'required|numeric|min:0',
             'round_off' => 'required|numeric',
             
@@ -219,7 +219,6 @@ class DebitNoteController extends Controller
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
-            'products.*.godown' => 'required|integer'        
         ]);
 
         // Get the debit note record by ID
