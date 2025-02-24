@@ -403,7 +403,6 @@ class CreditNoteController extends Controller
                 'total' => 'required|numeric',
                 'currency' => 'required|string',
                 'template' => 'required|integer',
-                'status' => 'required|integer',
             ]);
 
             if ($validator->fails()) {
