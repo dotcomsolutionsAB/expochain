@@ -13,87 +13,6 @@ class DebitNoteController extends Controller
 {
     //
     // create
-    // public function add_debit_note(Request $request)
-    // {
-    //     $request->validate([
-    //         'supplier_id' => 'required|integer',
-    //         'name' => 'required|string',
-    //         'debit_note_no' => 'required|string',
-    //         'debit_note_date' => 'required|date',
-    //         'remarks' => 'nullable|string',
-    //         'cgst' => 'required|numeric',
-    //         'sgst' => 'required|numeric',
-    //         'igst' => 'required|numeric',
-    //         'total' => 'required|numeric',
-    //         'currency' => 'required|string',
-    //         'template' => 'required|integer',
-    //         'status' => 'required|integer',
-    //         'products' => 'required|array', // Validating array of products
-    //         'products.*.product_id' => 'required|integer',
-    //         'products.*.product_name' => 'required|string',
-    //         'products.*.description' => 'nullable|string',
-    //         'products.*.brand' => 'required|string',
-    //         'products.*.quantity' => 'required|integer',
-    //         'products.*.unit' => 'required|string',
-    //         'products.*.price' => 'required|numeric',
-    //         'products.*.discount' => 'nullable|numeric',
-    //         'products.*.hsn' => 'required|string',
-    //         'products.*.tax' => 'required|numeric',
-    //         'products.*.cgst' => 'required|numeric',
-    //         'products.*.sgst' => 'required|numeric',
-    //         'products.*.igst' => 'required|numeric',
-    //         'products.*.godown' => 'required|integer'         
-    //     ]);
-    
-    
-    //     $register_debit_note = DebitNoteModel::create([
-    //         'supplier_id' => $request->input('supplier_id'),
-    //         'company_id' => Auth::user()->company_id,
-    //         'name' => $request->input('name'),
-    //         'debit_note_no' => $request->input('debit_note_no'),
-    //         'debit_note_date' => $request->input('debit_note_date'),
-    //         'remarks' => $request->input('remarks'),
-    //         'cgst' => $request->input('cgst'),
-    //         'sgst' => $request->input('sgst'),
-    //         'igst' => $request->input('igst'),
-    //         'total' => $request->input('total'),
-    //         'currency' => $request->input('currency'),
-    //         'template' => $request->input('template'),
-    //         'status' => $request->input('status'),
-    //     ]);
-        
-    //     $products = $request->input('products');
-
-    //     // Iterate over the products array and insert each contact
-    //     foreach ($products as $product) 
-    //     {
-    //         DebitNoteProductsModel::create([
-    //             'debit_note_number' => $register_debit_note['id'],
-    //             'company_id' => Auth::user()->company_id,
-    //             'product_id' => $product['product_id'],
-    //             'product_name' => $product['product_name'],
-    //             'description' => $product['description'],
-    //             'brand' => $product['brand'],
-    //             'quantity' => $product['quantity'],
-    //             'brand' => $product['brand'],
-    //             'unit' => $product['unit'],
-    //             'price' => $product['price'],
-    //             'discount' => $product['discount'],
-    //             'hsn' => $product['hsn'],
-    //             'tax' => $product['tax'],
-    //             'cgst' => $product['cgst'],
-    //             'sgst' => $product['sgst'],
-    //             'igst' => $product['igst'],
-    //         ]);
-    //     }
-
-    //     unset($register_debit_note['id'], $register_debit_note['created_at'], $register_debit_note['updated_at']);
-    
-    //     return isset($register_debit_note) && $register_debit_note !== null
-    //     ? response()->json(['Debit Note registered successfully!', 'data' => $register_debit_note], 201)
-    //     : response()->json(['Failed to register Debit Note record'], 400);
-    // }
-
     public function add_debit_note(Request $request)
     {
         $request->validate([
@@ -106,141 +25,115 @@ class DebitNoteController extends Controller
             'sgst' => 'required|numeric',
             'igst' => 'required|numeric',
             'total' => 'required|numeric',
-            'currency' => 'required|string',
+            'gross' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric',
             'template' => 'required|integer',
-            'status' => 'required|integer',
+            
             'products' => 'required|array', // Validating array of products
             'products.*.product_id' => 'required|integer',
+            'products.*.product_name' => 'required|string',
+            'products.*.description' => 'nullable|string',
             'products.*.quantity' => 'required|integer',
-            'products.*.discount' => 'nullable|numeric',
+            'products.*.unit' => 'required|string',
+            'products.*.price' => 'required|numeric|min:0',
+            'products.*.discount' => 'nullable|numeric|min:0',
+            'products.*.discount_type' => 'required|in:percentage,value',
+            'products.*.hsn' => 'required|string',
+            'products.*.tax' => 'required|numeric',
+            'products.*.cgst' => 'required|numeric',
+            'products.*.sgst' => 'required|numeric',
+            'products.*.igst' => 'required|numeric',
             'products.*.godown' => 'required|integer'         
         ]);
     
+        // Handle quotation number logic
+        $counterController = new CounterController();
+        $sendRequest = Request::create('/counter', 'GET', [
+            'name' => 'debit_note',
+            // 'company_id' => Auth::user()->company_id,
+        ]);
+
+        $response = $counterController->view_counter($sendRequest);
+        $decodedResponse = json_decode($response->getContent(), true);
+
+        if ($decodedResponse['code'] === 200) {
+            $data = $decodedResponse['data'];
+            $get_customer_type = $data[0]['type'];
+        }
+
+        if ($get_customer_type == "auto") {
+            $debit_note_no = $decodedResponse['data'][0]['prefix'] .
+                str_pad($decodedResponse['data'][0]['next_number'], 3, '0', STR_PAD_LEFT) .
+                $decodedResponse['data'][0]['postfix'];
+        } else {
+            $debit_note_no = $request->input('debit_note_no');
+        }
+ 
+         // \DB::enableQueryLog();
+         $exists = DebitNoteModel::where('company_id', Auth::user()->company_id)
+             ->where('debit_note_no', $debit_note_no)
+             ->exists();
+             // dd(\DB::getQueryLog());
+             // dd($exists);
+ 
+         if ($exists) {
+             return response()->json([
+                 'error' => 'The combination of company_id and debit_note_no must be unique.',
+             ], 422);
+         }
     
         $register_debit_note = DebitNoteModel::create([
             'supplier_id' => $request->input('supplier_id'),
             'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
-            'debit_note_no' => $request->input('debit_note_no'),
+            'debit_note_no' => $debit_note_no,
             'debit_note_date' => $request->input('debit_note_date'),
             'remarks' => $request->input('remarks'),
-            'cgst' => 0,
-            'sgst' => 0,
-            'igst' => 0,
-            'total' => 0,
-            'currency' => $request->input('currency'),
+            'cgst' => $request->input('cgst'),
+            'sgst' => $request->input('sgst'),
+            'igst' => $request->input('igst'),
+            'total' => $request->input('total'),
+            'currency' => "INR",
             'template' => $request->input('template'),
-            'status' => $request->input('status'),
+            'gross' => $request->input('gross'),
+            'round_off' => $request->input('round_off'),
         ]);
         
         $products = $request->input('products');
-        $total_amount = 0;
-        $total_cgst = 0;
-        $total_sgst = 0;
-        $total_igst = 0;
-        $total_discount = 0;
 
         // Iterate over the products array and insert each contact
         foreach ($products as $product) 
         {
-            $product_details = ProductsModel::where('id', $product['product_id'])
-                                            ->where('company_id', Auth::user()->company_id)
-                                            ->first();
-            
-            if ($product_details) {
-                $quantity = $product['quantity'];
-                $rate = $product_details->sale_price;
-                $tax_rate = $product_details->tax;
-
-               // Calculate the discount based on category or sub-category
-               $sub_category_discount = DiscountModel::select('discount')
-                                                    ->where('client', $request->input('supplier_id'))
-                                                    ->where('sub_category', $product_details->sub_category)
-                                                    ->first();
-
-                $category_discount = DiscountModel::select('discount')
-                                                    ->where('client', $request->input('supplier_id'))
-                                                    ->where('category', $product_details->category)
-                                                    ->first();
-
-                $discount_rate = $sub_category_discount->discount ?? $category_discount->discount ?? 0;
-                $discount_amount = $rate * $quantity * ($discount_rate / 100);
-                $total_discount += $discount_amount;
-
-                // Calculate the total for the product
-                $product_total = $rate * $quantity - $discount_amount;
-                $tax_amount = $product_total * ($tax_rate / 100);
-
-                // Determine the tax distribution based on the client's state
-                if (strtolower($client->state) === 'west bengal') {
-                    $cgst = $tax_amount / 2;
-                    $sgst = $tax_amount / 2;
-                    $igst = 0;
-                } else {
-                    $cgst = 0;
-                    $sgst = 0;
-                    $igst = $tax_amount;
-                }
-
-                // Accumulate totals
-                $total_amount += $product_total;
-                $total_cgst += $cgst;
-                $total_sgst += $sgst;
-                $total_igst += $igst;
-
-                DebitNoteProductsModel::create([
-                    'debit_note_number' => $register_debit_note['id'],
-                    'company_id' => Auth::user()->company_id,
-                    'product_id' => $product['product_id'],
-                    'product_name' => $product_details->name,
-                    'description' => $product_details->description,
-                    'brand' => $product_details->brand,
-                    'quantity' => $quantity,
-                    'unit' => $product_details->unit,
-                    'price' => $rate,
-                    'discount' => $discount_amount,
-                    'hsn' => $product_details->hsn,
-                    'tax' => $product_details->tax,
-                    'cgst' => $cgst,
-                    'sgst' => $sgst,
-                    'igst' => $igst,
-                ]);
-            }
-
-            else{
-                return response()->json(['message' => 'Sorry, Products not found'], 404);
-            }
+            DebitNoteProductsModel::create([
+                'debit_note_number' => $register_debit_note['id'],
+                'company_id' => Auth::user()->company_id,
+                'product_id' => $product['product_id'],
+                'product_name' => $product['product_name'],
+                'description' => $product['description'],
+                'quantity' => $product['quantity'],
+                'unit' => $product['unit'],
+                'price' => $product['price'],
+                'discount' => $product['discount'],
+                'discount_type' => $product['discount_type'],
+                'hsn' => $product['hsn'],
+                'tax' => $product['tax'],
+                'cgst' => $product['cgst'],
+                'sgst' => $product['sgst'],
+                'igst' => $product['igst'],
+            ]);
         }
 
-        // Update the total amount and tax values in the sales invoice record
-        $register_debit_note->update([
-            'total' => $total_amount,
-            'cgst' => $total_cgst,
-            'sgst' => $total_sgst,
-            'igst' => $total_igst,
-        ]);
+        // increment the `next_number` by 1
+        CounterModel::where('name', 'debit_note')
+        ->where('company_id', Auth::user()->company_id)
+        ->increment('next_number');
 
         unset($register_debit_note['id'], $register_debit_note['created_at'], $register_debit_note['updated_at']);
     
         return isset($register_debit_note) && $register_debit_note !== null
-        ? response()->json(['code' => 201,'success' => true, 'Debit Note registered successfully!', 'data' => $register_debit_note], 201)
-        : response()->json(['code' => 400,'success' => false, 'Failed to register Debit Note record'], 400);
+        ? response()->json(['Debit Note registered successfully!', 'data' => $register_debit_note], 201)
+        : response()->json(['Failed to register Debit Note record'], 400);
     }
-    
-    // view
-    // public function view_debit_note()
-    // {
-    //     $get_debit_notes = DebitNoteModel::with(['products' => function ($query) {
-    //         $query->select('debit_note_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
-    //     }])
-    //     ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
-    //     ->where('company_id',Auth::user()->company_id)
-    //     ->get();
-
-    //     return isset($get_debit_notes) && $get_debit_notes->isNotEmpty()
-    //         ? response()->json(['Debit Notes fetched successfully!', 'data' => $get_debit_notes], 200)
-    //         : response()->json(['Failed to fetch Debit Notes data'], 404);
-    // }
 
     public function view_debit_note(Request $request)
     {
@@ -254,9 +147,9 @@ class DebitNoteController extends Controller
 
         // Build the query
         $query = DebitNoteModel::with(['products' => function ($query) {
-            $query->select('debit_note_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
+            $query->select('debit_note_number', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
         }])
-        ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
+        ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -308,24 +201,25 @@ class DebitNoteController extends Controller
             'sgst' => 'required|numeric',
             'igst' => 'required|numeric',
             'total' => 'required|numeric',
-            'currency' => 'required|string',
             'template' => 'required|integer',
-            'status' => 'required|integer',
+            'gross' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric',
+            
             'products' => 'required|array', // Validating array of products
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
-            'products.*.brand' => 'required|string',
             'products.*.quantity' => 'required|integer',
             'products.*.unit' => 'required|string',
-            'products.*.price' => 'required|numeric',
-            'products.*.discount' => 'nullable|numeric',
+            'products.*.price' => 'required|numeric|min:0',
+            'products.*.discount' => 'nullable|numeric|min:0',
+            'products.*.discount_type' => 'required|in:percentage,value',
             'products.*.hsn' => 'required|string',
             'products.*.tax' => 'required|numeric',
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
-            'products.*.godown' => 'required|integer',
+            'products.*.godown' => 'required|integer'        
         ]);
 
         // Get the debit note record by ID
@@ -342,9 +236,10 @@ class DebitNoteController extends Controller
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
-            'currency' => $request->input('currency'),
+            'currency' => "INR",
             'template' => $request->input('template'),
-            'status' => $request->input('status'),
+            'gross' => $request->input('gross'),
+            'round_off' => $request->input('round_off'),
         ]);
 
         // Get the list of products from the request
@@ -364,11 +259,11 @@ class DebitNoteController extends Controller
                 $existingProduct->update([
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    'brand' => $productData['brand'],
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
                     'discount' => $productData['discount'],
+                    'discount_type' => $productData['discount_type'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
                     'cgst' => $productData['cgst'],
@@ -388,6 +283,7 @@ class DebitNoteController extends Controller
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
                     'discount' => $productData['discount'],
+                    'discount_type' => $productData['discount_type'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
                     'cgst' => $productData['cgst'],
@@ -489,6 +385,7 @@ class DebitNoteController extends Controller
 
             // Prepare debit note data
             $debitNoteData = [
+                'company_id' => Auth::user()->company_id,
                 'supplier_id' => $supplier->id,
                 'name' => $record['supplier'],
                 'debit_note_no' => !empty($record['dn_no']) ? $record['dn_no'] : 'Unknown',
@@ -501,6 +398,8 @@ class DebitNoteController extends Controller
                 'currency' => 'INR',
                 'template' => 1, // Default template ID
                 'status' => (int) $record['status'] ?? 0,
+                'gross' => 0,
+                'round_off' => 0,
             ];
 
             // Validate debit note data
@@ -541,6 +440,7 @@ class DebitNoteController extends Controller
                     try {
                         DebitNoteProductsModel::create([
                             'debit_note_number' => $debitNote->id,
+                            'company_id' => Auth::user()->company_id,
                             'product_id' => $index + 1, // This might need to be adjusted to match your actual product ID logic
                             'product_name' => $product,
                             'description' => $itemsData['desc'][$index] ?? 'No Description',
@@ -549,6 +449,7 @@ class DebitNoteController extends Controller
                             'unit' => $itemsData['unit'][$index] ?? '',
                             'price' => (float) $itemsData['price'][$index] ?? 0.0,
                             'discount' => (float) $itemsData['discount'][$index] ?? 0.0,
+                            'discount_type' => 'percentage',
                             'hsn' => $itemsData['hsn'][$index] ?? '',
                             'tax' => (float) $itemsData['tax'][$index] ?? 0.0,
                             'cgst' => !empty($taxData['cgst']) ? (float) $taxData['cgst'] : 0,
