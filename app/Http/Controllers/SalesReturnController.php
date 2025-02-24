@@ -536,7 +536,9 @@ class SalesReturnController extends Controller
                 'igst' => !empty($taxData['igst']) ? $taxData['igst'] : 0,
                 'total' => $record['total'] ?? 0,
                 'currency' => 'INR',
-                'template' => json_decode($record['pdf_template'], true)['id'] ?? 0,
+                'template' => json_decode($record['pdf_template'], true)['id'] ?? null,
+                'gross' => 0,
+                'round_off' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];

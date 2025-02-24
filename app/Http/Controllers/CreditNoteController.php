@@ -529,7 +529,7 @@ class CreditNoteController extends Controller
                     'igst' => !empty($taxData['igst']) ? (float) $taxData['igst'] : 0,
                     'total' => (float) $record['total'] ?? 0.0,
                     'currency' => 'INR',
-                    'template' => 1, // Default template ID
+                    'template' => null, // Default template ID
                     'gross' => 0,
                     'round_off' => 0,
                     'created_at' => now(),
