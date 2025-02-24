@@ -19,13 +19,16 @@ return new class extends Migration
             $table->string('sales_return_no');
             $table->date('sales_return_date');
             $table->string('sales_invoice_no');
+            // as it don't support `length`, it can store upto `65,535 characters for TEXT type in MySQL`
+            $table->text('remarks')->nullable();
             $table->float('cgst');
             $table->float('sgst');
             $table->float('igst');
             $table->float('total');
             $table->string('currency');
             $table->integer('template');
-            $table->integer('status');
+            $table->float('gross');
+            $table->float('round_off');
             $table->timestamps();
         });
     }

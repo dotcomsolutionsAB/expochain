@@ -26,7 +26,8 @@ return new class extends Migration
             $table->float('total');
             $table->string('currency');
             $table->integer('template');
-            $table->integer('status');
+            $table->float('gross');
+            $table->float('round_off');
             $table->timestamps();
         });
     }

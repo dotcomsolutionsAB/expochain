@@ -16,13 +16,15 @@ class PurchaseReturnModel extends Model
         'purchase_return_no',
         'purchase_return_date',
         'purchase_invoice_no',
+        'remarks',
         'cgst',
         'sgst',
         'igst',
         'total',
         'currency',
         'template',
-        'status'
+        'gross',
+        'round_off'
     ];
 
     // Defining the relationship with PurchaseReturnProductsModel

@@ -22,7 +22,8 @@ class DebitNoteModel extends Model
         'total',
         'currency',
         'template',
-        'status'
+        'gross',
+        'round_off'
     ];
 
     // Defining the relationship with PurchaseReturnProductsModel

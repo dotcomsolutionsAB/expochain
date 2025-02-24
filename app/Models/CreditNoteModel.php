@@ -22,7 +22,8 @@ class CreditNoteModel extends Model
         'total',
         'currency',
         'template',
-        'status'
+        'gross',
+        'round_off'
     ];
 
     public function products()

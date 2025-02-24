@@ -16,13 +16,15 @@ class SalesReturnModel extends Model
         'sales_return_no',
         'sales_return_date',
         'sales_invoice_no',
+        'remarks',
         'cgst',
         'sgst',
         'igst',
         'total',
         'currency',
         'template',
-        'status',
+        'gross',
+        'round_off'
     ];
 
     public function products()
