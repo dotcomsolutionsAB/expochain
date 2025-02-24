@@ -36,7 +36,7 @@ class SalesOrderController extends Controller
             'sales_order_date' => 'required|date_format:Y-m-d',
             'ref_no' => 'required|string',
             'template' => 'required|integer|exists:t_pdf_template,id',
-            'contact_person' => 'required|integer|exists:users,id',
+            'sales_person' => 'required|integer|exists:users,id',
             'cgst' => 'nullable|numeric|min:0',
             'sgst' => 'nullable|numeric|min:0',
             'igst' => 'nullable|numeric|min:0',
@@ -118,7 +118,7 @@ class SalesOrderController extends Controller
             'sales_order_date' => $request->input('sales_order_date'),
             'ref_no' => $request->input('ref_no'),
             'template' => $request->input('template'),
-            'contact_person' => $request->input('contact_person'),
+            'sales_person' => $request->input('sales_person'),
             'status' => "pending",
             'user' => Auth::user()->id,
             'cgst' => $request->input('cgst'),
@@ -389,7 +389,7 @@ class SalesOrderController extends Controller
         ])
         ->select('id', 'client_id', 'name', 'sales_order_no', 
             DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 
-            'ref_no', 'template', 'contact_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
+            'ref_no', 'template', 'sales_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
         )
         ->where('company_id', Auth::user()->company_id);
         
@@ -408,7 +408,7 @@ class SalesOrderController extends Controller
             // Transform Single Sales Order
             $salesOrder->amount_in_words = $this->convertNumberToWords($salesOrder->total);
             $salesOrder->total = is_numeric($salesOrder->total) ? number_format((float) $salesOrder->total, 2) : $salesOrder->total;
-            $salesOrder->contact_person = $salesOrder->get_user ? ['id' => $salesOrder->get_user->id, 'name' => $salesOrder->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            $salesOrder->sales_person = $salesOrder->get_user ? ['id' => $salesOrder->get_user->id, 'name' => $salesOrder->get_user->name] : ['id' => null, 'name' => 'Unknown'];
             $salesOrder->user = $salesOrder->get_user ? ['id' => $salesOrder->get_user->id, 'name' => $salesOrder->get_user->name] : ['id' => null, 'name' => 'Unknown'];
             unset($salesOrder->get_user);
 
@@ -491,7 +491,7 @@ class SalesOrderController extends Controller
         $get_sales_orders->transform(function ($order) {
             $order->amount_in_words = $this->convertNumberToWords($order->total);
             $order->total = is_numeric($order->total) ? number_format((float) $order->total, 2) : $order->total;
-            $order->contact_person = $order->get_user ? ['id' => $order->get_user->id, 'name' => $order->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            $order->sales_person = $order->get_user ? ['id' => $order->get_user->id, 'name' => $order->get_user->name] : ['id' => null, 'name' => 'Unknown'];
             $order->user = $order->get_user ? ['id' => $order->get_user->id, 'name' => $order->get_user->name] : ['id' => null, 'name' => 'Unknown'];
             unset($order->get_user);
 
@@ -520,7 +520,7 @@ class SalesOrderController extends Controller
             'sales_order_date' => 'required|date',
             'ref_no' => 'required|string',
             'template' => 'required|integer|exists:t_pdf_template,id',
-            'contact_person' => 'required|integer|exists:users,id',
+            'sales_person' => 'required|integer|exists:users,id',
             'cgst' => 'required|numeric',
             'sgst' => 'required|numeric',
             'igst' => 'required|numeric',
@@ -582,7 +582,7 @@ class SalesOrderController extends Controller
             'sales_order_date' => $request->input('sales_order_date'),
             'ref_no' => $request->input('ref_no'),
             'template' => $request->input('template'),
-            'contact_person' => $request->input('contact_person'),
+            'sales_person' => $request->input('sales_person'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),

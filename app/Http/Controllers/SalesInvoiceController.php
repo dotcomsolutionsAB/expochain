@@ -35,7 +35,7 @@ class SalesInvoiceController extends Controller
             'sales_order_id' => 'required|string|exists:t_sales_order,id',
             'sales_order_date' => 'required|date_format:Y-m-d',
             'template' => 'required|integer|exists:t_pdf_template,id',
-            'contact_person' => 'required|integer|exists:users,id',
+            'sales_person' => 'required|integer|exists:users,id',
             'cash' => 'required|in:0,1',
             'cgst' => 'required|numeric|min:0',
             'sgst' => 'required|numeric|min:0',
@@ -120,7 +120,7 @@ class SalesInvoiceController extends Controller
             'sales_order_id' => $request->input('sales_order_id'),
             'sales_order_date' => $request->input('sales_order_date'),
             'template' => $request->input('template'),
-            'contact_person' => $request->input('contact_person'),
+            'sales_person' => $request->input('sales_person'),
             'cash' => $request->input('cash'),
             'user' => Auth::user()->id,
             'cgst' => $request->input('cgst'),
@@ -247,7 +247,7 @@ class SalesInvoiceController extends Controller
     //             $query->select('id', 'name');
     //         }
     //     ])
-    //     ->select('id', 'client_id', 'name', 'sales_invoice_no', DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date'), 'user', 'sales_order_id', DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 'template', 'contact_person', 'cash', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off')
+    //     ->select('id', 'client_id', 'name', 'sales_invoice_no', DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date'), 'user', 'sales_order_id', DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 'template', 'sales_person', 'cash', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off')
     //     ->where('company_id', Auth::user()->company_id);
 
     //     // Apply filters
@@ -314,8 +314,8 @@ class SalesInvoiceController extends Controller
     //         // ✅ Format total with comma-separated values
     //         $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
 
-    //         // Replace user ID with corresponding contact_person object
-    //         $invoice->contact_person = isset($invoice->get_user) ? [
+    //         // Replace user ID with corresponding sales_person object
+    //         $invoice->sales_person = isset($invoice->get_user) ? [
     //             'id' => $invoice->get_user->id,
     //             'name' => $invoice->get_user->name
     //         ] : ['id' => null, 'name' => 'Unknown'];
@@ -384,7 +384,7 @@ class SalesInvoiceController extends Controller
             DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date'), 
             'user', 'sales_order_id', 
             DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 
-            'template', 'contact_person', 'cash', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
+            'template', 'sales_person', 'cash', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
         )
         ->where('company_id', Auth::user()->company_id);
 
@@ -402,7 +402,7 @@ class SalesInvoiceController extends Controller
             // Transform Single Sales Invoice
             $salesInvoice->amount_in_words = $this->convertNumberToWords($salesInvoice->total);
             $salesInvoice->total = is_numeric($salesInvoice->total) ? number_format((float) $salesInvoice->total, 2) : $salesInvoice->total;
-            $salesInvoice->contact_person = $salesInvoice->get_user ? ['id' => $salesInvoice->get_user->id, 'name' => $salesInvoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            $salesInvoice->sales_person = $salesInvoice->get_user ? ['id' => $salesInvoice->get_user->id, 'name' => $salesInvoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
             $salesInvoice->user = $salesInvoice->get_user ? ['id' => $salesInvoice->get_user->id, 'name' => $salesInvoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
             unset($salesInvoice->get_user);
 
@@ -475,7 +475,7 @@ class SalesInvoiceController extends Controller
         $get_sales_invoices->transform(function ($invoice) {
             $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
             $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
-            $invoice->contact_person = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            $invoice->sales_person = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
             $invoice->user = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
             unset($invoice->get_user);
 
@@ -506,7 +506,7 @@ class SalesInvoiceController extends Controller
             'sales_order_id' => 'required|string|exists:t_sales_order,id',
             'sales_order_date' => 'required|date_format:Y-m-d',
             'template' => 'required|integer|exists:t_pdf_template,id',
-            'contact_person' => 'required|integer|exists:users,id',
+            'sales_person' => 'required|integer|exists:users,id',
             'cash' => 'required|in:0,1',
             'cgst' => 'required|numeric|min:0',
             'sgst' => 'required|numeric|min:0',
@@ -556,7 +556,7 @@ class SalesInvoiceController extends Controller
             'sales_order_id' => $request->input('sales_order_id'),
             'sales_order_date' => $request->input('sales_order_date'),
             'template' => $request->input('template'),
-            'contact_person' => $request->input('contact_person'),
+            'sales_person' => $request->input('sales_person'),
             'cash' => $request->input('cash'),
             'user' => Auth::user()->id,
             'cgst' => $request->input('cgst'),

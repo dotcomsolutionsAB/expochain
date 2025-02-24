@@ -17,7 +17,7 @@ class SalesOrderModel extends Model
         'sales_order_date',
         'ref_no',
         'template',
-        'contact_person',
+        'sales_person',
         'status',
         'user',
         'cgst',

@@ -20,7 +20,7 @@ return new class extends Migration
             $table->date('sales_order_date');
             $table->string('ref_no');
             $table->integer('template');
-            $table->integer('contact_person')->nullable();
+            $table->integer('sales_person')->nullable();
             $table->enum('status', ['pending', 'partial', 'completed', 'short_closed']);
             $table->integer('user');
             $table->float('cgst');
