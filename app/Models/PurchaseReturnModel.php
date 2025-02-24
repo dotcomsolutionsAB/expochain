@@ -15,7 +15,7 @@ class PurchaseReturnModel extends Model
         'name',
         'purchase_return_no',
         'purchase_return_date',
-        'purchase_invoice_no',
+        'purchase_invoice_id',
         'remarks',
         'cgst',
         'sgst',

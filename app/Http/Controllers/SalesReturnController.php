@@ -94,7 +94,7 @@ class SalesReturnController extends Controller
             'client_id' => $request->input('client_id'),
             'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
-            'sales_return_no' => $request->input('sales_return_no'),
+            'sales_return_no' => $sales_return_no,
             'sales_return_date' => $request->input('sales_return_date'),
             'sales_invoice_id' => $request->input('sales_invoice_id'),
             'remarks' => $request->input('remarks'),

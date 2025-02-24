@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('purchase_return_no');
             $table->date('purchase_return_date');
-            $table->string('purchase_invoice_no');
+            $table->string('purchase_invoice_id');
             // as it don't support `length`, it can store upto `65,535 characters for TEXT type in MySQL`
             $table->text('remarks')->nullable();
             $table->float('cgst');
