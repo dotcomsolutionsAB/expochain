@@ -172,7 +172,7 @@ class QuotationsController extends Controller
                 'name' => $addon['name'],
                 'amount' => $addon['amount'],
                 'tax' => $addon['tax'],
-                'hsn' => $addon['hsn'],
+                'hsn' =>  '99',
                 'cgst' => $addon['cgst'],
                 'sgst' => $addon['sgst'],
                 'igst' => $addon['igst'],
@@ -188,7 +188,8 @@ class QuotationsController extends Controller
             ]);
         }
 
-        CounterModel::where('name', 'Quotation Counter')
+        // increment the `next_number` by 1
+        CounterModel::where('name', 'quotation')
             ->where('company_id', Auth::user()->company_id)
             ->increment('next_number');
 

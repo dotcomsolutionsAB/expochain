@@ -13,6 +13,7 @@ use App\Models\ClientContactsModel;
 use App\Models\ClientAddressModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
+use App\Models\CounterModel;
 use Auth;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
@@ -163,12 +164,17 @@ class SalesOrderController extends Controller
                 'name' => $addon['name'],
                 'amount' => $addon['amount'],
                 'tax' => $addon['tax'],
-                'hsn' => $addon['hsn'],
+                'hsn' =>  '99',
                 'cgst' => $addon['cgst'],
                 'sgst' => $addon['sgst'],
                 'igst' => $addon['igst'],
             ]);
         }
+
+        // increment the `next_number` by 1
+        CounterModel::where('name', 'sales_order')
+            ->where('company_id', Auth::user()->company_id)
+            ->increment('next_number');
 
         unset($register_sales_order['id'], $register_sales_order['created_at'], $register_sales_order['updated_at']);
 

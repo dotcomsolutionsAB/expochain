@@ -10,6 +10,7 @@ use App\Models\PurchaseOrderTermsModel;
 use App\Models\SuppliersModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
+use App\Models\CounterModel;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -166,7 +167,7 @@ class PurchaseOrderController extends Controller
                 'name' => $addon['name'],
                 'amount' => $addon['amount'],
                 'tax' => $addon['tax'],
-                'hsn' => $addon['hsn'],
+                'hsn' =>  '99',
                 'cgst' => $addon['cgst'],
                 'sgst' => $addon['sgst'],
                 'igst' => $addon['igst'],
@@ -182,6 +183,11 @@ class PurchaseOrderController extends Controller
                 'value' => $term['value'],
             ]);
         }
+
+        // increment the `next_number` by 1
+        CounterModel::where('name', 'purchase_order')
+            ->where('company_id', Auth::user()->company_id)
+            ->increment('next_number');
 
         unset($register_purchase_order['id'], $register_purchase_order['created_at'], $register_purchase_order['updated_at']);
     

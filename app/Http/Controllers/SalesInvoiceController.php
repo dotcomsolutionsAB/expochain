@@ -13,6 +13,7 @@ use App\Models\ClientsContactsModel;
 use App\Models\ClientAddressModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
+use App\Models\CounterModel;
 use App\Http\Controllers\ResetController;
 use Carbon\Carbon;
 use Auth;
@@ -165,12 +166,17 @@ class SalesInvoiceController extends Controller
                 'name' => $addon['name'],
                 'amount' => $addon['amount'],
                 'tax' => $addon['tax'],
-                'hsn' => $addon['hsn'],
+                'hsn' =>  '99',
                 'cgst' => $addon['cgst'],
                 'sgst' => $addon['sgst'],
                 'igst' => $addon['igst'],
             ]);
         }
+
+        // increment the `next_number` by 1
+        CounterModel::where('name', 'sales_invoice')
+            ->where('company_id', Auth::user()->company_id)
+            ->increment('next_number');
 
         unset($register_sales_invoice['id'], $register_sales_invoice['created_at'], $register_sales_invoice['updated_at']);
 
