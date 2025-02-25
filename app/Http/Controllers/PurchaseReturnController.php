@@ -592,7 +592,7 @@ class PurchaseReturnController extends Controller
                     }
 
                     $purchaseReturnProductsBatch[] = [
-                        'purchase_return_number' => $purchaseReturn->id,
+                        'purchase_return_id' => $purchaseReturn->id,
                         'company_id' => Auth::user()->company_id,
                         'product_id' => $product->id,
                         'product_name' => $productName,
