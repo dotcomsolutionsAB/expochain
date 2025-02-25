@@ -193,137 +193,6 @@ class SalesOrderController extends Controller
         return ucfirst($formatter->format($num)) . ' Only';
     }
 
-    // public function view_sales_order(Request $request)
-    // {
-    //     // Get filter inputs
-    //     $clientId = $request->input('client_id');
-    //     $clientContactId = $request->input('client_contact_id');
-    //     $name = $request->input('name');
-    //     $salesOrderNo = $request->input('sales_order_no');
-    //     $salesOrderDate = $request->input('sales_order_date');
-    //     $user = $request->input('user'); // New filter for user
-    //     $dateFrom = $request->input('date_from');
-    //     $dateTo = $request->input('date_to');
-    //     $status = $request->input('status');
-    //     $productIds = $request->input('product_ids'); 
-    //     $limit = $request->input('limit', 10); // Default limit to 10
-    //     $offset = $request->input('offset', 0); // Default offset to 0
-
-    //     // Get total count of records in `t_sales_order`
-    //     $total_sales_order = SalesOrderModel::count(); 
-
-    //     // Build the query
-    //     $query = SalesOrderModel::with([
-    //         'products' => function ($query) {
-    //             $query->select(
-    //                 'sales_order_id', 'product_id', 'product_name', 'description',
-    //                 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'sent', 'short_closed', 
-    //             )->with(['channel' => function ($channelQuery) {
-    //                 $channelQuery->select('id', 'name'); // Fetch channel name
-    //             }]);
-    //         },
-    //         'addons' => function ($query) {
-    //             $query->select('sales_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
-    //         },
-    //         'get_user' => function ($query) { // Fetch only user name
-    //             $query->select('id', 'name');
-    //         },
-    //     ])
-    //     ->select('id', 'client_id', 'name', 'sales_order_no', DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 'ref_no', 'template', 'contact_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off')
-    //     ->where('company_id', Auth::user()->company_id);
-
-    //     // Apply filters
-    //     if ($clientId) {
-    //         $query->where('client_id', $clientId);
-    //     }
-    //     if ($clientContactId) {
-    //         $query->where('client_contact_id', $clientContactId);
-    //     }
-    //     if ($name) {
-    //         $query->where('name', 'LIKE', '%' . $name . '%');
-    //     }
-    //     if ($salesOrderNo) {
-    //         $query->where('sales_order_no', 'LIKE', '%' . $salesOrderNo . '%');
-    //     }
-    //     if ($salesOrderDate) {
-    //         $query->whereDate('sales_order_date', $salesOrderDate);
-    //     }
-    //     // ✅ **Filter by comma-separated statuses**
-    //     if (!empty($status)) {
-    //         $statusArray = explode(',', $status); // Convert CSV to array
-    //         $query->whereIn('status', $statusArray);
-    //     }
-
-    //     // ✅ **Filter by comma-separated product IDs**
-    //     if (!empty($productIds)) {
-    //         $productIdArray = explode(',', $productIds); // Convert CSV to array
-    //         $query->whereHas('products', function ($query) use ($productIdArray) {
-    //             $query->whereIn('product_id', $productIdArray);
-    //         });
-    //     }      
-    
-    //     // Apply Date Range Filter
-    //     if ($dateFrom && $dateTo) {
-    //         $query->whereBetween('sales_order_date', [$dateFrom, $dateTo]);
-    //     } elseif ($dateFrom) {
-    //         $query->whereDate('sales_order_date', '>=', $dateFrom);
-    //     } elseif ($dateTo) {
-    //         $query->whereDate('sales_order_date', '<=', $dateTo);
-    //     }
-    
-    //     $sales_order_count = $query->count();
-    //     // Apply limit and offset
-    //     $query->offset($offset)->limit($limit);
-
-    //     // Fetch data
-    //     $get_sales_orders = $query->get();
-
-    //     // Transform Data
-    //     $get_sales_orders->transform(function ($order) {
-
-    //         // Convert total to words
-    //         $order->amount_in_words = $this->convertNumberToWords($order->total);
-
-    //         // ✅ Format total with comma-separated values
-    //         $order->total = is_numeric($order->total) ? number_format((float) $order->total, 2) : $order->total;
-
-    //         // Capitalize the first letter of status
-    //         $order->status = ucfirst($order->status);
-
-    //         // Replace user ID with corresponding contact_person object
-    //         $order->contact_person = isset($order->get_user) ? [
-    //             'id' => $order->get_user->id,
-    //             'name' => $order->get_user->name
-    //         ] : ['id' => null, 'name' => 'Unknown'];
-
-    //         // Replace user ID with corresponding user object
-    //         $order->user = isset($order->get_user) ? [
-    //             'id' => $order->get_user->id,
-    //             'name' => $order->get_user->name
-    //         ] : ['id' => null, 'name' => 'Unknown'];
-
-    //         unset($order->get_user); // Remove raw user data
-
-    //         return $order;
-    //     });
-
-    //     // Return response
-    //     return $get_sales_orders->isNotEmpty()
-    //         ? response()->json([
-    //             'code' => 200,
-    //             'success' => true,
-    //             'message' => 'Sales Orders fetched successfully!',
-    //             'data' => $get_sales_orders,
-    //             'count' => $get_sales_orders->count(),
-    //             'total_records' => $sales_order_count,
-    //         ], 200)
-    //         : response()->json([
-    //             'code' => 404,
-    //             'success' => false,
-    //             'message' => 'No Sales Orders found!',
-    //         ], 404);
-    // }
-
     public function view_sales_order(Request $request, $id = null)
     {
         // Get filter inputs
@@ -715,202 +584,6 @@ class SalesOrderController extends Controller
     }
 
     // migrate
-    // public function importSalesOrders()
-    // {
-    //     set_time_limit(300); // Prevent timeout for large imports
-
-    //     // Clear old data before import
-    //     SalesOrderModel::truncate();
-    //     SalesOrderProductsModel::truncate();
-    //     SalesOrderAddonsModel::truncate();
-
-    //     $url = 'https://expo.egsm.in/assets/custom/migrate/sells_order.php';
-
-    //     // Fetch data from the external URL
-    //     try {
-    //         $response = Http::get($url);
-    //     } catch (\Exception $e) {
-    //         return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
-    //     }
-
-    //     if ($response->failed()) {
-    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
-    //     }
-
-    //     $data = $response->json('data');
-
-    //     if (empty($data)) {
-    //         return response()->json(['message' => 'No data found'], 404);
-    //     }
-
-    //     $successfulInserts = 0;
-    //     $errors = [];
-
-    //     // **Batch size limit**
-    //     $batchSize = 50;
-
-    //     // Initialize batch arrays
-    //     $salesOrdersBatch = [];
-    //     $productsBatch = [];
-    //     $addonsBatch = [];
-
-    //     foreach ($data as $record) {
-    //         // Decode JSON fields
-    //         $itemsData = json_decode($record['items'] ?? '{}', true);
-    //         $taxData = json_decode($record['tax'] ?? '{}', true);
-    //         $addonsData = json_decode($record['addons'] ?? '{}', true);
-
-    //         // Retrieve client details
-    //         $client = ClientsModel::where('name', $record['client'])->first();
-    //         if (!$client) {
-    //             $errors[] = ['record' => $record, 'error' => 'Client not found: ' . $record['client']];
-    //             continue;
-    //         }
-
-    //         $clientContact = ClientContactsModel::where('customer_id', $client->customer_id)->first();
-    //         if (!$clientContact) {
-    //             $errors[] = ['record' => $record, 'error' => 'Client contact not found for customer ID: ' . $client->customer_id];
-    //             continue;
-    //         }
-
-    //         // Mapping status integer values to their corresponding enum values
-    //         $statusMapping = [
-    //             1 => 'pending',
-    //             2 => 'partial',
-    //             3 => 'completed'
-    //         ];
-
-    //         // Prepare sales order data
-    //         $salesOrdersBatch[] = [
-    //             'company_id' => Auth::user()->company_id,
-    //             'client_id' => $client->id ?? null,
-    //             'client_contact_id' => $clientContact->id ?? null,
-    //             'name' => $record['client'] ?? 'Unnamed Client',
-    //             'address_line_1' => $client->address_line_1 ?? null,
-    //             'address_line_2' => $client->address_line_2 ?? null,
-    //             'city' => $client->city ?? null,
-    //             'pincode' => $client->pincode ?? null,
-    //             'state' => $client->state ?? null,
-    //             'country' => $client->country ?? null,
-    //             'user' => Auth::user()->id,
-    //             'sales_order_no' => $record['so_no'] ?? 'Unknown',
-    //             'sales_order_date' => date('Y-m-d', strtotime($record['so_date'] ?? now())), // Ensure correct format
-    //             'ref_no' => $record['ref_no'] ?? 0,
-    //             'cgst' => (float)($taxData['cgst'] ?? 0),
-    //             'sgst' => (float)($taxData['sgst'] ?? 0),
-    //             'igst' => (float)($taxData['igst'] ?? 0),
-    //             'total' => (float)($record['total'] ?? 0),
-    //             'currency' => 'INR',
-    //             'template' => json_decode($record['pdf_template'], true)['id'] ?? '0',
-    //             // 'status' => $record['status'] ?? 1,
-    //             // Assign status based on integer mapping; default to 'pending' if not found
-    //             'status' => isset($record['status']) && isset($statusMapping[$record['status']]) 
-    //             ? $statusMapping[$record['status']] 
-    //             : 'pending',
-    //             'created_at' => now(),
-    //             'updated_at' => now()
-    //         ];
-
-    //         // Temporary Sales Order ID for mapping products
-    //         $salesOrderId = count($salesOrdersBatch);
-
-    //         // Process products
-    //         if (!empty($itemsData['product'])) {
-    //             foreach ($itemsData['product'] as $index => $product) {
-    //                 $get_product = ProductsModel::where('name', $product)->first();
-
-    //                 if (!$get_product) {
-    //                     $errors[] = ['record' => $itemsData, 'error' => "Product not found: '{$product}'"];
-    //                     continue;
-    //                 }
-
-    //                 $productsBatch[] = [
-    //                     'sales_order_id' => $salesOrderId,
-    //                     'company_id' => Auth::user()->company_id,
-    //                     'product_id' => $get_product->id,
-    //                     'product_name' => $product,
-    //                     'description' => $itemsData['desc'][$index] ?? '',
-    //                     'group' => $itemsData['brand'][$index] ?? '',
-    //                     'quantity' => is_numeric($itemsData['quantity'][$index]) ? (int)$itemsData['quantity'][$index] : 0,
-    //                     'sent' => is_numeric($itemsData['sent'][$index]) ? (int)$itemsData['sent'][$index] : 0,
-    //                     'unit' => $itemsData['unit'][$index] ?? '',
-    //                     'price' => is_numeric($itemsData['price'][$index]) ? (float)$itemsData['price'][$index] : 0,
-    //                     'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index]) 
-    //                         ? (
-    //                             is_numeric($itemsData['channel'][$index]) 
-    //                                 ? (float)$itemsData['channel'][$index] 
-    //                                 : (
-    //                                     strtolower($itemsData['channel'][$index]) === 'standard' ? 1 :
-    //                                     (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 2 :
-    //                                     (strtolower($itemsData['channel'][$index]) === 'cbs' ? 3 : null))
-    //                                 )
-    //                         ) 
-    //                         : null,
-    //                     'discount_type' => 'percentage',
-    //                     'discount' => is_numeric($itemsData['discount'][$index]) ? (float)$itemsData['discount'][$index] : 0,
-    //                     'hsn' => $itemsData['hsn'][$index] ?? '',
-    //                     'tax' => is_numeric($itemsData['tax'][$index]) ? (float)$itemsData['tax'][$index] : 0,
-    //                     'cgst' => (float)($itemsData['cgst'][$index] ?? 0),
-    //                     'sgst' => (float)($itemsData['sgst'][$index] ?? 0),
-    //                     'igst' => (float)($itemsData['igst'][$index] ?? 0),
-    //                     'created_at' => now(),
-    //                     'updated_at' => now()
-    //                 ];
-    //             }
-    //         }
-
-    //         // Process addons
-    //         if (!empty($addonsData)) {
-    //             foreach ($addonsData as $name => $values) {
-    //                 $addonsBatch[] = [
-    //                     'sales_order_id' => $salesOrderId,
-    //                     'company_id' => Auth::user()->company_id,
-    //                     'name' => $name,
-    //                     'amount' => (float)($values['cgst'] ?? 0) + (float)($values['sgst'] ?? 0) + (float)($values['igst'] ?? 0),
-    //                     'tax' => 18,
-    //                     'hsn' => $values['hsn'] ?? '',
-    //                     'cgst' => (float)($values['cgst'] ?? 0),
-    //                     'sgst' => (float)($values['sgst'] ?? 0),
-    //                     'igst' => (float)($values['igst'] ?? 0),
-    //                     'created_at' => now(),
-    //                     'updated_at' => now()
-    //                 ];
-    //             }
-    //         }
-
-    //         // Batch insert when batch size reaches limit
-    //         if (count($salesOrdersBatch) >= $batchSize) {
-    //             SalesOrderModel::insert($salesOrdersBatch);
-    //             $salesOrdersBatch = [];
-    //         }
-
-    //         if (count($productsBatch) >= $batchSize) {
-    //             SalesOrderProductsModel::insert($productsBatch);
-    //             $productsBatch = [];
-    //         }
-
-    //         if (count($addonsBatch) >= $batchSize) {
-    //             SalesOrderAddonsModel::insert($addonsBatch);
-    //             $addonsBatch = [];
-    //         }
-    //     }
-
-    //     // Insert remaining records after loop completes
-    //     if (!empty($salesOrdersBatch)) SalesOrderModel::insert($salesOrdersBatch);
-    //     foreach (array_chunk($productsBatch, $batchSize) as $chunk) {
-    //         SalesOrderProductsModel::insert($chunk);
-    //     }
-    //     foreach (array_chunk($addonsBatch, $batchSize) as $chunk) {
-    //         SalesOrderAddonsModel::insert($chunk);
-    //     }
-
-    //     return response()->json([
-    //         'code' => 200,
-    //         'success' => true,
-    //         'message' => "Sales orders import completed with $successfulInserts successful inserts.",
-    //         'errors' => $errors,
-    //     ], 200);
-    // }
 
     public function importSalesOrders()
     {
@@ -1107,7 +780,6 @@ class SalesOrderController extends Controller
         ], 200);
     }
 
-
     // export
     public function export_sales_orders(Request $request)
     {
@@ -1281,6 +953,39 @@ class SalesOrderController extends Controller
                 'file_size' => $fileSize,
                 'content_type' => 'Excel',
             ],
+        ], 200);
+    }
+
+    public function getPendingSupplierseOrders(Request $request)
+    {
+        // Validate request
+        $request->validate([
+            'client_id' => 'required|integer|exists:t_clients,id',
+        ]);
+
+        // Get authenticated user
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Fetch pending purchase orders for the given supplier and authenticated company
+        $saleseOrders = SalesOrderModel::where('supplier_id', $request->input('supplier_id'))
+            ->where('company_id', $user->company_id)
+            ->where('status', 'pending')
+            ->pluck('ref_no'); // Fetch only `ref_no`
+
+        // Check if any records exist
+        if ($saleseOrders->isEmpty()) {
+            return response()->json(['message' => 'No pending sales orders found.'], 404);
+        }
+
+        // Return the result
+        return response()->json([
+            'success' => true,
+            'client_id' => $request->input('client_id'),
+            'company_id' => $user->company_id,
+            'pending_ref_numbers' => $saleseOrders
         ], 200);
     }
 
