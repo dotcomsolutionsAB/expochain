@@ -920,5 +920,37 @@ class PurchaseOrderController extends Controller
         }
     }
 
+    public function getPendingPurchaseOrders(Request $request)
+    {
+        // Validate request
+        $request->validate([
+            'supplier_id' => 'required|integer|exists:t_suppliers,id',
+        ]);
+
+        // Get authenticated user
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Fetch pending purchase orders for the given supplier and authenticated company
+        $purchaseOrders = PurchaseOrderModel::where('supplier_id', $request->input('supplier_id'))
+            ->where('company_id', $user->company_id)
+            ->where('status', 'pending')
+            ->pluck('oa_no'); // Fetch only `oa_no`
+
+        // Check if any records exist
+        if ($purchaseOrders->isEmpty()) {
+            return response()->json(['message' => 'No pending purchase orders found.'], 404);
+        }
+
+        // Return the result
+        return response()->json([
+            'success' => true,
+            'supplier_id' => $request->input('supplier_id'),
+            'company_id' => $user->company_id,
+            'pending_oa_numbers' => $purchaseOrders
+        ], 200);
+    }
 
 }

@@ -162,6 +162,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_purchase_order/{id?}', [PurchaseOrderController::class, 'edit_purchase_order']);
     Route::delete('/purchase_order/{id?}', [PurchaseOrderController::class, 'delete_purchase_order']);
     Route::get('/purchaseorder_migrate', [PurchaseOrderController::class, 'importPurchaseOrders']);
+    Route::post('/pending_oa_no', [PurchaseOrderController::class, 'getPendingPurchaseOrders']);
 
     Route::post('/add_purchase_invoice', [PurchaseInvoiceController::class, 'add_purchase_invoice']);
     Route::post('/purchase_invoice/{id?}', [PurchaseInvoiceController::class, 'view_purchase_invoice']);
