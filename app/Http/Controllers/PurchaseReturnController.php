@@ -595,7 +595,7 @@ class PurchaseReturnController extends Controller
                     // Fetch `godown_id` from `GodownModel` using `company_id` and `name`
                     $godownName = $itemsData['place'][$index] ?? 'Default Godown';
                     $godown = GodownModel::where('name', $godownName)
-                                        ->where('company_id', $companyId) // Ensure correct company
+                                        ->where('company_id', Auth::user()->company_id) // Ensure correct company
                                         ->first();
 
                     // Use `godown_id` if found, otherwise set a default ID (e.g., `1` or `NULL`)
