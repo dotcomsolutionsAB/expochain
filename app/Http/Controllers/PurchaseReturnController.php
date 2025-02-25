@@ -10,6 +10,7 @@ use App\Models\PurchaseInvoiceModel;
 use App\Models\SuppliersModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
+use App\Models\GodownModel;
 use Carbon\Carbon;
 use Auth;
 
@@ -590,6 +591,15 @@ class PurchaseReturnController extends Controller
                         $errors[] = ['record' => $record, 'error' => "Product '{$productName}' not found."];
                         continue;
                     }
+
+                    // Fetch `godown_id` from `GodownModel` using `company_id` and `name`
+                    $godownName = $itemsData['place'][$index] ?? 'Default Godown';
+                    $godown = GodownModel::where('name', $godownName)
+                                        ->where('company_id', $companyId) // Ensure correct company
+                                        ->first();
+
+                    // Use `godown_id` if found, otherwise set a default ID (e.g., `1` or `NULL`)
+                    $godownId = $godown ? $godown->id : null; // Change `null` to your actual default ID
 
                     $purchaseReturnProductsBatch[] = [
                         'purchase_return_id' => $purchaseReturn->id,
