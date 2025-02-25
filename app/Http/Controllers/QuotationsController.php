@@ -971,10 +971,19 @@ class QuotationsController extends Controller
             'get_template:id,name',
             'salesPerson:id,name',
             // Load the client record along with its addresses
+            // 'client' => function ($q) {
+            //     $q->select('id', 'name', 'customer_id', 'mobile', 'email')
+            //       ->with('addresses'); // addresses() relationship should be defined in ClientsModel
+            // }
             'client' => function ($q) {
-                $q->select('id', 'name', 'customer_id', 'mobile', 'email')
-                  ->with('addresses'); // addresses() relationship should be defined in ClientsModel
+                // Only select the key columns needed for the join (ID and customer_id)
+                $q->select('id', 'customer_id')
+                ->with(['addresses' => function ($query) {
+                    // Only fetch the customer_id (for joining) and the state field
+                    $query->select('customer_id', 'state');
+                }]);
             }
+
         ])
         ->select(
             'id', 'client_id', 'name', 'quotation_no', 
