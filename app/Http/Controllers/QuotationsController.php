@@ -586,18 +586,31 @@ class QuotationsController extends Controller
                 $quotation->template = $quotation->get_template ? ['id' => $quotation->get_template->id, 'name' => $quotation->get_template->name] : ['id' => null, 'name' => 'Unknown'];
                 unset($quotation->get_user, $quotation->salesPerson, $quotation->get_template);
 
-                // Attach client data with addresses
-                $clientData = $quotation->client ? $quotation->client->toArray() : null;
+                // // Attach client data with addresses
+                // $clientData = $quotation->client ? $quotation->client->toArray() : null;
 
-                // Remove unnecessary fields from client addresses if needed
-                if ($clientData && isset($clientData['addresses'])) {
-                    foreach ($clientData['addresses'] as &$address) {
-                        unset($address['created_at'], $address['updated_at']);
+                // // Remove unnecessary fields from client addresses if needed
+                // if ($clientData && isset($clientData['addresses'])) {
+                //     foreach ($clientData['addresses'] as &$address) {
+                //         unset($address['created_at'], $address['updated_at']);
+                //     }
+                // }
+
+                // // Include client data in response
+                // $quotation->client = $clientData;
+
+                // Attach client data along with addresses (only state)
+                if ($quotation->client) {
+                    $clientData = $quotation->client->toArray();
+                    if (isset($clientData['addresses'])) {
+                        $clientData['addresses'] = array_map(function ($address) {
+                            return ['state' => $address['state']];
+                        }, $clientData['addresses']);
                     }
+                    $quotation->client = $clientData;
+                } else {
+                    $quotation->client = null;
                 }
-
-                // Include client data in response
-                $quotation->client = $clientData;
 
                 return response()->json([
                     'code' => 200,
