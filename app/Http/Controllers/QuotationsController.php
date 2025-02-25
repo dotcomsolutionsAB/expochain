@@ -813,16 +813,10 @@ class QuotationsController extends Controller
                                 : ['id' => null, 'name' => 'Unknown'];
             unset($quotation->get_user, $quotation->salesPerson, $quotation->get_template);
 
-            // Attach client data along with addresses (only state)
+            // Transform client: Only return state from addresses
             if ($quotation->client) {
-                $clientData = $quotation->client->toArray();
-                if (isset($clientData['addresses'])) {
-                    // Transform each address to include only the state attribute
-                    $clientData['addresses'] = array_map(function ($address) {
-                        return ['state' => $address['state']];
-                    }, $clientData['addresses']);
-                }
-                $quotation->client = $clientData;
+                $state = optional($quotation->client->addresses->first())->state;
+                $quotation->client = ['state' => $state];
             } else {
                 $quotation->client = null;
             }
@@ -921,18 +915,15 @@ class QuotationsController extends Controller
                                 : ['id' => null, 'name' => 'Unknown'];
             unset($quotation->get_user, $quotation->salesPerson, $quotation->get_template);
 
-            // Attach client data along with addresses (only state)
+           // Attach client data: Only return state from addresses
             if ($quotation->client) {
-                $clientData = $quotation->client->toArray();
-                if (isset($clientData['addresses'])) {
-                    $clientData['addresses'] = array_map(function ($address) {
-                        return ['state' => $address['state']];
-                    }, $clientData['addresses']);
-                }
-                $quotation->client = $clientData;
+                // Use the addresses relationship, which is assumed to be a collection
+                $state = optional($quotation->client->addresses->first())->state;
+                $quotation->client = ['state' => $state];
             } else {
                 $quotation->client = null;
             }
+
 
             return $quotation;
         });
