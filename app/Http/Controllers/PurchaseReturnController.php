@@ -145,20 +145,6 @@ class PurchaseReturnController extends Controller
     }
 
     // view
-    // public function view_purchase_return()
-    // {
-    //     $get_purchase_returns = PurchaseReturnModel::with(['products' => function ($query) {
-    //         $query->select('purchase_return_number', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
-    //     }])
-    //     ->select('id', 'supplier_id', 'name', 'purchase_return_no', 'purchase_return_date', 'purchase_invoice_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
-    //     ->where('company_id',Auth::user()->company_id)
-    //     ->get();
-
-    //     return isset($get_purchase_returns) && $get_purchase_returns->isNotEmpty()
-    //         ? response()->json(['Purchase Returns fetched successfully!', 'data' => $get_purchase_returns], 200)
-    //         : response()->json(['Failed to fetch Purchase Return data'], 404);
-    // }
-
     public function view_purchase_return(Request $request)
     {
         // Get filter inputs
@@ -215,7 +201,6 @@ class PurchaseReturnController extends Controller
                 'message' => 'No Purchase Returns found!',
             ], 404);
     }
-
 
     // update
     public function edit_purchase_return(Request $request, $id)
@@ -346,147 +331,6 @@ class PurchaseReturnController extends Controller
     }
 
     // migration
-    // public function importPurchaseReturns()
-    // {
-    //     set_time_limit(300);
-
-    //     // Clear the PurchaseReturn and related tables
-    //     PurchaseReturnModel::truncate();
-    //     PurchaseReturnProductsModel::truncate();
-
-    //     // Define the external URL
-    //     $url = 'https://expo.egsm.in/assets/custom/migrate/purchase_return.php'; // Replace with your actual URL
-
-    //     // Fetch data from the external URL
-    //     try {
-    //         $response = Http::get($url);
-    //     } catch (\Exception $e) {
-    //         return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
-    //     }
-
-    //     if ($response->failed()) {
-    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
-    //     }
-
-    //     $data = $response->json('data');
-
-    //     if (empty($data)) {
-    //         return response()->json(['message' => 'No data found'], 404);
-    //     }
-
-    //     $successfulInserts = 0;
-    //     $errors = [];
-
-    //     foreach ($data as $record) {
-    //         // Decode JSON fields for items, tax, and addons
-    //         $itemsData = json_decode($record['items'] ?? '{}', true);
-    //         $taxData = json_decode($record['tax'] ?? '{}', true);
-
-    //         // Retrieve client/supplier
-    //         $supplier = SuppliersModel::where('name', $record['client'])->first();
-
-    //         if (!$supplier) {
-    //             $errors[] = [
-    //                 'record' => $record,
-    //                 'error' => 'Supplier not found for the provided name: ' . $record['client']
-    //             ];
-    //             continue; // Skip to the next record in the loop
-    //         }
-
-    //         // Set up main purchase return data
-    //         $purchaseReturnData = [
-    //             'supplier_id' => $supplier->id,
-    //             'name' => $record['client'],
-    //             'purchase_return_no' => $record['si_no'] ?? 'Unknown',
-    //             'purchase_return_date' => $record['si_date'] ?? now(),
-    //             'purchase_invoice_no' => $record['so_no'] ?? 'Unknown',
-    //             // 'state' => $record['state'] ?? 'Unknown State',
-    //             'cgst' => !empty($taxData['cgst']) ? $taxData['cgst'] : 0,
-    //             'sgst' => !empty($taxData['sgst']) ? $taxData['sgst'] : 0,
-    //             'igst' => !empty($taxData['igst']) ? $taxData['igst'] : 0,
-    //             'total' => $record['total'] ?? 0,
-    //             'currency' => 'INR',
-    //             'template' => json_decode($record['pdf_template'], true)['id'] ?? 0,
-    //             'status' => $record['status'] ?? 1,
-    //             // 'remarks' => $record['remarks'] ?? '',
-    //             // 'log_user' => $record['log_user'] ?? 'Unknown',
-    //         ];
-
-    //         // Validate main purchase return data
-    //         $validator = Validator::make($purchaseReturnData, [
-    //             'supplier_id' => 'required|integer',
-    //             'name' => 'required|string',
-    //             'purchase_return_no' => 'required|string',
-    //             'purchase_return_date' => 'required|date',
-    //             'purchase_invoice_no' => 'required|string',
-    //             // 'state' => 'required|string',
-    //             'cgst' => 'required|numeric',
-    //             'sgst' => 'required|numeric',
-    //             'igst' => 'required|numeric',
-    //             'total' => 'required|numeric',
-    //             'currency' => 'required|string',
-    //             'template' => 'required|integer',
-    //             'status' => 'required|integer',
-    //             // 'remarks' => 'nullable|string',
-    //             // 'log_user' => 'required|string',
-    //         ]);
-
-    //         if ($validator->fails()) {
-    //             $errors[] = ['record' => $record, 'errors' => $validator->errors()];
-    //             continue;
-    //         }
-
-    //         try {
-    //             $purchaseReturn = PurchaseReturnModel::create($purchaseReturnData);
-    //             $successfulInserts++;
-    //         } catch (\Exception $e) {
-    //             $errors[] = ['record' => $record, 'error' => 'Failed to insert purchase return: ' . $e->getMessage()];
-    //             continue;
-    //         }
-
-    //         // Process items (products) associated with the purchase return
-    //         if ($itemsData && isset($itemsData['product']) && is_array($itemsData['product'])) {
-    //             foreach ($itemsData['product'] as $index => $productName) {
-    //                 $product = ProductsModel::where('name', $productName)->first();
-
-    //                 // Check if the product exists
-    //                 if (!$product) {
-    //                     $errors[] = [
-    //                         'record' => $record,
-    //                         'error' => "Product with name '{$productName}' not found."
-    //                     ];
-    //                     continue; // Skip this product if not found
-    //                 }
-
-    //                 PurchaseReturnProductsModel::create([
-    //                     'purchase_return_number' => $purchaseReturn->id,
-    //                     'product_id' => $product->id,
-    //                     'product_name' => $productName,
-    //                     'description' => !empty($itemsData['desc'][$index]) ? ($itemsData['desc'][$index]) : 'null',
-    //                     'brand' => 'No brand Available',
-    //                     'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
-    //                     'unit' => $itemsData['unit'][$index] ?? '',
-    //                     'price' => (float) $itemsData['price'][$index] ?? 0,
-    //                     'discount' => (float) $itemsData['discount'][$index] ?? 0,
-    //                     'hsn' => $itemsData['hsn'][$index] ?? '',
-    //                     'tax' => (float) $itemsData['tax'][$index] ?? 0,
-    //                     'cgst' => (float) ($itemsData['cgst'][$index] ?? 0),
-    //                     'sgst' => (float) ($itemsData['sgst'][$index] ?? 0),
-    //                     'igst' => 0,
-    //                     'godown' => $itemsData['place'][$index] ?? 'Default Godown',
-    //                 ]);
-    //             }
-    //         }
-    //     }
-
-    //     return response()->json([
-    //         'code' => 200,
-    //         'success' => true,
-    //         'message' => "Purchase returns import completed with $successfulInserts successful inserts.",
-    //         'errors' => $errors,
-    //     ], 200);
-    // }
-
     public function importPurchaseReturns()
     {
         set_time_limit(300); // Extend execution time for large data sets
