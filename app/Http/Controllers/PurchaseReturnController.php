@@ -540,19 +540,22 @@ class PurchaseReturnController extends Controller
                 }
 
                 $purchaseReturnsBatch[] = [
+                    'company_id' => Auth::user()->company_id,
                     'supplier_id' => $supplier->id,
                     'name' => $record['client'],
                     'purchase_return_no' => $record['si_no'] ?? 'Unknown',
                     'purchase_return_date' => $record['si_date'] ?? now(),
                     'purchase_invoice_id' => $purchaseInvoice->id, // Storing the fetched purchase invoice ID
-                    'purchase_invoice_no' => $record['so_no'] ?? 'Unknown',
+                    // 'purchase_invoice_no' => $record['so_no'] ?? 'Unknown',
+                    'remarks' => $record['remarks'] ?? null,
                     'cgst' => $taxData['cgst'] ?? 0,
                     'sgst' => $taxData['sgst'] ?? 0,
                     'igst' => $taxData['igst'] ?? 0,
                     'total' => $record['total'] ?? 0,
                     'currency' => 'INR',
                     'template' => json_decode($record['pdf_template'], true)['id'] ?? 0,
-                    'status' => $record['status'] ?? 1,
+                    'gross' => 0,
+                    'round_off' => 0,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
@@ -589,14 +592,15 @@ class PurchaseReturnController extends Controller
 
                     $purchaseReturnProductsBatch[] = [
                         'purchase_return_number' => $purchaseReturn->id,
+                        'company_id' => Auth::user()->company_id,
                         'product_id' => $product->id,
                         'product_name' => $productName,
                         'description' => $itemsData['desc'][$index] ?? 'null',
-                        'brand' => 'No brand Available',
                         'quantity' => (int) ($itemsData['quantity'][$index] ?? 0),
                         'unit' => $itemsData['unit'][$index] ?? '',
                         'price' => (float) ($itemsData['price'][$index] ?? 0),
                         'discount' => (float) ($itemsData['discount'][$index] ?? 0),
+                        'discount_type' => "percentage",
                         'hsn' => $itemsData['hsn'][$index] ?? '',
                         'tax' => (float) ($itemsData['tax'][$index] ?? 0),
                         'cgst' => (float) ($itemsData['cgst'][$index] ?? 0),
