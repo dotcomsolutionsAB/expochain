@@ -534,7 +534,7 @@ class PurchaseReturnController extends Controller
                 }
 
                 // 🔍 Fetch `purchase_invoice_id` from `t_purchase_invoice`
-                $purchaseInvoice = PurchaseInvoiceModel::where('purchase_invoice_id', 'LIKE', $record['so_no'])->first();
+                $purchaseInvoice = PurchaseInvoiceModel::where('purchase_invoice_no', 'LIKE', $record['so_no'])->first();
                 if (!$purchaseInvoice) {
                     $errors[] = ['record' => $record, 'error' => "Purchase Invoice '{$record['so_no']}' not found."];
                     continue;
