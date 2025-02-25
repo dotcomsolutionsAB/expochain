@@ -970,7 +970,7 @@ class SalesOrderController extends Controller
         }
 
         // Fetch pending purchase orders for the given supplier and authenticated company
-        $saleseOrders = SalesOrderModel::where('supplier_id', $request->input('supplier_id'))
+        $saleseOrders = SalesOrderModel::where('client_id', $request->input('client_id'))
             ->where('company_id', $user->company_id)
             ->where('status', 'pending')
             ->pluck('ref_no'); // Fetch only `ref_no`
