@@ -686,13 +686,27 @@ class QuotationsController extends Controller
                 unset($quotation->get_user, $quotation->salesPerson, $quotation->get_template);
 
                 // Attach client data along with addresses
+                // if ($quotation->client) {
+                //     $clientData = $quotation->client->toArray();
+                //     // Optionally, remove timestamps or any unnecessary fields from addresses
+                //     if (isset($clientData['addresses'])) {
+                //         foreach ($clientData['addresses'] as &$address) {
+                //             unset($address['created_at'], $address['updated_at']);
+                //         }
+                //     }
+                //     $quotation->client = $clientData;
+                // } else {
+                //     $quotation->client = null;
+                // }
+
+                // Attach client data along with addresses (only state)
                 if ($quotation->client) {
                     $clientData = $quotation->client->toArray();
-                    // Optionally, remove timestamps or any unnecessary fields from addresses
                     if (isset($clientData['addresses'])) {
-                        foreach ($clientData['addresses'] as &$address) {
-                            unset($address['created_at'], $address['updated_at']);
-                        }
+                        // Transform addresses to include only the state attribute
+                        $clientData['addresses'] = array_map(function ($address) {
+                            return ['state' => $address['state']];
+                        }, $clientData['addresses']);
                     }
                     $quotation->client = $clientData;
                 } else {
