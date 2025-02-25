@@ -196,7 +196,6 @@ class SalesReturnController extends Controller
             ], 404);
     }
 
-
     // update
     public function edit_sales_return(Request $request, $id)
     {
@@ -483,5 +482,4 @@ class SalesReturnController extends Controller
             'errors' => $errors,
         ], 200);
     }
-
 }

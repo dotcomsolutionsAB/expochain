@@ -481,6 +481,4 @@ class PurchaseReturnController extends Controller
             'errors' => $errors,
         ], 200);
     }
-
-
 }
