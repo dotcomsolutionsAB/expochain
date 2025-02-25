@@ -617,7 +617,7 @@ class PurchaseReturnController extends Controller
                         'cgst' => (float) ($itemsData['cgst'][$index] ?? 0),
                         'sgst' => (float) ($itemsData['sgst'][$index] ?? 0),
                         'igst' => 0,
-                        'godown' => $godown,
+                        'godown' => $godownId,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ];
