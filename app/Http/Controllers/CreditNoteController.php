@@ -249,7 +249,7 @@ class CreditNoteController extends Controller
         foreach ($products as $productData) {
             $requestProductIDs[] = $productData['product_id'];
 
-            $existingProduct = CreditNoteProductsModel::where('credit_note_id', $productData['credit_note_id'])
+            $existingProduct = CreditNoteProductsModel::where('credit_note_id', $id)
                                                     ->where('product_id', $productData['product_id'])
                                                     ->first();
 
@@ -272,7 +272,7 @@ class CreditNoteController extends Controller
             } else {
                 // Create new product
                 CreditNoteProductsModel::create([
-                    'credit_note_id' => $productData['credit_note_id'],
+                    'credit_note_id' => $id,
                     'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
