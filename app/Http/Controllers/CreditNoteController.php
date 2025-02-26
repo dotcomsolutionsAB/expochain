@@ -307,7 +307,7 @@ class CreditNoteController extends Controller
     public function delete_credit_note($id)
     {
         $delete_credit_note = CreditNoteModel::where('id', $id)
-                                                ->where('company_id', $Auth::user()->company_id)
+                                                ->where('company_id', Auth::user()->company_id)
                                                 ->delete();
 
         $delete_credit_note_products = CreditNoteProductsModel::where('credit_note_id', $id)
