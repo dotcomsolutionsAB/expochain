@@ -211,7 +211,6 @@ class CreditNoteController extends Controller
             'round_off' => 'required|numeric',
 
             'products' => 'required|array',// Validating array of products
-            'products.*.credit_note_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
