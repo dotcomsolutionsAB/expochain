@@ -249,7 +249,7 @@ class DebitNoteController extends Controller
             $requestProductIDs[] = $productData['product_id'];
 
             // Check if the product exists for this debit_note_number
-            $existingProduct = DebitNoteProductsModel::where('debit_note_number', $productData['debit_note_number'])
+            $existingProduct = DebitNoteProductsModel::where('debit_note_number', $id)
                                                     ->where('product_id', $productData['product_id'])
                                                     ->first();
 
@@ -272,7 +272,7 @@ class DebitNoteController extends Controller
             } else {
                 // Create new product if it does not exist
                 DebitNoteProductsModel::create([
-                    'debit_note_number' => $productData['debit_note_number'],
+                    'debit_note_number' => $id,
                     'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
@@ -294,7 +294,7 @@ class DebitNoteController extends Controller
 
         // Delete products that are not in the request but exist in the database for this debit_note_number
         $productsDeleted = DebitNoteProductsModel::where('debit_note_number', $id)
-                                                ->where('product_id', $requestProductIDs)
+                                                ->whereNotIn('product_id', $requestProductIDs)
                                                 ->delete();
 
         // Remove timestamps from the response for neatness
