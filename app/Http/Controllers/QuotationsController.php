@@ -947,213 +947,210 @@ class QuotationsController extends Controller
     // }
 
     public function view_quotations(Request $request, $id = null)
-{
-    try {
-        // Build the base query with relationships
-        $query = QuotationsModel::with([
-            'products' => function ($query) {
-                $query->select(
-                    'quotation_id', 'product_id', 'product_name', 'description', 'quantity', 'amount', 
-                    'unit', 'price', 'delivery', 'discount_type', 'discount', 'hsn', 
-                    DB::raw('(tax / 2) as cgst_rate'), 
-                    DB::raw('(tax / 2) as sgst_rate'), 
-                    DB::raw('(tax) as igst_rate'), 
-                    'cgst', 'sgst', 'igst', 'attachment'
-                );
-            },
-            'addons' => function ($query) {
-                $query->select('quotation_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
-            },
-            'terms' => function ($query) {
-                $query->select('quotation_id', 'name', 'value');
-            },
-            'get_user:id,name',
-            'get_template:id,name',
-            'salesPerson:id,name',
-            // Load the client record along with its addresses
-            // 'client' => function ($q) {
-            //     $q->select('id', 'name', 'customer_id', 'mobile', 'email')
-            //       ->with('addresses'); // addresses() relationship should be defined in ClientsModel
-            // }
-            'client' => function ($q) {
-                // Only select the key columns needed for the join (ID and customer_id)
-                $q->select('id', 'customer_id')
-                ->with(['addresses' => function ($query) {
-                    // Only fetch the customer_id (for joining) and the state field
-                    $query->select('customer_id', 'state');
-                }]);
+    {
+        try {
+            // Build the base query with relationships
+            $query = QuotationsModel::with([
+                'products' => function ($query) {
+                    $query->select(
+                        'quotation_id', 'product_id', 'product_name', 'description', 'quantity', 'amount', 
+                        'unit', 'price', 'delivery', 'discount_type', 'discount', 'hsn', 
+                        DB::raw('(tax / 2) as cgst_rate'), 
+                        DB::raw('(tax / 2) as sgst_rate'), 
+                        DB::raw('(tax) as igst_rate'), 
+                        'cgst', 'sgst', 'igst', 'attachment'
+                    );
+                },
+                'addons' => function ($query) {
+                    $query->select('quotation_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
+                },
+                'terms' => function ($query) {
+                    $query->select('quotation_id', 'name', 'value');
+                },
+                'get_user:id,name',
+                'get_template:id,name',
+                'salesPerson:id,name',
+                // Load the client record along with its addresses
+                // 'client' => function ($q) {
+                //     $q->select('id', 'name', 'customer_id', 'mobile', 'email')
+                //       ->with('addresses'); // addresses() relationship should be defined in ClientsModel
+                // }
+                'client' => function ($q) {
+                    // Only select the key columns needed for the join (ID and customer_id)
+                    $q->select('id', 'customer_id')
+                    ->with(['addresses' => function ($query) {
+                        // Only fetch the customer_id (for joining) and the state field
+                        $query->select('customer_id', 'state');
+                    }]);
+                }
+
+            ])
+            ->select(
+                'id', 'client_id', 'name', 'quotation_no', 
+                DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 
+                'enquiry_no', 
+                DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 
+                'template', 'contact_person', 'sales_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off'
+            )
+            ->where('company_id', Auth::user()->company_id);
+
+            // If an ID is provided, fetch a single quotation
+            if ($id) {
+                $quotation = $query->where('id', $id)->first();
+                if (!$quotation) {
+                    return response()->json([
+                        'code' => 404,
+                        'success' => false,
+                        'message' => 'Quotation not found!',
+                    ], 404);
+                }
+
+                // Transform single quotation
+                $quotation->amount_in_words = $this->convertNumberToWords($quotation->total);
+                $quotation->total = is_numeric($quotation->total) 
+                                    ? number_format((float)$quotation->total, 2) 
+                                    : $quotation->total;
+                $quotation->user = $quotation->get_user 
+                                    ? ['id' => $quotation->get_user->id, 'name' => $quotation->get_user->name] 
+                                    : ['id' => null, 'name' => 'Unknown'];
+                $quotation->sales_person = $quotation->salesPerson 
+                                    ? ['id' => $quotation->salesPerson->id, 'name' => $quotation->salesPerson->name] 
+                                    : ['id' => null, 'name' => 'Unknown'];
+                $quotation->template = $quotation->get_template 
+                                    ? ['id' => $quotation->get_template->id, 'name' => $quotation->get_template->name] 
+                                    : ['id' => null, 'name' => 'Unknown'];
+                unset($quotation->get_user, $quotation->salesPerson, $quotation->get_template);
+
+                // Transform client: Only return state from addresses
+                if ($quotation->client) {
+                    $state = optional($quotation->client->addresses->first())->state;
+                    $quotation->client = ['state' => $state];
+                } else {
+                    $quotation->client = null;
+                }
+
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'Quotation fetched successfully!',
+                    'data' => $quotation,
+                ], 200);
             }
 
-        ])
-        ->select(
-            'id', 'client_id', 'name', 'quotation_no', 
-            DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 
-            'enquiry_no', 
-            DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 
-            'template', 'contact_person', 'sales_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off'
-        )
-        ->where('company_id', Auth::user()->company_id);
+            // Apply filters for listing
+            $clientId = $request->input('client_id');
+            $name = $request->input('name');
+            $quotationNo = $request->input('quotation_no');
+            $quotationDate = $request->input('quotation_date');
+            $dateFrom = $request->input('date_from');
+            $dateTo = $request->input('date_to');
+            $enquiryNo = $request->input('enquiry_no');
+            $enquiryDate = $request->input('enquiry_date');
+            $user = $request->input('user');
+            $status = $request->input('status');
+            $productIds = $request->input('product_ids');
+            $limit = $request->input('limit', 10);
+            $offset = $request->input('offset', 0);
 
-        // If an ID is provided, fetch a single quotation
-        if ($id) {
-            $quotation = $query->where('id', $id)->first();
-            if (!$quotation) {
+            if ($clientId) {
+                $query->where('client_id', $clientId);
+            }
+            if ($name) {
+                $query->where('name', 'LIKE', '%' . $name . '%');
+            }
+            if ($quotationNo) {
+                $query->where('quotation_no', 'LIKE', '%' . $quotationNo . '%');
+            }
+            if ($quotationDate) {
+                $query->whereDate('quotation_date', $quotationDate);
+            }
+            if ($enquiryNo) {
+                $query->where('enquiry_no', 'LIKE', '%' . $enquiryNo . '%');
+            }
+            if ($enquiryDate) {
+                $query->whereDate('enquiry_date', $enquiryDate);
+            }
+            if ($dateFrom && $dateTo) {
+                $query->whereBetween('quotation_date', [$dateFrom, $dateTo]);
+            } elseif ($dateFrom) {
+                $query->whereDate('quotation_date', '>=', $dateFrom);
+            } elseif ($dateTo) {
+                $query->whereDate('quotation_date', '<=', $dateTo);
+            }
+            if ($user) {
+                $query->where('user', $user);
+            }
+            if (!empty($status)) {
+                $statusArray = explode(',', $status);
+                $query->whereIn('status', $statusArray);
+            }
+            if (!empty($productIds)) {
+                $productIdArray = explode(',', $productIds);
+                $query->whereHas('products', function ($q) use ($productIdArray) {
+                    $q->whereIn('product_id', $productIdArray);
+                });
+            }
+
+            // Get total record count before applying limit
+            $totalRecords = $query->count();
+            $query->offset($offset)->limit($limit);
+
+            // Fetch paginated results
+            $get_quotations = $query->get();
+
+            if ($get_quotations->isEmpty()) {
                 return response()->json([
                     'code' => 404,
                     'success' => false,
-                    'message' => 'Quotation not found!',
+                    'message' => 'No Quotations found!',
                 ], 404);
             }
 
-            // Transform single quotation
-            $quotation->amount_in_words = $this->convertNumberToWords($quotation->total);
-            $quotation->total = is_numeric($quotation->total) 
-                                ? number_format((float)$quotation->total, 2) 
-                                : $quotation->total;
-            $quotation->user = $quotation->get_user 
-                                ? ['id' => $quotation->get_user->id, 'name' => $quotation->get_user->name] 
-                                : ['id' => null, 'name' => 'Unknown'];
-            $quotation->sales_person = $quotation->salesPerson 
-                                ? ['id' => $quotation->salesPerson->id, 'name' => $quotation->salesPerson->name] 
-                                : ['id' => null, 'name' => 'Unknown'];
-            $quotation->template = $quotation->get_template 
-                                ? ['id' => $quotation->get_template->id, 'name' => $quotation->get_template->name] 
-                                : ['id' => null, 'name' => 'Unknown'];
-            unset($quotation->get_user, $quotation->salesPerson, $quotation->get_template);
+            // Transform Data for each quotation
+            $get_quotations->transform(function ($quotation) {
+                $quotation->amount_in_words = $this->convertNumberToWords($quotation->total);
+                $quotation->total = is_numeric($quotation->total)
+                                    ? number_format((float)$quotation->total, 2)
+                                    : $quotation->total;
+                $quotation->user = $quotation->get_user 
+                                    ? ['id' => $quotation->get_user->id, 'name' => $quotation->get_user->name]
+                                    : ['id' => null, 'name' => 'Unknown'];
+                $quotation->sales_person = $quotation->salesPerson 
+                                    ? ['id' => $quotation->salesPerson->id, 'name' => $quotation->salesPerson->name]
+                                    : ['id' => null, 'name' => 'Unknown'];
+                $quotation->template = $quotation->get_template 
+                                    ? ['id' => $quotation->get_template->id, 'name' => $quotation->get_template->name]
+                                    : ['id' => null, 'name' => 'Unknown'];
+                unset($quotation->get_user, $quotation->salesPerson, $quotation->get_template);
 
-            // Transform client: Only return state from addresses
-            if ($quotation->client) {
-                $state = optional($quotation->client->addresses->first())->state;
-                $quotation->client = ['state' => $state];
-            } else {
-                $quotation->client = null;
-            }
+                // Transform client: Only return state from addresses
+                if ($quotation->client) {
+                    $state = optional($quotation->client->addresses->first())->state;
+                    $quotation->client = ['state' => $state];
+                } else {
+                    $quotation->client = null;
+                }
+
+                return $quotation;
+            });
 
             return response()->json([
                 'code' => 200,
                 'success' => true,
-                'message' => 'Quotation fetched successfully!',
-                'data' => $quotation,
+                'message' => 'Quotations fetched successfully!',
+                'data' => $get_quotations,
+                'count' => $get_quotations->count(),
+                'total_records' => $totalRecords,
             ], 200);
-        }
 
-        // Apply filters for listing
-        $clientId = $request->input('client_id');
-        $name = $request->input('name');
-        $quotationNo = $request->input('quotation_no');
-        $quotationDate = $request->input('quotation_date');
-        $dateFrom = $request->input('date_from');
-        $dateTo = $request->input('date_to');
-        $enquiryNo = $request->input('enquiry_no');
-        $enquiryDate = $request->input('enquiry_date');
-        $user = $request->input('user');
-        $status = $request->input('status');
-        $productIds = $request->input('product_ids');
-        $limit = $request->input('limit', 10);
-        $offset = $request->input('offset', 0);
-
-        if ($clientId) {
-            $query->where('client_id', $clientId);
-        }
-        if ($name) {
-            $query->where('name', 'LIKE', '%' . $name . '%');
-        }
-        if ($quotationNo) {
-            $query->where('quotation_no', 'LIKE', '%' . $quotationNo . '%');
-        }
-        if ($quotationDate) {
-            $query->whereDate('quotation_date', $quotationDate);
-        }
-        if ($enquiryNo) {
-            $query->where('enquiry_no', 'LIKE', '%' . $enquiryNo . '%');
-        }
-        if ($enquiryDate) {
-            $query->whereDate('enquiry_date', $enquiryDate);
-        }
-        if ($dateFrom && $dateTo) {
-            $query->whereBetween('quotation_date', [$dateFrom, $dateTo]);
-        } elseif ($dateFrom) {
-            $query->whereDate('quotation_date', '>=', $dateFrom);
-        } elseif ($dateTo) {
-            $query->whereDate('quotation_date', '<=', $dateTo);
-        }
-        if ($user) {
-            $query->where('user', $user);
-        }
-        if (!empty($status)) {
-            $statusArray = explode(',', $status);
-            $query->whereIn('status', $statusArray);
-        }
-        if (!empty($productIds)) {
-            $productIdArray = explode(',', $productIds);
-            $query->whereHas('products', function ($q) use ($productIdArray) {
-                $q->whereIn('product_id', $productIdArray);
-            });
-        }
-
-        // Get total record count before applying limit
-        $totalRecords = $query->count();
-        $query->offset($offset)->limit($limit);
-
-        // Fetch paginated results
-        $get_quotations = $query->get();
-
-        if ($get_quotations->isEmpty()) {
+        } catch (\Exception $e) {
             return response()->json([
-                'code' => 404,
+                'code' => 500,
                 'success' => false,
-                'message' => 'No Quotations found!',
-            ], 404);
+                'message' => 'Something went wrong: ' . $e->getMessage(),
+            ], 500);
         }
-
-        // Transform Data for each quotation
-        $get_quotations->transform(function ($quotation) {
-            $quotation->amount_in_words = $this->convertNumberToWords($quotation->total);
-            $quotation->total = is_numeric($quotation->total)
-                                ? number_format((float)$quotation->total, 2)
-                                : $quotation->total;
-            $quotation->user = $quotation->get_user 
-                                ? ['id' => $quotation->get_user->id, 'name' => $quotation->get_user->name]
-                                : ['id' => null, 'name' => 'Unknown'];
-            $quotation->sales_person = $quotation->salesPerson 
-                                ? ['id' => $quotation->salesPerson->id, 'name' => $quotation->salesPerson->name]
-                                : ['id' => null, 'name' => 'Unknown'];
-            $quotation->template = $quotation->get_template 
-                                ? ['id' => $quotation->get_template->id, 'name' => $quotation->get_template->name]
-                                : ['id' => null, 'name' => 'Unknown'];
-            unset($quotation->get_user, $quotation->salesPerson, $quotation->get_template);
-
-            // Transform client: Only return state from addresses
-            if ($quotation->client) {
-                $state = optional($quotation->client->addresses->first())->state;
-                $quotation->client = ['state' => $state];
-            } else {
-                $quotation->client = null;
-            }
-
-            return $quotation;
-        });
-
-        return response()->json([
-            'code' => 200,
-            'success' => true,
-            'message' => 'Quotations fetched successfully!',
-            'data' => $get_quotations,
-            'count' => $get_quotations->count(),
-            'total_records' => $totalRecords,
-        ], 200);
-
-    } catch (\Exception $e) {
-        return response()->json([
-            'code' => 500,
-            'success' => false,
-            'message' => 'Something went wrong: ' . $e->getMessage(),
-        ], 500);
     }
-}
-
-
-
 
     // Update Quotations
     public function update_quotations(Request $request, $id)

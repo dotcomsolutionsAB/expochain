@@ -293,7 +293,7 @@ class CreditNoteController extends Controller
 
         // Delete products not included in the request
         $productsDeleted = CreditNoteProductsModel::where('credit_note_id', $id)
-                                                ->where('product_id', $requestProductIDs)
+                                                ->whereNotIn('product_id', $requestProductIDs)
                                                 ->delete();
 
         unset($creditNote['created_at'], $creditNote['updated_at']);
