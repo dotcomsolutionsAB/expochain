@@ -73,7 +73,7 @@ class CreditNoteController extends Controller
         }
 
         // \DB::enableQueryLog();
-        $exists = DebitNoteModel::where('company_id', Auth::user()->company_id)
+        $exists = CreditNoteModel::where('company_id', Auth::user()->company_id)
             ->where('credit_note_no', $credit_note_no)
             ->exists();
             // dd(\DB::getQueryLog());
