@@ -258,11 +258,11 @@ class CreditNoteController extends Controller
                 $existingProduct->update([
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    'brand' => $productData['brand'],
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
                     'discount' => $productData['discount'],
+                    'discount_type' => $productData['discount_type'],
                     'hsn' => $productData['hsn'],
                     'tax' => $productData['tax'],
                     'cgst' => $productData['cgst'],
