@@ -277,7 +277,6 @@ class DebitNoteController extends Controller
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
-                    'brand' => $productData['brand'],
                     'quantity' => $productData['quantity'],
                     'unit' => $productData['unit'],
                     'price' => $productData['price'],
