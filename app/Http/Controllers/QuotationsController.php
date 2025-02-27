@@ -966,9 +966,11 @@ class QuotationsController extends Controller
                 'addons' => function ($query) {
                     $query->select('quotation_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
                 },
-                'terms' => function ($query) {
-                    $query->select('quotation_id', 'name', 'value', 'term_master_id');
-                },
+                // 'terms' => function ($query) {
+                //     $query->select('quotation_id', 'name', 'value', 'term_master_id');
+                // },
+                // Load terms along with their term master details
+                'terms.termMaster',
                 'get_user:id,name',
                 'get_template:id,name',
                 'salesPerson:id,name',
@@ -1030,6 +1032,23 @@ class QuotationsController extends Controller
                 } else {
                     $quotation->client = null;
                 }
+
+                // Transform terms: Replace term_master_id with a term_master object
+                $quotation->terms = $quotation->terms->map(function ($term) {
+                    return [
+                        'quotation_id' => $term->quotation_id,
+                        'name' => $term->name,
+                        'value' => $term->value,
+                        'term_master' => $term->termMaster 
+                            ? [
+                                'id'      => $term->termMaster->id,
+                                'name'    => $term->termMaster->name,
+                                'default' => $term->termMaster->default,
+                                'type'    => $term->termMaster->type,
+                            ]
+                            : null,
+                    ];
+                });
 
                 return response()->json([
                     'code' => 200,
@@ -1132,6 +1151,23 @@ class QuotationsController extends Controller
                 } else {
                     $quotation->client = null;
                 }
+
+                // Transform terms: Replace term_master_id with a term_master object
+                $quotation->terms = $quotation->terms->map(function ($term) {
+                    return [
+                        'quotation_id' => $term->quotation_id,
+                        'name' => $term->name,
+                        'value' => $term->value,
+                        'term_master' => $term->termMaster 
+                            ? [
+                                'id'      => $term->termMaster->id,
+                                'name'    => $term->termMaster->name,
+                                'default' => $term->termMaster->default,
+                                'type'    => $term->termMaster->type,
+                            ]
+                            : null,
+                    ];
+                });
 
                 return $quotation;
             });

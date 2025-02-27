@@ -15,4 +15,9 @@ class QuotationTermsModel extends Model
     {
         return $this->belongsTo(QuotationsModel::class, 'quotation_id', 'id');
     }
+
+    public function termMaster()
+    {
+        return $this->belongsTo(QuotationTermMasterModel::class, 'term_master_id', 'id');
+    }   
 }
