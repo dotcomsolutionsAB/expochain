@@ -48,7 +48,7 @@ class QuotationsController extends Controller
             // for products
             'products' => 'required|array|min:1',
             'products.*.product_id' => 'required|integer|exists:t_products,id',
-            'products.*.product_name' => 'required|string|exists:t_products,id',
+            'products.*.product_name' => 'required|string|exists:t_products,name',
             'products.*.description' => 'nullable|string',
             'products.*.quantity' => 'required|numeric|min:1',
             'products.*.unit' => 'required|string|max:50',
