@@ -1033,20 +1033,44 @@ class QuotationsController extends Controller
                     $quotation->client = null;
                 }
 
-                // Transform terms: Replace term_master_id with a term_master object
+                // // Transform terms: Replace term_master_id with a term_master object
+                // $quotation->terms = $quotation->terms->map(function ($term) {
+                //     return [
+                //         'quotation_id' => $term->quotation_id,
+                //         'name' => $term->name,
+                //         'value' => $term->value,
+                //         'term_master' => $term->termMaster 
+                //             ? [
+                //                 'id'      => $term->termMaster->id,
+                //                 'name'    => $term->termMaster->name,
+                //                 'default' => $term->termMaster->default,
+                //                 'type'    => $term->termMaster->type,
+                //             ]
+                //             : null,
+                //     ];
+                // });
+
+                // Transform terms: Rebuild each term without timestamps
                 $quotation->terms = $quotation->terms->map(function ($term) {
+                    $termMaster = null;
+                    if ($term->termMaster) {
+                        $termMaster = [
+                            'id'            => $term->termMaster->id,
+                            'company_id'    => $term->termMaster->company_id,
+                            'order'         => $term->termMaster->order,
+                            'name'          => $term->termMaster->name,
+                            'default_value' => $term->termMaster->default_value,
+                            'type'          => $term->termMaster->type,
+                        ];
+                    }
                     return [
-                        'quotation_id' => $term->quotation_id,
-                        'name' => $term->name,
-                        'value' => $term->value,
-                        'term_master' => $term->termMaster 
-                            ? [
-                                'id'      => $term->termMaster->id,
-                                'name'    => $term->termMaster->name,
-                                'default' => $term->termMaster->default,
-                                'type'    => $term->termMaster->type,
-                            ]
-                            : null,
+                        'id'             => $term->id,
+                        'quotation_id'   => $term->quotation_id,
+                        'company_id'     => $term->company_id,
+                        'term_master_id' => $term->term_master_id,
+                        'name'           => $term->name,
+                        'value'          => $term->value,
+                        'term_master'    => $termMaster,
                     ];
                 });
 
@@ -1152,24 +1176,50 @@ class QuotationsController extends Controller
                     $quotation->client = null;
                 }
 
-                // Transform terms: Replace term_master_id with a term_master object
+                // // Transform terms: Replace term_master_id with a term_master object
+                // $quotation->terms = $quotation->terms->map(function ($term) {
+                //     return [
+                //         'quotation_id' => $term->quotation_id,
+                //         'name' => $term->name,
+                //         'value' => $term->value,
+                //         'term_master' => $term->termMaster 
+                //             ? [
+                //                 'id'      => $term->termMaster->id,
+                //                 'name'    => $term->termMaster->name,
+                //                 'default' => $term->termMaster->default,
+                //                 'type'    => $term->termMaster->type,
+                //             ]
+                //             : null,
+                //     ];
+                // });
+
+                // return $quotation;
+
+                // Transform terms: Replace term_master_id with a term_master object excluding timestamps
                 $quotation->terms = $quotation->terms->map(function ($term) {
+                    // Build term_master object without created_at and updated_at
+                    $termMaster = null;
+                    if ($term->termMaster) {
+                        $termMaster = [
+                            'id'            => $term->termMaster->id,
+                            'company_id'    => $term->termMaster->company_id,
+                            'order'         => $term->termMaster->order,
+                            'name'          => $term->termMaster->name,
+                            'default_value' => $term->termMaster->default_value,
+                            'type'          => $term->termMaster->type,
+                        ];
+                    }
                     return [
-                        'quotation_id' => $term->quotation_id,
-                        'name' => $term->name,
-                        'value' => $term->value,
-                        'term_master' => $term->termMaster 
-                            ? [
-                                'id'      => $term->termMaster->id,
-                                'name'    => $term->termMaster->name,
-                                'default' => $term->termMaster->default,
-                                'type'    => $term->termMaster->type,
-                            ]
-                            : null,
+                        'id'             => $term->id,
+                        'quotation_id'   => $term->quotation_id,
+                        'company_id'     => $term->company_id,
+                        'term_master_id' => $term->term_master_id,
+                        'name'           => $term->name,
+                        'value'          => $term->value,
+                        'term_master'    => $termMaster,
                     ];
                 });
 
-                return $quotation;
             });
 
             return response()->json([
