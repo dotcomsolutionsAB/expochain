@@ -9,7 +9,7 @@ class QuotationTermsModel extends Model
     //
     protected $table = 't_quotation_terms';
 
-    protected $fillable = ['quotation_id', 'company_id', 'name', 'value'];
+    protected $fillable = ['quotation_id', 'company_id', 'name', 'value', 'term_master_id'];
 
     public function quotation()
     {

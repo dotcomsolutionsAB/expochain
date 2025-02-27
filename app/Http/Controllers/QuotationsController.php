@@ -78,6 +78,7 @@ class QuotationsController extends Controller
             'terms' => 'nullable|array',
             'terms.*.name' => 'required|string|max:255',
             'terms.*.value' => 'required|string|max:255',
+            'terms.*.term_master_id' => 'required|integer|exists:t_quotation_term_masters,id',
         ]);
 
         // Handle quotation number logic
@@ -185,6 +186,7 @@ class QuotationsController extends Controller
                 'company_id' => Auth::user()->company_id,
                 'name' => $term['name'],
                 'value' => $term['value'],
+                'term_master_id' => $term['term_master_id'],
             ]);
         }
 
@@ -965,7 +967,7 @@ class QuotationsController extends Controller
                     $query->select('quotation_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
                 },
                 'terms' => function ($query) {
-                    $query->select('quotation_id', 'name', 'value');
+                    $query->select('quotation_id', 'name', 'value', 'term_master_id');
                 },
                 'get_user:id,name',
                 'get_template:id,name',
@@ -1206,6 +1208,7 @@ class QuotationsController extends Controller
             'terms' => 'nullable|array',
             'terms.*.name' => 'required|string',
             'terms.*.value' => 'required|string',
+            'terms.*.term_master_id' => 'required|integer|exists:t_quotation_term_masters,id',
         ]);
 
         $quotation = QuotationsModel::where('id', $id)->first();
@@ -1332,6 +1335,7 @@ class QuotationsController extends Controller
             if ($existingTerm) {
                 $existingTerm->update([
                     'value' => $termData['value'],
+                    'term_master_id' => $termData['term_master_id'],
                 ]);
             } else {
                 QuotationTermsModel::create([
@@ -1339,6 +1343,7 @@ class QuotationsController extends Controller
                     'company_id' => Auth::user()->company_id,
                     'name' => $termData['name'],
                     'value' => $termData['value'],
+                    'term_master_id' => $termData['term_master_id'],
                 ]);
             }
         }
