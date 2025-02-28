@@ -414,6 +414,14 @@ class SalesInvoiceController extends Controller
             $salesInvoice->user = $salesInvoice->get_user ? ['id' => $salesInvoice->get_user->id, 'name' => $salesInvoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
             unset($salesInvoice->get_user);
 
+            // Transform client: Only return state from addresses
+            if ($salesInvoice->client) {
+                $state = optional($salesInvoice->client->addresses->first())->state;
+                $salesInvoice->client = ['state' => $state];
+            } else {
+                $salesInvoice->client = null;
+            }
+
             return response()->json([
                 'code' => 200,
                 'success' => true,
@@ -479,14 +487,6 @@ class SalesInvoiceController extends Controller
             ], 404);
         }
 
-        // Transform client: Only return state from addresses
-         if ($salesInvoice->client) {
-            $state = optional($salesInvoice->client->addresses->first())->state;
-            $salesInvoice->client = ['state' => $state];
-        } else {
-            $salesInvoice->client = null;
-        }
-
         // Transform Data
         $get_sales_invoices->transform(function ($invoice) {
             $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
@@ -494,6 +494,14 @@ class SalesInvoiceController extends Controller
             $invoice->sales_person = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
             $invoice->user = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
             unset($invoice->get_user);
+
+            // Transform client: Only return state from addresses for each invoice
+            if ($invoice->client) {
+                $state = optional($invoice->client->addresses->first())->state;
+                $invoice->client = ['state' => $state];
+            } else {
+                $invoice->client = null;
+            }
 
             return $invoice;
         });
