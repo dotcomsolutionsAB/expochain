@@ -148,7 +148,15 @@ class DebitNoteController extends Controller
         // Build the query
         $query = DebitNoteModel::with(['products' => function ($query) {
             $query->select('debit_note_number', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
-        }])
+        },
+        'supplier' => function ($q) {
+                // Select key supplier columns and include addresses
+                $q->select('id', 'customer_id')
+                  ->with(['addresses' => function ($query) {
+                      $query->select('customer_id', 'state');
+                  }]);
+            }
+        ])
         ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
         ->where('company_id', Auth::user()->company_id);
 
@@ -171,6 +179,19 @@ class DebitNoteController extends Controller
 
         // Fetch data
         $get_debit_notes = $query->get();
+
+        // Transform data
+        $get_debit_notes->transform(function ($debitNote) {
+            // Transform supplier: Only return state from addresses
+            if ($debitNote->supplier) {
+                $state = optional($debitNote->supplier->addresses->first())->state;
+                $debitNote->supplier = ['state' => $state];
+            } else {
+                $debitNote->supplier = null;
+            }
+
+            return $debitNote;
+        });
 
         // Return response
         return $get_debit_notes->isNotEmpty()
