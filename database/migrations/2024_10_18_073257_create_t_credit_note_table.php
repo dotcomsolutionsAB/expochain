@@ -25,7 +25,7 @@ return new class extends Migration
             $table->float('igst');
             $table->float('total');
             $table->string('currency');
-            $table->integer('template');
+            $table->integer('template')->nullable();
             $table->float('gross');
             $table->float('round_off');
             $table->timestamps();

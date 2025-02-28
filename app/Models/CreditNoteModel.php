@@ -31,4 +31,15 @@ class CreditNoteModel extends Model
         return $this->hasMany(CreditNoteProductsModel::class, 'credit_note_id', 'id');
     }
 
+    public function client()
+    {
+        return $this->belongsTo(ClientsModel::class, 'client_id', 'id');
+    }
+
+    public function addresses()
+    {
+        // Here, 'customer_id' in ClientAddressModel should match the 'customer_id' in ClientsModel.
+        return $this->hasMany(ClientAddressModel::class, 'customer_id', 'customer_id');
+    }
+
 }

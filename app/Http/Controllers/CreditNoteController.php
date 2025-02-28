@@ -152,7 +152,15 @@ class CreditNoteController extends Controller
         // Build the query
         $query = CreditNoteModel::with(['products' => function ($query) {
             $query->select('credit_note_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
-        }])
+        },
+        'client' => function ($q) {
+                // Select key client columns and include addresses
+                $q->select('id', 'customer_id')
+                  ->with(['addresses' => function ($query) {
+                      $query->select('customer_id', 'state');
+                  }]);
+            }
+        ])
         ->select('id', 'client_id', 'name', 'credit_note_no', 'credit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
         ->where('company_id', Auth::user()->company_id);
 
@@ -175,6 +183,19 @@ class CreditNoteController extends Controller
 
         // Fetch data
         $get_credit_notes = $query->get();
+
+        // Transform data
+        $get_credit_notes->transform(function ($creditNote) {
+            // Transform client: Only return state from addresses
+            if ($creditNote->client) {
+                $state = optional($creditNote->client->addresses->first())->state;
+                $creditNote->client = ['state' => $state];
+            } else {
+                $creditNote->client = null;
+            }
+
+            return $creditNote;
+        });
 
         // Return response
         return $get_credit_notes->isNotEmpty()
