@@ -151,9 +151,9 @@ class DebitNoteController extends Controller
         },
         'supplier' => function ($q) {
                 // Select key supplier columns and include addresses
-                $q->select('id', 'customer_id')
+                $q->select('id', 'supplier_id')
                   ->with(['addresses' => function ($query) {
-                      $query->select('customer_id', 'state');
+                      $query->select('supplier_id', 'state');
                   }]);
             }
         ])
