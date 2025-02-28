@@ -480,11 +480,11 @@ class SalesInvoiceController extends Controller
         }
 
         // Transform client: Only return state from addresses
-         if ($get_sales_invoices->client) {
-            $state = optional($get_sales_invoices->client->addresses->first())->state;
-            $get_sales_invoices->client = ['state' => $state];
+         if ($salesInvoice->client) {
+            $state = optional($salesInvoice->client->addresses->first())->state;
+            $salesInvoice->client = ['state' => $state];
         } else {
-            $get_sales_invoices->client = null;
+            $salesInvoice->client = null;
         }
 
         // Transform Data
