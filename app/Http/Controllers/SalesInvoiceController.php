@@ -378,7 +378,15 @@ class SalesInvoiceController extends Controller
             'addons' => function ($query) {
                 $query->select('sales_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
             },
-            'get_user:id,name'
+            'get_user:id,name',
+            'client' => function ($q) {
+                    // Only select the key columns needed for the join (ID and customer_id)
+                    $q->select('id', 'customer_id')
+                    ->with(['addresses' => function ($query) {
+                        // Only fetch the customer_id (for joining) and the state field
+                        $query->select('customer_id', 'state');
+                    }]);
+            }
         ])
         ->select('id', 'client_id', 'name', 'sales_invoice_no', 
             DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date'), 
@@ -469,6 +477,14 @@ class SalesInvoiceController extends Controller
                 'success' => false,
                 'message' => 'No Sales Invoices found!',
             ], 404);
+        }
+
+        // Transform client: Only return state from addresses
+         if ($get_sales_invoices->client) {
+            $state = optional($get_sales_invoices->client->addresses->first())->state;
+            $get_sales_invoices->client = ['state' => $state];
+        } else {
+            $get_sales_invoices->client = null;
         }
 
         // Transform Data
