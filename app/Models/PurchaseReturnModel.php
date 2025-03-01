@@ -30,7 +30,7 @@ class PurchaseReturnModel extends Model
     // Defining the relationship with PurchaseReturnProductsModel
     public function products()
     {
-        return $this->hasMany(PurchaseReturnProductsModel::class, 'purchase_return_number', 'id');
+        return $this->hasMany(PurchaseReturnProductsModel::class, 'purchase_return_id', 'id');
     }
 
     public function supplier()
