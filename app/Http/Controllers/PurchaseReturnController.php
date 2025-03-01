@@ -25,7 +25,7 @@ class PurchaseReturnController extends Controller
             'name' => 'required|string|max:255',
             'purchase_return_no' => 'required|string',
             'purchase_return_date' => 'required|date',
-            'purchase_invoice_id' => 'required|string|exists:t_purchase_invoice,purchase_invoice_no', // Ensure invoice exists
+            'purchase_invoice_id' => 'required|string|exists:t_purchase_invoice,id', // Ensure invoice exists
             'remarks' => 'nullable|string',
             'cgst' => 'required|numeric|min:0',
             'sgst' => 'required|numeric|min:0',
@@ -97,7 +97,7 @@ class PurchaseReturnController extends Controller
             'name' =>  $supplier->name,
             'purchase_return_no' => $purchase_return_no,
             'purchase_return_date' => $currentDate,
-            'purchase_invoice_no' => $request->input('purchase_invoice_no'),
+            'purchase_invoice_id' => $request->input('purchase_invoice_id'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
@@ -152,7 +152,7 @@ class PurchaseReturnController extends Controller
         $name = $request->input('name');
         $purchaseReturnNo = $request->input('purchase_return_no');
         $purchaseReturnDate = $request->input('purchase_return_date');
-        $purchaseInvoiceNo = $request->input('purchase_invoice_no');
+        $purchaseInvoiceId = $request->input('purchase_invoice_id');
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
 
@@ -168,7 +168,7 @@ class PurchaseReturnController extends Controller
                   }]);
             }
         ])
-        ->select('id', 'supplier_id', 'name', 'purchase_return_no', 'purchase_return_date', 'purchase_invoice_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
+        ->select('id', 'supplier_id', 'name', 'purchase_return_no', 'purchase_return_date', 'purchase_invoice_id', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -184,8 +184,8 @@ class PurchaseReturnController extends Controller
         if ($purchaseReturnDate) {
             $query->whereDate('purchase_return_date', $purchaseReturnDate);
         }
-        if ($purchaseInvoiceNo) {
-            $query->where('purchase_invoice_no', 'LIKE', '%' . $purchaseInvoiceNo . '%');
+        if ($purchaseInvoiceId) {
+            $query->where('purchase_invoice_id', 'LIKE', '%' . $purchaseInvoiceId . '%');
         }
 
         // Apply limit and offset
@@ -229,7 +229,7 @@ class PurchaseReturnController extends Controller
             'name' => 'required|string',
             'purchase_return_no' => 'required|string',
             'purchase_return_date' => 'required|date',
-            'purchase_invoice_no' => 'required|string',
+            'purchase_invoice_id' => 'required|string',
             'cgst' => 'required|numeric',
             'sgst' => 'required|numeric',
             'igst' => 'required|numeric',
@@ -263,7 +263,7 @@ class PurchaseReturnController extends Controller
             'name' => $request->input('name'),
             'purchase_return_no' => $request->input('purchase_return_no'),
             'purchase_return_date' => $request->input('purchase_return_date'),
-            'purchase_invoice_no' => $request->input('purchase_invoice_no'),
+            'purchase_invoice_id' => $request->input('purchase_invoice_id'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
@@ -398,7 +398,7 @@ class PurchaseReturnController extends Controller
                 }
 
                 // 🔍 Fetch `purchase_invoice_id` from `t_purchase_invoice`
-                $purchaseInvoice = PurchaseInvoiceModel::where('purchase_invoice_no', 'LIKE', $record['so_no'])->first();
+                $purchaseInvoice = PurchaseInvoiceModel::where('purchase_invoice_id', 'LIKE', $record['so_no'])->first();
                 if (!$purchaseInvoice) {
                     $errors[] = ['record' => $record, 'error' => "Purchase Invoice '{$record['so_no']}' not found."];
                     continue;
@@ -411,7 +411,7 @@ class PurchaseReturnController extends Controller
                     'purchase_return_no' => $record['si_no'] ?? 'Unknown',
                     'purchase_return_date' => $record['si_date'] ?? now(),
                     'purchase_invoice_id' => $purchaseInvoice->id, // Storing the fetched purchase invoice ID
-                    // 'purchase_invoice_no' => $record['so_no'] ?? 'Unknown',
+                    // 'purchase_invoice_id' => $record['so_no'] ?? 'Unknown',
                     'remarks' => $record['remarks'] ?? null,
                     'cgst' => $taxData['cgst'] ?? 0,
                     'sgst' => $taxData['sgst'] ?? 0,
