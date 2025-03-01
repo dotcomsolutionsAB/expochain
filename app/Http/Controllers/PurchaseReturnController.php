@@ -158,7 +158,7 @@ class PurchaseReturnController extends Controller
 
         // Build the query
         $query = PurchaseReturnModel::with(['products' => function ($query) {
-            $query->select('purchase_return_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
+            $query->select('purchase_return_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
         },
             'supplier' => function ($q) {
                 // Select key supplier columns and include addresses
@@ -168,7 +168,7 @@ class PurchaseReturnController extends Controller
                   }]);
             }
         ])
-        ->select('id', 'supplier_id', 'name', 'purchase_return_no', 'purchase_return_date', 'purchase_invoice_id', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
+        ->select('id', 'supplier_id', 'name', 'purchase_return_no', 'purchase_return_date', 'purchase_invoice_id', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
