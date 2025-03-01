@@ -159,7 +159,15 @@ class PurchaseReturnController extends Controller
         // Build the query
         $query = PurchaseReturnModel::with(['products' => function ($query) {
             $query->select('purchase_return_id', 'product_id', 'product_name', 'description', 'brand', 'quantity', 'unit', 'price', 'discount', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
-        }])
+        },
+            'supplier' => function ($q) {
+                // Select key supplier columns and include addresses
+                $q->select('id', 'supplier_id')
+                  ->with(['addresses' => function ($query) {
+                      $query->select('supplier_id', 'state');
+                  }]);
+            }
+        ])
         ->select('id', 'supplier_id', 'name', 'purchase_return_no', 'purchase_return_date', 'purchase_invoice_no', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'status')
         ->where('company_id', Auth::user()->company_id);
 
@@ -185,6 +193,17 @@ class PurchaseReturnController extends Controller
 
         // Fetch data
         $get_purchase_returns = $query->get();
+
+         // Transform data: For each purchase return, transform supplier data to include only state from addresses
+        $get_purchase_returns->transform(function ($purchaseReturn) {
+            if ($purchaseReturn->supplier) {
+                $state = optional($purchaseReturn->supplier->addresses->first())->state;
+                $purchaseReturn->supplier = ['state' => $state];
+            } else {
+                $purchaseReturn->supplier = null;
+            }
+            return $purchaseReturn;
+        });
 
         // Return response
         return $get_purchase_returns->isNotEmpty()
