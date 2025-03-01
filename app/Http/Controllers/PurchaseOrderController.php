@@ -372,7 +372,14 @@ class PurchaseOrderController extends Controller
                 $query->select('purchase_order_id', 'name', 'value');
             },
             'get_user:id,name',
-            'get_template:id,name'
+            'get_template:id,name',
+            'supplier' => function ($q) {
+                // Select key supplier columns and include addresses
+                $q->select('id', 'supplier_id')
+                  ->with(['addresses' => function ($query) {
+                      $query->select('supplier_id', 'state');
+                  }]);
+            }
         ])
         ->select(
             'id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'oa_no', 
@@ -403,6 +410,14 @@ class PurchaseOrderController extends Controller
             $purchaseOrder->products->transform(fn($product) => collect($product)->except(['purchase_order_id']));
             $purchaseOrder->addons->transform(fn($addon) => collect($addon)->except(['purchase_order_id']));
             $purchaseOrder->terms->transform(fn($term) => collect($term)->except(['purchase_order_id']));
+
+            // Transform supplier: Only return state from addresses
+            if ($purchaseOrder->supplier) {
+                $state = optional($purchaseOrder->supplier->addresses->first())->state;
+                $purchaseOrder->supplier = ['state' => $state];
+            } else {
+                $purchaseOrder->supplier = null;
+            }
 
             return response()->json([
                 'code' => 200,
@@ -477,7 +492,6 @@ class PurchaseOrderController extends Controller
             'total_records' => $totalRecords,
         ], 200);
     }
-
 
     // update
     public function edit_purchase_order(Request $request, $id)
