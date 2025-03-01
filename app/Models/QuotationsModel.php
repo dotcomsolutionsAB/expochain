@@ -71,5 +71,4 @@ class QuotationsModel extends Model
         // Here, 'customer_id' in ClientAddressModel should match the 'customer_id' in ClientsModel.
         return $this->hasMany(ClientAddressModel::class, 'customer_id', 'customer_id');
     }
-
 }

@@ -165,7 +165,16 @@ class SalesReturnController extends Controller
             if ($productName) {
                 $query->where('product_name', 'LIKE', '%' . $productName . '%');
             }
-        }])
+        },
+            'client' => function ($q) {
+                    // Only select the key columns needed for the join (ID and customer_id)
+                    $q->select('id', 'customer_id')
+                    ->with(['addresses' => function ($query) {
+                        // Only fetch the customer_id (for joining) and the state field
+                        $query->select('customer_id', 'state');
+                    }]);
+                }
+        ])
         ->select('id', 'client_id', 'name', 'sales_return_no', 'sales_return_date', 'sales_invoice_id', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
         ->where('company_id', Auth::user()->company_id);
 
@@ -179,6 +188,17 @@ class SalesReturnController extends Controller
 
         // Fetch the data
         $get_sales_returns = $query->get();
+
+        // Transform each sales return's client: Only return state from addresses
+        $get_sales_returns->transform(function ($salesReturn) {
+            if ($salesReturn->client) {
+                $state = optional($salesReturn->client->addresses->first())->state;
+                $salesReturn->client = ['state' => $state];
+            } else {
+                $salesReturn->client = null;
+            }
+            return $salesReturn;
+        });
 
         // Return the response
         return $get_sales_returns->isNotEmpty()
