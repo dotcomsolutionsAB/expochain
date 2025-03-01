@@ -279,7 +279,14 @@ class PurchaseInvoiceController extends Controller
             'addons' => function ($query) {
                 $query->select('purchase_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
             },
-            'get_user:id,name'
+            'get_user:id,name',
+            'supplier' => function ($q) {
+                // Select key supplier columns and include addresses
+                $q->select('id', 'supplier_id')
+                  ->with(['addresses' => function ($query) {
+                      $query->select('supplier_id', 'state');
+                  }]);
+            }
         ])
         ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 
             DB::raw('DATE_FORMAT(purchase_invoice_date, "%d-%m-%Y") as purchase_invoice_date'),
@@ -359,6 +366,15 @@ class PurchaseInvoiceController extends Controller
             $invoice->user = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
             unset($invoice->get_user);
 
+
+            // Transform client: Only return state from addresses for each invoice
+            if ($invoice->client) {
+                $state = optional($invoice->client->addresses->first())->state;
+                $invoice->client = ['state' => $state];
+            } else {
+                $invoice->client = null;
+            }
+            
             return $invoice;
         });
 

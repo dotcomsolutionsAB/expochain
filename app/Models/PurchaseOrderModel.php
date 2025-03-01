@@ -53,4 +53,15 @@ class PurchaseOrderModel extends Model
     {
         return $this->belongsTo(PdfTemplateModel::class, 'template', 'id');
     }
+
+    public function supplier()
+    {
+        return $this->belongsTo(SuppliersModel::class, 'supplier_id', 'id');
+    }
+
+    public function addresses()
+    {
+        // Here, 'supplier_id' in SupplierAddressModel should match the 'supplier_id' in ClientsModel.
+        return $this->hasMany(SupplierAddressModel::class, 'supplier_id', 'supplier_id');
+    }
 }
