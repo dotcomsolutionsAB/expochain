@@ -15,6 +15,7 @@ class AssemblyProductsModel extends Model
         'product_id',
         'product_name',
         'quantity',
+        'rate',
         'log_user'
     ];
 }

@@ -16,14 +16,15 @@ class AssemblyController extends Controller
     public function add_assembly(Request $request)
     {
         $request->validate([
-            'product_id' => 'required|integer',
-            'product_name' => 'required|string',
-            'quantity' => 'required|integer',
+            'product_id' => 'required|integer|exists:t_products,id',
+            'product_name' => 'required|string|exists:t_products,name',
+            // 'quantity' => 'required|integer',
             'log_user' => 'required|string',
             'products' => 'required|array', // Validating array of products
-            'products.*.product_id' => 'required|integer',
-            'products.*.product_name' => 'required|string',
-            'products.*.quantity' => 'required|integer',
+            'products.*.product_id' => 'required|integer|exists:t_products,id',
+            'products.*.product_name' => 'required|string|exists:t_products,name',
+            'products.*.quantity' => 'required|integer|min:1',
+            'products.*.rate' => 'required|integer|min:1',
             'products.*.log_user' => 'required|string',
         ]);
     
@@ -38,7 +39,7 @@ class AssemblyController extends Controller
             'company_id' => Auth::user()->company_id,
             'product_id' => $request->input('product_id'),
             'product_name' => $request->input('product_name'),
-            'quantity' => $request->input('quantity'),
+            // 'quantity' => $request->input('quantity'),
             'log_user' => $request->input('log_user'),
         ]);
         
@@ -53,6 +54,7 @@ class AssemblyController extends Controller
                 'product_id' => $product['product_id'],
                 'product_name' => $product['product_name'],
                 'quantity' => $product['quantity'],
+                'rate' => $product['rate'],
                 'log_user' => $product['log_user'],
             ]);
         }
@@ -60,8 +62,8 @@ class AssemblyController extends Controller
         unset($register_assembly['id'], $register_assembly['created_at'], $register_assembly['updated_at']);
     
         return isset($register_assembly) && $register_assembly !== null
-        ? response()->json(['code' => 201,'success' => true, 'Assembly records registered successfully!', 'data' => $register_assembly], 201)
-        : response()->json(['code' => 400,'success' => false, 'Failed to register Assembly records'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'message' => 'Assembly records registered successfully!', 'data' => $register_assembly], 201)
+        : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to register Assembly records'], 400);
     }
 
     // view
@@ -92,9 +94,9 @@ class AssemblyController extends Controller
 
         // Build the query
         $query = AssemblyModel::with(['products' => function ($query) {
-            $query->select('assembly_id', 'product_id', 'product_name', 'quantity', 'log_user');
+            $query->select('assembly_id', 'product_id', 'product_name', 'quantity', 'rate', 'log_user');
         }])
-        ->select('assembly_id', 'product_id', 'product_name', 'quantity', 'log_user')
+        ->select('assembly_id', 'product_id', 'product_name', 'log_user')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
@@ -138,13 +140,14 @@ class AssemblyController extends Controller
             'assembly_id' => 'required|integer',
             'product_id' => 'required|integer',
             'product_name' => 'required|string',
-            'quantity' => 'required|integer',
+            // 'quantity' => 'required|integer',
             'log_user' => 'required|string',
             'products' => 'required|array', // Validating array of products
             'products.*.assembly_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
+            'products.*.quantity' => 'required|integer',
             'products.*.quantity' => 'required|integer',
             'products.*.log_user' => 'required|string',
         ]);
