@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('product_name');
             $table->integer('quantity');
             $table->integer('rate');
+            $table->integer('godown');
             $table->string('log_user');
             $table->timestamps();
         });

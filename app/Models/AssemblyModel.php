@@ -14,7 +14,7 @@ class AssemblyModel extends Model
         'company_id',
         'product_id',
         'product_name',
-        // 'quantity',
+        'godown',
         'log_user'
     ];
 

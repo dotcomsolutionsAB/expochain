@@ -17,7 +17,7 @@ return new class extends Migration
             $table->integer('company_id');
             $table->integer('product_id');
             $table->string('product_name');
-            // $table->integer('quantity');
+            $table->integer('godown');
             $table->string('log_user');
             $table->timestamps();
         });

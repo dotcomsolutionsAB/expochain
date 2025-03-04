@@ -18,13 +18,14 @@ class AssemblyController extends Controller
         $request->validate([
             'product_id' => 'required|integer|exists:t_products,id',
             'product_name' => 'required|string|exists:t_products,name',
-            // 'quantity' => 'required|integer',
+            'godown' => 'required|integer|exists:t_godown,id',
             'log_user' => 'required|string',
             'products' => 'required|array', // Validating array of products
             'products.*.product_id' => 'required|integer|exists:t_products,id',
             'products.*.product_name' => 'required|string|exists:t_products,name',
             'products.*.quantity' => 'required|integer|min:1',
             'products.*.rate' => 'required|integer|min:1',
+            'products.*.godown' => 'required|integer|exists:t_godown,id',
             'products.*.log_user' => 'required|string',
         ]);
     
@@ -39,7 +40,7 @@ class AssemblyController extends Controller
             'company_id' => Auth::user()->company_id,
             'product_id' => $request->input('product_id'),
             'product_name' => $request->input('product_name'),
-            // 'quantity' => $request->input('quantity'),
+            'godown' => $request->input('godown'),
             'log_user' => $request->input('log_user'),
         ]);
         
@@ -55,6 +56,7 @@ class AssemblyController extends Controller
                 'product_name' => $product['product_name'],
                 'quantity' => $product['quantity'],
                 'rate' => $product['rate'],
+                'godown' => $product['godown'],
                 'log_user' => $product['log_user'],
             ]);
         }
@@ -94,9 +96,9 @@ class AssemblyController extends Controller
 
         // Build the query
         $query = AssemblyModel::with(['products' => function ($query) {
-            $query->select('assembly_id', 'product_id', 'product_name', 'quantity', 'rate', 'log_user');
+            $query->select('assembly_id', 'product_id', 'product_name', 'quantity', 'rate', 'godown', 'log_user');
         }])
-        ->select('assembly_id', 'product_id', 'product_name', 'log_user')
+        ->select('assembly_id', 'product_id', 'product_name', 'godown', 'log_user')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters

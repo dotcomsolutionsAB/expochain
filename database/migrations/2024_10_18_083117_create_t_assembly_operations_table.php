@@ -19,9 +19,7 @@ return new class extends Migration
             $table->enum('type', ['assemble', 'de-assemble']);
             $table->integer('product_id');
             $table->string('product_name');
-            $table->integer('quantity');
-            $table->string('godown');
-            $table->float('rate');
+            $table->integer('godown');
             $table->float('amount');
             $table->string('log_user');
             $table->timestamps();

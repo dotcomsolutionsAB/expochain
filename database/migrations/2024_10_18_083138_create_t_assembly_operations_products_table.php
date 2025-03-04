@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('product_name');
             $table->integer('quantity');
             $table->float('rate');
-            $table->string('godown');
+            $table->integer('godown');
             $table->float('amount');
             $table->timestamps();
         });

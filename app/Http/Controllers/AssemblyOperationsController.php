@@ -18,19 +18,18 @@ class AssemblyOperationsController extends Controller
     {
         $request->validate([
             'type' => 'required|in:assemble,de-assemble',
-            'product_id' => 'required|integer',
-            'product_name' => 'required|string',
-            'quantity' => 'required|integer',
-            'godown' => 'required|integer',
-            'rate' => 'required|numeric',
+            'assembly_operations_date' => 'required|date',
+            'product_id' => 'required|integer|exists:t_products,id',
+            'product_name' => 'required|string|exists:t_products,name',
+            'godown' => 'required|integer|exists:t_godown,id',
             'amount' => 'required|numeric',
             'log_user' => 'required|string',
             'products' => 'required|array', // Validating array of products
-            'products.*.product_id' => 'required|integer',
-            'products.*.product_name' => 'required|string',
+            'products.*.product_id' => 'required|integer|exists:t_products,id',
+            'products.*.product_name' => 'required|string|exists:t_products,name',
             'products.*.quantity' => 'required|integer',
             'products.*.rate' => 'required|numeric',
-            'products.*.godown' => 'required|integer',
+            'products.*.godown' => 'required|integer|exists:t_godown,id',
             'products.*.amount' => 'required|numeric',
         ]);
     
@@ -40,18 +39,17 @@ class AssemblyOperationsController extends Controller
             $exists = AssemblyOperationModel::where('assembly_operations_id', $assembly_operations_id)->exists();
         }while ($exists);
 
-        $currentDate = Carbon::now()->toDateString();
+        // $currentDate = Carbon::now()->toDateString();
 
         $register_assembly_operations = AssemblyOperationModel::create([
             'assembly_operations_id' => $assembly_operations_id,
-            'assembly_operations_date' => $currentDate,
+            'company_id' => Auth::user()->company_id,
+            'assembly_operations_date' => $request->input('assembly_operations_date'),
             'company_id' => Auth::user()->company_id,
             'type' => $request->input('type'),
             'product_id' => $request->input('product_id'),
             'product_name' => $request->input('product_name'),
-            'quantity' => $request->input('quantity'),
             'godown' => $request->input('godown'),
-            'rate' => $request->input('rate'),
             'amount' => $request->input('amount'),
             'log_user' => $request->input('log_user')
         ]);
@@ -76,8 +74,8 @@ class AssemblyOperationsController extends Controller
         unset($register_assembly_operations['id'], $register_assembly_operations['created_at'], $register_assembly_operations['updated_at']);
     
         return isset($register_assembly_operations) && $register_assembly_operations !== null
-        ? response()->json(['code' => 201,'success' => true, 'Assembly Operations records registered successfully!', 'data' => $register_assembly_operations], 201)
-        : response()->json(['code' => 400,'success' => false, 'Failed to register Assembly Operations records'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'message' => 'Assembly Operations records registered successfully!', 'data' => $register_assembly_operations], 201)
+        : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to register Assembly Operations records'], 400);
     }
 
     // view
@@ -110,7 +108,7 @@ class AssemblyOperationsController extends Controller
         $query = AssemblyOperationModel::with(['products' => function ($query) {
             $query->select('assembly_operations_id', 'product_id', 'product_name', 'quantity', 'rate', 'godown', 'amount');
         }])
-        ->select('assembly_operations_id', 'assembly_operations_date', 'type', 'product_id', 'product_name', 'quantity', 'godown', 'rate', 'amount')
+        ->select('assembly_operations_id', 'assembly_operations_date', 'type', 'product_id', 'product_name', 'godown', 'amount')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
