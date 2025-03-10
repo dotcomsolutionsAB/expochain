@@ -48,7 +48,7 @@ class SalesOrderController extends Controller
             'products' => 'required|array',
             'products.*.product_id' => 'required|integer|exists:t_products,id',
             'products.*.product_name' => 'required|string|exists:t_products,name',
-            'products.*.description' => 'required|string',
+            'products.*.description' => 'nullable|string',
             'products.*.quantity' => 'required|integer|min:1',
             'products.*.unit' => 'required|string|max:20',
             'products.*.price' => 'required|numeric|min:0',
