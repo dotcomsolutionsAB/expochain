@@ -788,7 +788,6 @@ class SalesOrderController extends Controller
 
         // Get filter inputs
         $clientId = $request->input('client_id');
-        $clientContactId = $request->input('client_contact_id');
         $name = $request->input('name');
         $city = $request->input('city');
         $pincode = $request->input('pincode');
@@ -802,7 +801,6 @@ class SalesOrderController extends Controller
             ->select(
                 'id', 
                 'client_id', 
-                'client_contact_id', 
                 'name', 
                 'address_line_1', 
                 'address_line_2', 
@@ -830,9 +828,6 @@ class SalesOrderController extends Controller
             // Apply filters only if IDs are not provided
             if ($clientId) {
                 $query->where('client_id', $clientId);
-            }
-            if ($clientContactId) {
-                $query->where('client_contact_id', $clientContactId);
             }
             if ($name) {
                 $query->where('name', 'LIKE', '%' . $name . '%');
@@ -872,7 +867,6 @@ class SalesOrderController extends Controller
             return [
                 'Sales Order ID' => $order->id,
                 'Client ID' => $order->client_id,
-                'Client Contact ID' => $order->client_contact_id,
                 'Name' => $order->name,
                 'Address Line 1' => $order->address_line_1,
                 'Address Line 2' => $order->address_line_2,
@@ -916,7 +910,6 @@ class SalesOrderController extends Controller
                 return [
                     'Sales Order ID',
                     'Client ID',
-                    'Client Contact ID',
                     'Name',
                     'Address Line 1',
                     'Address Line 2',
