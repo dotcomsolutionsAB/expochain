@@ -16,6 +16,7 @@ class AssemblyProductsModel extends Model
         'product_name',
         'quantity',
         'rate',
+        'godown',
         'log_user'
     ];
 }
