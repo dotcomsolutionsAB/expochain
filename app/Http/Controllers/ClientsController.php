@@ -47,7 +47,7 @@ class ClientsController extends Controller
             'addresses' => 'nullable|array|min:1', // ✅ Addresses must be an array with at least 1 address
             'addresses.*.type' => 'required_with:addresses|string|in:billing,shipping', // ✅ Must be "Billing" or "Shipping"
             'addresses.*.country' => 'required_with:addresses|string',
-            'addresses.*.address_line_1' => 'required_with:addresses|string',
+            'addresses.*.z' => 'required_with:addresses|string',
             'addresses.*.address_line_2' => 'nullable|string',
             'addresses.*.city' => 'required_with:addresses|string',
             'addresses.*.state' => 'required_with:addresses|string',
@@ -121,7 +121,7 @@ class ClientsController extends Controller
         unset($register_clients['id'], $register_clients['created_at'], $register_clients['updated_at']);
 
         return isset($register_clients) && $register_clients !== null
-            ? response()->json(['code' => 201, 'success' => true, 'Client registered successfully!', 'data' => $register_clients], 201)
+            ? response()->json(['code' => 201, 'success' => true, 'message' => 'Client registered successfully!', 'data' => $register_clients], 201)
             : response()->json(['code' => 400, 'success' => false, 'message' => 'Failed to register client record'], 400);
     }
 
