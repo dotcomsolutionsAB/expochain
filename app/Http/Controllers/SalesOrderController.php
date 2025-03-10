@@ -789,10 +789,6 @@ class SalesOrderController extends Controller
         // Get filter inputs
         $clientId = $request->input('client_id');
         $name = $request->input('name');
-        $city = $request->input('city');
-        $pincode = $request->input('pincode');
-        $state = $request->input('state');
-        $country = $request->input('country');
         $salesOrderNo = $request->input('sales_order_no');
         $salesOrderDate = $request->input('sales_order_date');
 
@@ -802,12 +798,6 @@ class SalesOrderController extends Controller
                 'id', 
                 'client_id', 
                 'name', 
-                'address_line_1', 
-                'address_line_2', 
-                'city', 
-                'pincode', 
-                'state', 
-                'country', 
                 'sales_order_no', 
                 'sales_order_date', 
                 'quotation_no', 
@@ -831,18 +821,6 @@ class SalesOrderController extends Controller
             }
             if ($name) {
                 $query->where('name', 'LIKE', '%' . $name . '%');
-            }
-            if ($city) {
-                $query->where('city', 'LIKE', '%' . $city . '%');
-            }
-            if ($pincode) {
-                $query->where('pincode', $pincode);
-            }
-            if ($state) {
-                $query->where('state', 'LIKE', '%' . $state . '%');
-            }
-            if ($country) {
-                $query->where('country', 'LIKE', '%' . $country . '%');
             }
             if ($salesOrderNo) {
                 $query->where('sales_order_no', 'LIKE', '%' . $salesOrderNo . '%');
@@ -868,12 +846,6 @@ class SalesOrderController extends Controller
                 'Sales Order ID' => $order->id,
                 'Client ID' => $order->client_id,
                 'Name' => $order->name,
-                'Address Line 1' => $order->address_line_1,
-                'Address Line 2' => $order->address_line_2,
-                'City' => $order->city,
-                'Pincode' => $order->pincode,
-                'State' => $order->state,
-                'Country' => $order->country,
                 'Sales Order No' => $order->sales_order_no,
                 'Sales Order Date' => $order->sales_order_date,
                 'Quotation No' => $order->quotation_no,
@@ -911,12 +883,6 @@ class SalesOrderController extends Controller
                     'Sales Order ID',
                     'Client ID',
                     'Name',
-                    'Address Line 1',
-                    'Address Line 2',
-                    'City',
-                    'Pincode',
-                    'State',
-                    'Country',
                     'Sales Order No',
                     'Sales Order Date',
                     'Quotation No',
