@@ -805,7 +805,6 @@ class SalesOrderController extends Controller
                 'sgst', 
                 'igst', 
                 'total', 
-                'currency', 
                 'template', 
                 'status'
             )
@@ -853,7 +852,6 @@ class SalesOrderController extends Controller
                 'SGST' => $order->sgst,
                 'IGST' => $order->igst,
                 'Total' => $order->total,
-                'Currency' => $order->currency,
                 'Template' => $order->template,
                 'Status' => $order->status,
             ];
@@ -890,7 +888,6 @@ class SalesOrderController extends Controller
                     'SGST',
                     'IGST',
                     'Total',
-                    'Currency',
                     'Template',
                     'Status',
                 ];
