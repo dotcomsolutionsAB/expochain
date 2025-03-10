@@ -378,7 +378,6 @@ class SalesOrderController extends Controller
         ], 200);
     }
 
-
     // Update Sales Order
     public function edit_sales_order(Request $request, $id)
     {

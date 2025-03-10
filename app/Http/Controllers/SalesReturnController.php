@@ -183,6 +183,8 @@ class SalesReturnController extends Controller
             $query->where('id', $salesReturnId);
         }
 
+        // Get total record count before applying limit
+        $totalRecords = $query->count();
         // Apply limit and offset
         $query->offset($offset)->limit($limit);
 
@@ -208,6 +210,7 @@ class SalesReturnController extends Controller
                 'message' => 'Sales Returns fetched successfully!',
                 'data' => $get_sales_returns,
                 'count' => $get_sales_returns->count(),
+                'total_records' => $totalRecords,
             ], 200)
             : response()->json([
                 'code' => 404,

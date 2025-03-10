@@ -188,6 +188,8 @@ class PurchaseReturnController extends Controller
             $query->where('purchase_invoice_id', 'LIKE', '%' . $purchaseInvoiceId . '%');
         }
 
+        // Get total record count before applying limit
+        $totalRecords = $query->count();
         // Apply limit and offset
         $query->offset($offset)->limit($limit);
 
@@ -213,6 +215,7 @@ class PurchaseReturnController extends Controller
                 'message' => 'Purchase Returns fetched successfully!',
                 'data' => $get_purchase_returns,
                 'count' => $get_purchase_returns->count(),
+                'total_records' => $totalRecords,
             ], 200)
             : response()->json([
                 'code' => 404,

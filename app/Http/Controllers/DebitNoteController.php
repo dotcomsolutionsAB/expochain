@@ -174,6 +174,8 @@ class DebitNoteController extends Controller
             $query->whereDate('debit_note_date', $debitNoteDate);
         }
 
+        // Get total record count before applying limit
+        $totalRecords = $query->count();
         // Apply limit and offset
         $query->offset($offset)->limit($limit);
 
@@ -201,6 +203,7 @@ class DebitNoteController extends Controller
                 'message' => 'Debit Notes fetched successfully!',
                 'data' => $get_debit_notes,
                 'count' => $get_debit_notes->count(),
+                'total_records' => $totalRecords,
             ], 200)
             : response()->json([
                 'code' => 404,

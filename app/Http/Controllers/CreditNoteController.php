@@ -178,6 +178,8 @@ class CreditNoteController extends Controller
             $query->whereDate('credit_note_date', $creditNoteDate);
         }
 
+        // Get total record count before applying limit
+        $totalRecords = $query->count();
         // Apply limit and offset
         $query->offset($offset)->limit($limit);
 
@@ -205,6 +207,7 @@ class CreditNoteController extends Controller
                 'message' => 'Credit Notes fetched successfully!',
                 'data' => $get_credit_notes,
                 'count' => $get_credit_notes->count(),
+                'total_records' => $totalRecords,
             ], 200)
             : response()->json([
                 'code' => 404,
