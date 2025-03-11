@@ -139,7 +139,7 @@ class CreditNoteController extends Controller
     }
 
     // view
-    public function view_credit_note(Request $request, $id)
+    public function view_credit_note(Request $request, $id = null)
     {
         try {
             // If an id is provided, fetch a single credit note.
