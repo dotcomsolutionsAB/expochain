@@ -135,81 +135,116 @@ class DebitNoteController extends Controller
         : response()->json(['Failed to register Debit Note record'], 400);
     }
 
-    public function view_debit_note(Request $request)
+    public function view_debit_note(Request $request, $id = null)
     {
-        // Get filter inputs
-        $supplierId = $request->input('supplier_id');
-        $name = $request->input('name');
-        $debitNoteNo = $request->input('debit_note_no');
-        $debitNoteDate = $request->input('debit_note_date');
-        $limit = $request->input('limit', 10); // Default limit to 10
-        $offset = $request->input('offset', 0); // Default offset to 0
+        try {
+            // Get filter inputs
+            $supplierId = $request->input('supplier_id');
+            $name = $request->input('name');
+            $debitNoteNo = $request->input('debit_note_no');
+            $debitNoteDate = $request->input('debit_note_date');
+            $limit = $request->input('limit', 10); // Default limit to 10
+            $offset = $request->input('offset', 0); // Default offset to 0
 
-        // Build the query
-        $query = DebitNoteModel::with(['products' => function ($query) {
-            $query->select('debit_note_number', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
-        },
-        'supplier' => function ($q) {
-                // Select key supplier columns and include addresses
-                $q->select('id', 'supplier_id')
-                  ->with(['addresses' => function ($query) {
-                      $query->select('supplier_id', 'state');
-                  }]);
-            }
-        ])
-        ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
-        ->where('company_id', Auth::user()->company_id);
+            // Build the query
+            $query = DebitNoteModel::with(['products' => function ($query) {
+                $query->select('debit_note_number', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
+            },
+            'supplier' => function ($q) {
+                    // Select key supplier columns and include addresses
+                    $q->select('id', 'supplier_id')
+                    ->with(['addresses' => function ($query) {
+                        $query->select('supplier_id', 'state');
+                    }]);
+                }
+            ])
+            ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
+            ->where('company_id', Auth::user()->company_id);
 
-        // Apply filters
-        if ($supplierId) {
-            $query->where('supplier_id', $supplierId);
-        }
-        if ($name) {
-            $query->where('name', 'LIKE', '%' . $name . '%');
-        }
-        if ($debitNoteNo) {
-            $query->where('debit_note_no', 'LIKE', '%' . $debitNoteNo . '%');
-        }
-        if ($debitNoteDate) {
-            $query->whereDate('debit_note_date', $debitNoteDate);
-        }
+             // If an id is provided, fetch a single debit note and return it
+            if ($id) {
+                $debitNote = $query->where('id', $id)->first();
+                if (!$debitNote) {
+                    return response()->json([
+                        'code' => 404,
+                        'success' => false,
+                        'message' => 'Debit Note not found!',
+                    ], 404);
+                }
 
-        // Get total record count before applying limit
-        $totalRecords = $query->count();
-        // Apply limit and offset
-        $query->offset($offset)->limit($limit);
+                // Transform supplier: Only return state from addresses
+                if ($debitNote->supplier) {
+                    $state = optional($debitNote->supplier->addresses->first())->state;
+                    $debitNote->supplier = ['state' => $state];
+                } else {
+                    $debitNote->supplier = null;
+                }
 
-        // Fetch data
-        $get_debit_notes = $query->get();
-
-        // Transform data
-        $get_debit_notes->transform(function ($debitNote) {
-            // Transform supplier: Only return state from addresses
-            if ($debitNote->supplier) {
-                $state = optional($debitNote->supplier->addresses->first())->state;
-                $debitNote->supplier = ['state' => $state];
-            } else {
-                $debitNote->supplier = null;
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'Debit Note fetched successfully!',
+                    'data' => $debitNote,
+                ], 200);
             }
 
-            return $debitNote;
-        });
+            // Apply filters
+            if ($supplierId) {
+                $query->where('supplier_id', $supplierId);
+            }
+            if ($name) {
+                $query->where('name', 'LIKE', '%' . $name . '%');
+            }
+            if ($debitNoteNo) {
+                $query->where('debit_note_no', 'LIKE', '%' . $debitNoteNo . '%');
+            }
+            if ($debitNoteDate) {
+                $query->whereDate('debit_note_date', $debitNoteDate);
+            }
 
-        // Return response
-        return $get_debit_notes->isNotEmpty()
-            ? response()->json([
-                'code' => 200,
-                'success' => true,
-                'message' => 'Debit Notes fetched successfully!',
-                'data' => $get_debit_notes,
-                'count' => $get_debit_notes->count(),
-                'total_records' => $totalRecords,
-            ], 200)
-            : response()->json([
-                'code' => 404,
-                'success' => false,
-                'message' => 'No Debit Notes found!',
-            ], 404);
+            // Get total record count before applying limit
+            $totalRecords = $query->count();
+            // Apply limit and offset
+            $query->offset($offset)->limit($limit);
+
+            // Fetch data
+            $get_debit_notes = $query->get();
+
+            // Transform data
+            $get_debit_notes->transform(function ($debitNote) {
+                // Transform supplier: Only return state from addresses
+                if ($debitNote->supplier) {
+                    $state = optional($debitNote->supplier->addresses->first())->state;
+                    $debitNote->supplier = ['state' => $state];
+                } else {
+                    $debitNote->supplier = null;
+                }
+
+                return $debitNote;
+            });
+
+            // Return response
+            return $get_debit_notes->isNotEmpty()
+                ? response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'Debit Notes fetched successfully!',
+                    'data' => $get_debit_notes,
+                    'count' => $get_debit_notes->count(),
+                    'total_records' => $totalRecords,
+                ], 200)
+                : response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'No Debit Notes found!',
+                ], 404);
+        } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Something went wrong!',
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
     }
 
     // update

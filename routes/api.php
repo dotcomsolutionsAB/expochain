@@ -180,7 +180,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/purchase_return_migrate', [PurchaseReturnController::class, 'importPurchaseReturns']);
 
     Route::post('/add_debit_note', [DebitNoteController::class, 'add_debit_note']);
-    Route::post('/debit_note', [DebitNoteController::class, 'view_debit_note']);
+    Route::post('/debit_note/{id?}', [DebitNoteController::class, 'view_debit_note']);
     Route::post('/update_debit_note/{id?}', [DebitNoteController::class, 'edit_debit_note']);
     Route::delete('/debit_note/{id?}', [DebitNoteController::class, 'delete_debit_note']);
 
