@@ -145,7 +145,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/sales_return_migrate', [SalesReturnController::class, 'importSalesReturns']);
 
     Route::post('/add_credit_note', [CreditNoteController::class, 'add_credit_note']);
-    Route::post('/credit_note', [CreditNoteController::class, 'view_credit_note']);
+    Route::post('/credit_note/{id?}', [CreditNoteController::class, 'view_credit_note']);
     Route::post('/update_credit_note/{id?}', [CreditNoteController::class, 'edit_credit_note']);
     Route::delete('/credit_note/{id?}', [CreditNoteController::class, 'delete_credit_note']);
 
