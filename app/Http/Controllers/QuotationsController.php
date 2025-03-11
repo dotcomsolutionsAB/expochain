@@ -1209,7 +1209,7 @@ class QuotationsController extends Controller
             'total' => 'required|numeric',
             'currency' => 'required|string',
             'gross' => 'required|numeric|min:0',
-            'round_off' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric',
 
             // for products
             'products' => 'required|array',

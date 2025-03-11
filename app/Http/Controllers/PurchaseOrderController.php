@@ -38,7 +38,7 @@ class PurchaseOrderController extends Controller
             'total' => 'required|numeric|min:0',
             'currency' => 'required|string|max:10',
             'gross' => 'required|numeric|min:0',
-            'round_off' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric',
 
             // Product Details (Array Validation)
             'products' => 'required|array', // Validating array of products
@@ -510,7 +510,7 @@ class PurchaseOrderController extends Controller
             'total' => 'required|numeric|min:0',
             'currency' => 'required|string|max:10',
             'gross' => 'required|numeric|min:0',
-            'round_off' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric',
 
             // Product Details (Array Validation)
             'products' => 'required|array', // Validating array of products

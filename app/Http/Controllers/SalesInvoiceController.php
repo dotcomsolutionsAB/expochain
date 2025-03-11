@@ -42,7 +42,7 @@ class SalesInvoiceController extends Controller
             'igst' => 'required|numeric|min:0',
             'total' => 'required|numeric|min:0',
             'gross' => 'required|numeric|min:0',
-            'round_off' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric',
             
             // Products Array Validation
             'products' => 'required|array',
@@ -405,7 +405,7 @@ class SalesInvoiceController extends Controller
             'igst' => 'required|numeric|min:0',
             'total' => 'required|numeric|min:0',
             'gross' => 'required|numeric|min:0',
-            'round_off' => 'required|numeric|min:0',
+            'round_off' => 'required|numeric',
             
             // Products Array Validation
             'products' => 'required|array',
