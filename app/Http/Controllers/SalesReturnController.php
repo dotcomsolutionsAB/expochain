@@ -145,78 +145,113 @@ class SalesReturnController extends Controller
         : response()->json(['Failed to register Sales Return record'], 400);
     }
 
-    public function view_sales_return(Request $request)
+    public function view_sales_return(Request $request, $id = null)
     {
-        // Get filter inputs
-        $salesReturnId = $request->input('sales_return_id'); // Filter by sales return ID
-        $productId = $request->input('product_id'); // Filter by product ID
-        $productName = $request->input('product_name'); // Filter by product name
-        $limit = $request->input('limit', 10); // Default limit to 10
-        $offset = $request->input('offset', 0); // Default offset to 0
+        try {
+            // Get filter inputs
+            $salesReturnId = $request->input('sales_return_id'); // Filter by sales return ID
+            $productId = $request->input('product_id'); // Filter by product ID
+            $productName = $request->input('product_name'); // Filter by product name
+            $limit = $request->input('limit', 10); // Default limit to 10
+            $offset = $request->input('offset', 0); // Default offset to 0
 
-        // Build the query
-        $query = SalesReturnModel::with(['products' => function ($query) use ($productId, $productName) {
-            $query->select('sales_return_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
-            
-            // Apply product-related filters
-            if ($productId) {
-                $query->where('product_id', $productId);
-            }
-            if ($productName) {
-                $query->where('product_name', 'LIKE', '%' . $productName . '%');
-            }
-        },
-            'client' => function ($q) {
-                    // Only select the key columns needed for the join (ID and customer_id)
-                    $q->select('id', 'customer_id')
-                    ->with(['addresses' => function ($query) {
-                        // Only fetch the customer_id (for joining) and the state field
-                        $query->select('customer_id', 'state');
-                    }]);
+            // Build the query
+            $query = SalesReturnModel::with(['products' => function ($query) use ($productId, $productName) {
+                $query->select('sales_return_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
+                
+                // Apply product-related filters
+                if ($productId) {
+                    $query->where('product_id', $productId);
                 }
-        ])
-        ->select('id', 'client_id', 'name', 'sales_return_no', 'sales_return_date', 'sales_invoice_id', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
-        ->where('company_id', Auth::user()->company_id);
+                if ($productName) {
+                    $query->where('product_name', 'LIKE', '%' . $productName . '%');
+                }
+            },
+                'client' => function ($q) {
+                        // Only select the key columns needed for the join (ID and customer_id)
+                        $q->select('id', 'customer_id')
+                        ->with(['addresses' => function ($query) {
+                            // Only fetch the customer_id (for joining) and the state field
+                            $query->select('customer_id', 'state');
+                        }]);
+                    }
+            ])
+            ->select('id', 'client_id', 'name', 'sales_return_no', 'sales_return_date', 'sales_invoice_id', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
+            ->where('company_id', Auth::user()->company_id);
 
-        // Apply sales_return_id filter
-        if ($salesReturnId) {
-            $query->where('id', $salesReturnId);
-        }
+            // If an id is provided, fetch a single sales return record.
+            if ($id) {
+                $salesReturn = $query->find($id);
+                if (!$salesReturn) {
+                    return response()->json([
+                        'code' => 404,
+                        'success' => false,
+                        'message' => 'Sales Return not found!',
+                    ], 404);
+                }
 
-        // Get total record count before applying limit
-        $totalRecords = $query->count();
-        // Apply limit and offset
-        $query->offset($offset)->limit($limit);
+                // Transform supplier data: Only return state from addresses.
+                if ($salesReturn->client) {
+                    $state = optional($salesReturn->client->addresses->first())->state;
+                    $salesReturn->client = ['state' => $state];
+                } else {
+                    $salesReturn->client = null;
+                }
 
-        // Fetch the data
-        $get_sales_returns = $query->get();
-
-        // Transform each sales return's client: Only return state from addresses
-        $get_sales_returns->transform(function ($salesReturn) {
-            if ($salesReturn->client) {
-                $state = optional($salesReturn->client->addresses->first())->state;
-                $salesReturn->client = ['state' => $state];
-            } else {
-                $salesReturn->client = null;
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'Sales Return fetched successfully!',
+                    'data' => $salesReturn,
+                ], 200);
             }
-            return $salesReturn;
-        });
 
-        // Return the response
-        return $get_sales_returns->isNotEmpty()
-            ? response()->json([
-                'code' => 200,
-                'success' => true,
-                'message' => 'Sales Returns fetched successfully!',
-                'data' => $get_sales_returns,
-                'count' => $get_sales_returns->count(),
-                'total_records' => $totalRecords,
-            ], 200)
-            : response()->json([
-                'code' => 404,
+            // Apply sales_return_id filter
+            if ($salesReturnId) {
+                $query->where('id', $salesReturnId);
+            }
+
+            // Get total record count before applying limit
+            $totalRecords = $query->count();
+            // Apply limit and offset
+            $query->offset($offset)->limit($limit);
+
+            // Fetch the data
+            $get_sales_returns = $query->get();
+
+            // Transform each sales return's client: Only return state from addresses
+            $get_sales_returns->transform(function ($salesReturn) {
+                if ($salesReturn->client) {
+                    $state = optional($salesReturn->client->addresses->first())->state;
+                    $salesReturn->client = ['state' => $state];
+                } else {
+                    $salesReturn->client = null;
+                }
+                return $salesReturn;
+            });
+
+            // Return the response
+            return $get_sales_returns->isNotEmpty()
+                ? response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'Sales Returns fetched successfully!',
+                    'data' => $get_sales_returns,
+                    'count' => $get_sales_returns->count(),
+                    'total_records' => $totalRecords,
+                ], 200)
+                : response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'No Sales Returns found!',
+                ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
                 'success' => false,
-                'message' => 'No Sales Returns found!',
-            ], 404);
+                'message' => 'Something went wrong!',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     // update
