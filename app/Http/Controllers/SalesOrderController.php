@@ -383,8 +383,8 @@ class SalesOrderController extends Controller
     {
         $request->validate([
             'client_id' => 'required|integer|exists:t_clients,id',
-            'name' => 'required|string|exists:t_clients,name',
-            'sales_order_no' => 'required|integer',
+            'name' => 'nullable|string|exists:t_clients,name',
+            'sales_order_no' => 'required|string',
             'sales_order_date' => 'required|date',
             'ref_no' => 'required|string',
             'template' => 'required|integer|exists:t_pdf_template,id',
@@ -444,7 +444,7 @@ class SalesOrderController extends Controller
         $salesOrderUpdated = $salesOrder->update([
             'client_id' => $request->input('client_id'),
             'company_id' => Auth::user()->company_id,
-            'name' => $request->input('name'),
+            'name' => $request->input('name') !== null ? $request->input('name') : $salesOrder->name,
             'user' => Auth::user()->id,
             'sales_order_no' => $request->input('sales_order_no'),
             'sales_order_date' => $request->input('sales_order_date'),

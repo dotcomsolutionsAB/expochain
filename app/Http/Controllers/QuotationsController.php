@@ -1196,7 +1196,7 @@ class QuotationsController extends Controller
         $request->validate([
             'client_id' => 'required|integer|exists:t_clients,id',
             'name' => 'nullable|string|exists:t_clients,name',
-            'quotation_no' => 'nullable|string|max:255',
+            'quotation_no' => 'nullable|string',
             'quotation_date' => 'required|date',
             'enquiry_no' => 'required|string',
             'enquiry_date' => 'required|date',
