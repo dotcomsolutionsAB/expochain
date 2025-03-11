@@ -13,7 +13,7 @@ class PurchaseOrderModel extends Model
       'company_id',
         'supplier_id',
         'name',
-        'purchase_order_id', 
+        'purchase_order_no', 
         'purchase_order_date',
         'oa_no', 
         'oa_date', 
