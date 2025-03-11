@@ -141,79 +141,131 @@ class CreditNoteController extends Controller
     // view
     public function view_credit_note(Request $request)
     {
-        // Get filter inputs
-        $clientId = $request->input('client_id');
-        $name = $request->input('name');
-        $creditNoteNo = $request->input('credit_note_no');
-        $creditNoteDate = $request->input('credit_note_date');
-        $limit = $request->input('limit', 10); // Default limit to 10
-        $offset = $request->input('offset', 0); // Default offset to 0
+        try {
+            // If an id is provided, fetch a single credit note.
+            if ($id) {
+                $creditNote = CreditNoteModel::with([
+                    'products' => function ($query) {
+                        $query->select(
+                            'credit_note_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst'
+                        );
+                    },
+                    'client' => function ($q) {
+                        // Select key client columns and include addresses
+                        $q->select('id', 'customer_id')
+                        ->with(['addresses' => function ($query) {
+                            $query->select('customer_id', 'state');
+                        }]);
+                    }
+                ])
+                ->select('id', 'client_id', 'name', 'credit_note_no', 'credit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
+                ->where('company_id', Auth::user()->company_id)
+                ->find($id);
 
-        // Build the query
-        $query = CreditNoteModel::with(['products' => function ($query) {
-            $query->select('credit_note_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
-        },
-        'client' => function ($q) {
-                // Select key client columns and include addresses
-                $q->select('id', 'customer_id')
-                  ->with(['addresses' => function ($query) {
-                      $query->select('customer_id', 'state');
-                  }]);
-            }
-        ])
-        ->select('id', 'client_id', 'name', 'credit_note_no', 'credit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
-        ->where('company_id', Auth::user()->company_id);
+                if (!$creditNote) {
+                    return response()->json([
+                        'code' => 404,
+                        'success' => false,
+                        'message' => 'Credit Note not found!',
+                    ], 404);
+                }
 
-        // Apply filters
-        if ($clientId) {
-            $query->where('client_id', $clientId);
-        }
-        if ($name) {
-            $query->where('name', 'LIKE', '%' . $name . '%');
-        }
-        if ($creditNoteNo) {
-            $query->where('credit_note_no', 'LIKE', '%' . $creditNoteNo . '%');
-        }
-        if ($creditNoteDate) {
-            $query->whereDate('credit_note_date', $creditNoteDate);
-        }
+                // Transform client: Only return state from addresses
+                if ($creditNote->client) {
+                    $state = optional($creditNote->client->addresses->first())->state;
+                    $creditNote->client = ['state' => $state];
+                } else {
+                    $creditNote->client = null;
+                }
 
-        // Get total record count before applying limit
-        $totalRecords = $query->count();
-        // Apply limit and offset
-        $query->offset($offset)->limit($limit);
-
-        // Fetch data
-        $get_credit_notes = $query->get();
-
-        // Transform data
-        $get_credit_notes->transform(function ($creditNote) {
-            // Transform client: Only return state from addresses
-            if ($creditNote->client) {
-                $state = optional($creditNote->client->addresses->first())->state;
-                $creditNote->client = ['state' => $state];
-            } else {
-                $creditNote->client = null;
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'Credit Note fetched successfully!',
+                    'data' => $creditNote,
+                ], 200);
             }
 
-            return $creditNote;
-        });
+            // Get filter inputs
+            $clientId = $request->input('client_id');
+            $name = $request->input('name');
+            $creditNoteNo = $request->input('credit_note_no');
+            $creditNoteDate = $request->input('credit_note_date');
+            $limit = $request->input('limit', 10); // Default limit to 10
+            $offset = $request->input('offset', 0); // Default offset to 0
 
-        // Return response
-        return $get_credit_notes->isNotEmpty()
-            ? response()->json([
-                'code' => 200,
-                'success' => true,
-                'message' => 'Credit Notes fetched successfully!',
-                'data' => $get_credit_notes,
-                'count' => $get_credit_notes->count(),
-                'total_records' => $totalRecords,
-            ], 200)
-            : response()->json([
-                'code' => 404,
+            // Build the query
+            $query = CreditNoteModel::with(['products' => function ($query) {
+                $query->select('credit_note_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
+            },
+            'client' => function ($q) {
+                    // Select key client columns and include addresses
+                    $q->select('id', 'customer_id')
+                    ->with(['addresses' => function ($query) {
+                        $query->select('customer_id', 'state');
+                    }]);
+                }
+            ])
+            ->select('id', 'client_id', 'name', 'credit_note_no', 'credit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
+            ->where('company_id', Auth::user()->company_id);
+
+            // Apply filters
+            if ($clientId) {
+                $query->where('client_id', $clientId);
+            }
+            if ($name) {
+                $query->where('name', 'LIKE', '%' . $name . '%');
+            }
+            if ($creditNoteNo) {
+                $query->where('credit_note_no', 'LIKE', '%' . $creditNoteNo . '%');
+            }
+            if ($creditNoteDate) {
+                $query->whereDate('credit_note_date', $creditNoteDate);
+            }
+
+            // Get total record count before applying limit
+            $totalRecords = $query->count();
+            // Apply limit and offset
+            $query->offset($offset)->limit($limit);
+
+            // Fetch data
+            $get_credit_notes = $query->get();
+
+            // Transform data
+            $get_credit_notes->transform(function ($creditNote) {
+                // Transform client: Only return state from addresses
+                if ($creditNote->client) {
+                    $state = optional($creditNote->client->addresses->first())->state;
+                    $creditNote->client = ['state' => $state];
+                } else {
+                    $creditNote->client = null;
+                }
+
+                return $creditNote;
+            });
+
+            // Return response
+            return $get_credit_notes->isNotEmpty()
+                ? response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'Credit Notes fetched successfully!',
+                    'data' => $get_credit_notes,
+                    'count' => $get_credit_notes->count(),
+                    'total_records' => $totalRecords,
+                ], 200)
+                : response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'No Credit Notes found!',
+                ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
                 'success' => false,
-                'message' => 'No Credit Notes found!',
-            ], 404);
+                'message' => 'Something went wrong!',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
 
