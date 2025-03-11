@@ -145,83 +145,119 @@ class PurchaseReturnController extends Controller
     }
 
     // view
-    public function view_purchase_return(Request $request)
+    public function view_purchase_return(Request $request, $id = null)
     {
-        // Get filter inputs
-        $supplierId = $request->input('supplier_id');
-        $name = $request->input('name');
-        $purchaseReturnNo = $request->input('purchase_return_no');
-        $purchaseReturnDate = $request->input('purchase_return_date');
-        $purchaseInvoiceId = $request->input('purchase_invoice_id');
-        $limit = $request->input('limit', 10); // Default limit to 10
-        $offset = $request->input('offset', 0); // Default offset to 0
+        try {
+            // Get filter inputs
+            $supplierId = $request->input('supplier_id');
+            $name = $request->input('name');
+            $purchaseReturnNo = $request->input('purchase_return_no');
+            $purchaseReturnDate = $request->input('purchase_return_date');
+            $purchaseInvoiceId = $request->input('purchase_invoice_id');
+            $limit = $request->input('limit', 10); // Default limit to 10
+            $offset = $request->input('offset', 0); // Default offset to 0
 
-        // Build the query
-        $query = PurchaseReturnModel::with(['products' => function ($query) {
-            $query->select('purchase_return_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
-        },
-            'supplier' => function ($q) {
-                // Select key supplier columns and include addresses
-                $q->select('id', 'supplier_id')
-                  ->with(['addresses' => function ($query) {
-                      $query->select('supplier_id', 'state');
-                  }]);
+            // Build the query
+            $query = PurchaseReturnModel::with(['products' => function ($query) {
+                $query->select('purchase_return_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
+            },
+                'supplier' => function ($q) {
+                    // Select key supplier columns and include addresses
+                    $q->select('id', 'supplier_id')
+                    ->with(['addresses' => function ($query) {
+                        $query->select('supplier_id', 'state');
+                    }]);
+                }
+            ])
+            ->select('id', 'supplier_id', 'name', 'purchase_return_no', 'purchase_return_date', 'purchase_invoice_id', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
+            ->where('company_id', Auth::user()->company_id);
+
+            // If an id is provided, fetch a single purchase return
+        if ($id) {
+            $purchaseReturn = $query->find($id);
+            if (!$purchaseReturn) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'Purchase Return not found!',
+                ], 404);
             }
-        ])
-        ->select('id', 'supplier_id', 'name', 'purchase_return_no', 'purchase_return_date', 'purchase_invoice_id', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
-        ->where('company_id', Auth::user()->company_id);
 
-        // Apply filters
-        if ($supplierId) {
-            $query->where('supplier_id', $supplierId);
-        }
-        if ($name) {
-            $query->where('name', 'LIKE', '%' . $name . '%');
-        }
-        if ($purchaseReturnNo) {
-            $query->where('purchase_return_no', 'LIKE', '%' . $purchaseReturnNo . '%');
-        }
-        if ($purchaseReturnDate) {
-            $query->whereDate('purchase_return_date', $purchaseReturnDate);
-        }
-        if ($purchaseInvoiceId) {
-            $query->where('purchase_invoice_id', 'LIKE', '%' . $purchaseInvoiceId . '%');
-        }
-
-        // Get total record count before applying limit
-        $totalRecords = $query->count();
-        // Apply limit and offset
-        $query->offset($offset)->limit($limit);
-
-        // Fetch data
-        $get_purchase_returns = $query->get();
-
-         // Transform data: For each purchase return, transform supplier data to include only state from addresses
-        $get_purchase_returns->transform(function ($purchaseReturn) {
+            // Transform supplier: Only return state from addresses
             if ($purchaseReturn->supplier) {
                 $state = optional($purchaseReturn->supplier->addresses->first())->state;
                 $purchaseReturn->supplier = ['state' => $state];
             } else {
                 $purchaseReturn->supplier = null;
             }
-            return $purchaseReturn;
-        });
 
-        // Return response
-        return $get_purchase_returns->isNotEmpty()
-            ? response()->json([
+            return response()->json([
                 'code' => 200,
                 'success' => true,
-                'message' => 'Purchase Returns fetched successfully!',
-                'data' => $get_purchase_returns,
-                'count' => $get_purchase_returns->count(),
-                'total_records' => $totalRecords,
-            ], 200)
-            : response()->json([
-                'code' => 404,
-                'success' => false,
-                'message' => 'No Purchase Returns found!',
-            ], 404);
+                'message' => 'Purchase Return fetched successfully!',
+                'data' => $purchaseReturn,
+            ], 200);
+        }
+
+
+            // Apply filters
+            if ($supplierId) {
+                $query->where('supplier_id', $supplierId);
+            }
+            if ($name) {
+                $query->where('name', 'LIKE', '%' . $name . '%');
+            }
+            if ($purchaseReturnNo) {
+                $query->where('purchase_return_no', 'LIKE', '%' . $purchaseReturnNo . '%');
+            }
+            if ($purchaseReturnDate) {
+                $query->whereDate('purchase_return_date', $purchaseReturnDate);
+            }
+            if ($purchaseInvoiceId) {
+                $query->where('purchase_invoice_id', 'LIKE', '%' . $purchaseInvoiceId . '%');
+            }
+
+            // Get total record count before applying limit
+            $totalRecords = $query->count();
+            // Apply limit and offset
+            $query->offset($offset)->limit($limit);
+
+            // Fetch data
+            $get_purchase_returns = $query->get();
+
+            // Transform data: For each purchase return, transform supplier data to include only state from addresses
+            $get_purchase_returns->transform(function ($purchaseReturn) {
+                if ($purchaseReturn->supplier) {
+                    $state = optional($purchaseReturn->supplier->addresses->first())->state;
+                    $purchaseReturn->supplier = ['state' => $state];
+                } else {
+                    $purchaseReturn->supplier = null;
+                }
+                return $purchaseReturn;
+            });
+
+            // Return response
+            return $get_purchase_returns->isNotEmpty()
+                ? response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'Purchase Returns fetched successfully!',
+                    'data' => $get_purchase_returns,
+                    'count' => $get_purchase_returns->count(),
+                    'total_records' => $totalRecords,
+                ], 200)
+                : response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'No Purchase Returns found!',
+                ], 404);
+            } catch (\Exception $e) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Something went wrong!',
+                    'error' => $e->getMessage(),
+                ], 500);
+            }
     }
 
     // update

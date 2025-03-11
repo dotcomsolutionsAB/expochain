@@ -173,7 +173,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/purchase_invoice_migrate', [PurchaseInvoiceController::class, 'importPurchaseInvoices']);
 
     Route::post('/add_purchase_return', [PurchaseReturnController::class, 'add_purchase_return']);
-    Route::post('/purchase_return', [PurchaseReturnController::class, 'view_purchase_return']);
+    Route::post('/purchase_return/{id?}', [PurchaseReturnController::class, 'view_purchase_return']);
     Route::post('/update_purchase_return/{id?}', [PurchaseReturnController::class, 'edit_purchase_return']);
     Route::delete('/purchase_return/{id?}', [PurchaseReturnController::class, 'delete_purchase_return']);
 
