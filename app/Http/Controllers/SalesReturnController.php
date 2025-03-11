@@ -489,6 +489,15 @@ class SalesReturnController extends Controller
         $productNames = collect($data)->pluck('items')->map(fn($items) => json_decode($items, true)['product'] ?? [])->flatten()->unique();
         $products = ProductsModel::whereIn('name', $productNames)->get()->keyBy('name');
 
+        // Fetch `godown_id` from `GodownModel` using `company_id` and `name`
+        $godownName = $itemsData['place'][$index] ?? 'Default Godown';
+        $godown = GodownModel::where('name', $godownName)
+                            ->where('company_id', Auth::user()->company_id) // Ensure correct company
+                            ->first();
+
+        // Use `godown_id` if found, otherwise set a default ID (e.g., `1` or `NULL`)
+        $godownId = $godown ? $godown->id : null; // Change `null` to your actual default ID
+
         $salesReturnProductsBatch = [];
 
         foreach ($data as $record) {
@@ -521,7 +530,7 @@ class SalesReturnController extends Controller
                     'cgst' => (float) ($itemsData['cgst'][$i] ?? 0),
                     'sgst' => (float) ($itemsData['sgst'][$i] ?? 0),
                     'igst' => 0,
-                    'godown' => 'DefaultGodown',
+                    'godown' => $godownId,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];

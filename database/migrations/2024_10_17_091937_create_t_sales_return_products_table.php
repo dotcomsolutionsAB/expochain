@@ -29,7 +29,7 @@ return new class extends Migration
             $table->float('cgst');
             $table->float('sgst');
             $table->float('igst');
-            $table->string('godown');
+            $table->integer('godown')->nullable();
             $table->timestamps();
         });
     }
