@@ -431,15 +431,15 @@ class SalesOrderController extends Controller
             return response()->json(['code' => 404, 'success' => false, 'message' => 'Sales Order not found!'], 404);
         }
 
-        $exists = SalesOrderModel::where('company_id', Auth::user()->company_id)
-            ->where('sales_order_no', $request->input('sales_order_no'))
-            ->exists();
+        // $exists = SalesOrderModel::where('company_id', Auth::user()->company_id)
+        //     ->where('sales_order_no', $request->input('sales_order_no'))
+        //     ->exists();
 
-        if ($exists) {
-            return response()->json([
-                'error' => 'The combination of company_id and sales_order_no must be unique.',
-            ], 422);
-        }
+        // if ($exists) {
+        //     return response()->json([
+        //         'error' => 'The combination of company_id and sales_order_no must be unique.',
+        //     ], 422);
+        // }
 
         $salesOrderUpdated = $salesOrder->update([
             'client_id' => $request->input('client_id'),
@@ -941,6 +941,32 @@ class SalesOrderController extends Controller
             'client_id' => $request->input('client_id'),
             'company_id' => $user->company_id,
             'pending_ref_numbers' => $saleseOrders
+        ], 200);
+    }
+
+    public function getPendingPartialSalesOrders()
+    {
+        // Get authenticated user
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Fetch pending sales orders for the given supplier and authenticated company
+        $get_SalesOrders = SalesOrderModel::where('company_id', $user->company_id)
+                                            ->whereIn('status', ['pending', 'partial'])
+                                            ->pluck('sales_order_no'); // Fetch only `sales_order_no`
+
+        // Check if any records exist
+        if ($get_SalesOrders->isEmpty()) {
+            return response()->json(['message' => 'No pending sales orders found.'], 404);
+        }
+
+        // Return the result
+        return response()->json([
+            'success' => true,
+            'company_id' => $user->company_id,
+            'pending_oa_numbers' => $get_SalesOrders
         ], 200);
     }
 

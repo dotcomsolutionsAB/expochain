@@ -125,6 +125,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_sales_order/{id?}', [SalesOrderController::class, 'edit_sales_order']);
     Route::delete('/sales_order/{id?}', [SalesOrderController::class, 'delete_sales_order']);
     Route::post('/pending_ref_no', [SalesOrderController::class, 'getPendingSupplierseOrders']);
+    Route::get('/pending_partial_no', [SalesOrderController::class, 'getPendingPartialSalesOrders']);
 
     Route::get('/sales_order_migrate', [SalesOrderController::class, 'importSalesOrders']);
 

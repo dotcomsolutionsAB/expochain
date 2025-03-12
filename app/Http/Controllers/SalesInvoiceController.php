@@ -32,7 +32,7 @@ class SalesInvoiceController extends Controller
             'client_id' => 'required|integer|exists:t_clients,id',
             'sales_invoice_no' => 'required|string',
             'sales_invoice_date' => 'required|date_format:Y-m-d',
-            'sales_order_id' => 'required|string|exists:t_sales_order,id',
+            'sales_order_id' => 'nullable|string|exists:t_sales_order,id',
             'sales_order_date' => 'required|date_format:Y-m-d',
             'template' => 'required|integer|exists:t_pdf_template,id',
             'sales_person' => 'required|integer|exists:users,id',
@@ -792,5 +792,4 @@ class SalesInvoiceController extends Controller
 
         return response()->json(['message' => "Sales invoices import completed with $successfulInserts successful inserts.", 'errors' => $errors], 200);
     }
-
 }
