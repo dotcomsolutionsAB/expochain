@@ -950,6 +950,11 @@ class SalesOrderController extends Controller
 
     public function getPendingPartialSalesOrders()
     {
+        // Validate request
+        $request->validate([
+            'client_id' => 'required|integer|exists:t_clients,id',
+        ]);
+
         // Get authenticated user
         $user = Auth::user();
         if (!$user) {
@@ -957,7 +962,8 @@ class SalesOrderController extends Controller
         }
 
         // Fetch pending sales orders for the given supplier and authenticated company
-        $get_SalesOrders = SalesOrderModel::where('company_id', $user->company_id)
+        $get_SalesOrders = SalesOrderModel::where('client_id', $request->input('client_id'))
+                                            ->where('company_id', $user->company_id)
                                             ->whereIn('status', ['pending', 'partial'])
                                             ->pluck('sales_order_no'); // Fetch only `sales_order_no`
 
