@@ -966,9 +966,8 @@ class PurchaseOrderController extends Controller
         return response()->json([
             'code' => 200,
             'success' => true,
-            'supplier_id' => $request->input('supplier_id'),
-            'company_id' => $user->company_id,
-            'pending_oa_numbers' => $purchaseOrders
+            'message' => 'Pending purchase orders oa fetched successfully!',
+            'data' => $purchaseOrders
         ], 200);
     }
 

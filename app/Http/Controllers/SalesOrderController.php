@@ -942,9 +942,7 @@ class SalesOrderController extends Controller
             'code' => 201,
             'success' => true,
             'message' => 'Pending Suppliers record fetched successfully!',
-            'client_id' => $request->input('client_id'),
-            'company_id' => $user->company_id,
-            'pending_ref_numbers' => $saleseOrders
+            'data' => $saleseOrders
         ], 200);
     }
 
@@ -965,7 +963,8 @@ class SalesOrderController extends Controller
         $get_SalesOrders = SalesOrderModel::where('client_id', $request->input('client_id'))
                                             ->where('company_id', $user->company_id)
                                             ->whereIn('status', ['pending', 'partial'])
-                                            ->pluck('sales_order_no'); // Fetch only `sales_order_no`
+                                            ->select('id', 'sales_order_no') // Fetch both `id` and `sales_order_no`
+                                            ->get();
 
         // Check if any records exist
         if ($get_SalesOrders->isEmpty()) {
@@ -977,8 +976,7 @@ class SalesOrderController extends Controller
             'code' => 201,
             'success' => true,
             'message' => 'Pending and partial orders fetched successfully!',
-            'company_id' => $user->company_id,
-            'pending_oa_numbers' => $get_SalesOrders
+            'data' => $get_SalesOrders
         ], 200);
     }
 
