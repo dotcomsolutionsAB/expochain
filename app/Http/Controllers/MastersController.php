@@ -317,16 +317,16 @@ class MastersController extends Controller
             // Fetch data from the external URL
             $response = Http::get($url);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data from the external source.'], 500);
         }
 
         if ($response->failed()) {
-            return response()->json(['error' => 'Failed to fetch data.'], 500);
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
         }
 
         $data = $response->json('data');
         if (empty($data)) {
-            return response()->json(['message' => 'No data found'], 404);
+            return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
         }
 
         $batchSize = 1000; // Define a batch size for inserting products
@@ -434,6 +434,8 @@ class MastersController extends Controller
 
         // Return response
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "Product data import completed. Successful inserts: $successfulInserts.",
             'errors' => $errors,
         ], 200);
@@ -835,18 +837,18 @@ class MastersController extends Controller
         try {
             $response = Http::get($url);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data from the external source.'], 500);
         }
     
         // Check if fetching failed
         if ($response->failed()) {
-            return response()->json(['error' => 'Failed to fetch data.'], 500);
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
         }
     
         $data = $response->json();
     
         if (empty($data)) {
-            return response()->json(['message' => 'No data found'], 404);
+            return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
         }
     
         $successfulInserts = 0;
@@ -922,6 +924,8 @@ class MastersController extends Controller
 
         // Return summary of the operation
         return response()->json([
+            'code' => 200,
+            'success' => true,
             'message' => "PDF template import completed. Successful inserts: $successfulInserts.",
             'errors' => $errors,
         ], 200);

@@ -197,18 +197,18 @@ class UsersController extends Controller
         try {
             $response = Http::get($url);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data from the external source.'], 500);
         }
 
         if ($response->failed()) {
-            return response()->json(['error' => 'Failed to fetch data.'], 500);
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
         }
 
         // Decode the response
         $data = $response->json('data');
 
         if (empty($data)) {
-            return response()->json(['message' => 'No data found'], 404);
+            return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
         }
 
         // Process and save each record

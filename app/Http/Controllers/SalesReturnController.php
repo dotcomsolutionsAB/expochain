@@ -84,6 +84,8 @@ class SalesReturnController extends Controller
 
         if ($exists) {
             return response()->json([
+                'code' => 422,
+                'success' => true,
                 'error' => 'The combination of company_id and sales_return_no must be unique.',
             ], 422);
         }
@@ -248,6 +250,7 @@ class SalesReturnController extends Controller
                 ], 404);
         } catch (\Exception $e) {
             return response()->json([
+                'code' => 500,
                 'success' => false,
                 'message' => 'Something went wrong!',
                 'error' => $e->getMessage(),
@@ -390,167 +393,6 @@ class SalesReturnController extends Controller
     }
 
     // migration
-    // public function importSalesReturns()
-    // {
-    //     // Increase execution time for large data sets
-    //     set_time_limit(300);
-
-    //     // Clear existing records before importing
-    //     SalesReturnModel::truncate();
-    //     SalesReturnProductsModel::truncate();
-
-    //     // Define the external URL
-    //     $url = 'https://expo.egsm.in/assets/custom/migrate/sales_return.php';
-
-    //     // Fetch data from the external URL
-    //     try {
-    //         $response = Http::timeout(120)->get($url);
-    //     } catch (\Exception $e) {
-    //         return response()->json(['error' => 'Failed to fetch data from the external source: ' . $e->getMessage()], 500);
-    //     }
-
-    //     if ($response->failed()) {
-    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
-    //     }
-
-    //     $data = $response->json('data');
-
-    //     if (empty($data)) {
-    //         return response()->json(['message' => 'No data found'], 404);
-    //     }
-
-    //     $successfulInserts = 0;
-    //     $errors = [];
-
-    //     // ✅ Pre-fetch all required clients (Suppliers)
-    //     $supplierNames = collect($data)->pluck('supplier')->unique();
-    //     $suppliers = ClientsModel::whereIn('name', $supplierNames)->get()->keyBy('name');
-
-    //     // ✅ Pre-fetch all Sales Invoices to map sales_invoice_no to sales_invoice_id
-    //     $invoiceNumbers = collect($data)->pluck('reference_no')->unique();
-    //     $salesInvoices = SalesInvoiceModel::whereIn('sales_invoice_no', $invoiceNumbers)
-    //         ->pluck('id', 'sales_invoice_no'); // Key: sales_invoice_no, Value: id
-
-    //     // ✅ Store Sales Return Data in a Batch Array
-    //     $salesReturnDataBatch = [];
-    //     $salesReturnIds = [];
-
-    //     foreach ($data as $record) {
-    //         // Decode JSON fields for items and tax
-    //         $itemsData = json_decode($record['items'], true);
-    //         $taxData = json_decode($record['tax'], true);
-
-    //         if (!is_array($itemsData)) {
-    //             $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure for items.'];
-    //             continue;
-    //         }
-
-    //         // ✅ Get Supplier (Client)
-    //         $supplier = $suppliers[$record['supplier']] ?? null;
-    //         if (!$supplier) {
-    //             $errors[] = ['record' => $record, 'error' => 'Supplier not found: ' . $record['supplier']];
-    //             continue;
-    //         }
-
-    //         // ✅ Get Sales Invoice ID based on sales_invoice_no
-    //         $salesInvoiceId = $salesInvoices[$record['reference_no']] ?? null; // If not found, store NULL
-
-    //         // ✅ Prepare sales return data for batch insert
-    //         $salesReturnDataBatch[] = [
-    //             'company_id' => Auth::user()->company_id,
-    //             'client_id' => $supplier->id,
-    //             'name' => $record['supplier'],
-    //             'sales_return_no' => $record['pi_no'] ?? 'Unknown',
-    //             'sales_return_date' => $record['pi_date'] ?? now()->format('Y-m-d'),
-    //             'sales_invoice_id' => $salesInvoiceId, // ✅ Store correct sales_invoice_id
-    //             'remarks' => $record['remarks'] ?? null,
-    //             'cgst' => !empty($taxData['cgst']) ? (float)$taxData['cgst'] : 0,
-    //             'sgst' => !empty($taxData['sgst']) ? (float)$taxData['sgst'] : 0,
-    //             'igst' => !empty($taxData['igst']) ? (float)$taxData['igst'] : 0,
-    //             'total' => (float)$record['total'] ?? 0,
-    //             'currency' => 'INR',
-    //             'template' => optional(json_decode($record['pdf_template'], true))['id'] ?? null, // ✅ Use optional() helper
-    //             'gross' => 0,
-    //             'round_off' => 0,
-    //             'created_at' => now(),
-    //             'updated_at' => now(),
-    //         ];
-    //     }
-
-    //     // ✅ Batch Insert Sales Returns (Insert in Chunks)
-    //     foreach (array_chunk($salesReturnDataBatch, 100) as $batch) {
-    //         SalesReturnModel::insert($batch);
-    //     }
-
-    //     // ✅ Fetch inserted Sales Return IDs
-    //     $salesReturns = SalesReturnModel::select('id', 'sales_return_no')->whereIn('sales_return_no', array_column($salesReturnDataBatch, 'sales_return_no'))->get();
-    //     $salesReturnIds = $salesReturns->pluck('id', 'sales_return_no')->toArray();
-
-    //     // ✅ Fetch all products in one query to prevent duplicate lookups
-    //     $productNames = collect($data)->pluck('items')->map(fn($items) => json_decode($items, true)['product'] ?? [])->flatten()->unique();
-    //     $products = ProductsModel::whereIn('name', $productNames)->get()->keyBy('name');
-
-    //     // Fetch `godown_id` from `GodownModel` using `company_id` and `name`
-    //     $godownName = $itemsData['place'][$index] ?? 'Default Godown';
-    //     $godown = GodownModel::where('name', $godownName)
-    //                         ->where('company_id', Auth::user()->company_id) // Ensure correct company
-    //                         ->first();
-
-    //     // Use `godown_id` if found, otherwise set a default ID (e.g., `1` or `NULL`)
-    //     $godownId = $godown ? $godown->id : null; // Change `null` to your actual default ID
-
-    //     $salesReturnProductsBatch = [];
-
-    //     foreach ($data as $record) {
-    //         $itemsData = json_decode($record['items'], true);
-    //         if (!isset($salesReturnIds[$record['pi_no']]) || !is_array($itemsData)) continue;
-
-    //         $salesReturnId = $salesReturnIds[$record['pi_no']];
-
-    //         foreach ($itemsData['product'] as $i => $productName) {
-    //             $product = $products[$productName] ?? null;
-    //             if (!$product) {
-    //                 $errors[] = ['record' => $record, 'error' => "Product not found: {$productName}"];
-    //                 continue;
-    //             }
-
-    //             // ✅ Prepare Sales Return Products for batch insert
-    //             $salesReturnProductsBatch[] = [
-    //                 'sales_return_id' => $salesReturnId,
-    //                 'company_id' => Auth::user()->company_id,
-    //                 'product_id' => $product->id,
-    //                 'product_name' => $productName,
-    //                 'description' => !empty($itemsData['desc'][$i]) ? $itemsData['desc'][$i] : 'No Desc',
-    //                 'quantity' => (int) $itemsData['quantity'][$i] ?? 0,
-    //                 'unit' => $itemsData['unit'][$i] ?? '',
-    //                 'price' => (float) $itemsData['price'][$i] ?? 0,
-    //                 'discount' => (float) $itemsData['discount'][$i] ?? 0,
-    //                 'discount_type' => "percentage",
-    //                 'hsn' => $itemsData['hsn'][$i] ?? '',
-    //                 'tax' => (float) $itemsData['tax'][$i] ?? 0,
-    //                 'cgst' => (float) ($itemsData['cgst'][$i] ?? 0),
-    //                 'sgst' => (float) ($itemsData['sgst'][$i] ?? 0),
-    //                 'igst' => 0,
-    //                 'godown' => $godownId,
-    //                 'created_at' => now(),
-    //                 'updated_at' => now(),
-    //             ];
-    //         }
-    //     }
-
-    //     // ✅ Batch Insert Sales Return Products (Insert in Chunks)
-    //     foreach (array_chunk($salesReturnProductsBatch, 100) as $batch) {
-    //         SalesReturnProductsModel::insert($batch);
-    //     }
-
-    //     return response()->json([
-    //         'code' => 200,
-    //         'success' => true,
-    //         'message' => "Data import completed with $successfulInserts successful inserts.",
-    //         'errors' => $errors,
-    //     ], 200);
-    // }
-
 
     public function importSalesReturns()
     {
@@ -568,17 +410,17 @@ class SalesReturnController extends Controller
         try {
             $response = Http::timeout(120)->get($url);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to fetch data from the external source: ' . $e->getMessage()], 500);
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data from the external source: ' . $e->getMessage()], 500);
         }
 
         if ($response->failed()) {
-            return response()->json(['error' => 'Failed to fetch data.'], 500);
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
         }
 
         $data = $response->json('data');
 
         if (empty($data)) {
-            return response()->json(['message' => 'No data found'], 404);
+            return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
         }
 
         $successfulInserts = 0;

@@ -105,6 +105,8 @@ class SalesOrderController extends Controller
 
         if ($exists) {
             return response()->json([
+                'code' => 422,
+                'success' => false,
                 'error' => 'The combination of company_id and sales_order_no must be unique.',
             ], 422);
         }
@@ -599,17 +601,17 @@ class SalesOrderController extends Controller
         try {
             $response = Http::get($url);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data from the external source.'], 500);
         }
 
         if ($response->failed()) {
-            return response()->json(['error' => 'Failed to fetch data.'], 500);
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
         }
 
         $data = $response->json('data');
 
         if (empty($data)) {
-            return response()->json(['message' => 'No data found'], 404);
+            return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
         }
 
         $successfulInserts = 0;
@@ -921,7 +923,7 @@ class SalesOrderController extends Controller
         // Get authenticated user
         $user = Auth::user();
         if (!$user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
+            return response()->json(['code' => 401, 'success' => false, 'message' => 'Unauthorized'], 401);
         }
 
         // Fetch pending purchase orders for the given supplier and authenticated company
@@ -932,12 +934,14 @@ class SalesOrderController extends Controller
 
         // Check if any records exist
         if ($saleseOrders->isEmpty()) {
-            return response()->json(['message' => 'No pending sales orders found.'], 404);
+            return response()->json(['code' => 201, 'success' => true, 'message' => 'No pending sales orders found.'], 404);
         }
 
         // Return the result
         return response()->json([
+            'code' => 201,
             'success' => true,
+            'message' => 'Pending Suppliers record fetched successfully!',
             'client_id' => $request->input('client_id'),
             'company_id' => $user->company_id,
             'pending_ref_numbers' => $saleseOrders
@@ -964,7 +968,9 @@ class SalesOrderController extends Controller
 
         // Return the result
         return response()->json([
+            'code' => 201,
             'success' => true,
+            'message' => 'Pending and partial orders fetched successfully!',
             'company_id' => $user->company_id,
             'pending_oa_numbers' => $get_SalesOrders
         ], 200);

@@ -103,6 +103,8 @@ class PurchaseOrderController extends Controller
 
         if ($exists) {
             return response()->json([
+                'code' => 422,
+                'success' => false,
                 'error' => 'The combination of company_id and purchase_order_no must be unique.',
             ], 422);
         }
@@ -110,7 +112,7 @@ class PurchaseOrderController extends Controller
         // Fetch supplier details using supplier_id
         $supplier = SuppliersModel::find($request->input('supplier_id'));
         if (!$supplier) {
-            return response()->json(['message' => 'Supplier not found'], 404);
+            return response()->json(['code' => 404, 'success' => false, 'message' => 'Supplier not found'], 404);
         }
 
         $register_purchase_order = PurchaseOrderModel::create([
@@ -554,6 +556,8 @@ class PurchaseOrderController extends Controller
 
         if ($exists) {
             return response()->json([
+                'code' => 422,
+                'success' => false,
                 'error' => 'The combination of company_id and purchase_order_no must be unique.',
             ], 422);
         }
@@ -758,13 +762,13 @@ class PurchaseOrderController extends Controller
             $response = Http::timeout(120)->get($url);
 
             if ($response->failed()) {
-                return response()->json(['error' => 'Failed to fetch data.'], 500);
+                return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
             }
 
             $data = $response->json('data');
 
             if (empty($data)) {
-                return response()->json(['message' => 'No data found'], 404);
+                return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
             }
 
             // Define Batch Size
@@ -927,10 +931,10 @@ class PurchaseOrderController extends Controller
             }
 
             DB::commit();
-            return response()->json(['success' => true, 'message' => "Purchase orders import completed successfully."], 200);
+            return response()->json(['code' => 200, 'success' => true, 'message' => "Purchase orders import completed successfully."], 200);
 
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Something went wrong: ' . $e->getMessage()], 500);
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Something went wrong: ' . $e->getMessage()], 500);
         }
     }
 
@@ -944,7 +948,7 @@ class PurchaseOrderController extends Controller
         // Get authenticated user
         $user = Auth::user();
         if (!$user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
+            return response()->json(['code' => 401, 'success' => false, 'message' => 'Unauthorized'], 401);
         }
 
         // Fetch pending purchase orders for the given supplier and authenticated company
@@ -955,11 +959,12 @@ class PurchaseOrderController extends Controller
 
         // Check if any records exist
         if ($purchaseOrders->isEmpty()) {
-            return response()->json(['message' => 'No pending purchase orders found.'], 404);
+            return response()->json(['code' => 404, 'success' => false, 'message' => 'No pending purchase orders found.'], 404);
         }
 
         // Return the result
         return response()->json([
+            'code' => 200,
             'success' => true,
             'supplier_id' => $request->input('supplier_id'),
             'company_id' => $user->company_id,

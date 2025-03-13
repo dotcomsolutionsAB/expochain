@@ -63,7 +63,7 @@ class ClientsController extends Controller
             ->exists();
 
         if ($exists) {
-            return response()->json(['error' => 'The combination of name, GSTIN, and company ID must be unique.'], 422);
+            return response()->json(['code' => 422, 'success' => false, 'error' => 'The combination of name, GSTIN, and company ID must be unique.'], 422);
         }
 
         $customer_id = rand(1111111111, 9999999999);
@@ -534,18 +534,18 @@ class ClientsController extends Controller
         try {
             $response = Http::get($url);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data from the external source.'], 500);
         }
     
         if ($response->failed()) {
-            return response()->json(['error' => 'Failed to fetch data.'], 500);
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
         }
     
         // Decode the JSON response
         $data = $response->json('data');
     
         if (empty($data)) {
-            return response()->json(['message' => 'No data found'], 404);
+            return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
         }
     
         $successfulInserts = 0;

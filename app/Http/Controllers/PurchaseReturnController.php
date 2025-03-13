@@ -84,6 +84,8 @@ class PurchaseReturnController extends Controller
 
        if ($exists) {
            return response()->json([
+               'code' => 422,
+               'success' => false,
                'error' => 'The combination of company_id and purchase_return_no must be unique.',
            ], 422);
        }
@@ -253,6 +255,7 @@ class PurchaseReturnController extends Controller
                 ], 404);
             } catch (\Exception $e) {
                 return response()->json([
+                    'code' => 500,
                     'success' => false,
                     'message' => 'Something went wrong!',
                     'error' => $e->getMessage(),
@@ -403,17 +406,17 @@ class PurchaseReturnController extends Controller
         try {
             $response = Http::get($url);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to fetch data from the external source.'], 500);
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data from the external source.'], 500);
         }
 
         if ($response->failed()) {
-            return response()->json(['error' => 'Failed to fetch data.'], 500);
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
         }
 
         $data = $response->json('data');
 
         if (empty($data)) {
-            return response()->json(['message' => 'No data found'], 404);
+            return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
         }
 
         $successfulInserts = 0;
