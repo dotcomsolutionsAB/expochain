@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class PurchaseBackModel extends Model
 {
     //
-    protected $table = 't_products';
+    protected $table = 't_purchase_back';
 
     protected $fillable = [
         'product',
