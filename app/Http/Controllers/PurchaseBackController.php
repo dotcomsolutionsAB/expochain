@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use App\Models\PurchaseBackModel;
 use Illuminate\Http\Request;
+use Auth;
 
 class PurchaseBackController extends Controller
 {
