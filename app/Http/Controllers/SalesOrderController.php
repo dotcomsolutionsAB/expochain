@@ -946,7 +946,7 @@ class SalesOrderController extends Controller
         ], 200);
     }
 
-    public function getPendingPartialSalesOrders()
+    public function getPendingPartialSalesOrders(Request $request)
     {
         // Validate request
         $request->validate([
