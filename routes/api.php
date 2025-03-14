@@ -251,4 +251,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/channels', [ChannelController::class, 'retrieve']); // View All Channels
     Route::post('/update_channel/{id}', [ChannelController::class, 'update']); // Update Channel
     Route::delete('/channel/{id}', [ChannelController::class, 'destroy']); // Delete Channel
+
+    Route::post('/purchase_back', [PurchaseBackController::class, 'add_purchase_back']); // Create purchase-bcak
+    Route::get('/purchase_back', [PurchaseBackController::class, 'fetch_purchase_back']); // View All purchase-back
 });
