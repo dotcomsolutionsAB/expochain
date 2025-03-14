@@ -27,6 +27,7 @@ use App\Http\Controllers\CountryController;
 use App\Http\Controllers\StateController;
 use App\Http\Controllers\ChannelController;
 use App\Http\Controllers\QuotationTermMasterController;
+use App\Http\Controllers\PurchaseBackController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
