@@ -955,7 +955,8 @@ class PurchaseOrderController extends Controller
         $purchaseOrders = PurchaseOrderModel::where('supplier_id', $request->input('supplier_id'))
             ->where('company_id', $user->company_id)
             ->where('status', 'pending')
-            ->select('id', 'oa_no'); // Fetch only `oa_no`
+            ->select('id', 'oa_no') // Fetch only `oa_no`
+            ->get();
 
         // Check if any records exist
         if ($purchaseOrders->isEmpty()) {
