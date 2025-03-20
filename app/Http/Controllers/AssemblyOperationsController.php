@@ -115,12 +115,33 @@ class AssemblyOperationsController extends Controller
         if ($assemblyOperationsId) {
             $query->where('assembly_operations_id', $assemblyOperationsId);
         }
+        // if ($productId) {
+        //     $query->where('product_id', $productId);
+        // }
+        // if ($productName) {
+        //     $query->where('product_name', 'LIKE', '%' . $productName . '%');
+        // }
+
+        // Filter by Product ID (checks both main assembly and related products)
         if ($productId) {
-            $query->where('product_id', $productId);
+            $query->where(function ($q) use ($productId) {
+                $q->where('product_id', $productId)
+                ->orWhereHas('products', function ($q2) use ($productId) {
+                    $q2->where('product_id', $productId);
+                });
+            });
         }
+
+        // Filter by Product Name (checks both main assembly and related products)
         if ($productName) {
-            $query->where('product_name', 'LIKE', '%' . $productName . '%');
+            $query->where(function ($q) use ($productName) {
+                $q->where('product_name', 'LIKE', '%' . $productName . '%')
+                ->orWhereHas('products', function ($q2) use ($productName) {
+                    $q2->where('product_name', 'LIKE', '%' . $productName . '%');
+                });
+            });
         }
+
         if ($quantity) {
             $query->where('quantity', $quantity);
         }

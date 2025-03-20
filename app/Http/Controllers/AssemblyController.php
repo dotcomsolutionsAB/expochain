@@ -113,12 +113,31 @@ class AssemblyController extends Controller
         if ($assemblyId) {
             $query->where('assembly_id', $assemblyId);
         }
+        // if ($productId) {
+        //     $query->where('product_id', $productId);
+        // }
+
         if ($productId) {
-            $query->where('product_id', $productId);
+            $query->where(function ($q) use ($productId) {
+                $q->where('product_id', $productId)
+                  ->orWhereHas('products', function ($q2) use ($productId) {
+                      $q2->where('product_id', $productId);
+                  });
+            });
         }
+
+        // if ($productName) {
+        //     $query->where('product_name', 'LIKE', '%' . $productName . '%');
+        // }
+
         if ($productName) {
-            $query->where('product_name', 'LIKE', '%' . $productName . '%');
-        }
+            $query->where(function ($q) use ($productName) {
+                $q->where('product_name', 'LIKE', '%' . $productName . '%')
+                  ->orWhereHas('products', function ($q2) use ($productName) {
+                      $q2->where('product_name', 'LIKE', '%' . $productName . '%');
+                  });
+            });
+        }        
 
         // Apply limit and offset
         $query->offset($offset)->limit($limit);
