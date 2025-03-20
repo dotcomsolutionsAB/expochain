@@ -109,6 +109,26 @@ class AssemblyController extends Controller
         ->select('assembly_id', 'product_id', 'product_name')
         ->where('company_id', Auth::user()->company_id);
 
+        // If an $id is provided, filter based on product_id and return a single assembly record
+        if ($id) {
+            $assembly = $query->where('product_id', $id)->first();
+            
+            if (!$assembly) {
+                return response()->json([
+                    'code'    => 404,
+                    'success' => false,
+                    'message' => 'Assembly record not found!',
+                ], 404);
+            }
+
+            return response()->json([
+                'code'    => 200,
+                'success' => true,
+                'message' => 'Assembly record fetched successfully!',
+                'data'    => $assembly,
+            ], 200);
+        }
+
         // Apply filters
         if ($assemblyId) {
             $query->where('assembly_id', $assemblyId);
