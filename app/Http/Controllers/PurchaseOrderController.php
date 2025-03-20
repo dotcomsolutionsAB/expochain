@@ -955,7 +955,8 @@ class PurchaseOrderController extends Controller
         $purchaseOrders = PurchaseOrderModel::where('supplier_id', $request->input('supplier_id'))
             ->where('company_id', $user->company_id)
             ->where('status', 'pending')
-            ->pluck('oa_no'); // Fetch only `oa_no`
+            ->select('id', 'oa_no') // Fetch only `oa_no`
+            ->get();
 
         // Check if any records exist
         if ($purchaseOrders->isEmpty()) {
@@ -966,9 +967,8 @@ class PurchaseOrderController extends Controller
         return response()->json([
             'code' => 200,
             'success' => true,
-            'supplier_id' => $request->input('supplier_id'),
-            'company_id' => $user->company_id,
-            'pending_oa_numbers' => $purchaseOrders
+            'message' => 'Pending purchase orders oa fetched successfully!',
+            'data' => $purchaseOrders
         ], 200);
     }
 

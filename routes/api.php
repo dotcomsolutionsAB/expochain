@@ -27,6 +27,7 @@ use App\Http\Controllers\CountryController;
 use App\Http\Controllers\StateController;
 use App\Http\Controllers\ChannelController;
 use App\Http\Controllers\QuotationTermMasterController;
+use App\Http\Controllers\PurchaseBackController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -125,7 +126,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_sales_order/{id?}', [SalesOrderController::class, 'edit_sales_order']);
     Route::delete('/sales_order/{id?}', [SalesOrderController::class, 'delete_sales_order']);
     Route::post('/pending_ref_no', [SalesOrderController::class, 'getPendingSupplierseOrders']);
-    Route::get('/pending_partial_no', [SalesOrderController::class, 'getPendingPartialSalesOrders']);
+    Route::post('/pending_partial_no', [SalesOrderController::class, 'getPendingPartialSalesOrders']);
 
     Route::get('/sales_order_migrate', [SalesOrderController::class, 'importSalesOrders']);
 
@@ -251,4 +252,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/channels', [ChannelController::class, 'retrieve']); // View All Channels
     Route::post('/update_channel/{id}', [ChannelController::class, 'update']); // Update Channel
     Route::delete('/channel/{id}', [ChannelController::class, 'destroy']); // Delete Channel
+
+    Route::post('/purchase_back', [PurchaseBackController::class, 'add_purchase_back']); // Create purchase-bcak
+    Route::get('/purchase_back', [PurchaseBackController::class, 'fetch_purchase_back']); // View All purchase-back
 });
