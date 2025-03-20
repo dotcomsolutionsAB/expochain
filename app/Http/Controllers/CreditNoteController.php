@@ -166,7 +166,7 @@ class CreditNoteController extends Controller
                         }]);
                     }
                 ])
-                ->select('id', 'client_id', 'name', 'credit_note_no', 'credit_note_date', 'si_no', 'effective_date', 'type', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
+                ->select('id', 'client_id', 'name', 'credit_note_no', 'credit_note_date', 'si_no', 'effective_date', 'type', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off')
                 ->where('company_id', Auth::user()->company_id)
                 ->find($id);
 
