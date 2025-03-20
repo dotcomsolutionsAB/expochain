@@ -93,7 +93,7 @@ class AssemblyController extends Controller
     //     : response()->json(['Failed to fetch data'], 404); 
     // }
 
-    public function view_assembly(Request $request)
+    public function view_assembly(Request $request, $id = null)
     {
         // Get filter inputs
         $assemblyId = $request->input('assembly_id');
