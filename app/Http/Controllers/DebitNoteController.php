@@ -166,7 +166,7 @@ class DebitNoteController extends Controller
                     }]);
                 }
             ])
-            ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'si_no', 'effective_date', 'type', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
+            ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'si_no', 'effective_date', 'type', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off')
             ->where('company_id', Auth::user()->company_id);
 
              // If an id is provided, fetch a single debit note and return it
