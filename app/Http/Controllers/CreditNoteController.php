@@ -24,12 +24,15 @@ class CreditNoteController extends Controller
             'name' => 'required|string',
             'credit_note_no' => 'required|string',
             'credit_note_date' => 'required|date',
+            'si_no' => 'required|integer|exists:t_sales_invoice,sales_invoice_no',
+            'effective_date' => 'required|date',
+            'type' => 'required|string',
             'remarks' => 'nullable|string',
             'cgst' => 'required|numeric',
             'sgst' => 'required|numeric',
             'igst' => 'required|numeric',
             'total' => 'required|numeric',
-            'template' => 'required|integer|exists:t_pdf_template,id',
+            //'template' => 'required|integer|exists:t_pdf_template,id',
             'gross' => 'required|numeric|min:0',
             'round_off' => 'required|numeric',
 
@@ -93,13 +96,16 @@ class CreditNoteController extends Controller
             'name' => $request->input('name'),
             'credit_note_no' => $credit_note_no,
             'credit_note_date' => $request->input('credit_note_date'),
+            'si_no' => $request->input('si_no'),
+            'effective_date' => $request->input('effective_date'),
+            'type' => $request->input('type'),
             'remarks' => $request->input('remarks'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
             'currency' => "INR",
-            'template' => $request->input('template'),
+            //'template' => $request->input('template'),
             'gross' => $request->input('gross'),
             'round_off' => $request->input('round_off'),
         ]);
@@ -136,8 +142,8 @@ class CreditNoteController extends Controller
         unset($register_credit_note['id'], $register_credit_note['created_at'], $register_credit_note['updated_at']);
     
         return isset($register_credit_note) && $register_credit_note !== null
-        ? response()->json(['Credit Note registered successfully!', 'data' => $register_credit_note], 201)
-        : response()->json(['Failed to register Credit Note record'], 400);
+        ? response()->json(['code' => 200, 'success' => true, 'message' =>'Credit Note registered successfully!', 'data' => $register_credit_note], 201)
+        : response()->json(['code' => 400, 'success' => false, 'message' => 'Failed to register Credit Note record'], 400);
     }
 
     // view
@@ -160,7 +166,7 @@ class CreditNoteController extends Controller
                         }]);
                     }
                 ])
-                ->select('id', 'client_id', 'name', 'credit_note_no', 'credit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
+                ->select('id', 'client_id', 'name', 'credit_note_no', 'credit_note_date', 'si_no', 'effective_date', 'type', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
                 ->where('company_id', Auth::user()->company_id)
                 ->find($id);
 
@@ -280,12 +286,15 @@ class CreditNoteController extends Controller
             'name' => 'required|string',
             'credit_note_no' => 'required|string',
             'credit_note_date' => 'required|date',
+            'si_no' => 'required|integer|exists:t_sales_invoice,sales_invoice_no',
+            'effective_date' => 'required|date',
+            'type' => 'required|string',
             'remarks' => 'nullable|string',
             'cgst' => 'required|numeric',
             'sgst' => 'required|numeric',
             'igst' => 'required|numeric',
             'total' => 'required|numeric',
-            'template' => 'required|integer|exists:t_pdf_template,id',
+            //'template' => 'required|integer|exists:t_pdf_template,id',
             'gross' => 'required|numeric|min:0',
             'round_off' => 'required|numeric',
 
@@ -312,6 +321,9 @@ class CreditNoteController extends Controller
             'name' => $request->input('name'),
             'credit_note_no' => $request->input('credit_note_no'),
             'credit_note_date' => $request->input('credit_note_date'),
+            'si_no' => $request->input('si_no'),
+            'effective_date' => $request->input('effective_date'),
+            'type' => $request->input('type'),
             'remarks' => $request->input('remarks'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),

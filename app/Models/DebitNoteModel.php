@@ -15,13 +15,16 @@ class DebitNoteModel extends Model
         'name',
         'debit_note_no',
         'debit_note_date',
+        'si_no',
+        'effective_date',
+        'type',
         'remarks',
         'cgst',
         'sgst',
         'igst',
         'total',
         'currency',
-        'template',
+        //'template',
         'gross',
         'round_off'
     ];

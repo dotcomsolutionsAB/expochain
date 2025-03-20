@@ -385,7 +385,7 @@ class PurchaseOrderController extends Controller
             }
         ])
         ->select(
-            'id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'oa_no', 
+            'id', 'supplier_id', 'name', 'purchase_order_no', DB::raw('DATE_FORMAT(purchase_order_date, "%d-%m-%Y") as purchase_order_date'), 'oa_no', 
             DB::raw('DATE_FORMAT(oa_date, "%d-%m-%Y") as oa_date'), 'template', 'status', 
             'user', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off'
         )

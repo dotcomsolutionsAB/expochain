@@ -21,12 +21,15 @@ class DebitNoteController extends Controller
             'name' => 'required|string',
             'debit_note_no' => 'required|string',
             'debit_note_date' => 'required|date',
+            'si_no' => 'required|integer|exists:t_sales_invoice,sales_invoice_no',
+            'effective_date' => 'required|date',
+            'type' => 'required|string',
             'remarks' => 'nullable|string',
             'cgst' => 'required|numeric',
             'sgst' => 'required|numeric',
             'igst' => 'required|numeric',
             'total' => 'required|numeric',
-            'template' => 'required|integer|exists:t_pdf_template,id',
+            //'template' => 'required|integer|exists:t_pdf_template,id',
             'gross' => 'required|numeric|min:0',
             'round_off' => 'required|numeric',
             
@@ -90,13 +93,16 @@ class DebitNoteController extends Controller
             'name' => $request->input('name'),
             'debit_note_no' => $debit_note_no,
             'debit_note_date' => $request->input('debit_note_date'),
+            'si_no' => $request->input('si_no'),
+            'effective_date' => $request->input('effective_date'),
+            'type' => $request->input('type'),
             'remarks' => $request->input('remarks'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
             'currency' => "INR",
-            'template' => $request->input('template'),
+            //'template' => $request->input('template'),
             'gross' => $request->input('gross'),
             'round_off' => $request->input('round_off'),
         ]);
@@ -133,8 +139,8 @@ class DebitNoteController extends Controller
         unset($register_debit_note['id'], $register_debit_note['created_at'], $register_debit_note['updated_at']);
     
         return isset($register_debit_note) && $register_debit_note !== null
-        ? response()->json(['Debit Note registered successfully!', 'data' => $register_debit_note], 201)
-        : response()->json(['Failed to register Debit Note record'], 400);
+        ? response()->json(['code' => 200, 'success' => true, 'message' => 'Debit Note registered successfully!', 'data' => $register_debit_note], 201)
+        : response()->json(['code' => 400, 'success' => false, 'message' => 'Failed to register Debit Note record'], 400);
     }
 
     public function view_debit_note(Request $request, $id = null)
@@ -160,7 +166,7 @@ class DebitNoteController extends Controller
                     }]);
                 }
             ])
-            ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
+            ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'si_no', 'effective_date', 'type', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'template', 'gross', 'round_off')
             ->where('company_id', Auth::user()->company_id);
 
              // If an id is provided, fetch a single debit note and return it
@@ -258,12 +264,15 @@ class DebitNoteController extends Controller
             'name' => 'required|string',
             'debit_note_no' => 'required|string',
             'debit_note_date' => 'required|date',
+            'si_no' => 'required|integer|exists:t_sales_invoice,sales_invoice_no',
+            'effective_date' => 'required|date',
+            'type' => 'required|string',
             'remarks' => 'nullable|string',
             'cgst' => 'required|numeric',
             'sgst' => 'required|numeric',
             'igst' => 'required|numeric',
             'total' => 'required|numeric',
-            'template' => 'required|integer|exists:t_pdf_template,id',
+            //'template' => 'required|integer|exists:t_pdf_template,id',
             'gross' => 'required|numeric|min:0',
             'round_off' => 'required|numeric',
             
@@ -292,13 +301,16 @@ class DebitNoteController extends Controller
             'name' => $request->input('name'),
             'debit_note_no' => $request->input('debit_note_no'),
             'debit_note_date' => $request->input('debit_note_date'),
+            'si_no' => $request->input('si_no'),
+            'effective_date' => $request->input('effective_date'),
+            'type' => $request->input('type'),
             'remarks' => $request->input('remarks'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
             'currency' => "INR",
-            'template' => $request->input('template'),
+            //'template' => $request->input('template'),
             'gross' => $request->input('gross'),
             'round_off' => $request->input('round_off'),
         ]);

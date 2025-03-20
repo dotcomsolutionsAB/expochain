@@ -15,13 +15,16 @@ class CreditNoteModel extends Model
         'name',
         'credit_note_no',
         'credit_note_date',
+        'si_no',
+        'effective_date',
+        'type',
         'remarks',
         'cgst',
         'sgst',
         'igst',
         'total',
         'currency',
-        'template',
+        //'template',
         'gross',
         'round_off'
     ];
