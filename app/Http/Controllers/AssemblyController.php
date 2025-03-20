@@ -37,6 +37,7 @@ class AssemblyController extends Controller
 
         if (AssemblyModel::where('product_id', $request->input('product_id'))->exists()) {
             return response()->json([
+                'code' => 422,
                 'success' => false,
                 'message' => 'Assembly for this product already exists.'
             ], 422);
