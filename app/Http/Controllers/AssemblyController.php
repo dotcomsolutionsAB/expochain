@@ -35,6 +35,13 @@ class AssemblyController extends Controller
             $exists = AssemblyModel::where('assembly_id', $assembly_id)->exists();
         }while ($exists);
 
+        if (AssemblyModel::where('product_id', $request->input('product_id'))->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Assembly for this product already exists.'
+            ], 422);
+        }
+
         $register_assembly = AssemblyModel::create([
             'assembly_id' => $assembly_id,
             'company_id' => Auth::user()->company_id,
