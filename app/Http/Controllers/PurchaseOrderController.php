@@ -194,8 +194,9 @@ class PurchaseOrderController extends Controller
         unset($register_purchase_order['id'], $register_purchase_order['created_at'], $register_purchase_order['updated_at']);
     
         return isset($register_purchase_order) && $register_purchase_order !== null
-        ? response()->json(['Purchase Order registered successfully!', 'data' => $register_purchase_order], 201)
-        : response()->json(['Failed to register Purchase Order record'], 400);
+        ? response()->json(['code' => 200, 'success' => true, 'message' => 'Purchase Order registered successfully!', 'data' => $register_purchase_order], 201)
+        : response()->json(['code' => 400, 'success' => false, 'message' => 'Failed to register Purchase Order record'], 400);
+        
     }
 
     // view
