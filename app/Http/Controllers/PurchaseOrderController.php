@@ -550,17 +550,6 @@ class PurchaseOrderController extends Controller
 
         $purchaseOrder = PurchaseOrderModel::where('id', $id)->first();
 
-        $exists = PurchaseOrderModel::where('company_id', Auth::user()->company_id)
-        ->where('purchase_order_no', $request->input('purchase_order_no'))
-        ->exists();
-
-        if ($exists) {
-            return response()->json([
-                'code' => 422,
-                'success' => false,
-                'error' => 'The combination of company_id and purchase_order_no must be unique.',
-            ], 422);
-        }
 
         $purchaseOrderUpdated = $purchaseOrder->update([
             'supplier_id' => $request->input('supplier_id'),
