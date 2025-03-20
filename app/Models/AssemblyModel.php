@@ -14,8 +14,8 @@ class AssemblyModel extends Model
         'company_id',
         'product_id',
         'product_name',
-        'godown',
-        'log_user'
+        // 'godown',
+        // 'log_user'
     ];
 
     public function products()
