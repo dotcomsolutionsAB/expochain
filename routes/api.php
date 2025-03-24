@@ -176,6 +176,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/statistic', [PurchaseInvoiceController::class, 'getSummary']);
 
+    Route::get('/fy-wise-totals', [PurchaseController::class, 'fyWisePurchaseTotals']);
+
     Route::post('/add_purchase_return', [PurchaseReturnController::class, 'add_purchase_return']);
     Route::post('/purchase_return/{id?}', [PurchaseReturnController::class, 'view_purchase_return']);
     Route::post('/update_purchase_return/{id?}', [PurchaseReturnController::class, 'edit_purchase_return']);

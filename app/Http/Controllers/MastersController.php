@@ -116,10 +116,10 @@ class MastersController extends Controller
             // Extract names for group, category, and sub-category
             $product->group_name = $product->groupRelation->name ?? null;
             $product->category_name = $product->categoryRelation->name ?? null;
-            $product->sub_category_name = $product->subCategory->name ?? null;
+            $product->sub_category_name = $product->subCategoryRelation->name ?? null;
 
             // Remove relationship objects
-            unset($product->groupRelation, $product->categoryRelation, $product->subCategory);
+            unset($product->groupRelation, $product->categoryRelation, $product->subCategoryRelation);
 
             return response()->json([
                 'code' => 200,

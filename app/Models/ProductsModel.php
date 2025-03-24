@@ -36,7 +36,7 @@ class ProductsModel extends Model
         return $this->belongsTo(CategoryModel::class, 'category', 'id');
     }
 
-    public function subCategory()
+    public function subCategoryRelation()
     {
         return $this->belongsTo(SubCategoryModel::class, 'sub_category', 'id');
     }

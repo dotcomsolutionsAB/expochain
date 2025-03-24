@@ -971,5 +971,60 @@ class PurchaseInvoiceController extends Controller
         ]);
     }
 
-
+    public function fyWisePurchaseTotals()
+    {
+        $companyId = auth()->user()->company_id;
+    
+        // Step 1: Get all relevant invoice products with necessary relationships
+        $items = PurchaseInvoiceProductsModel::with([
+                'invoice:id,company_id,purchase_invoice_no,purchase_invoice_date',
+                'product.groupRelation:id,name',
+                'product.categoryRelation:id,name',
+                'product.subCategoryRelation:id,name'
+            ])
+            ->whereHas('invoice', function ($q) use ($companyId) {
+                $q->where('company_id', $companyId);
+            })
+            ->get();
+    
+        // Step 2: Group data by Financial Year
+        $result = [];
+    
+        foreach ($items as $item) {
+            $invoice = $item->invoice;
+            $product = $item->product;
+    
+            if (!$invoice || !$product) continue;
+    
+            $date = \Carbon\Carbon::parse($invoice->purchase_invoice_date);
+    
+            // Determine Financial Year (e.g., 2024-2025)
+            $fyStartYear = $date->month >= 4 ? $date->year : $date->year - 1;
+            $fyLabel = $fyStartYear . '-' . ($fyStartYear + 1);
+    
+            $groupName = $product->groupRelation->name ?? 'Unknown';
+            $categoryName = $product->categoryRelation->name ?? 'Unknown';
+            $subCategoryName = $product->subCategoryRelation->name ?? 'Unknown';
+    
+            // Initialize if not set
+            if (!isset($result[$fyLabel])) {
+                $result[$fyLabel] = [
+                    'group' => [],
+                    'category' => [],
+                    'sub_category' => []
+                ];
+            }
+    
+            // Sum amounts
+            $result[$fyLabel]['group'][$groupName] = ($result[$fyLabel]['group'][$groupName] ?? 0) + $item->amount;
+            $result[$fyLabel]['category'][$categoryName] = ($result[$fyLabel]['category'][$categoryName] ?? 0) + $item->amount;
+            $result[$fyLabel]['sub_category'][$subCategoryName] = ($result[$fyLabel]['sub_category'][$subCategoryName] ?? 0) + $item->amount;
+        }
+    
+        return response()->json([
+            'success' => true,
+            'data' => $result
+        ]);
+    }
+    
 }
