@@ -1468,7 +1468,7 @@ class MastersController extends Controller
                     'group:id,name',
                     'category:id,name'
                 ])
-                ->select('id', 'name', 'alias', 'group_id', 'category_id')
+                ->select('id', 'name', 'alias', 'group', 'category')
                 ->get();
 
             // Transform the products so that only required fields are returned
