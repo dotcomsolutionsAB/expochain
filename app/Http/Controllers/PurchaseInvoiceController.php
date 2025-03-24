@@ -991,7 +991,7 @@ class PurchaseInvoiceController extends Controller
         $result = [];
     
         foreach ($items as $item) {
-            $invoice = $item->invoice;
+            $invoice = $item->purchaseInvoice;
             $product = $item->product;
     
             if (!$invoice || !$product) continue;
