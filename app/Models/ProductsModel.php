@@ -26,12 +26,12 @@ class ProductsModel extends Model
         'tax',
     ];
 
-    public function group()
+    public function groupRelation()
     {
         return $this->belongsTo(GroupModel::class, 'group', 'id');
     }
 
-    public function category()
+    public function categoryRelation()
     {
         return $this->belongsTo(CategoryModel::class, 'category', 'id');
     }

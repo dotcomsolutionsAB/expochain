@@ -1467,8 +1467,8 @@ class MastersController extends Controller
 
             // Fetch products with their group and category (using eager loading)
             $products = ProductsModel::with([
-                    'group:id,name',
-                    'category:id,name'
+                    'groupRelation:id,name',
+                    'categoryRelation:id,name'
                 ])
                 ->where('company_id', $companyId)
                 ->select('id', 'name', 'alias', 'group', 'category')
@@ -1479,8 +1479,8 @@ class MastersController extends Controller
                 return [
                     'name'     => $product->name,
                     'alias'    => $product->alias,
-                    'group'    => optional($product->group)->name,     // returns null if no group found
-                    'category' => optional($product->category)->name,   // returns null if no category found
+                    'group'    => optional($product->groupRelation)->name,     // returns null if no group found
+                    'category' => optional($product->categoryRelation)->name,   // returns null if no category found
                 ];
             });
 
