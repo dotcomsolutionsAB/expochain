@@ -233,6 +233,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/client_category', [MastersController::class, 'getClientsCategories']);
 
+    Route::get('/dashboard', [MastersController::class, 'dashboard']);
+
     Route::post('/add_country', [CountryController::class, 'registerCountries']);
     Route::get('/country', [CountryController::class, 'viewCountries']);
     Route::post('/edit_country/{id}', [CountryController::class, 'updateCountry']);

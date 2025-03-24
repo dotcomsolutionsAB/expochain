@@ -1455,4 +1455,43 @@ class MastersController extends Controller
             'data' => $clietsCategories,
         ], 200);
     }
+
+    // dashboard
+    public function dashboard()
+    {
+        try {
+            // Get the total count of products
+            $totalProducts = ProductsModel::count();
+
+            // Fetch products with their group and category (using eager loading)
+            $products = ProductsModel::with([
+                    'group:id,name',
+                    'category:id,name'
+                ])
+                ->select('id', 'name', 'alias', 'group_id', 'category_id')
+                ->get();
+
+            // Transform the products so that only required fields are returned
+            $productsTransformed = $products->map(function ($product) {
+                return [
+                    'name'     => $product->name,
+                    'alias'    => $product->alias,
+                    'group'    => optional($product->group)->name,     // returns null if no group found
+                    'category' => optional($product->category)->name,   // returns null if no category found
+                ];
+            });
+
+            return response()->json([
+                'data'     => [
+                    'total_products' => $totalProducts,
+                ],
+                'products' => $productsTransformed,
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }
