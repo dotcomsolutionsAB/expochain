@@ -67,7 +67,7 @@ class PurchaseInvoiceController extends Controller
         ]);     
         
         $exists = PurchaseInvoiceModel::where('company_id', Auth::user()->company_id)
-            ->where('purchase_invoice_number', $request->input('purchase_invoice_no'))
+            ->where('purchase_invoice_no', $request->input('purchase_invoice_no'))
             ->exists();
 
         if ($exists) {
@@ -443,17 +443,17 @@ class PurchaseInvoiceController extends Controller
 
         $purchaseInvoice = PurchaseInvoiceModel::where('id', $id)->first();
 
-        $exists = PurchaseInvoiceModel::where('company_id', Auth::user()->company_id)
-            ->where('purchase_invoice_number', $request->input('purchase_invoice_no'))
-            ->exists();
+        // $exists = PurchaseInvoiceModel::where('company_id', Auth::user()->company_id)
+        //     ->where('purchase_invoice_number', $request->input('purchase_invoice_no'))
+        //     ->exists();
 
-        if ($exists) {
-            return response()->json([
-                'code' => 422,
-                'success' => true,
-                'error' => 'The combination of company_id and purchase_invoice_number must be unique.',
-            ], 422);
-        }
+        // if ($exists) {
+        //     return response()->json([
+        //         'code' => 422,
+        //         'success' => true,
+        //         'error' => 'The combination of company_id and purchase_invoice_number must be unique.',
+        //     ], 422);
+        // }
         
         $purchaseInvoiceUpdated = $purchaseInvoice->update([
             'supplier_id' => $request->input('supplier_id'),
