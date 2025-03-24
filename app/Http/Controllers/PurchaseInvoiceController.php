@@ -1006,19 +1006,40 @@ class PurchaseInvoiceController extends Controller
             $categoryName = $product->categoryRelation->name ?? 'Unknown';
             $subCategoryName = $product->subCategoryRelation->name ?? 'Unknown';
     
-            // Initialize if not set
-            if (!isset($result[$fyLabel])) {
-                $result[$fyLabel] = [
-                    'group' => [],
-                    'category' => [],
-                    'sub_category' => []
-                ];
-            }
+        //     // Initialize if not set
+        //     if (!isset($result[$fyLabel])) {
+        //         $result[$fyLabel] = [
+        //             'group' => [],
+        //             'category' => [],
+        //             'sub_category' => []
+        //         ];
+        //     }
     
-            // Sum amounts
-            $result[$fyLabel]['group'][$groupName] = ($result[$fyLabel]['group'][$groupName] ?? 0) + $item->amount;
-            $result[$fyLabel]['category'][$categoryName] = ($result[$fyLabel]['category'][$categoryName] ?? 0) + $item->amount;
-            $result[$fyLabel]['sub_category'][$subCategoryName] = ($result[$fyLabel]['sub_category'][$subCategoryName] ?? 0) + $item->amount;
+        //     // Sum amounts
+        //     $result[$fyLabel]['group'][$groupName] = ($result[$fyLabel]['group'][$groupName] ?? 0) + $item->amount;
+        //     $result[$fyLabel]['category'][$categoryName] = ($result[$fyLabel]['category'][$categoryName] ?? 0) + $item->amount;
+        //     $result[$fyLabel]['sub_category'][$subCategoryName] = ($result[$fyLabel]['sub_category'][$subCategoryName] ?? 0) + $item->amount;
+        // }
+
+        // Initialize FY block
+        if (!isset($result[$fyLabel])) {
+            $result[$fyLabel] = ['groups' => []];
+        }
+
+        // Initialize Group
+        if (!isset($result[$fyLabel]['groups'][$groupName])) {
+            $result[$fyLabel]['groups'][$groupName] = ['categories' => []];
+        }
+
+        // Initialize Category
+        if (!isset($result[$fyLabel]['groups'][$groupName]['categories'][$categoryName])) {
+            $result[$fyLabel]['groups'][$groupName]['categories'][$categoryName] = ['sub_categories' => []];
+        }
+
+        // Add Amount to SubCategory
+        $result[$fyLabel]['groups'][$groupName]['categories'][$categoryName]['sub_categories'][$subCategoryName] =
+            ($result[$fyLabel]['groups'][$groupName]['categories'][$categoryName]['sub_categories'][$subCategoryName] ?? 0)
+            + $item->amount;
         }
     
         return response()->json([
