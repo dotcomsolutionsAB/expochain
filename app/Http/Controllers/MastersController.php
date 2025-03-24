@@ -79,7 +79,7 @@ class MastersController extends Controller
         $subCategory = $request->input('sub_category_id') ? explode(',', $request->input('sub_category_id')) : null;
 
         // Query Products
-        $query = ProductsModel::with(['group', 'category', 'subCategory'])
+        $query = ProductsModel::with(['groupRelation', 'categoryRelation', 'subCategory'])
             ->select(
                 'id',
                 'serial_number',
@@ -114,12 +114,12 @@ class MastersController extends Controller
             $product->stock_details = $stockDetails;
 
             // Extract names for group, category, and sub-category
-            $product->group_name = $product->group->name ?? null;
-            $product->category_name = $product->category->name ?? null;
+            $product->group_name = $product->groupRelation->name ?? null;
+            $product->category_name = $product->categoryRelation->name ?? null;
             $product->sub_category_name = $product->subCategory->name ?? null;
 
             // Remove relationship objects
-            unset($product->group, $product->category, $product->subCategory);
+            unset($product->groupRelation, $product->categoryRelation, $product->subCategory);
 
             return response()->json([
                 'code' => 200,
