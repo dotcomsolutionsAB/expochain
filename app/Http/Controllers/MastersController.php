@@ -1485,6 +1485,9 @@ class MastersController extends Controller
             });
 
             return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => "Fetched successfully",
                 'data'     => [
                     'total_products' => $totalProducts,
                 ],
@@ -1492,6 +1495,7 @@ class MastersController extends Controller
             ], 200);
         } catch (Exception $e) {
             return response()->json([
+                'code' => 500,
                 'success' => false,
                 'message' => 'Something went wrong: ' . $e->getMessage(),
             ], 500);

@@ -963,6 +963,9 @@ class PurchaseInvoiceController extends Controller
             ->get();
 
         return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => "Fetched successfully",
             'total_count' => $totalCount,
             'date_wise_total' => $dateWiseTotal
         ]);
