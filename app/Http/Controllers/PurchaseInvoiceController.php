@@ -948,5 +948,25 @@ class PurchaseInvoiceController extends Controller
         ], 200);
     }
 
+    public function getSummary()
+    {
+        $companyId = Auth::user()->company_id;
+
+        // Total count
+        $totalCount = PurchaseInvoiceModel::where('company_id', $companyId)->count();
+
+        // Date-wise total sum grouped by purchase_invoice_date
+        $dateWiseTotal = PurchaseInvoiceModel::where('company_id', $companyId)
+            ->selectRaw('DATE(purchase_invoice_date) as date, SUM(total) as total_sum')
+            ->groupBy('date')
+            ->orderBy('date', 'desc')
+            ->get();
+
+        return response()->json([
+            'total_count' => $totalCount,
+            'date_wise_total' => $dateWiseTotal
+        ]);
+    }
+
 
 }
