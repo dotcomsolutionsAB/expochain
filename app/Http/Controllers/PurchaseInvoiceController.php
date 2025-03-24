@@ -982,7 +982,7 @@ class PurchaseInvoiceController extends Controller
                 'product.categoryRelation:id,name',
                 'product.subCategoryRelation:id,name'
             ])
-            ->whereHas('invoice', function ($q) use ($companyId) {
+            ->whereHas('purchaseInvoice', function ($q) use ($companyId) {
                 $q->where('company_id', $companyId);
             })
             ->get();
