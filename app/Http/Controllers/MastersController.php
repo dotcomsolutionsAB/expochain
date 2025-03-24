@@ -1460,14 +1460,17 @@ class MastersController extends Controller
     public function dashboard()
     {
         try {
+            $companyId = Auth::user()->company_id;
+
             // Get the total count of products
-            $totalProducts = ProductsModel::count();
+            $totalProducts = ProductsModel::where('company_id', $companyId)->count();
 
             // Fetch products with their group and category (using eager loading)
             $products = ProductsModel::with([
                     'group:id,name',
                     'category:id,name'
                 ])
+                ->where('company_id', $companyId)
                 ->select('id', 'name', 'alias', 'group', 'category')
                 ->get();
 
