@@ -977,7 +977,7 @@ class PurchaseInvoiceController extends Controller
     
         // Step 1: Get all relevant invoice products with necessary relationships
         $items = PurchaseInvoiceProductsModel::with([
-                'invoice:id,company_id,purchase_invoice_no,purchase_invoice_date',
+                'purchaseInvoice:id,company_id,purchase_invoice_no,purchase_invoice_date',
                 'product.groupRelation:id,name',
                 'product.categoryRelation:id,name',
                 'product.subCategoryRelation:id,name'
