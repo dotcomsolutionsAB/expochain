@@ -641,6 +641,19 @@ class SalesInvoiceController extends Controller
                     continue;
                 }
 
+                // Gross calculation
+                $gross = 0;
+                if (!empty($itemsData['product'])) {
+                    foreach ($itemsData['product'] as $index => $productName) {
+                        $qty = isset($itemsData['quantity'][$index]) ? (float)$itemsData['quantity'][$index] : 0;
+                        $price = isset($itemsData['price'][$index]) ? (float)$itemsData['price'][$index] : 0;
+                        $gross += $qty * $price;
+                    }
+                }
+
+                // Roundoff (if available in addons)
+                $roundoff = isset($addonsData['roundoff']) ? (float)$addonsData['roundoff'] : 0;
+
                 $client_address_record = ClientAddressModel::select('address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country')
                     ->where('customer_id', $client->customer_id)
                     ->where('type', 'billing')
@@ -668,6 +681,8 @@ class SalesInvoiceController extends Controller
                     'sgst' => $taxData['sgst'] ?? 0,
                     'igst' => $taxData['igst'] ?? 0,
                     'total' => $record['total'] ?? 0,
+                    'gross' => $gross,
+                    'round_off' => $roundoff,
                     'created_at' => now(),
                     'updated_at' => now()
                 ];
