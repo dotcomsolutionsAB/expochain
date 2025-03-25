@@ -1021,26 +1021,65 @@ class PurchaseInvoiceController extends Controller
         //     $result[$fyLabel]['sub_category'][$subCategoryName] = ($result[$fyLabel]['sub_category'][$subCategoryName] ?? 0) + $item->amount;
         // }
 
-        // Initialize FY block
-        if (!isset($result[$fyLabel])) {
-            $result[$fyLabel] = ['groups' => []];
+        // Initialize FY
+        if (!isset($fyData[$fyLabel])) {
+            $fyData[$fyLabel] = [];
         }
 
-        // Initialize Group
-        if (!isset($result[$fyLabel]['groups'][$groupName])) {
-            $result[$fyLabel]['groups'][$groupName] = ['categories' => []];
+        // Find or create group entry
+        if (!isset($fyData[$fyLabel][$groupName])) {
+            $fyData[$fyLabel][$groupName] = [];
         }
 
-        // Initialize Category
-        if (!isset($result[$fyLabel]['groups'][$groupName]['categories'][$categoryName])) {
-            $result[$fyLabel]['groups'][$groupName]['categories'][$categoryName] = ['sub_categories' => []];
+        // Find or create category entry
+        if (!isset($fyData[$fyLabel][$groupName][$categoryName])) {
+            $fyData[$fyLabel][$groupName][$categoryName] = [];
         }
 
-        // Add Amount to SubCategory
-        $result[$fyLabel]['groups'][$groupName]['categories'][$categoryName]['sub_categories'][$subCategoryName] =
-            ($result[$fyLabel]['groups'][$groupName]['categories'][$categoryName]['sub_categories'][$subCategoryName] ?? 0)
-            + $item->amount;
+        // Add amount to sub-category
+        if (!isset($fyData[$fyLabel][$groupName][$categoryName][$subCategoryName])) {
+            $fyData[$fyLabel][$groupName][$categoryName][$subCategoryName] = 0;
         }
+
+        $fyData[$fyLabel][$groupName][$categoryName][$subCategoryName] += $item->amount;
+    }
+
+    // Transform into clean array
+    $finalOutput = [];
+
+    foreach ($fyData as $fy => $groups) {
+        $groupArray = [];
+
+        foreach ($groups as $groupName => $categories) {
+            $categoryArray = [];
+
+            foreach ($categories as $categoryName => $subCategories) {
+                $subCategoryArray = [];
+
+                foreach ($subCategories as $subCategoryName => $amount) {
+                    $subCategoryArray[] = [
+                        'name' => $subCategoryName,
+                        'amount' => round($amount, 2)
+                    ];
+                }
+
+                $categoryArray[] = [
+                    'name' => $categoryName,
+                    'sub_category' => $subCategoryArray
+                ];
+            }
+
+            $groupArray[] = [
+                'name' => $groupName,
+                'category' => $categoryArray
+            ];
+        }
+
+        $finalOutput[] = [
+            'fy' => $fy,
+            'group' => $groupArray
+        ];
+    }
     
         return response()->json([
             'success' => true,
