@@ -18,6 +18,9 @@ return new class extends Migration
             $table->string('name');
             $table->string('credit_note_no');
             $table->date('credit_note_date');
+            $table->string('si_no')->nullable();
+            $table->date('effective_date');
+            $table->string('type');
             // as it don't support `length`, it can store upto `65,535 characters for TEXT type in MySQL`
             $table->text('remarks');
             $table->float('cgst');
