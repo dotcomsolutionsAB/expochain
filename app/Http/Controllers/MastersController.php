@@ -79,7 +79,7 @@ class MastersController extends Controller
         $subCategory = $request->input('sub_category_id') ? explode(',', $request->input('sub_category_id')) : null;
 
         // Query Products
-        $query = ProductsModel::with(['groupRelation', 'categoryRelation', 'subCategory'])
+        $query = ProductsModel::with(['groupRelation', 'categoryRelation', 'subCategoryRelation'])
             ->select(
                 'id',
                 'serial_number',
