@@ -201,7 +201,7 @@ class PurchaseInvoiceController extends Controller
     //     if ($purchaseOrderNo) {
     //         $query->where('purchase_order_no', 'LIKE', '%' . $purchaseOrderNo . '%');
     //     }
-    //         // ✅ **Filter by comma-separated product IDs**
+    //         // **Filter by comma-separated product IDs**
     //         if (!empty($productIds)) {
     //         $productIdArray = explode(',', $productIds); // Convert CSV to array
     //         $query->whereHas('products', function ($query) use ($productIdArray) {
@@ -222,7 +222,7 @@ class PurchaseInvoiceController extends Controller
     //         // Convert total to words
     //         $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
 
-    //         // ✅ Format total with comma-separated values
+    //         // Format total with comma-separated values
     //         $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
 
     //         // Replace user ID with corresponding contact_person object
@@ -817,6 +817,9 @@ class PurchaseInvoiceController extends Controller
                 'sgst' => $taxData['sgst'] ?? 0,
                 'igst' => $taxData['igst'] ?? 0,
                 'total' => $record['total'] ?? null,
+                // gross will be updated later after processing items
+                'gross' => 0,
+                'round_off' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -835,8 +838,33 @@ class PurchaseInvoiceController extends Controller
         // **3️⃣ Insert Products and Addons**
         foreach ($data as $record) {
             $purchaseInvoiceId = $purchaseInvoiceIds[$record['pi_no']] ?? null;
+
             if (!$purchaseInvoiceId) {
                 continue;
+            }
+
+            $itemsData = json_decode($record['items'] ?? '{}', true);
+            $addonsData = json_decode($record['addons'] ?? '{}', true);
+
+            $gross = 0;
+
+            if (!empty($itemsData['product'])) {
+                foreach ($itemsData['product'] as $index => $productName) {
+                    $qty = isset($itemsData['quantity'][$index]) ? (float) $itemsData['quantity'][$index] : 0;
+                    $price = isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0;
+                    $gross += $qty * $price;
+                }
+            }
+
+            $roundoff = isset($addonsData['roundoff']) ? (float) $addonsData['roundoff'] : 0;
+
+            // Now update invoice with correct gross and roundoff
+
+            if ($purchaseInvoiceId) {
+                PurchaseInvoiceModel::where('id', $purchaseInvoiceId)->update([
+                    'gross' => $gross,
+                    'round_off' => $roundoff
+                ]);
             }
 
             // **Process Items (Products)**
@@ -853,7 +881,7 @@ class PurchaseInvoiceController extends Controller
                     }
 
                     $productsBatch[] = [
-                        'purchase_invoice_id' => $purchaseInvoiceId, // ✅ Assign parent ID
+                        'purchase_invoice_id' => $purchaseInvoiceId, // Assign parent ID
                         'company_id' => Auth::user()->company_id,
                         'product_id' => $productId,
                         'product_name' => $productName,
@@ -904,7 +932,7 @@ class PurchaseInvoiceController extends Controller
             if (!empty($addonsData)) {
                 foreach ($addonsData as $name => $values) {
                     $addonsBatch[] = [
-                        'purchase_invoice_id' => $purchaseInvoiceId, // ✅ Assign parent ID
+                        'purchase_invoice_id' => $purchaseInvoiceId, // Assign parent ID
                         'company_id' => Auth::user()->company_id,
                         'name' => $name,
                         'amount' => (float)($values['cgst'] ?? 0) + (float)($values['sgst'] ?? 0) + (float)($values['igst'] ?? 0),
