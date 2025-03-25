@@ -614,6 +614,8 @@ class CreditNoteController extends Controller
                     'credit_note_no' => !empty($record['cn_no']) ? $record['cn_no'] : 'Unknown',
                     'credit_note_date' => $record['cn_date'] ?? now(),
                     'si_no' => $record['sales_invoice'],
+                    'effective_date' => $record['effective_date'],
+                    'type' => $record['type'],
                     'remarks' => $record['remarks'] ?? '',
                     'cgst' => !empty($taxData['cgst']) ? (float) $taxData['cgst'] : 0,
                     'sgst' => !empty($taxData['sgst']) ? (float) $taxData['sgst'] : 0,

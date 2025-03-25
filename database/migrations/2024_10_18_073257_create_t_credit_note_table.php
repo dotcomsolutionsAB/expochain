@@ -20,7 +20,7 @@ return new class extends Migration
             $table->date('credit_note_date');
             $table->string('si_no')->nullable();
             $table->date('effective_date');
-            $table->string('type');
+            $table->string('type')->nullable();
             // as it don't support `length`, it can store upto `65,535 characters for TEXT type in MySQL`
             $table->text('remarks');
             $table->float('cgst');
