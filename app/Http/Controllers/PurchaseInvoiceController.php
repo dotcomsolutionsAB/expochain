@@ -980,7 +980,7 @@ class PurchaseInvoiceController extends Controller
         $endDate = Carbon::parse($request->end_date)->endOfDay();
 
         // Get all products with group, category, sub-category
-        $products = ProductModel::with([
+        $products = ProductsModel::with([
             'groupRelation:id,name',
             'categoryRelation:id,name',
             'subCategoryRelation:id,name'
