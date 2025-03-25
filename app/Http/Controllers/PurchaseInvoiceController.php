@@ -1098,10 +1098,39 @@ class PurchaseInvoiceController extends Controller
             }, $result))
         ];
     
+        // return response()->json([
+        //     'success' => true,
+        //     'data' => $result
+        // ]);
+
         return response()->json([
             'success' => true,
-            'data' => $result
+            'start_date' => $startDate->toDateString(),
+            'end_date' => $endDate->toDateString(),
+            'data' => array_values(array_map(function ($group) {
+                $group['categories'] = array_values(array_map(function ($cat) {
+                    $cat['sub_categories'] = array_values($cat['sub_categories']);
+                    // Round off category totals
+                    $cat['total_sales'] = round($cat['total_sales']);
+                    $cat['total_purchase'] = round($cat['total_purchase']);
+                    $cat['total_profit'] = round($cat['total_profit']);
+                    foreach ($cat['sub_categories'] as &$sub) {
+                        $sub['total_sales'] = round($sub['total_sales']);
+                        $sub['total_purchase'] = round($sub['total_purchase']);
+                        $sub['total_profit'] = round($sub['total_profit']);
+                    }
+                    return $cat;
+                }, $group['categories']));
+        
+                // Round off group totals
+                $group['total_sales'] = round($group['total_sales']);
+                $group['total_purchase'] = round($group['total_purchase']);
+                $group['total_profit'] = round($group['total_profit']);
+        
+                return $group;
+            }, $result))
         ]);
+        
     }
     
 }
