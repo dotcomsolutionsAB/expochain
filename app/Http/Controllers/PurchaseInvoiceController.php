@@ -971,115 +971,131 @@ class PurchaseInvoiceController extends Controller
         ]);
     }
 
-    public function fyWisePurchaseTotals()
+    public function fyWisePurchaseTotals(Request $request)
     {
         $companyId = auth()->user()->company_id;
     
-        // Step 1: Get all relevant invoice products with necessary relationships
-        $items = PurchaseInvoiceProductsModel::with([
-                'purchaseInvoice:id,company_id,purchase_invoice_no,purchase_invoice_date',
-                'product.groupRelation:id,name',
-                'product.categoryRelation:id,name',
-                'product.subCategoryRelation:id,name'
-            ])
-            ->whereHas('purchaseInvoice', function ($q) use ($companyId) {
-                $q->where('company_id', $companyId);
-            })
-            ->get();
-    
-        // Step 2: Group data by Financial Year
+        // Get start and end date from request
+        $startDate = Carbon::parse($request->start_date)->startOfDay();
+        $endDate = Carbon::parse($request->end_date)->endOfDay();
+
+        // Get all products with group, category, sub-category
+        $products = ProductModel::with([
+            'groupRelation:id,name',
+            'categoryRelation:id,name',
+            'subCategoryRelation:id,name'
+        ])->where('company_id', $companyId)->get()->keyBy('id');
+
+        // Fetch purchase data
+        $purchaseData = PurchaseInvoiceProductsModel::with('purchaseInvoice')
+            ->whereHas('purchaseInvoice', function ($q) use ($companyId, $startDate, $endDate) {
+                $q->where('company_id', $companyId)
+                ->whereBetween('purchase_invoice_date', [$startDate, $endDate]);
+            })->get();
+
+        // Fetch sales data
+        $salesData = SalesInvoiceProductsModel::with('salesInvoice')
+            ->whereHas('salesInvoice', function ($q) use ($companyId, $startDate, $endDate) {
+                $q->where('company_id', $companyId)
+                ->whereBetween('sales_invoice_date', [$startDate, $endDate]);
+            })->get();
+
+        // Build structure
         $result = [];
-    
-        foreach ($items as $item) {
-            $invoice = $item->purchaseInvoice;
-            $product = $item->product;
-    
-            if (!$invoice || !$product) continue;
-    
-            $date = \Carbon\Carbon::parse($invoice->purchase_invoice_date);
-    
-            // Determine Financial Year (e.g., 2024-2025)
-            $fyStartYear = $date->month >= 4 ? $date->year : $date->year - 1;
-            $fyLabel = $fyStartYear . '-' . ($fyStartYear + 1);
-    
+
+        foreach ($products as $productId => $product) {
+            $groupId = $product->group;
+            $categoryId = $product->category;
+            $subCategoryId = $product->sub_category;
+
             $groupName = $product->groupRelation->name ?? 'Unknown';
             $categoryName = $product->categoryRelation->name ?? 'Unknown';
             $subCategoryName = $product->subCategoryRelation->name ?? 'Unknown';
-    
-        //     // Initialize if not set
-        //     if (!isset($result[$fyLabel])) {
-        //         $result[$fyLabel] = [
-        //             'group' => [],
-        //             'category' => [],
-        //             'sub_category' => []
-        //         ];
-        //     }
-    
-        //     // Sum amounts
-        //     $result[$fyLabel]['group'][$groupName] = ($result[$fyLabel]['group'][$groupName] ?? 0) + $item->amount;
-        //     $result[$fyLabel]['category'][$categoryName] = ($result[$fyLabel]['category'][$categoryName] ?? 0) + $item->amount;
-        //     $result[$fyLabel]['sub_category'][$subCategoryName] = ($result[$fyLabel]['sub_category'][$subCategoryName] ?? 0) + $item->amount;
-        // }
 
-        // Initialize FY
-        if (!isset($fyData[$fyLabel])) {
-            $fyData[$fyLabel] = [];
-        }
-
-        // Find or create group entry
-        if (!isset($fyData[$fyLabel][$groupName])) {
-            $fyData[$fyLabel][$groupName] = [];
-        }
-
-        // Find or create category entry
-        if (!isset($fyData[$fyLabel][$groupName][$categoryName])) {
-            $fyData[$fyLabel][$groupName][$categoryName] = [];
-        }
-
-        // Add amount to sub-category
-        if (!isset($fyData[$fyLabel][$groupName][$categoryName][$subCategoryName])) {
-            $fyData[$fyLabel][$groupName][$categoryName][$subCategoryName] = 0;
-        }
-
-        $fyData[$fyLabel][$groupName][$categoryName][$subCategoryName] += $item->amount;
-    }
-
-    // Transform into clean array
-    $finalOutput = [];
-
-    foreach ($fyData as $fy => $groups) {
-        $groupArray = [];
-
-        foreach ($groups as $groupName => $categories) {
-            $categoryArray = [];
-
-            foreach ($categories as $categoryName => $subCategories) {
-                $subCategoryArray = [];
-
-                foreach ($subCategories as $subCategoryName => $amount) {
-                    $subCategoryArray[] = [
-                        'name' => $subCategoryName,
-                        'amount' => round($amount, 2)
-                    ];
-                }
-
-                $categoryArray[] = [
-                    'name' => $categoryName,
-                    'sub_category' => $subCategoryArray
+            // Initialize
+            if (!isset($result[$groupId])) {
+                $result[$groupId] = [
+                    'group_id' => $groupId,
+                    'group_name' => $groupName,
+                    'total_sales' => 0,
+                    'total_purchase' => 0,
+                    'total_profit' => 0,
+                    'categories' => []
                 ];
             }
 
-            $groupArray[] = [
-                'name' => $groupName,
-                'category' => $categoryArray
-            ];
+            if (!isset($result[$groupId]['categories'][$categoryId])) {
+                $result[$groupId]['categories'][$categoryId] = [
+                    'category_id' => $categoryId,
+                    'category_name' => $categoryName,
+                    'total_sales' => 0,
+                    'total_purchase' => 0,
+                    'total_profit' => 0,
+                    'sub_categories' => []
+                ];
+            }
+
+            if (!isset($result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId])) {
+                $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId] = [
+                    'sub_category_id' => $subCategoryId,
+                    'sub_category_name' => $subCategoryName,
+                    'total_sales' => 0,
+                    'total_purchase' => 0,
+                    'total_profit' => 0
+                ];
+            }
         }
 
-        $finalOutput[] = [
-            'fy' => $fy,
-            'group' => $groupArray
+        // Loop and add purchase values
+        foreach ($purchaseData as $item) {
+            $product = $products[$item->product_id] ?? null;
+            if (!$product) continue;
+
+            $groupId = $product->group;
+            $categoryId = $product->category;
+            $subCategoryId = $product->sub_category;
+
+            $amount = $item->amount ?? 0;
+
+            $result[$groupId]['total_purchase'] += $amount;
+            $result[$groupId]['categories'][$categoryId]['total_purchase'] += $amount;
+            $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId]['total_purchase'] += $amount;
+        }
+
+        // Loop and add sales values
+        foreach ($salesData as $item) {
+            $product = $products[$item->product_id] ?? null;
+            if (!$product) continue;
+
+            $groupId = $product->group;
+            $categoryId = $product->category;
+            $subCategoryId = $product->sub_category;
+
+            $amount = $item->amount ?? 0;
+            $profit = $item->profit ?? 0;
+
+            $result[$groupId]['total_sales'] += $amount;
+            $result[$groupId]['total_profit'] += $profit;
+
+            $result[$groupId]['categories'][$categoryId]['total_sales'] += $amount;
+            $result[$groupId]['categories'][$categoryId]['total_profit'] += $profit;
+
+            $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId]['total_sales'] += $amount;
+            $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId]['total_profit'] += $profit;
+        }
+
+        // Re-index data for clean structure
+        $final = [
+            'start_date' => $startDate->toDateString(),
+            'end_date' => $endDate->toDateString(),
+            'data' => array_values(array_map(function ($group) {
+                $group['categories'] = array_values(array_map(function ($cat) {
+                    $cat['sub_categories'] = array_values($cat['sub_categories']);
+                    return $cat;
+                }, $group['categories']));
+                return $group;
+            }, $result))
         ];
-    }
     
         return response()->json([
             'success' => true,
