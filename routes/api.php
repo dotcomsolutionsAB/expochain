@@ -28,6 +28,7 @@ use App\Http\Controllers\StateController;
 use App\Http\Controllers\ChannelController;
 use App\Http\Controllers\QuotationTermMasterController;
 use App\Http\Controllers\PurchaseBackController;
+use App\Http\Controllers\HelperController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -139,10 +140,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/sales_invoice_migrate', [SalesInvoiceController::class, 'importSalesInvoices']);
 
-    Route::get('/product_profit', [SalesInvoiceController::class, 'getProductWiseSalesSummary']);
-
-    Route::get('/client_profit', [SalesInvoiceController::class, 'getClientWiseSalesSummary']);
-
     Route::post('/add_sales_return', [SalesReturnController::class, 'add_sales_return']);
     Route::post('/sales_return/{id?}', [SalesReturnController::class, 'view_sales_return']);
     Route::post('/update_sales_return/{id?}', [SalesReturnController::class, 'edit_sales_return']);
@@ -177,10 +174,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/purchase_invoice/{id?}', [PurchaseInvoiceController::class, 'delete_purchase_invoice']);
 
     Route::get('/purchase_invoice_migrate', [PurchaseInvoiceController::class, 'importPurchaseInvoices']);
-
-    Route::get('/statistic', [PurchaseInvoiceController::class, 'getSummary']);
-
-    Route::post('/fy_wise_totals', [PurchaseInvoiceController::class, 'fyWisePurchaseTotals']);
 
     Route::post('/add_purchase_return', [PurchaseReturnController::class, 'add_purchase_return']);
     Route::post('/purchase_return/{id?}', [PurchaseReturnController::class, 'view_purchase_return']);
@@ -241,8 +234,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/client_category', [MastersController::class, 'getClientsCategories']);
 
-    Route::get('/dashboard', [MastersController::class, 'dashboard']);
-
     Route::post('/add_country', [CountryController::class, 'registerCountries']);
     Route::get('/country', [CountryController::class, 'viewCountries']);
     Route::post('/edit_country/{id}', [CountryController::class, 'updateCountry']);
@@ -265,4 +256,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/purchase_back', [PurchaseBackController::class, 'add_purchase_back']); // Create purchase-bcak
     Route::get('/purchase_back', [PurchaseBackController::class, 'fetch_purchase_back']); // View All purchase-back
+
+    Route::get('/dashboard', [HelperController::class, 'dashboard']);
+
+    Route::get('/statistic', [HelperController::class, 'getSummary']);
+
+    Route::post('/fy_wise_totals', [HelperController::class, 'fyWisePurchaseTotals']);
+
+    Route::post('/monthly_summary', [HelperController::class, 'getMonthlyPurchaseSalesSummary']);
+
+    Route::get('/product_profit', [HelperController::class, 'getProductWiseSalesSummary']);
+
+    Route::get('/client_profit', [HelperController::class, 'getClientWiseSalesSummary']);
 });

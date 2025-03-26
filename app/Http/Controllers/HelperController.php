@@ -1,0 +1,410 @@
+<?php
+
+namespace App\Http\Controllers;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use App\Models\ProductsModel;
+use App\Models\PurchaseInvoiceModel;
+use App\Models\SalesInvoiceModel;
+use App\Models\PurchaseInvoiceProductsModel;
+use App\Models\SalesInvoiceProductsModel;
+
+class HelperController extends Controller
+{
+
+    // dashboard
+    public function dashboard()
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            // Get the total count of products
+            $totalProducts = ProductsModel::where('company_id', $companyId)->count();
+
+            // Fetch products with their group and category (using eager loading)
+            $products = ProductsModel::with([
+                    'groupRelation:id,name',
+                    'categoryRelation:id,name'
+                ])
+                ->where('company_id', $companyId)
+                ->select('id', 'name', 'alias', 'group', 'category')
+                ->get();
+
+            // Transform the products so that only required fields are returned
+            $productsTransformed = $products->map(function ($product) {
+                return [
+                    'name'     => $product->name,
+                    'alias'    => $product->alias,
+                    'group'    => optional($product->groupRelation)->name,     // returns null if no group found
+                    'category' => optional($product->categoryRelation)->name,   // returns null if no category found
+                ];
+            });
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => "Fetched successfully",
+                'data'     => [
+                    'total_products' => $totalProducts,
+                ],
+                'products' => $productsTransformed,
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function getSummary()
+    {
+        $companyId = Auth::user()->company_id;
+
+        // Total count
+        $totalCount = PurchaseInvoiceModel::where('company_id', $companyId)->count();
+
+        // Date-wise total sum grouped by purchase_invoice_date
+        $dateWiseTotal = PurchaseInvoiceModel::where('company_id', $companyId)
+            ->selectRaw('DATE(purchase_invoice_date) as date, SUM(total) as total_sum')
+            ->groupBy('date')
+            ->orderBy('date', 'desc')
+            ->get();
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => "Fetched successfully",
+            'total_count' => $totalCount,
+            'date_wise_total' => $dateWiseTotal
+        ]);
+    }
+
+    public function fyWisePurchaseTotals(Request $request)
+    {
+        $companyId = auth()->user()->company_id;
+    
+        // Get start and end date from request
+        $startDate = Carbon::parse($request->start_date)->startOfDay();
+        $endDate = Carbon::parse($request->end_date)->endOfDay();
+
+        // Get all products with group, category, sub-category
+        $products = ProductsModel::with([
+            'groupRelation:id,name',
+            'categoryRelation:id,name',
+            'subCategoryRelation:id,name'
+        ])->where('company_id', $companyId)->get()->keyBy('id');
+
+        // Fetch purchase data
+        $purchaseData = PurchaseInvoiceProductsModel::with('purchaseInvoice')
+            ->whereHas('purchaseInvoice', function ($q) use ($companyId, $startDate, $endDate) {
+                $q->where('company_id', $companyId)
+                ->whereBetween('purchase_invoice_date', [$startDate, $endDate]);
+            })->get();
+
+        // Fetch sales data
+        $salesData = SalesInvoiceProductsModel::with('salesInvoice')
+            ->whereHas('salesInvoice', function ($q) use ($companyId, $startDate, $endDate) {
+                $q->where('company_id', $companyId)
+                ->whereBetween('sales_invoice_date', [$startDate, $endDate]);
+            })->get();
+
+        // Build structure
+        $result = [];
+
+        foreach ($products as $productId => $product) {
+            $groupId = $product->group;
+            $categoryId = $product->category;
+            $subCategoryId = $product->sub_category;
+
+            $groupName = $product->groupRelation->name ?? 'Unknown';
+            $categoryName = $product->categoryRelation->name ?? 'Unknown';
+            $subCategoryName = $product->subCategoryRelation->name ?? 'Unknown';
+
+            // Initialize
+            if (!isset($result[$groupId])) {
+                $result[$groupId] = [
+                    'group_id' => $groupId,
+                    'group_name' => $groupName,
+                    'total_sales' => 0,
+                    'total_purchase' => 0,
+                    'total_profit' => 0,
+                    'categories' => []
+                ];
+            }
+
+            if (!isset($result[$groupId]['categories'][$categoryId])) {
+                $result[$groupId]['categories'][$categoryId] = [
+                    'category_id' => $categoryId,
+                    'category_name' => $categoryName,
+                    'total_sales' => 0,
+                    'total_purchase' => 0,
+                    'total_profit' => 0,
+                    'sub_categories' => []
+                ];
+            }
+
+            if (!isset($result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId])) {
+                $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId] = [
+                    'sub_category_id' => $subCategoryId,
+                    'sub_category_name' => $subCategoryName,
+                    'total_sales' => 0,
+                    'total_purchase' => 0,
+                    'total_profit' => 0
+                ];
+            }
+        }
+
+        // Loop and add purchase values
+        foreach ($purchaseData as $item) {
+            $product = $products[$item->product_id] ?? null;
+            if (!$product) continue;
+
+            $groupId = $product->group;
+            $categoryId = $product->category;
+            $subCategoryId = $product->sub_category;
+
+            $amount = $item->amount ?? 0;
+
+            $result[$groupId]['total_purchase'] += $amount;
+            $result[$groupId]['categories'][$categoryId]['total_purchase'] += $amount;
+            $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId]['total_purchase'] += $amount;
+        }
+
+        // Loop and add sales values
+        foreach ($salesData as $item) {
+            $product = $products[$item->product_id] ?? null;
+            if (!$product) continue;
+
+            $groupId = $product->group;
+            $categoryId = $product->category;
+            $subCategoryId = $product->sub_category;
+
+            $amount = $item->amount ?? 0;
+            $profit = $item->profit ?? 0;
+
+            $result[$groupId]['total_sales'] += $amount;
+            $result[$groupId]['total_profit'] += $profit;
+
+            $result[$groupId]['categories'][$categoryId]['total_sales'] += $amount;
+            $result[$groupId]['categories'][$categoryId]['total_profit'] += $profit;
+
+            $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId]['total_sales'] += $amount;
+            $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId]['total_profit'] += $profit;
+        }
+
+        // Re-index data for clean structure
+        $final = [
+            'start_date' => $startDate->toDateString(),
+            'end_date' => $endDate->toDateString(),
+            'data' => array_values(array_map(function ($group) {
+                $group['categories'] = array_values(array_map(function ($cat) {
+                    $cat['sub_categories'] = array_values($cat['sub_categories']);
+                    return $cat;
+                }, $group['categories']));
+                return $group;
+            }, $result))
+        ];
+    
+        // return response()->json([
+        //     'success' => true,
+        //     'data' => $result
+        // ]);
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'start_date' => $startDate->toDateString(),
+            'end_date' => $endDate->toDateString(),
+            'data' => array_values(array_map(function ($group) {
+                $group['categories'] = array_values(array_map(function ($cat) {
+                    $cat['sub_categories'] = array_values($cat['sub_categories']);
+                    // Round off category totals
+                    $cat['total_sales'] = round($cat['total_sales']);
+                    $cat['total_purchase'] = round($cat['total_purchase']);
+                    $cat['total_profit'] = round($cat['total_profit']);
+                    foreach ($cat['sub_categories'] as &$sub) {
+                        $sub['total_sales'] = round($sub['total_sales']);
+                        $sub['total_purchase'] = round($sub['total_purchase']);
+                        $sub['total_profit'] = round($sub['total_profit']);
+                    }
+                    return $cat;
+                }, $group['categories']));
+        
+                // Round off group totals
+                $group['total_sales'] = round($group['total_sales']);
+                $group['total_purchase'] = round($group['total_purchase']);
+                $group['total_profit'] = round($group['total_profit']);
+        
+                return $group;
+            }, $result))
+        ]);
+        
+    }
+
+    //purchase vs sales barchart
+    public function getMonthlyPurchaseSalesSummary(Request $request)
+    {
+        try {
+            $companyId = auth()->user()->company_id;
+
+            // Parse start and end dates
+            $startDate = Carbon::parse($request->start_date)->startOfMonth();
+            $endDate = Carbon::parse($request->end_date)->endOfMonth();
+
+            $months = [];
+            $purchaseTotals = [];
+            $salesTotals = [];
+            $purchaseInvoiceCounts = [];
+            $salesInvoiceCounts = [];
+
+            $current = $startDate->copy();
+
+            while ($current <= $endDate) {
+                $monthStart = $current->copy()->startOfMonth();
+                $monthEnd = $current->copy()->endOfMonth();
+                $monthName = $current->format('F Y');
+
+                // Purchase Invoice IDs for this month
+                $purchaseInvoiceIds = PurchaseInvoiceModel::where('company_id', $companyId)
+                    ->whereBetween('purchase_invoice_date', [$monthStart, $monthEnd])
+                    ->pluck('id');
+
+                // Sales Invoice IDs for this month
+                $salesInvoiceIds = SalesInvoiceModel::where('company_id', $companyId)
+                    ->whereBetween('sales_invoice_date', [$monthStart, $monthEnd])
+                    ->pluck('id');
+
+                // Sum of amounts for purchase and sales
+                $purchaseTotal = PurchaseInvoiceProductsModel::whereIn('purchase_invoice_id', $purchaseInvoiceIds)->sum('amount');
+                $salesTotal = SalesInvoiceProductsModel::whereIn('sales_invoice_id', $salesInvoiceIds)->sum('amount');
+
+                // Invoice counts
+                $purchaseCount = $purchaseInvoiceIds->count();
+                $salesCount = $salesInvoiceIds->count();
+
+                // Append results
+                $months[] = $monthName;
+                $purchaseTotals[] = round($purchaseTotal, 2);
+                $salesTotals[] = round($salesTotal, 2);
+                $purchaseInvoiceCounts[] = $purchaseCount;
+                $salesInvoiceCounts[] = $salesCount;
+
+                // Move to next month
+                $current->addMonth();
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'month' => $months,
+                    'purchase_total' => $purchaseTotals,
+                    'sales_total' => $salesTotals,
+                    'purchase_invoice_count' => $purchaseInvoiceCounts,
+                    'sales_invoice_count' => $salesInvoiceCounts,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error occurred while processing data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // product wise profit
+    public function getProductWiseSalesSummary()
+    {
+        try {
+            // Step 1: Fetch and group product-wise sales data
+            $products = SalesInvoiceProductsModel::select('product_id', 'product_name')
+                ->selectRaw('SUM(amount) as total_amount, SUM(profit) as total_profit')
+                ->groupBy('product_id', 'product_name')
+                ->get()
+                ->map(function ($product) {
+                    return [
+                        'product_id' => $product->product_id,
+                        'product_name' => $product->product_name,
+                        'total_amount' => round($product->total_amount, 2),
+                        'total_profit' => round($product->total_profit, 2),
+                    ];
+                });
+
+            // Step 2: Return response
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Product wise profit fetched successfully!',
+                'data' => $products
+            ]);
+        } catch (\Exception $e) {
+            // Error handling
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong while fetching product-wise sales summary.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    //client wise profit
+    public function getClientWiseSalesSummary()
+    {
+        try {
+            // Step 1: Get all sales invoices with their products
+            $invoices = SalesInvoiceModel::with('products:id,sales_invoice_id,profit,amount')
+                ->select('id', 'client_id')
+                ->get();
+
+            // Step 2: Aggregate totals by client_id
+            $result = [];
+
+            foreach ($invoices as $invoice) {
+                $clientId = $invoice->client_id;
+                if (!$clientId) continue;
+
+                $profitSum = $invoice->products->sum('profit');
+                $amountSum = $invoice->products->sum('amount');
+
+                if (!isset($result[$clientId])) {
+                    $result[$clientId] = [
+                        'client_id' => $clientId,
+                        'total_profit' => 0,
+                        'total_amount' => 0
+                    ];
+                }
+
+                $result[$clientId]['total_profit'] += $profitSum;
+                $result[$clientId]['total_amount'] += $amountSum;
+            }
+
+            // Round values to 2 decimal places
+            $finalResult = array_map(function ($item) {
+                return [
+                    'client_id' => $item['client_id'],
+                    'total_profit' => round($item['total_profit'], 2),
+                    'total_amount' => round($item['total_amount'], 2)
+                ];
+            }, $result);
+
+            // Step 3: Return the result
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Client wise profit fetched successfully!',
+                'data' => array_values($finalResult)
+            ]);
+
+        } catch (\Exception $e) {
+            // Catch unexpected errors
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong while calculating client-wise sales summary.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+}
