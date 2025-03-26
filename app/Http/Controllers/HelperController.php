@@ -296,7 +296,9 @@ class HelperController extends Controller
             }
 
             return response()->json([
+                'code' => 200,
                 'success' => true,
+                'message' => 'Purchase vs sales barchart fetched successfully!',
                 'data' => [
                     'month' => $months,
                     'purchase_total' => $purchaseTotals,
@@ -307,6 +309,7 @@ class HelperController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json([
+                'code' => 500,
                 'success' => false,
                 'message' => 'Error occurred while processing data',
                 'error' => $e->getMessage()
