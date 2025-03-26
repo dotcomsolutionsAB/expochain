@@ -377,9 +377,9 @@ class HelperController extends Controller
             $endDate = $request->end_date ? Carbon::parse($request->end_date)->endOfDay() : Carbon::now()->endOfDay();
 
             // Step 2: Get all sales invoices for company & date range, with products
-            $invoices = SalesInvoiceModel::with('products:id,sales_invoice_id,profit,amount')
+            $invoices = SalesInvoiceModel::with('products:id,sales_invoice_id,profit,amount', 
+                'client:id,name')
                 ->select('id', 'client_id')
-                ->with('client:id,name') // Add relation if exists
                 ->where('company_id', $companyId)
                 ->whereBetween('sales_invoice_date', [$startDate, $endDate])
                 ->get();
@@ -393,10 +393,12 @@ class HelperController extends Controller
 
                 $profitSum = $invoice->products->sum('profit');
                 $amountSum = $invoice->products->sum('amount');
+                $clientName = $invoice->client->name ?? 'Unknown';
 
                 if (!isset($result[$clientId])) {
                     $result[$clientId] = [
                         'client_id' => $clientId,
+                        'client_name' => $clientName,
                         'total_profit' => 0,
                         'total_amount' => 0
                     ];
@@ -410,6 +412,7 @@ class HelperController extends Controller
             $finalResult = array_map(function ($item) {
                 return [
                     'client_id' => $item['client_id'],
+                    'client_name' => $item['client_name'],
                     'total_profit' => round($item['total_profit'], 2),
                     'total_amount' => round($item['total_amount'], 2)
                 ];
@@ -503,9 +506,9 @@ class HelperController extends Controller
                 $endDate = Carbon::create($year, 12, 31)->endOfDay();
 
                 // Get all sales invoices for the year with products
-                $invoices = SalesInvoiceModel::with('products:id,sales_invoice_id,profit,amount')
+                $invoices = SalesInvoiceModel::with('products:id,sales_invoice_id,profit,amount',
+                    'client:id,name')
                     ->select('id', 'client_id')
-                    ->with('client:id,name') // Add relation if exists
                     ->where('company_id', $companyId)
                     ->whereBetween('sales_invoice_date', [$startDate, $endDate])
                     ->get();
@@ -518,10 +521,12 @@ class HelperController extends Controller
 
                     $profitSum = $invoice->products->sum('profit');
                     $amountSum = $invoice->products->sum('amount');
+                    $clientName = $invoice->client->name ?? 'Unknown';
 
                     if (!isset($yearlyData[$clientId])) {
                         $yearlyData[$clientId] = [
                             'client_id' => $clientId,
+                            'client_name' => $clientName,
                             'year' => $year,
                             'total_profit' => 0,
                             'total_amount' => 0
@@ -536,6 +541,7 @@ class HelperController extends Controller
                 $finalYearData = array_map(function ($item) {
                     return [
                         'client_id' => $item['client_id'],
+                        'client_name' => $item['client_name'],
                         'year' => $item['year'],
                         'total_profit' => round($item['total_profit'], 2),
                         'total_amount' => round($item['total_amount'], 2)
