@@ -817,16 +817,27 @@ class SalesInvoiceController extends Controller
             $products = SalesInvoiceProductsModel::select('product_id', 'product_name')
                 ->selectRaw('SUM(amount) as total_amount, SUM(profit) as total_profit')
                 ->groupBy('product_id', 'product_name')
-                ->get();
+                ->get()
+                ->map(function ($product) {
+                    return [
+                        'product_id' => $product->product_id,
+                        'product_name' => $product->product_name,
+                        'total_amount' => round($product->total_amount, 2),
+                        'total_profit' => round($product->total_profit, 2),
+                    ];
+                });
 
             // Step 2: Return response
             return response()->json([
+                'code' => 200,
                 'success' => true,
+                'message' => 'Product wise profit fetched successfully!',
                 'data' => $products
             ]);
         } catch (\Exception $e) {
             // Error handling
             return response()->json([
+                'code' => 500,
                 'success' => false,
                 'message' => 'Something went wrong while fetching product-wise sales summary.',
                 'error' => $e->getMessage()
@@ -865,10 +876,21 @@ class SalesInvoiceController extends Controller
                 $result[$clientId]['total_amount'] += $amountSum;
             }
 
+            // Round values to 2 decimal places
+            $finalResult = array_map(function ($item) {
+                return [
+                    'client_id' => $item['client_id'],
+                    'total_profit' => round($item['total_profit'], 2),
+                    'total_amount' => round($item['total_amount'], 2)
+                ];
+            }, $result);
+
             // Step 3: Return the result
             return response()->json([
+                'code' => 200,
                 'success' => true,
-                'data' => array_values($result)
+                'message' => 'Client wise profit fetched successfully!',
+                'data' => array_values($finalResult)
             ]);
 
         } catch (\Exception $e) {
