@@ -436,7 +436,7 @@ class HelperController extends Controller
         }
     }
 
-    // lsst 3 years fy wise product wise profit
+    // last 3 years fy wise product wise profit
     public function getProductWiseYearlySalesSummary()
     {
         try {
@@ -501,9 +501,12 @@ class HelperController extends Controller
             $result = [];
 
             for ($i = 0; $i < 3; $i++) {
-                $year = $currentYear - $i;
-                $startDate = Carbon::create($year, 1, 1)->startOfDay();
-                $endDate = Carbon::create($year, 12, 31)->endOfDay();
+                $fyStartYear = $currentYear - $i;
+                $fyEndYear = $fyStartYear + 1;
+                $fyKey = "{$fyStartYear}-{$fyEndYear}";
+
+                $startDate = Carbon::create($fyStartYear, 4, 1)->startOfDay(); // April 1st
+                $endDate = Carbon::create($fyEndYear, 3, 31)->endOfDay();      // March 31st
 
                 // Get all sales invoices for the year with products
                 $invoices = SalesInvoiceModel::with('products:id,sales_invoice_id,profit,amount',
@@ -527,7 +530,7 @@ class HelperController extends Controller
                         $yearlyData[$clientId] = [
                             'client_id' => $clientId,
                             'client_name' => $clientName,
-                            'year' => $year,
+                            'year' => $fyKey,
                             'total_profit' => 0,
                             'total_amount' => 0
                         ];
@@ -548,7 +551,7 @@ class HelperController extends Controller
                     ];
                 }, $yearlyData);
 
-                $result[$year] = array_values($finalYearData); // keep year as key
+                $result[$fyKey] = array_values($finalYearData); // keep FY key like "2025-2026"
             }
 
             return response()->json([
