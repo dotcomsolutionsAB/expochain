@@ -1132,6 +1132,7 @@ class PurchaseInvoiceController extends Controller
         // ]);
 
         return response()->json([
+            'code' => 200,
             'success' => true,
             'start_date' => $startDate->toDateString(),
             'end_date' => $endDate->toDateString(),
