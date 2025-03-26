@@ -265,7 +265,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/monthly_summary', [HelperController::class, 'getMonthlyPurchaseSalesSummary']);
 
-    Route::get('/product_profit', [HelperController::class, 'getProductWiseSalesSummary']);
+    Route::post('/product_profit', [HelperController::class, 'getProductWiseSalesSummary']);
 
-    Route::get('/client_profit', [HelperController::class, 'getClientWiseSalesSummary']);
+    Route::post('/client_profit', [HelperController::class, 'getClientWiseSalesSummary']);
+
+    Route::get('/product_profit_fy', [HelperController::class, 'getProductWiseYearlySalesSummary']);
+
+    Route::get('/client_profit_fy', [HelperController::class, 'getClientWiseYearlySalesSummary']);
 });

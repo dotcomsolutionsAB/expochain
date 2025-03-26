@@ -318,28 +318,41 @@ class HelperController extends Controller
     }
 
     // product wise profit
-    public function getProductWiseSalesSummary()
+    public function getProductWiseSalesSummary(Request $request)
     {
         try {
-            // Step 1: Fetch and group product-wise sales data
-            $products = SalesInvoiceProductsModel::select('product_id', 'product_name')
-                ->selectRaw('SUM(amount) as total_amount, SUM(profit) as total_profit')
-                ->groupBy('product_id', 'product_name')
-                ->get()
-                ->map(function ($product) {
-                    return [
-                        'product_id' => $product->product_id,
-                        'product_name' => $product->product_name,
-                        'total_amount' => round($product->total_amount, 2),
-                        'total_profit' => round($product->total_profit, 2),
-                    ];
-                });
+            $companyId = auth()->user()->company_id;
 
-            // Step 2: Return response
+            // Get date range
+            $startDate = Carbon::parse($request->start_date)->startOfDay();
+            $endDate = Carbon::parse($request->end_date)->endOfDay();
+
+             // Step 1: Filtered sales invoice IDs for the company and date range
+            $salesInvoiceIds = SalesInvoiceModel::where('company_id', $companyId)
+            ->whereBetween('sales_invoice_date', [$startDate, $endDate])
+            ->pluck('id');
+
+            // Step 2: Fetch product-wise sales with totals
+            $products = SalesInvoiceProductsModel::select('product_id', 'product_name')
+            ->where('company_id', $companyId)
+            ->whereIn('sales_invoice_id', $salesInvoiceIds)
+            ->selectRaw('SUM(amount) as total_amount, SUM(profit) as total_profit')
+            ->groupBy('product_id', 'product_name')
+            ->get()
+            ->map(function ($product) {
+                return [
+                    'product_id' => $product->product_id,
+                    'product_name' => $product->product_name,
+                    'total_amount' => round($product->total_amount, 2),
+                    'total_profit' => round($product->total_profit, 2),
+                ];
+            });
+
+            // Step 3: Return response
             return response()->json([
                 'code' => 200,
                 'success' => true,
-                'message' => 'Product wise profit fetched successfully!',
+                'message' => 'Product-wise sales summary fetched successfully!',
                 'data' => $products
             ]);
         } catch (\Exception $e) {
@@ -354,15 +367,24 @@ class HelperController extends Controller
     }
 
     //client wise profit
-    public function getClientWiseSalesSummary()
+    public function getClientWiseSalesSummary(Request $request)
     {
         try {
-            // Step 1: Get all sales invoices with their products
+            $companyId = auth()->user()->company_id;
+
+            // Step 1: Parse dates from request or default to full range
+            $startDate = $request->start_date ? Carbon::parse($request->start_date)->startOfDay() : Carbon::minValue();
+            $endDate = $request->end_date ? Carbon::parse($request->end_date)->endOfDay() : Carbon::now()->endOfDay();
+
+            // Step 2: Get all sales invoices for company & date range, with products
             $invoices = SalesInvoiceModel::with('products:id,sales_invoice_id,profit,amount')
                 ->select('id', 'client_id')
+                ->with('client:id,name') // Add relation if exists
+                ->where('company_id', $companyId)
+                ->whereBetween('sales_invoice_date', [$startDate, $endDate])
                 ->get();
 
-            // Step 2: Aggregate totals by client_id
+            // Step 3: Aggregate totals by client_id
             $result = [];
 
             foreach ($invoices as $invoice) {
@@ -410,4 +432,134 @@ class HelperController extends Controller
             ], 500);
         }
     }
+
+    // lsst 3 years fy wise product wise profit
+    public function getProductWiseYearlySalesSummary()
+    {
+        try {
+            $companyId = auth()->user()->company_id;
+            $now = Carbon::now();
+
+            $years = [];
+
+            // Get current and last 2 years
+            for ($i = 0; $i < 3; $i++) {
+                $start = Carbon::create($now->year - $i, 4, 1)->startOfDay(); // Financial year starts April 1
+                $end = Carbon::create($now->year - $i + 1, 3, 31)->endOfDay(); // Ends March 31 next year
+
+                $label = $start->format('Y') . '-' . $end->format('Y');
+
+                $salesInvoiceIds = SalesInvoiceModel::where('company_id', $companyId)
+                    ->whereBetween('sales_invoice_date', [$start, $end])
+                    ->pluck('id');
+
+                $yearlyData = SalesInvoiceProductsModel::select('product_id', 'product_name')
+                    ->where('company_id', $companyId)
+                    ->whereIn('sales_invoice_id', $salesInvoiceIds)
+                    ->selectRaw('SUM(amount) as total_amount, SUM(profit) as total_profit')
+                    ->groupBy('product_id', 'product_name')
+                    ->get()
+                    ->map(function ($item) {
+                        return [
+                            'product_id' => $item->product_id,
+                            'product_name' => $item->product_name,
+                            'total_amount' => round($item->total_amount, 2),
+                            'total_profit' => round($item->total_profit, 2),
+                        ];
+                    });
+
+                $years[$label] = $yearlyData;
+            }
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Year-wise product sales summary fetched successfully!',
+                'data' => $years
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong while fetching year-wise summary.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // last 3 years fy wise product wise profit
+    public function getClientWiseYearlySalesSummary()
+    {
+        try {
+            $companyId = auth()->user()->company_id;
+
+            $currentYear = Carbon::now()->year;
+
+            $result = [];
+
+            for ($i = 0; $i < 3; $i++) {
+                $year = $currentYear - $i;
+                $startDate = Carbon::create($year, 1, 1)->startOfDay();
+                $endDate = Carbon::create($year, 12, 31)->endOfDay();
+
+                // Get all sales invoices for the year with products
+                $invoices = SalesInvoiceModel::with('products:id,sales_invoice_id,profit,amount')
+                    ->select('id', 'client_id')
+                    ->with('client:id,name') // Add relation if exists
+                    ->where('company_id', $companyId)
+                    ->whereBetween('sales_invoice_date', [$startDate, $endDate])
+                    ->get();
+
+                $yearlyData = [];
+
+                foreach ($invoices as $invoice) {
+                    $clientId = $invoice->client_id;
+                    if (!$clientId) continue;
+
+                    $profitSum = $invoice->products->sum('profit');
+                    $amountSum = $invoice->products->sum('amount');
+
+                    if (!isset($yearlyData[$clientId])) {
+                        $yearlyData[$clientId] = [
+                            'client_id' => $clientId,
+                            'year' => $year,
+                            'total_profit' => 0,
+                            'total_amount' => 0
+                        ];
+                    }
+
+                    $yearlyData[$clientId]['total_profit'] += $profitSum;
+                    $yearlyData[$clientId]['total_amount'] += $amountSum;
+                }
+
+                // Round values
+                $finalYearData = array_map(function ($item) {
+                    return [
+                        'client_id' => $item['client_id'],
+                        'year' => $item['year'],
+                        'total_profit' => round($item['total_profit'], 2),
+                        'total_amount' => round($item['total_amount'], 2)
+                    ];
+                }, $yearlyData);
+
+                $result[$year] = array_values($finalYearData); // keep year as key
+            }
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Client-wise yearly sales summary fetched successfully!',
+                'data' => $result
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong while fetching client-wise yearly summary.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }
