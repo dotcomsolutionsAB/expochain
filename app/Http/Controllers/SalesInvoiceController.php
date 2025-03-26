@@ -808,4 +808,77 @@ class SalesInvoiceController extends Controller
 
         return response()->json(['code' => 200, 'success' => true, 'message' => "Sales invoices import completed with $successfulInserts successful inserts.", 'errors' => $errors], 200);
     }
+
+    // product wise profit
+    public function getProductWiseSalesSummary()
+    {
+        try {
+            // Step 1: Fetch and group product-wise sales data
+            $products = SalesInvoiceProductsModel::select('product_id', 'product_name')
+                ->selectRaw('SUM(amount) as total_amount, SUM(profit) as total_profit')
+                ->groupBy('product_id', 'product_name')
+                ->get();
+
+            // Step 2: Return response
+            return response()->json([
+                'success' => true,
+                'data' => $products
+            ]);
+        } catch (\Exception $e) {
+            // Error handling
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong while fetching product-wise sales summary.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    //client wise profit
+    public function getClientWiseSalesSummary()
+    {
+        try {
+            // Step 1: Get all sales invoices with their products
+            $invoices = SalesInvoiceModel::with('products:id,sales_invoice_id,profit,amount')
+                ->select('id', 'client_id')
+                ->get();
+
+            // Step 2: Aggregate totals by client_id
+            $result = [];
+
+            foreach ($invoices as $invoice) {
+                $clientId = $invoice->client_id;
+                if (!$clientId) continue;
+
+                $profitSum = $invoice->products->sum('profit');
+                $amountSum = $invoice->products->sum('amount');
+
+                if (!isset($result[$clientId])) {
+                    $result[$clientId] = [
+                        'client_id' => $clientId,
+                        'total_profit' => 0,
+                        'total_amount' => 0
+                    ];
+                }
+
+                $result[$clientId]['total_profit'] += $profitSum;
+                $result[$clientId]['total_amount'] += $amountSum;
+            }
+
+            // Step 3: Return the result
+            return response()->json([
+                'success' => true,
+                'data' => array_values($result)
+            ]);
+
+        } catch (\Exception $e) {
+            // Catch unexpected errors
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong while calculating client-wise sales summary.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }

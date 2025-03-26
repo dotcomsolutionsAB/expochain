@@ -139,6 +139,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/sales_invoice_migrate', [SalesInvoiceController::class, 'importSalesInvoices']);
 
+    Route::get('/product_profit', [SalesInvoiceController::class, 'getProductWiseSalesSummary']);
+
+    Route::get('/client_profit', [SalesInvoiceController::class, 'getClientWiseSalesSummary']);
+
     Route::post('/add_sales_return', [SalesReturnController::class, 'add_sales_return']);
     Route::post('/sales_return/{id?}', [SalesReturnController::class, 'view_sales_return']);
     Route::post('/update_sales_return/{id?}', [SalesReturnController::class, 'edit_sales_return']);
