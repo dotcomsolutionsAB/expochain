@@ -140,7 +140,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/sales_invoice_migrate', [SalesInvoiceController::class, 'importSalesInvoices']);
 
-    Route::post('/export_sales_invoice_report', [SalesOrderController::class, 'exportSalesInvoiceReport']);
+    Route::post('/export_sales_invoice_report', [SalesInvoiceController::class, 'exportSalesInvoiceReport']);
 
     Route::post('/add_sales_return', [SalesReturnController::class, 'add_sales_return']);
     Route::post('/sales_return/{id?}', [SalesReturnController::class, 'view_sales_return']);
