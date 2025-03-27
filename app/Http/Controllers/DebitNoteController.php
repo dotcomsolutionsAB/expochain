@@ -8,6 +8,7 @@ use App\Models\DebitNoteModel;
 use App\Models\DebitNoteProductsModel;
 use App\Models\SuppliersModel;
 use App\Models\CounterModel;
+use NumberFormatter;
 use Auth;
 
 class DebitNoteController extends Controller
@@ -143,6 +144,12 @@ class DebitNoteController extends Controller
         : response()->json(['code' => 400, 'success' => false, 'message' => 'Failed to register Debit Note record'], 400);
     }
 
+    // view
+    // helper function
+    private function convertNumberToWords($num) {
+        $formatter = new NumberFormatter("en", NumberFormatter::SPELLOUT);
+        return ucfirst($formatter->format($num)) . ' Only';
+    }
     public function view_debit_note(Request $request, $id = null)
     {
         try {
@@ -184,6 +191,9 @@ class DebitNoteController extends Controller
                 if ($debitNote->supplier) {
                     $state = optional($debitNote->supplier->addresses->first())->state;
                     $debitNote->supplier = ['state' => $state];
+
+                    $debitNote->amount_in_words = $this->convertNumberToWords($debitNote->total);
+                    $debitNote->total = is_numeric($debitNote->total) ? number_format((float)$debitNote->total, 2) : $debitNote->total;
                 } else {
                     $debitNote->supplier = null;
                 }
@@ -224,6 +234,9 @@ class DebitNoteController extends Controller
                 if ($debitNote->supplier) {
                     $state = optional($debitNote->supplier->addresses->first())->state;
                     $debitNote->supplier = ['state' => $state];
+
+                    $debitNote->amount_in_words = $this->convertNumberToWords($debitNote->total);
+                    $debitNote->total = is_numeric($debitNote->total) ? number_format((float)$debitNote->total, 2) : $debitNote->total;
                 } else {
                     $debitNote->supplier = null;
                 }
