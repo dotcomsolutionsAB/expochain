@@ -11,6 +11,10 @@ use App\Models\SuppliersModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
 use App\Models\SalesInvoiceProductsModel;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 use Carbon\Carbon;
 use Auth;
 use DB;
@@ -976,5 +980,99 @@ class PurchaseInvoiceController extends Controller
             'errors' => $errors,
         ], 200);
     }
-    
+
+    // export sales invoice report
+    public function exportPurchaseInvoiceReport(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+            $startDate = Carbon::parse($request->start_date)->startOfDay();
+            $endDate = Carbon::parse($request->end_date)->endOfDay();
+
+            // Load purchase invoice products with invoice and supplier
+            $items = PurchaseInvoiceProductsModel::with([
+                'purchaseInvoice' => function ($q) use ($companyId, $startDate, $endDate) {
+                    $q->where('company_id', $companyId)
+                        ->whereBetween('purchase_invoice_date', [$startDate, $endDate])
+                        ->with('supplier:id,name');
+                },
+                'product.groupRelation:id,name'
+            ])->get();
+
+            // Filter valid entries
+            $filtered = $items->filter(fn ($item) => $item->purchaseInvoice !== null);
+
+            // Prepare export data
+            $exportData = [];
+            $sn = 1;
+            foreach ($filtered as $item) {
+                $exportData[] = [
+                    'SN' => $sn++,
+                    'Supplier' => $item->purchaseInvoice->supplier->name ?? 'N/A',
+                    'Invoice' => $item->purchaseInvoice->purchase_invoice_no,
+                    'Date' => Carbon::parse($item->purchaseInvoice->purchase_invoice_date)->format('d-m-Y'),
+                    'Item Name' => $item->product_name,
+                    'Group' => $item->product->groupRelation->name ?? 'N/A',
+                    'Quantity' => $item->quantity,
+                    'Unit' => $item->unit,
+                    'Price' => $item->price,
+                    'Discount' => $item->discount,
+                    'Amount' => $item->amount,
+                    'Added On' => Carbon::parse($item->created_at)->format('d-m-Y H:i')
+                ];
+            }
+
+            if (empty($exportData)) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'No purchase invoice products found for the selected range.'
+                ]);
+            }
+
+            // Generate file details
+            $fileName = 'purchase_invoices_export_' . now()->format('Ymd_His') . '.xlsx';
+            $relativePath = 'purchase_invoices_report/' . $fileName;
+
+            // Store Excel file
+            Excel::store(new class($exportData) implements FromCollection, WithHeadings {
+                private $data;
+                public function __construct($data)
+                {
+                    $this->data = $data;
+                }
+                public function collection()
+                {
+                    return collect($this->data);
+                }
+                public function headings(): array
+                {
+                    return [
+                        'SN', 'Supplier', 'Invoice', 'Date', 'Item Name', 'Group',
+                        'Quantity', 'Unit', 'Price', 'Discount', 'Amount', 'Added On'
+                    ];
+                }
+            }, $relativePath, 'public');
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'File available for download',
+                'data' => [
+                    'file_url' => asset('storage/' . $relativePath),
+                    'file_name' => $fileName,
+                    'file_size' => Storage::disk('public')->size($relativePath),
+                    'content_type' => 'Excel'
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong while generating Excel.',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
 }
