@@ -820,7 +820,7 @@ class SalesInvoiceController extends Controller
 
             // Eager load relationships with joins to client and product group
             $invoices = SalesInvoiceProductsModel::with([
-                'invoice' => function ($q) use ($companyId, $startDate, $endDate) {
+                'salesInvoice' => function ($q) use ($companyId, $startDate, $endDate) {
                     $q->where('company_id', $companyId)
                     ->whereBetween('sales_invoice_date', [$startDate, $endDate])
                     ->with('client:id,name');
@@ -829,7 +829,7 @@ class SalesInvoiceController extends Controller
             ])->get();
 
             // Filter only those with invoices in date range
-            $filtered = $invoices->filter(fn ($item) => $item->invoice !== null);
+            $filtered = $invoices->filter(fn ($item) => $item->salesInvoice !== null);
 
             // Build export data
             $exportData = [];
@@ -837,9 +837,9 @@ class SalesInvoiceController extends Controller
             foreach ($filtered as $item) {
                 $exportData[] = [
                     'SN' => $sn++,
-                    'Client' => $item->invoice->client->name ?? 'N/A',
-                    'Invoice' => $item->invoice->sales_invoice_no,
-                    'Date' => Carbon::parse($item->invoice->sales_invoice_date)->format('d-m-Y'),
+                    'Client' => $item->salesInvoice->client->name ?? 'N/A',
+                    'Invoice' => $item->salesInvoice->sales_invoice_no,
+                    'Date' => Carbon::parse($item->salesInvoice->sales_invoice_date)->format('d-m-Y'),
                     'Item Name' => $item->product_name,
                     'Group' => $item->product->groupRelation->name ?? 'N/A',
                     'Quantity' => $item->quantity,
