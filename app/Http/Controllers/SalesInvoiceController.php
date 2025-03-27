@@ -810,7 +810,7 @@ class SalesInvoiceController extends Controller
     }
 
     // export sales report
-    public function exportSalesInvoicesToExcel(Request $request)
+    public function exportSalesInvoiceReport(Request $request)
     {
         try {
             $companyId = Auth::user()->company_id;
