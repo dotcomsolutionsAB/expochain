@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use App\Models\ProductsModel;
 use App\Models\PurchaseInvoiceModel;
