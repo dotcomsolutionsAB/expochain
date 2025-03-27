@@ -10,6 +10,7 @@ use App\Models\ClientsModel;
 use App\Models\DiscountModel;
 use App\Models\ProductsModel;
 use App\Models\CounterModel;
+use NumberFormatter;
 use Carbon\Carbon;
 use Auth;
 
@@ -147,6 +148,11 @@ class CreditNoteController extends Controller
     }
 
     // view
+    // helper function
+    private function convertNumberToWords($num) {
+        $formatter = new NumberFormatter("en", NumberFormatter::SPELLOUT);
+        return ucfirst($formatter->format($num)) . ' Only';
+    }
     public function view_credit_note(Request $request, $id = null)
     {
         try {
@@ -177,6 +183,14 @@ class CreditNoteController extends Controller
                         'message' => 'Credit Note not found!',
                     ], 404);
                 }
+
+
+                
+                // Transform single quotation
+                $creditNote->amount_in_words = $this->convertNumberToWords($quotation->total);
+                $creditNote->total = is_numeric($creditNote->total) 
+                    ? number_format((float)$creditNote->total, 2) 
+                    : $creditNote->total;
 
                 // Transform client: Only return state from addresses
                 if ($creditNote->client) {
