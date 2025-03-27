@@ -14,6 +14,10 @@ use App\Models\CounterModel;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 use Carbon\Carbon;
 use Auth;
 use DB;
@@ -960,6 +964,100 @@ class PurchaseOrderController extends Controller
             'message' => 'Pending purchase orders oa fetched successfully!',
             'data' => $purchaseOrders
         ], 200);
+    }
+
+    // export sales order report
+    public function exportPurchaseOrdersReport(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+            $startDate = Carbon::parse($request->start_date)->startOfDay();
+            $endDate = Carbon::parse($request->end_date)->endOfDay();
+
+            // Load purchase order products with order and supplier
+            $items = PurchaseOrderProductsModel::with([
+                'purchaseOrder' => function ($q) use ($companyId, $startDate, $endDate) {
+                    $q->where('company_id', $companyId)
+                        ->whereBetween('purchase_order_date', [$startDate, $endDate])
+                        ->with('supplier:id,name');
+                },
+                'product.groupRelation:id,name'
+            ])->get();
+
+            // Filter out entries without a purchase order
+            $filtered = $items->filter(fn ($item) => $item->purchaseOrder !== null);
+
+            // Prepare export data
+            $exportData = [];
+            $sn = 1;
+            foreach ($filtered as $item) {
+                $exportData[] = [
+                    'SN' => $sn++,
+                    'Supplier' => $item->purchaseOrder->supplier->name ?? 'N/A',
+                    'Order' => $item->purchaseOrder->purchase_order_no,
+                    'Date' => Carbon::parse($item->purchaseOrder->purchase_order_date)->format('d-m-Y'),
+                    'Item Name' => $item->product_name,
+                    'Group' => $item->product->groupRelation->name ?? 'N/A',
+                    'Quantity' => $item->quantity,
+                    'Unit' => $item->unit,
+                    'Price' => $item->price,
+                    'Discount' => $item->discount,
+                    'Amount' => $item->amount,
+                    'Added On' => Carbon::parse($item->created_at)->format('d-m-Y H:i')
+                ];
+            }
+
+            if (empty($exportData)) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'No purchase order products found for the selected range.'
+                ]);
+            }
+
+            // Save Excel file
+            $fileName = 'purchase_orders_export_' . now()->format('Ymd_His') . '.xlsx';
+            $relativePath = 'purchase_orders_report/' . $fileName;
+
+            Excel::store(new class($exportData) implements FromCollection, WithHeadings {
+                private $data;
+                public function __construct($data)
+                {
+                    $this->data = $data;
+                }
+                public function collection()
+                {
+                    return collect($this->data);
+                }
+                public function headings(): array
+                {
+                    return [
+                        'SN', 'Supplier', 'Order', 'Date', 'Item Name', 'Group',
+                        'Quantity', 'Unit', 'Price', 'Discount', 'Amount', 'Added On'
+                    ];
+                }
+            }, $relativePath, 'public');
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'File available for download',
+                'data' => [
+                    'file_url' => asset('storage/' . $relativePath),
+                    'file_name' => $fileName,
+                    'file_size' => Storage::disk('public')->size($relativePath),
+                    'content_type' => 'Excel'
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong while generating Excel.',
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 
 }

@@ -172,6 +172,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/purchaseorder_migrate', [PurchaseOrderController::class, 'importPurchaseOrders']);
     Route::post('/pending_oa_no', [PurchaseOrderController::class, 'getPendingPurchaseOrders']);
 
+    Route::post('/export_purchase_order_report', [PurchaseOrderController::class, 'exportPurchaseOrdersReport']);
+
     Route::post('/add_purchase_invoice', [PurchaseInvoiceController::class, 'add_purchase_invoice']);
     Route::post('/purchase_invoice/{id?}', [PurchaseInvoiceController::class, 'view_purchase_invoice']);
     Route::post('/update_purchase_invoice/{id?}', [PurchaseInvoiceController::class, 'edit_purchase_invoice']);
