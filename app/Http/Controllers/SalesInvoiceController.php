@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use App\Models\SalesInvoiceModel;
@@ -882,7 +884,7 @@ class SalesInvoiceController extends Controller
                 {
                     return [
                         'SN', 'Client', 'Invoice', 'Date', 'Item Name', 'Group',
-                        'Quanity', 'Unit', 'Price', 'Discount', 'Amount',
+                        'Quantity', 'Unit', 'Price', 'Discount', 'Amount',
                         'Added On', 'Profit'
                     ];
                 }
