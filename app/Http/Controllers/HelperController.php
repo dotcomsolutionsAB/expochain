@@ -246,168 +246,87 @@ class HelperController extends Controller
     }
 
     //purchase vs sales barchart
-    // public function getMonthlyPurchaseSalesSummary(Request $request)
-    // {
-    //     try {
-    //         $companyId = auth()->user()->company_id;
-
-    //         // Parse start and end dates
-    //         $startDate = Carbon::parse($request->start_date)->startOfMonth();
-    //         $endDate = Carbon::parse($request->end_date)->endOfMonth();
-
-    //         $months = [];
-    //         $purchaseTotals = [];
-    //         $salesTotals = [];
-    //         $purchaseInvoiceCounts = [];
-    //         $salesInvoiceCounts = [];
-
-    //         $current = $startDate->copy();
-
-    //         while ($current <= $endDate) {
-    //             $monthStart = $current->copy()->startOfMonth();
-    //             $monthEnd = $current->copy()->endOfMonth();
-    //             $monthName = $current->format('F Y');
-
-    //             // // Purchase Invoice IDs for this month
-    //             // $purchaseInvoiceIds = PurchaseInvoiceModel::where('company_id', $companyId)
-    //             //     ->whereBetween('purchase_invoice_date', [$monthStart, $monthEnd])
-    //             //     ->pluck('id');
-
-    //             // // Sales Invoice IDs for this month
-    //             // $salesInvoiceIds = SalesInvoiceModel::where('company_id', $companyId)
-    //             //     ->whereBetween('sales_invoice_date', [$monthStart, $monthEnd])
-    //             //     ->pluck('id');
-
-    //             // // Sum of amounts for purchase and sales
-    //             // $purchaseTotal = PurchaseInvoiceProductsModel::whereIn('purchase_invoice_id', $purchaseInvoiceIds)->sum('amount');
-    //             // $salesTotal = SalesInvoiceProductsModel::whereIn('sales_invoice_id', $salesInvoiceIds)->sum('amount');
-
-    //             // // Invoice counts
-    //             // $purchaseCount = $purchaseInvoiceIds->count();
-    //             // $salesCount = $salesInvoiceIds->count();
-
-    //             // // Append results
-    //             // $months[] = $monthName;
-    //             // $purchaseTotals[] = round($purchaseTotal, 2);
-    //             // $salesTotals[] = round($salesTotal, 2);
-    //             // $purchaseInvoiceCounts[] = $purchaseCount;
-    //             // $salesInvoiceCounts[] = $salesCount;
-
-    //             // // Move to next month
-    //             // $current->addMonth();
-
-    //             // Purchase Aggregates
-    //             $purchaseStats = DB::table('t_purchase_invoice as pi')
-    //             ->join('t_purchase_invoice_products as pip', 'pi.id', '=', 'pip.purchase_invoice_id')
-    //             ->where('pi.company_id', $companyId)
-    //             ->whereBetween('pi.purchase_invoice_date', [$monthStart, $monthEnd])
-    //             ->selectRaw('SUM(pip.amount) as total, COUNT(DISTINCT pi.id) as invoice_count')
-    //             ->first();
-
-    //             // Sales Aggregates
-    //             $salesStats = DB::table('t_sales_invoice as si')
-    //                 ->join('t_sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
-    //                 ->where('si.company_id', $companyId)
-    //                 ->whereBetween('si.sales_invoice_date', [$monthStart, $monthEnd])
-    //                 ->selectRaw('SUM(sip.amount) as total, COUNT(DISTINCT si.id) as invoice_count')
-    //                 ->first();
-
-    //             // Populate results
-    //             $months[] = $monthName;
-    //             $purchaseTotals[] = round($purchaseStats->total ?? 0, 2);
-    //             $salesTotals[] = round($salesStats->total ?? 0, 2);
-    //             $purchaseInvoiceCounts[] = $purchaseStats->invoice_count ?? 0;
-    //             $salesInvoiceCounts[] = $salesStats->invoice_count ?? 0;
-
-    //             $current->addMonth();
-
-    //         }
-
-    //         return response()->json([
-    //             'code' => 200,
-    //             'success' => true,
-    //             'message' => 'Purchase vs sales barchart fetched successfully!',
-    //             'data' => [
-    //                 'month' => $months,
-    //                 'purchase_total' => $purchaseTotals,
-    //                 'sales_total' => $salesTotals,
-    //                 'purchase_invoice_count' => $purchaseInvoiceCounts,
-    //                 'sales_invoice_count' => $salesInvoiceCounts,
-    //             ]
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         return response()->json([
-    //             'code' => 500,
-    //             'success' => false,
-    //             'message' => 'Error occurred while processing data',
-    //             'error' => $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
-
     public function getMonthlyPurchaseSalesSummary(Request $request)
     {
         try {
             $companyId = auth()->user()->company_id;
 
+            // Parse start and end dates
             $startDate = Carbon::parse($request->start_date)->startOfMonth();
             $endDate = Carbon::parse($request->end_date)->endOfMonth();
 
-            // 1️⃣ Purchase Stats
-            $purchaseStats = DB::table('t_purchase_invoice as pi')
-                ->join('t_purchase_invoice_products as pip', 'pi.id', '=', 'pip.purchase_invoice_id')
-                ->where('pi.company_id', $companyId)
-                ->whereBetween('pi.purchase_invoice_date', [$startDate, $endDate])
-                ->selectRaw("
-                    DATE_FORMAT(pi.purchase_invoice_date, '%M %Y') as month,
-                    DATE_FORMAT(pi.purchase_invoice_date, '%Y-%m') as month_key,
-                    SUM(pip.amount) as purchase_total,
-                    COUNT(DISTINCT pi.id) as purchase_invoice_count
-                ")
-                ->groupBy('month', 'month_key')
-                ->orderBy('month_key')
-                ->get()
-                ->keyBy('month_key');
-
-            // 2️⃣ Sales Stats
-            $salesStats = DB::table('t_sales_invoice as si')
-                ->join('t_sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
-                ->where('si.company_id', $companyId)
-                ->whereBetween('si.sales_invoice_date', [$startDate, $endDate])
-                ->selectRaw("
-                    DATE_FORMAT(si.sales_invoice_date, '%M %Y') as month,
-                    DATE_FORMAT(si.sales_invoice_date, '%Y-%m') as month_key,
-                    SUM(sip.amount) as sales_total,
-                    COUNT(DISTINCT si.id) as sales_invoice_count
-                ")
-                ->groupBy('month', 'month_key')
-                ->orderBy('month_key')
-                ->get()
-                ->keyBy('month_key');
-
-            // 3️⃣ Merge & Format Final Response
             $months = [];
             $purchaseTotals = [];
             $salesTotals = [];
             $purchaseInvoiceCounts = [];
             $salesInvoiceCounts = [];
 
-            $period = CarbonPeriod::create($startDate, '1 month', $endDate);
-            foreach ($period as $date) {
-                $key = $date->format('Y-m');
-                $label = $date->format('F Y');
+            $current = $startDate->copy();
 
-                $months[] = $label;
-                $purchaseTotals[] = round(optional($purchaseStats->get($key))->purchase_total ?? 0, 2);
-                $salesTotals[] = round(optional($salesStats->get($key))->sales_total ?? 0, 2);
-                $purchaseInvoiceCounts[] = optional($purchaseStats->get($key))->purchase_invoice_count ?? 0;
-                $salesInvoiceCounts[] = optional($salesStats->get($key))->sales_invoice_count ?? 0;
+            while ($current <= $endDate) {
+                $monthStart = $current->copy()->startOfMonth();
+                $monthEnd = $current->copy()->endOfMonth();
+                $monthName = $current->format('F Y');
+
+                // // Purchase Invoice IDs for this month
+                // $purchaseInvoiceIds = PurchaseInvoiceModel::where('company_id', $companyId)
+                //     ->whereBetween('purchase_invoice_date', [$monthStart, $monthEnd])
+                //     ->pluck('id');
+
+                // // Sales Invoice IDs for this month
+                // $salesInvoiceIds = SalesInvoiceModel::where('company_id', $companyId)
+                //     ->whereBetween('sales_invoice_date', [$monthStart, $monthEnd])
+                //     ->pluck('id');
+
+                // // Sum of amounts for purchase and sales
+                // $purchaseTotal = PurchaseInvoiceProductsModel::whereIn('purchase_invoice_id', $purchaseInvoiceIds)->sum('amount');
+                // $salesTotal = SalesInvoiceProductsModel::whereIn('sales_invoice_id', $salesInvoiceIds)->sum('amount');
+
+                // // Invoice counts
+                // $purchaseCount = $purchaseInvoiceIds->count();
+                // $salesCount = $salesInvoiceIds->count();
+
+                // // Append results
+                // $months[] = $monthName;
+                // $purchaseTotals[] = round($purchaseTotal, 2);
+                // $salesTotals[] = round($salesTotal, 2);
+                // $purchaseInvoiceCounts[] = $purchaseCount;
+                // $salesInvoiceCounts[] = $salesCount;
+
+                // // Move to next month
+                // $current->addMonth();
+
+                // Purchase Aggregates
+                $purchaseStats = DB::table('t_purchase_invoice as pi')
+                ->join('t_purchase_invoice_products as pip', 'pi.id', '=', 'pip.purchase_invoice_id')
+                ->where('pi.company_id', $companyId)
+                ->whereBetween('pi.purchase_invoice_date', [$monthStart, $monthEnd])
+                ->selectRaw('SUM(pip.amount) as total, COUNT(DISTINCT pi.id) as invoice_count')
+                ->first();
+
+                // Sales Aggregates
+                $salesStats = DB::table('t_sales_invoice as si')
+                    ->join('t_sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
+                    ->where('si.company_id', $companyId)
+                    ->whereBetween('si.sales_invoice_date', [$monthStart, $monthEnd])
+                    ->selectRaw('SUM(sip.amount) as total, COUNT(DISTINCT si.id) as invoice_count')
+                    ->first();
+
+                // Populate results
+                $months[] = $monthName;
+                $purchaseTotals[] = round($purchaseStats->total ?? 0, 2);
+                $salesTotals[] = round($salesStats->total ?? 0, 2);
+                $purchaseInvoiceCounts[] = $purchaseStats->invoice_count ?? 0;
+                $salesInvoiceCounts[] = $salesStats->invoice_count ?? 0;
+
+                $current->addMonth();
+
             }
 
             return response()->json([
                 'code' => 200,
                 'success' => true,
-                'message' => 'Monthly Purchase vs Sales summary fetched successfully!',
+                'message' => 'Purchase vs sales barchart fetched successfully!',
                 'data' => [
                     'month' => $months,
                     'purchase_total' => $purchaseTotals,
@@ -425,6 +344,87 @@ class HelperController extends Controller
             ], 500);
         }
     }
+
+    // public function getMonthlyPurchaseSalesSummary(Request $request)
+    // {
+    //     try {
+    //         $companyId = auth()->user()->company_id;
+
+    //         $startDate = Carbon::parse($request->start_date)->startOfMonth();
+    //         $endDate = Carbon::parse($request->end_date)->endOfMonth();
+
+    //         // 1️⃣ Purchase Stats
+    //         $purchaseStats = DB::table('t_purchase_invoice as pi')
+    //             ->join('t_purchase_invoice_products as pip', 'pi.id', '=', 'pip.purchase_invoice_id')
+    //             ->where('pi.company_id', $companyId)
+    //             ->whereBetween('pi.purchase_invoice_date', [$startDate, $endDate])
+    //             ->selectRaw("
+    //                 DATE_FORMAT(pi.purchase_invoice_date, '%M %Y') as month,
+    //                 DATE_FORMAT(pi.purchase_invoice_date, '%Y-%m') as month_key,
+    //                 SUM(pip.amount) as purchase_total,
+    //                 COUNT(DISTINCT pi.id) as purchase_invoice_count
+    //             ")
+    //             ->groupBy('month', 'month_key')
+    //             ->orderBy('month_key')
+    //             ->get()
+    //             ->keyBy('month_key');
+
+    //         // 2️⃣ Sales Stats
+    //         $salesStats = DB::table('t_sales_invoice as si')
+    //             ->join('t_sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
+    //             ->where('si.company_id', $companyId)
+    //             ->whereBetween('si.sales_invoice_date', [$startDate, $endDate])
+    //             ->selectRaw("
+    //                 DATE_FORMAT(si.sales_invoice_date, '%M %Y') as month,
+    //                 DATE_FORMAT(si.sales_invoice_date, '%Y-%m') as month_key,
+    //                 SUM(sip.amount) as sales_total,
+    //                 COUNT(DISTINCT si.id) as sales_invoice_count
+    //             ")
+    //             ->groupBy('month', 'month_key')
+    //             ->orderBy('month_key')
+    //             ->get()
+    //             ->keyBy('month_key');
+
+    //         // 3️⃣ Merge & Format Final Response
+    //         $months = [];
+    //         $purchaseTotals = [];
+    //         $salesTotals = [];
+    //         $purchaseInvoiceCounts = [];
+    //         $salesInvoiceCounts = [];
+
+    //         $period = CarbonPeriod::create($startDate, '1 month', $endDate);
+    //         foreach ($period as $date) {
+    //             $key = $date->format('Y-m');
+    //             $label = $date->format('F Y');
+
+    //             $months[] = $label;
+    //             $purchaseTotals[] = round(optional($purchaseStats->get($key))->purchase_total ?? 0, 2);
+    //             $salesTotals[] = round(optional($salesStats->get($key))->sales_total ?? 0, 2);
+    //             $purchaseInvoiceCounts[] = optional($purchaseStats->get($key))->purchase_invoice_count ?? 0;
+    //             $salesInvoiceCounts[] = optional($salesStats->get($key))->sales_invoice_count ?? 0;
+    //         }
+
+    //         return response()->json([
+    //             'code' => 200,
+    //             'success' => true,
+    //             'message' => 'Monthly Purchase vs Sales summary fetched successfully!',
+    //             'data' => [
+    //                 'month' => $months,
+    //                 'purchase_total' => $purchaseTotals,
+    //                 'sales_total' => $salesTotals,
+    //                 'purchase_invoice_count' => $purchaseInvoiceCounts,
+    //                 'sales_invoice_count' => $salesInvoiceCounts,
+    //             ]
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'code' => 500,
+    //             'success' => false,
+    //             'message' => 'Error occurred while processing data',
+    //             'error' => $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
 
     // public function getMonthlyPurchaseSalesSummary(Request $request)
     // {
