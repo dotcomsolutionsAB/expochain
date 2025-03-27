@@ -8,6 +8,7 @@ use App\Models\PurchaseInvoiceModel;
 use App\Models\SalesInvoiceModel;
 use App\Models\PurchaseInvoiceProductsModel;
 use App\Models\SalesInvoiceProductsModel;
+use DB;
 
 class HelperController extends Controller
 {
@@ -266,33 +267,59 @@ class HelperController extends Controller
                 $monthEnd = $current->copy()->endOfMonth();
                 $monthName = $current->format('F Y');
 
-                // Purchase Invoice IDs for this month
-                $purchaseInvoiceIds = PurchaseInvoiceModel::where('company_id', $companyId)
-                    ->whereBetween('purchase_invoice_date', [$monthStart, $monthEnd])
-                    ->pluck('id');
+                // // Purchase Invoice IDs for this month
+                // $purchaseInvoiceIds = PurchaseInvoiceModel::where('company_id', $companyId)
+                //     ->whereBetween('purchase_invoice_date', [$monthStart, $monthEnd])
+                //     ->pluck('id');
 
-                // Sales Invoice IDs for this month
-                $salesInvoiceIds = SalesInvoiceModel::where('company_id', $companyId)
-                    ->whereBetween('sales_invoice_date', [$monthStart, $monthEnd])
-                    ->pluck('id');
+                // // Sales Invoice IDs for this month
+                // $salesInvoiceIds = SalesInvoiceModel::where('company_id', $companyId)
+                //     ->whereBetween('sales_invoice_date', [$monthStart, $monthEnd])
+                //     ->pluck('id');
 
-                // Sum of amounts for purchase and sales
-                $purchaseTotal = PurchaseInvoiceProductsModel::whereIn('purchase_invoice_id', $purchaseInvoiceIds)->sum('amount');
-                $salesTotal = SalesInvoiceProductsModel::whereIn('sales_invoice_id', $salesInvoiceIds)->sum('amount');
+                // // Sum of amounts for purchase and sales
+                // $purchaseTotal = PurchaseInvoiceProductsModel::whereIn('purchase_invoice_id', $purchaseInvoiceIds)->sum('amount');
+                // $salesTotal = SalesInvoiceProductsModel::whereIn('sales_invoice_id', $salesInvoiceIds)->sum('amount');
 
-                // Invoice counts
-                $purchaseCount = $purchaseInvoiceIds->count();
-                $salesCount = $salesInvoiceIds->count();
+                // // Invoice counts
+                // $purchaseCount = $purchaseInvoiceIds->count();
+                // $salesCount = $salesInvoiceIds->count();
 
-                // Append results
-                $months[] = $monthName;
-                $purchaseTotals[] = round($purchaseTotal, 2);
-                $salesTotals[] = round($salesTotal, 2);
-                $purchaseInvoiceCounts[] = $purchaseCount;
-                $salesInvoiceCounts[] = $salesCount;
+                // // Append results
+                // $months[] = $monthName;
+                // $purchaseTotals[] = round($purchaseTotal, 2);
+                // $salesTotals[] = round($salesTotal, 2);
+                // $purchaseInvoiceCounts[] = $purchaseCount;
+                // $salesInvoiceCounts[] = $salesCount;
 
-                // Move to next month
+                // // Move to next month
+                // $current->addMonth();
+
+                // Purchase Aggregates
+                $purchaseStats = DB::table('t_purchase_invoice as pi')
+                ->join('t_purchase_invoice_products as pip', 'pi.id', '=', 'pip.purchase_invoice_id')
+                ->where('pi.company_id', $companyId)
+                ->whereBetween('pi.purchase_invoice_date', [$monthStart, $monthEnd])
+                ->selectRaw('SUM(pip.amount) as total, COUNT(DISTINCT pi.id) as invoice_count')
+                ->first();
+
+                // Sales Aggregates
+                $salesStats = DB::table('t_sales_invoice as si')
+                    ->join('t_sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
+                    ->where('si.company_id', $companyId)
+                    ->whereBetween('si.sales_invoice_date', [$monthStart, $monthEnd])
+                    ->selectRaw('SUM(sip.amount) as total, COUNT(DISTINCT si.id) as invoice_count')
+                    ->first();
+
+                // Populate results
+                $months[] = $monthLabel;
+                $purchaseTotals[] = round($purchaseStats->total ?? 0, 2);
+                $salesTotals[] = round($salesStats->total ?? 0, 2);
+                $purchaseInvoiceCounts[] = $purchaseStats->invoice_count ?? 0;
+                $salesInvoiceCounts[] = $salesStats->invoice_count ?? 0;
+
                 $current->addMonth();
+
             }
 
             return response()->json([
