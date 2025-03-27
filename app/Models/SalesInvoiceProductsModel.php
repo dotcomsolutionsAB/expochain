@@ -40,4 +40,8 @@ class SalesInvoiceProductsModel extends Model
         return $this->belongsTo(SalesInvoiceModel::class, 'sales_invoice_id');
     }
 
+    public function product()
+    {
+        return $this->belongsTo(ProductsModel::class, 'product_id');
+    }
 }

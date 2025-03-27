@@ -809,4 +809,87 @@ class SalesInvoiceController extends Controller
         return response()->json(['code' => 200, 'success' => true, 'message' => "Sales invoices import completed with $successfulInserts successful inserts.", 'errors' => $errors], 200);
     }
 
+    // export sales report
+    public function exportSalesInvoiceReport(Request $request)
+    {
+        try {
+            $companyId = auth()->user()->company_id;
+
+            // Validate and parse dates
+            $startDate = $request->start_date ? Carbon::parse($request->start_date)->startOfDay() : Carbon::minValue();
+            $endDate = $request->end_date ? Carbon::parse($request->end_date)->endOfDay() : Carbon::now()->endOfDay();
+
+            $salesInvoices = SalesInvoiceModel::with([
+                'client:id,name',
+                'products.product.groupRelation:id,name'
+            ])
+            ->where('company_id', $companyId)
+            ->whereBetween('sales_invoice_date', [$startDate, $endDate])
+            ->orderBy('sales_invoice_date', 'desc')
+            ->get();
+
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+
+            // Header row
+            $sheet->fromArray([
+                'SN', 'Client', 'Invoice', 'Date', 'Item Name', 'Group', 'Quantity', 'Unit', 'Price', 'Discount', 'Amount', 'Added On', 'Profit'
+            ], NULL, 'A1');
+
+            $row = 2;
+            $sn = 1;
+
+            foreach ($salesInvoices as $invoice) {
+                foreach ($invoice->products as $product) {
+                    $sheet->setCellValue('A' . $row, $sn++);
+                    $sheet->setCellValue('B' . $row, $invoice->client->name ?? '');
+                    $sheet->setCellValue('C' . $row, $invoice->sales_invoice_no ?? '');
+                    $sheet->setCellValue('D' . $row, optional($invoice->sales_invoice_date)->format('Y-m-d'));
+                    $sheet->setCellValue('E' . $row, $product->product_name);
+                    $sheet->setCellValue('F' . $row, $product->product->groupRelation->name ?? '');
+                    $sheet->setCellValue('G' . $row, $product->quantity);
+                    $sheet->setCellValue('H' . $row, $product->unit);
+                    $sheet->setCellValue('I' . $row, $product->price);
+                    $sheet->setCellValue('J' . $row, $product->discount);
+                    $sheet->setCellValue('K' . $row, $product->amount);
+                    $sheet->setCellValue('L' . $row, optional($invoice->created_at)->format('Y-m-d H:i:s'));
+                    $sheet->setCellValue('M' . $row, $product->profit);
+                    $row++;
+                }
+            }
+
+            // File naming and path
+            $fileName = 'sales_orders_export_' . now()->format('Ymd_His') . '.xlsx';
+            $filePath = 'uploads/sales_invoice_report/' . $fileName;
+            $fullPath = storage_path('app/public/' . $filePath);
+
+            // Create directory if not exists
+            Storage::disk('public')->makeDirectory('uploads/sales_invoice_report');
+
+            // Save file
+            $writer = new Xlsx($spreadsheet);
+            $writer->save($fullPath);
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'File available for download',
+                'data' => [
+                    'file_url' => asset('storage/' . $filePath),
+                    'file_name' => $fileName,
+                    'file_size' => Storage::disk('public')->size($filePath),
+                    'content_type' => 'Excel'
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Failed to export report.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }

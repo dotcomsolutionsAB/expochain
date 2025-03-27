@@ -979,5 +979,4 @@ class SalesOrderController extends Controller
             'data' => $get_SalesOrders
         ], 200);
     }
-
 }
