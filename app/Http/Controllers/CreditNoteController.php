@@ -183,8 +183,6 @@ class CreditNoteController extends Controller
                         'message' => 'Credit Note not found!',
                     ], 404);
                 }
-
-
                 
                 // Transform single quotation
                 $creditNote->amount_in_words = $this->convertNumberToWords($quotation->total);
