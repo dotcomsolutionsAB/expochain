@@ -312,7 +312,7 @@ class HelperController extends Controller
                     ->first();
 
                 // Populate results
-                $months[] = $monthLabel;
+                $months[] = $monthName;
                 $purchaseTotals[] = round($purchaseStats->total ?? 0, 2);
                 $salesTotals[] = round($salesStats->total ?? 0, 2);
                 $purchaseInvoiceCounts[] = $purchaseStats->invoice_count ?? 0;
