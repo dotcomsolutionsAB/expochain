@@ -452,7 +452,7 @@ class MastersController extends Controller
         $productName = $request->input('product_name');
 
         // Base Query
-        $query = ProductsModel::with(['Group:id,name', 'Category:id,name', 'SubCategory:id,name'])
+        $query = ProductsModel::with(['groupRelation:id,name', 'categoryRelation:id,name', 'subCategoryRelation:id,name'])
             ->select(
                 'serial_number',
                 'name',
