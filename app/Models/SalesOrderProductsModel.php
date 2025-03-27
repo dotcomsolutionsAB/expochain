@@ -41,4 +41,8 @@ class SalesOrderProductsModel extends Model
         return $this->belongsTo(ChannelModel::class, 'channel', 'id');
     }
 
+    public function product()
+    {
+        return $this->belongsTo(ProductsModel::class, 'product_id');
+    }
 }
