@@ -813,7 +813,7 @@ class SalesInvoiceController extends Controller
         return response()->json(['code' => 200, 'success' => true, 'message' => "Sales invoices import completed with $successfulInserts successful inserts.", 'errors' => $errors], 200);
     }
 
-    // export sales report
+    // export sales invoice report
     public function exportSalesInvoiceReport(Request $request)
     {
         try {
@@ -911,6 +911,4 @@ class SalesInvoiceController extends Controller
             ]);
         }
     }
-
-
 }

@@ -980,4 +980,93 @@ class SalesOrderController extends Controller
         ], 200);
     }
 
+    // export sales order report
+    public function exportSalesOrderReport(Request $request)
+    {
+        try {
+            $companyId = auth()->user()->company_id;
+
+            $startDate = Carbon::parse($request->start_date)->startOfDay();
+            $endDate = Carbon::parse($request->end_date)->endOfDay();
+
+            // Eager load relationships
+            $orders = SalesOrderProductsModel::with([
+                'salesOrder' => function ($q) use ($companyId, $startDate, $endDate) {
+                    $q->where('company_id', $companyId)
+                        ->whereBetween('sales_order_date', [$startDate, $endDate])
+                        ->with('client:id,name');
+                },
+                'product.groupRelation:id,name'
+            ])->get();
+
+            // Filter only those with valid sales order (within date & company)
+            $filtered = $orders->filter(fn ($item) => $item->salesOrder !== null);
+
+            // Build data
+            $exportData = [];
+            $sn = 1;
+            foreach ($filtered as $item) {
+                $exportData[] = [
+                    'SN' => $sn++,
+                    'Client' => $item->salesOrder->client->name ?? 'N/A',
+                    'Order' => $item->salesOrder->sales_order_no,
+                    'Date' => Carbon::parse($item->salesOrder->sales_order_date)->format('d-m-Y'),
+                    'Item Name' => $item->product_name,
+                    'Group' => $item->product->groupRelation->name ?? 'N/A',
+                    'Quantity' => $item->quantity,
+                    'Unit' => $item->unit,
+                    'Price' => $item->price,
+                    'Discount' => $item->discount,
+                    'Amount' => $item->amount,
+                    'Added On' => Carbon::parse($item->created_at)->format('d-m-Y H:i')
+                ];
+            }
+
+            if (empty($exportData)) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'No sales order products found in the given range.'
+                ]);
+            }
+
+            // File name and path
+            $timestamp = now()->format('Ymd_His');
+            $fileName = "sales_orders_export_{$timestamp}.xlsx";
+            $relativePath = "uploads/sales_orders_report/{$fileName}";
+
+            // Store using inline export class
+            Excel::store(new class($exportData) implements FromCollection, WithHeadings {
+                private $data;
+                public function __construct($data) { $this->data = $data; }
+                public function collection() { return collect($this->data); }
+                public function headings(): array
+                {
+                    return [
+                        'SN', 'Client', 'Order', 'Date', 'Item Name', 'Group',
+                        'Quantity', 'Unit', 'Price', 'Discount', 'Amount', 'Added On'
+                    ];
+                }
+            }, $relativePath, 'public');
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'File available for download',
+                'data' => [
+                    'file_url' => asset("storage/{$relativePath}"),
+                    'file_name' => $fileName,
+                    'file_size' => Storage::disk('public')->size($relativePath),
+                    'content_type' => 'Excel'
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Error generating sales order report.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

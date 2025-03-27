@@ -133,6 +133,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/export_sales_orders', [SalesOrderController::class, 'export_sales_orders']);
 
+    Route::post('/export_sales_order_report', [SalesInvoiceController::class, 'exportSalesOrderReport']);
+
     Route::post('/add_sales_invoice', [SalesInvoiceController::class, 'add_sales_invoice']);
     Route::post('/sales_invoice/{id?}', [SalesInvoiceController::class, 'view_sales_invoice']);
     Route::post('/update_sales_invoice/{id?}', [SalesInvoiceController::class, 'edit_sales_invoice']);
