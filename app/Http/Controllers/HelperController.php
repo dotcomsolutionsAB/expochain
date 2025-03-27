@@ -353,8 +353,8 @@ class HelperController extends Controller
             $endDate = Carbon::parse($request->end_date)->endOfMonth();
 
             // 1️⃣ Purchase Stats
-            $purchaseStats = DB::table('purchase_invoices as pi')
-                ->join('purchase_invoice_products as pip', 'pi.id', '=', 'pip.purchase_invoice_id')
+            $purchaseStats = DB::table('t_purchase_invoice as pi')
+                ->join('t_purchase_invoice_products as pip', 'pi.id', '=', 'pip.purchase_invoice_id')
                 ->where('pi.company_id', $companyId)
                 ->whereBetween('pi.purchase_invoice_date', [$startDate, $endDate])
                 ->selectRaw("
@@ -369,8 +369,8 @@ class HelperController extends Controller
                 ->keyBy('month_key');
 
             // 2️⃣ Sales Stats
-            $salesStats = DB::table('sales_invoices as si')
-                ->join('sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
+            $salesStats = DB::table('t_sales_invoice as si')
+                ->join('t_sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
                 ->where('si.company_id', $companyId)
                 ->whereBetween('si.sales_invoice_date', [$startDate, $endDate])
                 ->selectRaw("
