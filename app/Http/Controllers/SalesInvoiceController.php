@@ -810,86 +810,103 @@ class SalesInvoiceController extends Controller
     }
 
     // export sales report
-    public function exportSalesInvoiceReport(Request $request)
+    public function exportSalesInvoicesToExcel(Request $request)
     {
         try {
-            $companyId = auth()->user()->company_id;
+            $companyId = Auth::user()->company_id;
 
-            // Validate and parse dates
-            $startDate = $request->start_date ? Carbon::parse($request->start_date)->startOfDay() : Carbon::minValue();
-            $endDate = $request->end_date ? Carbon::parse($request->end_date)->endOfDay() : Carbon::now()->endOfDay();
+            $startDate = Carbon::parse($request->start_date)->startOfDay();
+            $endDate = Carbon::parse($request->end_date)->endOfDay();
 
-            $salesInvoices = SalesInvoiceModel::with([
-                'client:id,name',
-                'products.product.groupRelation:id,name'
-            ])
-            ->where('company_id', $companyId)
-            ->whereBetween('sales_invoice_date', [$startDate, $endDate])
-            ->orderBy('sales_invoice_date', 'desc')
-            ->get();
+            // Eager load relationships with joins to client and product group
+            $invoices = SalesInvoiceProductsModel::with([
+                'invoice' => function ($q) use ($companyId, $startDate, $endDate) {
+                    $q->where('company_id', $companyId)
+                    ->whereBetween('sales_invoice_date', [$startDate, $endDate])
+                    ->with('client:id,name');
+                },
+                'product.groupRelation:id,name'
+            ])->get();
 
-            $spreadsheet = new Spreadsheet();
-            $sheet = $spreadsheet->getActiveSheet();
+            // Filter only those with invoices in date range
+            $filtered = $invoices->filter(fn ($item) => $item->invoice !== null);
 
-            // Header row
-            $sheet->fromArray([
-                'SN', 'Client', 'Invoice', 'Date', 'Item Name', 'Group', 'Quantity', 'Unit', 'Price', 'Discount', 'Amount', 'Added On', 'Profit'
-            ], NULL, 'A1');
-
-            $row = 2;
+            // Build export data
+            $exportData = [];
             $sn = 1;
-
-            foreach ($salesInvoices as $invoice) {
-                foreach ($invoice->products as $product) {
-                    $sheet->setCellValue('A' . $row, $sn++);
-                    $sheet->setCellValue('B' . $row, $invoice->client->name ?? '');
-                    $sheet->setCellValue('C' . $row, $invoice->sales_invoice_no ?? '');
-                    $sheet->setCellValue('D' . $row, optional($invoice->sales_invoice_date)->format('Y-m-d'));
-                    $sheet->setCellValue('E' . $row, $product->product_name);
-                    $sheet->setCellValue('F' . $row, $product->product->groupRelation->name ?? '');
-                    $sheet->setCellValue('G' . $row, $product->quantity);
-                    $sheet->setCellValue('H' . $row, $product->unit);
-                    $sheet->setCellValue('I' . $row, $product->price);
-                    $sheet->setCellValue('J' . $row, $product->discount);
-                    $sheet->setCellValue('K' . $row, $product->amount);
-                    $sheet->setCellValue('L' . $row, optional($invoice->created_at)->format('Y-m-d H:i:s'));
-                    $sheet->setCellValue('M' . $row, $product->profit);
-                    $row++;
-                }
+            foreach ($filtered as $item) {
+                $exportData[] = [
+                    'SN' => $sn++,
+                    'Client' => $item->invoice->client->name ?? 'N/A',
+                    'Invoice' => $item->invoice->sales_invoice_no,
+                    'Date' => Carbon::parse($item->invoice->sales_invoice_date)->format('d-m-Y'),
+                    'Item Name' => $item->product_name,
+                    'Group' => $item->product->groupRelation->name ?? 'N/A',
+                    'Quantity' => $item->quantity,
+                    'Unit' => $item->unit,
+                    'Price' => $item->price,
+                    'Discount' => $item->discount,
+                    'Amount' => $item->amount,
+                    'Added On' => Carbon::parse($item->created_at)->format('d-m-Y H:i'),
+                    'Profit' => $item->profit
+                ];
             }
 
-            // File naming and path
-            $fileName = 'sales_orders_export_' . now()->format('Ymd_His') . '.xlsx';
-            $filePath = 'uploads/sales_invoice_report/' . $fileName;
-            $fullPath = storage_path('app/public/' . $filePath);
+            if (empty($exportData)) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'No sales invoice products found in the given range.'
+                ]);
+            }
 
-            // Create directory if not exists
-            Storage::disk('public')->makeDirectory('uploads/sales_invoice_report');
+            // Generate dynamic filename
+            $timestamp = now()->format('Ymd_His');
+            $fileName = "sales_invoices_export_{$timestamp}.xlsx";
+            $relativePath = "uploads/sales_invoices_report/{$fileName}";
+            $fullPath = storage_path("app/public/{$relativePath}");
 
-            // Save file
-            $writer = new Xlsx($spreadsheet);
-            $writer->save($fullPath);
+            // Store Excel using inline export class
+            Excel::store(new class($exportData) implements FromCollection, WithHeadings {
+                private $data;
+                public function __construct($data)
+                {
+                    $this->data = $data;
+                }
+                public function collection()
+                {
+                    return collect($this->data);
+                }
+                public function headings(): array
+                {
+                    return [
+                        'SN', 'Client', 'Invoice', 'Date', 'Item Name', 'Group',
+                        'Quanity', 'Unit', 'Price', 'Discount', 'Amount',
+                        'Added On', 'Profit'
+                    ];
+                }
+            }, $relativePath, 'public');
 
             return response()->json([
                 'code' => 200,
                 'success' => true,
                 'message' => 'File available for download',
                 'data' => [
-                    'file_url' => asset('storage/' . $filePath),
+                    'file_url' => asset("storage/{$relativePath}"),
                     'file_name' => $fileName,
-                    'file_size' => Storage::disk('public')->size($filePath),
+                    'file_size' => Storage::disk('public')->size($relativePath),
                     'content_type' => 'Excel'
                 ]
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
                 'success' => false,
-                'message' => 'Failed to export report.',
+                'message' => 'Something went wrong while generating Excel.',
                 'error' => $e->getMessage()
-            ], 500);
+            ]);
         }
     }
+
 
 }
