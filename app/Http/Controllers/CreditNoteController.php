@@ -184,16 +184,13 @@ class CreditNoteController extends Controller
                     ], 404);
                 }
                 
-                // Transform single quotation
-                $creditNote->amount_in_words = $this->convertNumberToWords($quotation->total);
-                $creditNote->total = is_numeric($creditNote->total) 
-                    ? number_format((float)$creditNote->total, 2) 
-                    : $creditNote->total;
-
                 // Transform client: Only return state from addresses
                 if ($creditNote->client) {
                     $state = optional($creditNote->client->addresses->first())->state;
                     $creditNote->client = ['state' => $state];
+
+                    $creditNote->amount_in_words = $this->convertNumberToWords($creditNote->total);
+                    $creditNote->total = is_numeric($creditNote->total) ? number_format((float)$creditNote->total, 2) : $creditNote->total;
                 } else {
                     $creditNote->client = null;
                 }
@@ -257,6 +254,9 @@ class CreditNoteController extends Controller
                 if ($creditNote->client) {
                     $state = optional($creditNote->client->addresses->first())->state;
                     $creditNote->client = ['state' => $state];
+
+                    $creditNote->amount_in_words = $this->convertNumberToWords($creditNote->total);
+                    $creditNote->total = is_numeric($creditNote->total) ? number_format((float)$creditNote->total, 2) : $creditNote->total;
                 } else {
                     $creditNote->client = null;
                 }
