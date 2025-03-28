@@ -823,14 +823,55 @@ class SalesInvoiceController extends Controller
             $endDate = Carbon::parse($request->end_date)->endOfDay();
 
             // Eager load relationships with joins to client and product group
-            $invoices = SalesInvoiceProductsModel::with([
-                'salesInvoice' => function ($q) use ($companyId, $startDate, $endDate) {
-                    $q->where('company_id', $companyId)
-                    ->whereBetween('sales_invoice_date', [$startDate, $endDate])
-                    ->with('client:id,name');
-                },
+            // $invoices = SalesInvoiceProductsModel::with([
+            //     'salesInvoice' => function ($q) use ($companyId, $startDate, $endDate) {
+            //         $q->where('company_id', $companyId)
+            //         ->whereBetween('sales_invoice_date', [$startDate, $endDate])
+            //         ->with('client:id,name');
+            //     },
+            //     'product.groupRelation:id,name'
+            // ])->get();
+
+            // Parse optional filters
+            $clientIds = $request->filled('client_id') ? array_map('intval', explode(',', $request->client_id)) : null;
+            $productIds = $request->filled('product_id') ? array_map('intval', explode(',', $request->product_id)) : null;
+            $groupIds = $request->filled('group_id') ? array_map('intval', explode(',', $request->group_id)) : null;
+            $categoryIds = $request->filled('category_id') ? array_map('intval', explode(',', $request->category_id)) : null;
+            $subCategoryIds = $request->filled('sub_category_id') ? array_map('intval', explode(',', $request->sub_category_id)) : null;
+
+            // Build query with relations and filters
+            $query = SalesInvoiceProductsModel::with([
+                'salesInvoice.client:id,name',
                 'product.groupRelation:id,name'
-            ])->get();
+            ])
+            ->whereHas('salesInvoice', function ($q) use ($companyId, $startDate, $endDate, $clientIds) {
+                $q->where('company_id', $companyId)
+                ->whereBetween('sales_invoice_date', [$startDate, $endDate]);
+
+                if ($clientIds) {
+                    $q->whereIn('client_id', $clientIds);
+                }
+            });
+
+            if ($productIds) {
+                $query->whereIn('product_id', $productIds);
+            }
+
+            if ($groupIds || $categoryIds || $subCategoryIds) {
+                $query->whereHas('product', function ($q) use ($groupIds, $categoryIds, $subCategoryIds) {
+                    if ($groupIds) {
+                        $q->whereIn('group', $groupIds);
+                    }
+                    if ($categoryIds) {
+                        $q->whereIn('category', $categoryIds);
+                    }
+                    if ($subCategoryIds) {
+                        $q->whereIn('sub_category', $subCategoryIds);
+                    }
+                });
+            }
+
+            $items = $query->get();
 
             // Filter only those with invoices in date range
             $filtered = $invoices->filter(fn ($item) => $item->salesInvoice !== null);
