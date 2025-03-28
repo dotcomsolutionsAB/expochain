@@ -989,15 +989,56 @@ class SalesOrderController extends Controller
             $startDate = Carbon::parse($request->start_date)->startOfDay();
             $endDate = Carbon::parse($request->end_date)->endOfDay();
 
-            // Eager load relationships
-            $orders = SalesOrderProductsModel::with([
-                'salesOrder' => function ($q) use ($companyId, $startDate, $endDate) {
-                    $q->where('company_id', $companyId)
-                        ->whereBetween('sales_order_date', [$startDate, $endDate])
-                        ->with('client:id,name');
-                },
+            // // Eager load relationships
+            // $orders = SalesOrderProductsModel::with([
+            //     'salesOrder' => function ($q) use ($companyId, $startDate, $endDate) {
+            //         $q->where('company_id', $companyId)
+            //             ->whereBetween('sales_order_date', [$startDate, $endDate])
+            //             ->with('client:id,name');
+            //     },
+            //     'product.groupRelation:id,name'
+            // ])->get();
+
+            // Parse comma-separated filters
+            $clientIds = $request->filled('client_id') ? array_map('intval', explode(',', $request->client_id)) : null;
+            $productIds = $request->filled('product_id') ? array_map('intval', explode(',', $request->product_id)) : null;
+            $groupIds = $request->filled('group_id') ? array_map('intval', explode(',', $request->group_id)) : null;
+            $categoryIds = $request->filled('category_id') ? array_map('intval', explode(',', $request->category_id)) : null;
+            $subCategoryIds = $request->filled('sub_category_id') ? array_map('intval', explode(',', $request->sub_category_id)) : null;
+
+            // Build query with filters
+            $query = SalesOrderProductsModel::with([
+                'salesOrder.client:id,name',
                 'product.groupRelation:id,name'
-            ])->get();
+            ])
+            ->whereHas('salesOrder', function ($q) use ($companyId, $startDate, $endDate, $clientIds) {
+                $q->where('company_id', $companyId)
+                ->whereBetween('sales_order_date', [$startDate, $endDate]);
+
+                if ($clientIds) {
+                    $q->whereIn('client_id', $clientIds);
+                }
+            });
+
+            if ($productIds) {
+                $query->whereIn('product_id', $productIds);
+            }
+
+            if ($groupIds || $categoryIds || $subCategoryIds) {
+                $query->whereHas('product', function ($q) use ($groupIds, $categoryIds, $subCategoryIds) {
+                    if ($groupIds) {
+                        $q->whereIn('group', $groupIds);
+                    }
+                    if ($categoryIds) {
+                        $q->whereIn('category', $categoryIds);
+                    }
+                    if ($subCategoryIds) {
+                        $q->whereIn('sub_category', $subCategoryIds);
+                    }
+                });
+            }
+
+            $orders = $query->get();
 
             // Filter only those with valid sales order (within date & company)
             $filtered = $orders->filter(fn ($item) => $item->salesOrder !== null);
