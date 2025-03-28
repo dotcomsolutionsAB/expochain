@@ -989,15 +989,86 @@ class PurchaseInvoiceController extends Controller
             $startDate = Carbon::parse($request->start_date)->startOfDay();
             $endDate = Carbon::parse($request->end_date)->endOfDay();
 
-            // Load purchase invoice products with invoice and supplier
-            $items = PurchaseInvoiceProductsModel::with([
-                'purchaseInvoice' => function ($q) use ($companyId, $startDate, $endDate) {
-                    $q->where('company_id', $companyId)
-                        ->whereBetween('purchase_invoice_date', [$startDate, $endDate])
-                        ->with('supplier:id,name');
-                },
+            // Parse filters
+            // $supplierIds = $request->filled('supplier_id') ? explode(',', $request->supplier_id) : null;
+            $supplierIds = $request->filled('supplier_id') 
+            ? array_map('intval', array_map('trim', explode(',', $request->supplier_id))) 
+            : null;
+            //$productIds = $request->filled('product_id') ? explode(',', $request->product_id) : null;
+            $productIds = $request->filled('product_id') 
+            ? array_map('intval', array_map('trim', explode(',', $request->product_id))) 
+            : null;
+            //$groupIds = $request->filled('group_id') ? explode(',', $request->group_id) : null;
+            $groupIds = $request->filled('group_id') 
+            ? array_map('intval', array_map('trim', explode(',', $request->group_id))) 
+            : null;
+            //$categoryIds = $request->filled('category_id') ? explode(',', $request->category_id) : null;
+            $categoryIds = $request->filled('category_id') 
+            ? array_map('intval', array_map('trim', explode(',', $request->category_id))) 
+            : null;
+            //$subCategoryIds = $request->filled('sub_category_id') ? explode(',', $request->sub_category_id) : null;
+            $subCategoryIds = $request->filled('sub_category_id') 
+            ? array_map('intval', array_map('trim', explode(',', $request->sub_category_id))) 
+            : null;
+
+            // Load invoice products with filters
+            // $query = PurchaseInvoiceProductsModel::with([
+            //     'purchaseInvoice' => function ($q) use ($companyId, $startDate, $endDate, $supplierIds) {
+            //         $q->where('company_id', $companyId)
+            //         ->whereBetween('purchase_invoice_date', [$startDate, $endDate]);
+
+            //         if ($supplierIds) {
+            //             $q->whereIn('supplier_id', $supplierIds);
+            //         }
+
+            //         $q->with('supplier:id,name');
+            //     },
+            //     'product' => function ($q) use ($groupIds, $categoryIds, $subCategoryIds) {
+            //         $q->with('groupRelation:id,name');
+
+            //         if ($groupIds) {
+            //             $q->whereIn('group', $groupIds);
+            //         }
+            //         if ($categoryIds) {
+            //             $q->whereIn('category', $categoryIds);
+            //         }
+            //         if ($subCategoryIds) {
+            //             $q->whereIn('sub_category', $subCategoryIds);
+            //         }
+            //     }
+            // ]);
+            $query = PurchaseInvoiceProductsModel::with([
+                'purchaseInvoice.supplier:id,name',
                 'product.groupRelation:id,name'
-            ])->get();
+            ])
+            ->whereHas('purchaseInvoice', function ($q) use ($companyId, $startDate, $endDate, $supplierIds) {
+                $q->where('company_id', $companyId)
+                  ->whereBetween('purchase_invoice_date', [$startDate, $endDate]);
+            
+                if ($supplierIds) {
+                    $q->whereIn('supplier_id', $supplierIds);
+                }
+            });
+
+            if ($productIds) {
+                $query->whereIn('product_id', $productIds);
+            }
+
+            if ($groupIds || $categoryIds || $subCategoryIds) {
+                $query->whereHas('product', function ($q) use ($groupIds, $categoryIds, $subCategoryIds) {
+                    if ($groupIds) {
+                        $q->whereIn('group', $groupIds);
+                    }
+                    if ($categoryIds) {
+                        $q->whereIn('category', $categoryIds);
+                    }
+                    if ($subCategoryIds) {
+                        $q->whereIn('sub_category', $subCategoryIds);
+                    }
+                });
+            }
+
+             $items = $query->get();
 
             // Filter valid entries
             $filtered = $items->filter(fn ($item) => $item->purchaseInvoice !== null);
@@ -1012,7 +1083,8 @@ class PurchaseInvoiceController extends Controller
                     'Invoice' => $item->purchaseInvoice->purchase_invoice_no,
                     'Date' => Carbon::parse($item->purchaseInvoice->purchase_invoice_date)->format('d-m-Y'),
                     'Item Name' => $item->product_name,
-                    'Group' => $item->product->groupRelation->name ?? 'N/A',
+                    // 'Group' => $item->product->groupRelation->name ?? 'N/A',
+                    'Group' => optional(optional($item->product)->groupRelation)->name ?? 'N/A',
                     'Quantity' => $item->quantity,
                     'Unit' => $item->unit,
                     'Price' => $item->price,
