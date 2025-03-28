@@ -981,7 +981,7 @@ class PurchaseInvoiceController extends Controller
         ], 200);
     }
 
-    // export sales invoice report
+    // export purchase invoice report
     public function exportPurchaseInvoiceReport(Request $request)
     {
         try {

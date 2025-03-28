@@ -966,7 +966,7 @@ class PurchaseOrderController extends Controller
         ], 200);
     }
 
-    // export sales order report
+    // export purchase order report
     public function exportPurchaseOrdersReport(Request $request)
     {
         try {
@@ -974,15 +974,56 @@ class PurchaseOrderController extends Controller
             $startDate = Carbon::parse($request->start_date)->startOfDay();
             $endDate = Carbon::parse($request->end_date)->endOfDay();
 
-            // Load purchase order products with order and supplier
-            $items = PurchaseOrderProductsModel::with([
-                'purchaseOrder' => function ($q) use ($companyId, $startDate, $endDate) {
-                    $q->where('company_id', $companyId)
-                        ->whereBetween('purchase_order_date', [$startDate, $endDate])
-                        ->with('supplier:id,name');
-                },
+            // // Load purchase order products with order and supplier
+            // $items = PurchaseOrderProductsModel::with([
+            //     'purchaseOrder' => function ($q) use ($companyId, $startDate, $endDate) {
+            //         $q->where('company_id', $companyId)
+            //             ->whereBetween('purchase_order_date', [$startDate, $endDate])
+            //             ->with('supplier:id,name');
+            //     },
+            //     'product.groupRelation:id,name'
+            // ])->get();
+
+            // Parse comma-separated filters
+            $supplierIds = $request->filled('supplier_id') ? array_map('intval', explode(',', $request->supplier_id)) : null;
+            $productIds = $request->filled('product_id') ? array_map('intval', explode(',', $request->product_id)) : null;
+            $groupIds = $request->filled('group_id') ? array_map('intval', explode(',', $request->group_id)) : null;
+            $categoryIds = $request->filled('category_id') ? array_map('intval', explode(',', $request->category_id)) : null;
+            $subCategoryIds = $request->filled('sub_category_id') ? array_map('intval', explode(',', $request->sub_category_id)) : null;
+
+            // Build query with relations and filters
+            $query = PurchaseOrderProductsModel::with([
+                'purchaseOrder.supplier:id,name',
                 'product.groupRelation:id,name'
-            ])->get();
+            ])
+            ->whereHas('purchaseOrder', function ($q) use ($companyId, $startDate, $endDate, $supplierIds) {
+                $q->where('company_id', $companyId)
+                ->whereBetween('purchase_order_date', [$startDate, $endDate]);
+
+                if ($supplierIds) {
+                    $q->whereIn('supplier_id', $supplierIds);
+                }
+            });
+
+            if ($productIds) {
+                $query->whereIn('product_id', $productIds);
+            }
+
+            if ($groupIds || $categoryIds || $subCategoryIds) {
+                $query->whereHas('product', function ($q) use ($groupIds, $categoryIds, $subCategoryIds) {
+                    if ($groupIds) {
+                        $q->whereIn('group', $groupIds);
+                    }
+                    if ($categoryIds) {
+                        $q->whereIn('category', $categoryIds);
+                    }
+                    if ($subCategoryIds) {
+                        $q->whereIn('sub_category', $subCategoryIds);
+                    }
+                });
+            }
+
+            $items = $query->get();
 
             // Filter out entries without a purchase order
             $filtered = $items->filter(fn ($item) => $item->purchaseOrder !== null);
