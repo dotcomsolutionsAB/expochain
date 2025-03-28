@@ -874,7 +874,7 @@ class SalesInvoiceController extends Controller
             $items = $query->get();
 
             // Filter only those with invoices in date range
-            $filtered = $invoices->filter(fn ($item) => $item->salesInvoice !== null);
+            $filtered = $items->filter(fn ($item) => $item->salesInvoice !== null);
 
             // Build export data
             $exportData = [];
