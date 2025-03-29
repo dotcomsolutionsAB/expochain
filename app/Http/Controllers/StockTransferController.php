@@ -93,7 +93,7 @@ class StockTransferController extends Controller
             // Build query on the master table with its products
             $query = StockTransferModel::with(['products' => function ($q) use ($productId, $productName, $productDesc) {
                 // Only select the columns that exist in t_stock_transfer_products
-                $q->select('transfer_id', 'product_id', 'product_name', 'description', 'quantity');
+                $q->select('stock_transfer_id', 'product_id', 'product_name', 'description', 'quantity');
                 if ($productId) {
                     $q->where('product_id', $productId);
                 }
