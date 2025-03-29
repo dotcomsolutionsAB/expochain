@@ -18,10 +18,8 @@ return new class extends Migration
             $table->integer('product_id');
             $table->string('product_name');
             // as it don't support `length`, it can store upto `65,535 characters for TEXT type in MySQL`
-            $table->text('description');
+            $table->text('description')->nullable();
             $table->integer('quantity');
-            $table->string('unit');
-            $table->string('status');
             $table->timestamps();
         });
     }

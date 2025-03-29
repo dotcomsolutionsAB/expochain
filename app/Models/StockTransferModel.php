@@ -15,8 +15,7 @@ class StockTransferModel extends Model
         'godown_from',
         'godown_to',
         'transfer_date',
-        'status',
-        'log_user'
+        'remarks'
     ];
 
     public function products()

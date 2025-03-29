@@ -13,13 +13,12 @@ return new class extends Migration
     {
         Schema::create('t_stock_transfer', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('transfer_id');
+            $table->unsignedBigInteger('transfer_id')->unique();
             $table->integer('company_id');
-            $table->string('godown_from');
-            $table->string('godown_to');
+            $table->integer('godown_from');
+            $table->integer('godown_to');
             $table->date('transfer_date');
-            $table->string('status');
-            $table->string('log_user');
+            $table->text('remarks')->nullable();
             $table->timestamps();
         });
     }

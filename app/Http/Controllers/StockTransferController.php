@@ -17,31 +17,31 @@ class StockTransferController extends Controller
     public function add_stock_transfer(Request $request)
     {
         $request->validate([
-            'godown_from' => 'required|string',
-            'godown_to' => 'required|string',
-            'status' => 'required|string',
-            'log_user' => 'required|string',
+            'godown_from' => 'required|integer|exists:t_godown,id',
+            'godown_to' => 'required|integer|exists:t_godown,id',
+            'transfer_date'  => 'required|date_format:Y-m-d',
+            'remarks' => 'nullable|string',
             'products' => 'required|array', // Validating array of products
-            'products.*.product_id' => 'required|integer',
+            'products.*.product_id' => 'required|integer|exists:t_products,id',
+            'products.*.product_name' => 'required|string|exists:t_products,name',
             'products.*.quantity' => 'required|integer',
-            'products.*.status' => 'required|string',
+            'products.*.description'  => 'nullable|string',
         ]);
     
         do {
-            $transfer_id = rand(1111111111,9999999999);
-            $exists = StockTransferModel::where('transfer_id', $transfer_id)->exists();
+            $transferNo  = rand(1111111111,9999999999);
+            $exists = StockTransferModel::where('transfer_id', $transferNo )->exists();
         } while ($exists);
 
         $currentDate = Carbon::now()->toDateString();
 
         $register_stock_transfer = StockTransferModel::create([
-            'transfer_id' => $transfer_id,
-            'company_id' => Auth::user()->company_id,
-            'godown_from' => $request->input('godown_from'),
-            'godown_to' => $request->input('godown_to'),
-            'transfer_date' => $currentDate,
-            'status' => $request->input('status'),
-            'log_user' => $request->input('log_user'),
+            'transfer_id'   => $transferNo,
+            'company_id'    => Auth::user()->company_id,
+            'godown_from'   => $request->input('godown_from'),
+            'godown_to'     => $request->input('godown_to'),
+            'transfer_date' => $request->input('transfer_date'),
+            'remarks'       => $request->input('remarks'),
         ]);
         
         $products = $request->input('products');
@@ -56,14 +56,12 @@ class StockTransferController extends Controller
             if ($product_details) 
             {
                 StockTransferProductsModel::create([
-                    'transfer_id' => $transfer_id,
-                    'company_id' => Auth::user()->company_id,
-                    'product_id' => $product['product_id'],
-                    'product_name' => $product_details->name,
-                    'description' => $product_details->description,
-                    'quantity' => $product['quantity'],
-                    'unit' => $product_details->unit,
-                    'status' => $product['status'],
+                    'transfer_id'   => $register_stock_transfer->id,
+                    'company_id'    => Auth::user()->company_id,
+                    'product_id'    => $product['product_id'],
+                    'product_name'  => $product['product_name'],
+                    'description'   => $product['description'] ?? null,
+                    'quantity'      => $product['quantity'],
                 ]);
             }
 
@@ -80,70 +78,63 @@ class StockTransferController extends Controller
     }
 
     // view
-    // public function view_stock_transfer()
-    // {
-    //     $get_stock_transfers = StockTransferModel::with(['products' => function ($query)
-    //     {
-    //         $query->select('transfer_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'status');
-    //     }])
-    //     ->select('transfer_id', 'godown_from', 'godown_to', 'transfer_date', 'status', 'log_user')
-    //     ->where('company_id',Auth::user()->company_id)
-    //     ->get();
-
-    //     return isset($get_stock_transfers) && $get_stock_transfers->isNotEmpty()
-    //         ? response()->json(['code' => 200,'success' => true, 'Stock Transfers fetched successfully!', 'data' => $get_stock_transfers], 200)
-    //         : response()->json(['code' => 404,'success' => false, 'Failed to fetch Stock Transfers data'], 404);
-    // }
-
-    public function view_stock_transfer(Request $request)
+    public function view_stock_transfer(Request $request, $id)
     {
-        // Get filter inputs
-        $transferId = $request->input('transfer_id'); // Filter by transfer ID
-        $productId = $request->input('product_id'); // Filter by product ID
-        $productName = $request->input('product_name'); // Filter by product name
-        $limit = $request->input('limit', 10); // Default limit to 10
-        $offset = $request->input('offset', 0); // Default offset to 0
+        try {
+            $companyId = Auth::user()->company_id;
+            // Optional filters from request (LR number filter and product filters)
+            $transferIdFilter = $request->input('transfer_id'); // master filter on transfer_id
+            $productId = $request->input('product_id');          // filter for product_id in products
+            $productName = $request->input('product_name');      // filter for product_name in products
+            $productDesc = $request->input('product_desc');      // filter for product description
+            $limit = $request->input('limit', 10);                // default limit 10
+            $offset = $request->input('offset', 0);               // default offset 0
 
-        // Build the query
-        $query = StockTransferModel::with(['products' => function ($query) use ($productId, $productName) {
-            $query->select('transfer_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'status');
-            
-            // Apply product-related filters
-            if ($productId) {
-                $query->where('product_id', $productId);
+            // Build query on the master table with its products
+            $query = StockTransferModel::with(['products' => function ($q) use ($productId, $productName, $productDesc) {
+                // Only select the columns that exist in t_stock_transfer_products
+                $q->select('transfer_id', 'product_id', 'product_name', 'description', 'quantity');
+                if ($productId) {
+                    $q->where('product_id', $productId);
+                }
+                if ($productName) {
+                    $q->where('product_name', 'LIKE', '%' . $productName . '%');
+                }
+                if ($productDesc) {
+                    $q->where('description', 'LIKE', '%' . $productDesc . '%');
+                }
+            }])
+            ->select('transfer_id', 'godown_from', 'godown_to', 'transfer_date', 'remarks')
+            ->where('company_id', $companyId);
+
+            // If an ID is passed as a route parameter, fetch that specific record.
+            if ($id) {
+                $query->where('transfer_id', $id);
+            } elseif ($transferIdFilter) {
+                // Else if a transfer_id filter is provided in the request, apply it.
+                $query->where('transfer_id', $transferIdFilter);
             }
-            if ($productName) {
-                $query->where('product_name', 'LIKE', '%' . $productName . '%');
-            }
-        }])
-        ->select('transfer_id', 'godown_from', 'godown_to', 'transfer_date', 'status', 'log_user')
-        ->where('company_id', Auth::user()->company_id);
 
-        // Apply transfer_id filter
-        if ($transferId) {
-            $query->where('transfer_id', $transferId);
-        }
+            // Apply pagination
+            $query->offset($offset)->limit($limit);
 
-        // Apply limit and offset
-        $query->offset($offset)->limit($limit);
+            $stockTransfers = $query->get();
 
-        // Fetch the data
-        $get_stock_transfers = $query->get();
-
-        // Return the response
-        return $get_stock_transfers->isNotEmpty()
-            ? response()->json([
+            return response()->json([
                 'code' => 200,
                 'success' => true,
                 'message' => 'Stock Transfers fetched successfully!',
-                'data' => $get_stock_transfers,
-                'count' => $get_stock_transfers->count(),
-            ], 200)
-            : response()->json([
-                'code' => 404,
+                'data' => $stockTransfers,
+                'count' => $stockTransfers->count()
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code'    => 500,
                 'success' => false,
-                'message' => 'No Stock Transfers found!',
-            ], 404);
+                'message' => 'Error fetching Stock Transfers.',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
     }
 
 
@@ -151,20 +142,15 @@ class StockTransferController extends Controller
     public function edit_stock_transfer(Request $request, $id)
     {
         $request->validate([
-            'transfer_id' => 'required|integer',
-            'godown_from' => 'required|string',
-            'godown_to' => 'required|string',
-            'transfer_date' => 'required|date',
-            'status' => 'required|string',
-            'log_user' => 'required|string',
-            'products' => 'required|array',
-            'products.*.transfer_id' => 'required|integer',
-            'products.*.product_id' => 'required|integer',
-            'products.*.product_name' => 'required|string',
-            'products.*.description' => 'nullable|string',
+            'godown_from' => 'required|integer|exists:t_godown,id',
+            'godown_to' => 'required|integer|exists:t_godown,id',
+            'transfer_date'  => 'required|date_format:Y-m-d',
+            'remarks' => 'nullable|string',
+            'products' => 'required|array', // Validating array of products
+            'products.*.product_id' => 'required|integer|exists:t_products,id',
+            'products.*.product_name' => 'required|string|exists:t_products,name',
             'products.*.quantity' => 'required|integer',
-            'products.*.unit' => 'required|string',
-            'products.*.status' => 'required|string',
+            'products.*.description'  => 'nullable|string',
         ]);
 
         // Fetch the stock transfer by ID
@@ -175,7 +161,6 @@ class StockTransferController extends Controller
             'godown_from' => $request->input('godown_from'),
             'godown_to' => $request->input('godown_to'),
             'transfer_date' => $request->input('transfer_date'),
-            'status' => $request->input('status'),
             'log_user' => $request->input('log_user'),
         ]);
 
@@ -187,7 +172,7 @@ class StockTransferController extends Controller
             $requestProductIDs[] = $productData['product_id'];
 
             // Check if the product exists for this transfer_id
-            $existingProduct = StockTransferProductsModel::where('transfer_id', $productData['transfer_id'])
+            $existingProduct = StockTransferProductsModel::where('transfer_id', $id)
                                                         ->where('product_id', $productData['product_id'])
                                                         ->first();
 
@@ -197,20 +182,16 @@ class StockTransferController extends Controller
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
                     'quantity' => $productData['quantity'],
-                    'unit' => $productData['unit'],
-                    'status' => $productData['status'],
                 ]);
             } else {
                 // Create new product if it does not exist
                 StockTransferProductsModel::create([
-                    'transfer_id' =>$productData['transfer_id'],
+                    'transfer_id' =>$id,
                     'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'description' => $productData['description'],
                     'quantity' => $productData['quantity'],
-                    'unit' => $productData['unit'],
-                    'status' => $productData['status'],
                 ]);
             }
         }
