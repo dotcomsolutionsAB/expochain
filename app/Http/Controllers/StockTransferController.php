@@ -73,8 +73,8 @@ class StockTransferController extends Controller
         unset($register_stock_transfer['id'], $register_stock_transfer['created_at'], $register_stock_transfer['updated_at']);
     
         return isset($register_stock_transfer) && $register_stock_transfer !== null
-        ? response()->json(['code' => 201,'success' => true, 'Stock Transfer registered successfully!', 'data' => $register_stock_transfer], 201)
-        : response()->json(['code' => 400,'success' => false, 'Failed to register Stock Transfer record'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'message' => 'Stock Transfer registered successfully!', 'data' => $register_stock_transfer], 201)
+        : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to register Stock Transfer record'], 400);
     }
 
     // view
