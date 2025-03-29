@@ -104,12 +104,12 @@ class StockTransferController extends Controller
                     $q->where('description', 'LIKE', '%' . $productDesc . '%');
                 }
             }])
-            ->select('transfer_id', 'godown_from', 'godown_to', 'transfer_date', 'remarks')
+            ->select('id', 'transfer_id', 'godown_from', 'godown_to', 'transfer_date', 'remarks')
             ->where('company_id', $companyId);
 
             // If an ID is passed as a route parameter, fetch that specific record.
             if ($id) {
-                $query->where('transfer_id', $id);
+                $query->where('id', $id);
             } elseif ($transferIdFilter) {
                 // Else if a transfer_id filter is provided in the request, apply it.
                 $query->where('transfer_id', $transferIdFilter);
