@@ -29,6 +29,7 @@ use App\Http\Controllers\ChannelController;
 use App\Http\Controllers\QuotationTermMasterController;
 use App\Http\Controllers\PurchaseBackController;
 use App\Http\Controllers\HelperController;
+use App\Http\Controllers\LotController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -280,4 +281,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/product_profit_fy', [HelperController::class, 'getProductWiseYearlySalesSummary']);
 
     Route::get('/client_profit_fy', [HelperController::class, 'getClientWiseYearlySalesSummary']);
+
+
+    Route::post('/add_lot', [LotController::class, 'add']); // Create Channel
+    Route::post('/fetch_lot/{id?}', [LotController::class, 'retrieve']); // View All Channels
+    Route::post('/update_lot/{id}', [LotController::class, 'update']); // Update Channel
+    Route::delete('/lot/{id}', [LotController::class, 'destroy']); // Delete Channel
 });
