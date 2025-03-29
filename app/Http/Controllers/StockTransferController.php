@@ -161,7 +161,7 @@ class StockTransferController extends Controller
             'godown_from' => $request->input('godown_from'),
             'godown_to' => $request->input('godown_to'),
             'transfer_date' => $request->input('transfer_date'),
-            'log_user' => $request->input('log_user'),
+            'remarks' => $request->input('remarks'),
         ]);
 
         // Get the products from the request
