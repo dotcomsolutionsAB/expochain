@@ -20,6 +20,6 @@ class StockTransferModel extends Model
 
     public function products()
     {
-        return $this->hasMany(StockTransferProductsModel::class, 'transfer_id', 'id');
+        return $this->hasMany(StockTransferProductsModel::class, 'stock_transfer_id', 'id');
     }
 }

@@ -56,7 +56,7 @@ class StockTransferController extends Controller
             if ($product_details) 
             {
                 StockTransferProductsModel::create([
-                    'transfer_id'   => $register_stock_transfer->id,
+                    'stock_transfer_id'   => $register_stock_transfer->id,
                     'company_id'    => Auth::user()->company_id,
                     'product_id'    => $product['product_id'],
                     'product_name'  => $product['product_name'],
@@ -172,7 +172,7 @@ class StockTransferController extends Controller
             $requestProductIDs[] = $productData['product_id'];
 
             // Check if the product exists for this transfer_id
-            $existingProduct = StockTransferProductsModel::where('transfer_id', $id)
+            $existingProduct = StockTransferProductsModel::where('stock_transfer_id', $id)
                                                         ->where('product_id', $productData['product_id'])
                                                         ->first();
 
@@ -186,7 +186,7 @@ class StockTransferController extends Controller
             } else {
                 // Create new product if it does not exist
                 StockTransferProductsModel::create([
-                    'transfer_id' =>$id,
+                    'stock_transfer_id' =>$id,
                     'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
@@ -197,7 +197,7 @@ class StockTransferController extends Controller
         }
 
         // Delete products not in the request but in the database
-        $productsDeleted = StockTransferProductsModel::where('transfer_id', $id)
+        $productsDeleted = StockTransferProductsModel::where('stock_transfer_id', $id)
                                                     ->where('product_id', $requestProductIDs)
                                                     ->delete();
 

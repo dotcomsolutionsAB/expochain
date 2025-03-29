@@ -10,7 +10,7 @@ class StockTransferProductsModel extends Model
     protected $table = 't_stock_transfer_products';
 
     protected $fillable = [
-        'transfer_id',
+        'stock_transfer_id',
         'product_id',
         'company_id',
         'product_name',
