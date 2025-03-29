@@ -220,7 +220,7 @@ class StockTransferController extends Controller
             $delete_stock_transfer = StockTransferModel::where('id', $id)->delete();
 
             // Delete associated products by transfer_id
-            $delete_stock_transfer_products = StockTransferProductsModel::where('transfer_id', $get_transfer_id->transfer_id)->delete();
+            $delete_stock_transfer_products = StockTransferProductsModel::where('stock_transfer_id', $get_transfer_id->transfer_id)->delete();
 
             // Return success response if deletion was successful
             return $delete_stock_transfer && $delete_stock_transfer_products
