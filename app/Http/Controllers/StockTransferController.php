@@ -153,7 +153,7 @@ class StockTransferController extends Controller
         ]);
 
         // Fetch the stock transfer by ID
-        $stockTransfer = StockTransferModel::where('transfer_id', $id)->first();
+        $stockTransfer = StockTransferModel::where('id', $id)->first();
 
         // Update stock transfer details
         $stockTransferUpdated = $stockTransfer->update([
