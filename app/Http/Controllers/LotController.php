@@ -108,7 +108,7 @@ class LotController extends Controller
                 'code'    => 200,
                 'success' => true,
                 'message' => 'Lots fetched successfully.',
-                'data'    => $lots
+                'data'    => $lots->makeHidden(['invoice', 'created_at','updated_at'])
             ]);
         } catch (\Exception $e) {
             return response()->json([
