@@ -48,7 +48,7 @@ class LotController extends Controller
                 'code' => 200,
                 'success' => true,
                 'message' => 'Lot created successfully.',
-                'data' => $lot
+                'data' => $lot->makeHidden(['id', 'created_at','updated_at'])
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -92,7 +92,7 @@ class LotController extends Controller
                     'code'    => 200,
                     'success' => true,
                     'message' => 'Lot fetched successfully.',
-                    'data'    => $lot
+                    'data'    => $lot->makeHidden(['invoice', 'created_at','updated_at'])
                 ]);
             }
 
@@ -187,7 +187,7 @@ class LotController extends Controller
                 'code' => 200,
                 'success' => true,
                 'message' => 'Lot updated successfully.',
-                'data' => $lot
+                'data' => $lot->makeHidden(['id', 'created_at','updated_at'])
             ]);
         } catch (\Exception $e) {
             return response()->json([
