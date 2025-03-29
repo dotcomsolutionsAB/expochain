@@ -199,7 +199,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/debit_note_migrate', [DebitNoteController::class, 'importDebitNotes']);
 
     Route::post('/add_stock_transfer', [StockTransferController::class, 'add_stock_transfer']);
-    Route::post('/stock_transfer', [StockTransferController::class, 'view_stock_transfer']);
+    Route::post('/stock_transfer/{id?}', [StockTransferController::class, 'view_stock_transfer']);
     Route::post('/update_stock_transfer/{id?}', [StockTransferController::class, 'edit_stock_transfer']);
     Route::delete('/stock_transfer/{id?}', [StockTransferController::class, 'delete_stock_transfer']);
 

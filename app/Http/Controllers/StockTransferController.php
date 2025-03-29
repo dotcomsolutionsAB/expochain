@@ -78,7 +78,7 @@ class StockTransferController extends Controller
     }
 
     // view
-    public function view_stock_transfer(Request $request, $id)
+    public function view_stock_transfer(Request $request, $id = null)
     {
         try {
             $companyId = Auth::user()->company_id;
