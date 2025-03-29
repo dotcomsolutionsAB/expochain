@@ -196,7 +196,7 @@ class LotController extends Controller
         }
     }
     // delete
-    public function destroy(Request $request, $id)
+    public function destroy($id)
     {
         try {
             // Find the lot record by ID
