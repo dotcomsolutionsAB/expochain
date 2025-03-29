@@ -134,7 +134,8 @@ class LotController extends Controller
             $purchaseInvoice = PurchaseInvoiceModel::find($id);
             $invoices[] = [
                 'id'   => $id,
-                'name' => $purchaseInvoice ? $purchaseInvoice->purchase_invoice_no : 'Unknown'
+                'name' => $purchaseInvoice ? $purchaseInvoice->name : 'Unknown',
+                'purchase_invoice_number' => $purchaseInvoice ? $purchaseInvoice->purchase_invoice_no : 'Unknown'
             ];
         }
         return $invoices;
