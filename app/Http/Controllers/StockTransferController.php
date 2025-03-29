@@ -197,7 +197,7 @@ class StockTransferController extends Controller
 
         // Delete products not in the request but in the database
         $productsDeleted = StockTransferProductsModel::where('stock_transfer_id', $id)
-                                                    ->where('product_id', $requestProductIDs)
+                                                    ->whereNotIn('product_id', $requestProductIDs)
                                                     ->delete();
 
         // Remove timestamps from the response for neatness
