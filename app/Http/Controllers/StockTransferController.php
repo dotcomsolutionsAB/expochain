@@ -137,7 +137,6 @@ class StockTransferController extends Controller
         }
     }
 
-
     // update
     public function edit_stock_transfer(Request $request, $id)
     {
