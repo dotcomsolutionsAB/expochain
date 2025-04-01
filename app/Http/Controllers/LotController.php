@@ -64,6 +64,10 @@ class LotController extends Controller
     public function retrieve(Request $request, $id = null)
     {
         try {
+            // Pagination defaults
+            $offset = $request->input('offset', 0);
+            $limit = $request->input('limit', 10);
+
             // Build base query
             $query = LotModel::query();
 
@@ -92,23 +96,30 @@ class LotController extends Controller
                     'code'    => 200,
                     'success' => true,
                     'message' => 'Lot fetched successfully.',
-                    'data'    => $lot->makeHidden(['invoice', 'created_at','updated_at'])
+                    'data'    => $lot->makeHidden(['invoice', 'created_at','updated_at']),
+                    'total_records' => $totalRecords,
                 ]);
             }
 
-            // Otherwise, fetch all lots (optionally filtered by lr_no)
-            $lots = $query->orderBy('id', 'desc')->get();
+                // For list view
+                $totalRecords = $query->count();
 
-            // Transform the invoice field for each record
-            $lots->each(function ($lot) {
-                $lot->invoices = $this->transformInvoiceColumn($lot->invoice);
-            });
+                $lots = $query->orderBy('id', 'desc')
+                    ->offset($offset)
+                    ->limit($limit)
+                    ->get();
+
+                // Transform the invoice field for each record
+                $lots->each(function ($lot) {
+                    $lot->invoices = $this->transformInvoiceColumn($lot->invoice);
+                });
 
             return response()->json([
                 'code'    => 200,
                 'success' => true,
                 'message' => 'Lots fetched successfully.',
-                'data'    => $lots->makeHidden(['invoice', 'created_at','updated_at'])
+                'data'    => $lots->makeHidden(['invoice', 'created_at','updated_at']),
+                'total_records' => $totalRecords,
             ]);
         } catch (\Exception $e) {
             return response()->json([
