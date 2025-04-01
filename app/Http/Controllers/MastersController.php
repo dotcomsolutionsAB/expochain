@@ -804,7 +804,7 @@ class MastersController extends Controller
             ->update([
                 'name' => $request->input('name'),
                 'phone_number' => $request->input('phone_number'),
-                'mobile	' => $request->input('mobile'),
+                'mobile' => $request->input('mobile'),
                 'email' => $request->input('email'),
                 'address_line_1' => $request->input('address_line_1'),
                 'address_line_2' => $request->input('address_line_2'),
