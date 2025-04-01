@@ -114,7 +114,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/get_pdf_template', [MastersController::class, 'get_pdf_template']);
 
-    Route::post('/get_pdf_template', [MastersController::class, 'edit_pdf_template']);
+    Route::post('/update_pdf_template/{id}', [MastersController::class, 'edit_pdf_template']);
 
     Route::delete('/get_pdf_template/{id}', [MastersController::class, 'delete_pdf_template']);
 
