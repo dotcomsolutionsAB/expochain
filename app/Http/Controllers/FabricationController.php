@@ -46,18 +46,6 @@ class FabricationController extends Controller
         : response()->json(['code' => 400,'success' => false, 'Failed to register Fabrication record'], 400);
     }
 
-    // public function view_fabrication()
-    // {        
-    //     $get_fabrication = FabricationModel::select('id', 'fabrication_date','product_id', 'product_name','type', 'quantity', 'godown', 'rate', 'amount', 'description', 'log_user')
-    //     ->where('company_id',Auth::user()->company_id)
-    //     ->get();
-        
-
-    //     return isset($get_fabrication) && $get_fabrication->isNotEmpty()
-    //     ? response()->json(['Fetch data successfully!', 'data' => $get_fabrication], 200)
-    //     : response()->json(['Failed to fetch data'], 404); 
-    // }
-
     public function view_fabrication(Request $request)
     {
         // Get filter inputs
