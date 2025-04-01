@@ -42,8 +42,8 @@ class FabricationController extends Controller
         unset($register_fabrication['id'], $register_fabrication['created_at'], $register_fabrication['updated_at']);
 
         return isset($register_fabrication) && $register_fabrication !== null
-        ? response()->json(['code' => 201,'success' => true, 'Fabrication registered successfully!', 'data' => $register_fabrication], 201)
-        : response()->json(['code' => 400,'success' => false, 'Failed to register Fabrication record'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'message' => 'Fabrication registered successfully!', 'data' => $register_fabrication], 201)
+        : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to register Fabrication record'], 400);
     }
 
     public function view_fabrication(Request $request)
@@ -127,8 +127,8 @@ class FabricationController extends Controller
         ]);
         
         return $update_fabrication
-        ? response()->json(['code' => 201,'success' => true, 'Fabrication updated successfully!', 'data' => $update_fabrication], 201)
-        : response()->json(['code' => 204,'success' => false, 'No changes detected'], 204);
+        ? response()->json(['code' => 201,'success' => true, 'message' => 'Fabrication updated successfully!', 'data' => $update_fabrication], 201)
+        : response()->json(['code' => 204,'success' => false, 'message' => 'No changes detected'], 204);
     }
 
     // delete
@@ -141,7 +141,7 @@ class FabricationController extends Controller
 
         // Return success response if deletion was successful
         return $delete_fabrication
-        ? response()->json(['code' => 204,'success' => true,'message' => 'Delete Fabrication successfully!'], 204)
-        : response()->json(['code' => 400,'success' => false,'message' => 'Sorry, Fabrication not found'], 400);
+        ? response()->json(['code' => 204,'success' => true, 'message' => 'Delete Fabrication successfully!'], 204)
+        : response()->json(['code' => 400,'success' => false, 'message' => 'Sorry, Fabrication not found'], 400);
     }
 }
