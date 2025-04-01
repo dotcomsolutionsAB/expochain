@@ -14,8 +14,8 @@ class FabricationController extends Controller
     {
         $request->validate([
             'fabrication_date' => 'required|date',
-            'product_id' => 'required|integer',
-            'product_name' => 'required|string',
+            'product_id' => 'required|integer|exists:t_products,id',
+            'product_name' => 'required|string|exists:t_products,name',
             'type' => 'required|in:wastage,sample',
             'quantity' => 'required|integer',
             'godown' => 'required|integer',
@@ -101,8 +101,8 @@ class FabricationController extends Controller
     {
         $request->validate([
             'fabrication_date' => 'required|date',
-            'product_id' => 'required|integer',
-            'product_name' => 'required|string',
+            'product_id' => 'required|integer|exists:t_products,id',
+            'product_name' => 'required|string|exists:t_products,name',
             'type' => 'required|in:wastage,sample',
             'quantity' => 'required|integer',
             'godown' => 'required|integer',
