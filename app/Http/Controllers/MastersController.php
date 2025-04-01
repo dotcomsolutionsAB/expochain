@@ -723,7 +723,7 @@ class MastersController extends Controller
             'name' => $request->input('name'),
             'phone_number' => $request->input('phone_number'),
             'mobile' => $request->input('mobile'),
-            'email	' => $request->input('email'),
+            'email' => $request->input('email'),
             'address_line_1' => $request->input('address_line_1'),
             'address_line_2' => $request->input('address_line_2'),
             'city' => $request->input('city'),
@@ -742,7 +742,7 @@ class MastersController extends Controller
         unset($register_pdf_template['id'], $register_pdf_template['created_at'], $register_pdf_template['updated_at']);
 
         return isset($register_pdf_template) && $register_pdf_template !== null
-        ? response()->json(['code' => 200, 'success' => true, 'message' => 'Pdf Template registered successfully!', 'data' => $register_products], 201)
+        ? response()->json(['code' => 200, 'success' => true, 'message' => 'Pdf Template registered successfully!', 'data' => $register_pdf_template], 201)
         : response()->json(['code' => 400, 'success' => false, 'Failed to register Pdf Template record'], 400);
         } catch (\Exception $e) {
             return response()->json([
