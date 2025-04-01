@@ -95,8 +95,8 @@ class UsersController extends Controller
         
 
         return isset($get_user_records) && $get_user_records !== null
-        ? response()->json(['code' => 200,'success' => true, 'Fetch data successfully!', 'data' => $get_user_records], 200)
-        : response()->json(['code' => 404,'success' => false, 'Failed to fetch data'], 404); 
+        ? response()->json(['code' => 200,'success' => true, 'message' => 'Fetch data successfully!', 'data' => $get_user_records], 200)
+        : response()->json(['code' => 404,'success' => false, 'message' => 'Failed to fetch data'], 404); 
     }
 
     // view user's record
