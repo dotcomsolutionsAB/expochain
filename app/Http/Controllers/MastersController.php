@@ -823,7 +823,7 @@ class MastersController extends Controller
             
             return $update_pdf_template
             ? response()->json(['code' => 200, 'success' => true, 'Products updated successfully!', 'data' => $update_pdf_template], 200)
-            : response()->json(['code' => 204, 'success' => false, 'No changes detected'], 204);
+            : response()->json(['code' => 200, 'success' => false, 'No changes detected'], 200);
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
