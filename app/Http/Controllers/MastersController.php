@@ -822,8 +822,8 @@ class MastersController extends Controller
             ]);
             
             return $update_pdf_template
-            ? response()->json(['Products updated successfully!', 'data' => $update_pdf_template], 200)
-            : response()->json(['No changes detected'], 204);
+            ? response()->json(['code' => 200, 'success' => true, 'Products updated successfully!', 'data' => $update_pdf_template], 200)
+            : response()->json(['code' => 204, 'success' => false, 'No changes detected'], 204);
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
@@ -845,7 +845,7 @@ class MastersController extends Controller
         // Return success response if deletion was successful
         return $delete_pdf_template
         ? response()->json(['message' => 'Delete Pdf template successfully!'], 204)
-        : response()->json(['message' => 'Sorry, Pdf Template not found'], 400);
+        : response()->json(['code' => 400, 'success' => false, 'message' => 'Sorry, Pdf Template not found'], 400);
     }
 
     // migrate
