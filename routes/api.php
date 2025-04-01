@@ -110,6 +110,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_group/{id?}', [MastersController::class, 'edit_group']);
     Route::delete('/group/{id?}', [MastersController::class, 'delete_group']);
 
+    Route::get('/add_pdf_template', [MastersController::class, 'add_pdf_template']);
+
+    Route::get('/get_pdf_template', [MastersController::class, 'get_pdf_template']);
+
+    Route::get('/get_pdf_template', [MastersController::class, 'edit_pdf_template']);
+
     Route::get('/get_pdf_template', [MastersController::class, 'get_pdf_template']);
 
     Route::get('/pdf_template_migrate', [MastersController::class, 'importPdfTemplates']);

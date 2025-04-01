@@ -96,7 +96,8 @@ class MastersController extends Controller
                 'unit',
                 'hsn',
                 'tax'
-            );
+            )
+            ->where('company_id', Auth::user()->company_id);
 
         // 🔹 **Fetch Single Product by ID**
         if ($id) {
@@ -694,6 +695,8 @@ class MastersController extends Controller
     //create
     public function add_pdf_template(Request $request)
     {
+        try {
+
         $request->validate([
             'name' => 'required|string',
             'phone_number' => 'required|string',
@@ -716,6 +719,7 @@ class MastersController extends Controller
         ]);
 
         $register_pdf_template = PdfTemplateModel::create([
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'phone_number' => $request->input('phone_number'),
             'email	' => $request->input('email'),
@@ -737,14 +741,24 @@ class MastersController extends Controller
         unset($register_pdf_template['id'], $register_pdf_template['created_at'], $register_pdf_template['updated_at']);
 
         return isset($register_pdf_template) && $register_pdf_template !== null
-        ? response()->json(['Pdf Template registered successfully!', 'data' => $register_products], 201)
-        : response()->json(['Failed to register Pdf Template record'], 400);
+        ? response()->json(['code' => 200, 'success' => true, 'message' => 'Pdf Template registered successfully!', 'data' => $register_products], 201)
+        : response()->json(['code' => 400, 'success' => false, 'Failed to register Pdf Template record'], 400);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong while registering PDF template.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     //view
     public function pdf_template()
     {        
-        $get_pdf_template = PdfTemplateModel::select('name','phone_number','mobile','email','address_line_1', 'address_line_2','city','pincode','state','country', 'gstin', 'bank_number', 'bank_account_name', 'bank_account_number', 'bank_ifsc','header', 'footer')->get();
+        $get_pdf_template = PdfTemplateModel::select('name','phone_number','mobile','email','address_line_1', 'address_line_2','city','pincode','state','country', 'gstin', 'bank_number', 'bank_account_name', 'bank_account_number', 'bank_ifsc','header', 'footer')
+        ->where('company_id', Auth::user()->company_id)
+        ->get();
 
         return isset($get_pdf_template) && $get_pdf_template !== null
         ? response()->json([
@@ -764,57 +778,68 @@ class MastersController extends Controller
     // update
     public function edit_pdf_template(Request $request, $id)
     {
-        $request->validate([
-            'name' => 'required|string',
-            'phone_number' => 'required|string',
-            'mobile' => 'required|string',
-            'email' => 'required|string',
-            'address_line_1' => 'required|string',
-            'address_line_2' => 'required|string',
-            'city' => 'required|string',
-            'pincode' => 'required',
-            'state' => 'required',
-            'country' => 'required',
-            'gstin' => 'required|string',
-            'bank_number' => 'required',
-            'bank_account_name' => 'required',
-            'bank_account_number' => 'required',
-            'bank_ifsc' => 'required',
-            'header' => 'required',
-            'footer' => 'required',
-        ]);
+        try {
+            $request->validate([
+                'name' => 'required|string',
+                'phone_number' => 'required|string',
+                'mobile' => 'required|string',
+                'email' => 'required|string',
+                'address_line_1' => 'required|string',
+                'address_line_2' => 'required|string',
+                'city' => 'required|string',
+                'pincode' => 'required',
+                'state' => 'required',
+                'country' => 'required',
+                'gstin' => 'required|string',
+                'bank_number' => 'required',
+                'bank_account_name' => 'required',
+                'bank_account_number' => 'required',
+                'bank_ifsc' => 'required',
+                'header' => 'required',
+                'footer' => 'required',
+            ]);
 
-        $update_pdf_template = PdfTemplateModel::where('id', $id)
-        ->update([
-            'name' => $request->input('name'),
-            'phone_number' => $request->input('phone_number'),
-            'mobile	' => $request->input('mobile'),
-            'email' => $request->input('email'),
-            'address_line_1' => $request->input('address_line_1'),
-            'address_line_2' => $request->input('address_line_2'),
-            'city' => $request->input('city'),
-            'pincode' => $request->input('pincode'),
-            'state' => $request->input('state'),
-            'country' => $request->input('country'),
-            'gstin' => $request->input('gstin'),
-            'bank_number' => $request->input('bank_number'),
-            'bank_account_name' => $request->input('bank_account_name'),
-            'bank_account_number' => $request->input('bank_account_number'),
-            'bank_ifsc' => $request->input('bank_ifsc'),
-            'header' => $request->input('header'),
-            'footer' => $request->input('footer'),
-        ]);
-        
-        return $update_pdf_template
-        ? response()->json(['Products updated successfully!', 'data' => $update_pdf_template], 200)
-        : response()->json(['No changes detected'], 204);
+            $update_pdf_template = PdfTemplateModel::where('id', $id)
+            ->update([
+                'name' => $request->input('name'),
+                'phone_number' => $request->input('phone_number'),
+                'mobile	' => $request->input('mobile'),
+                'email' => $request->input('email'),
+                'address_line_1' => $request->input('address_line_1'),
+                'address_line_2' => $request->input('address_line_2'),
+                'city' => $request->input('city'),
+                'pincode' => $request->input('pincode'),
+                'state' => $request->input('state'),
+                'country' => $request->input('country'),
+                'gstin' => $request->input('gstin'),
+                'bank_number' => $request->input('bank_number'),
+                'bank_account_name' => $request->input('bank_account_name'),
+                'bank_account_number' => $request->input('bank_account_number'),
+                'bank_ifsc' => $request->input('bank_ifsc'),
+                'header' => $request->input('header'),
+                'footer' => $request->input('footer'),
+            ]);
+            
+            return $update_pdf_template
+            ? response()->json(['Products updated successfully!', 'data' => $update_pdf_template], 200)
+            : response()->json(['No changes detected'], 204);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong while updating the PDF template.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     // delete
     public function delete_pdf_template($id)
     {
         // Delete the client
-        $delete_pdf_template = PdfTemplateModel::where('id', $id)->delete();
+        $delete_pdf_template = PdfTemplateModel::where('id', $id)
+                                ->where('company_id', Auth::user()->company_id)
+                                ->delete();
 
         // Return success response if deletion was successful
         return $delete_pdf_template
