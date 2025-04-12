@@ -98,7 +98,7 @@ class AssemblyOperationsController extends Controller
     //     : response()->json(['Failed to fetch data'], 404); 
     // }
 
-    public function assembly_operations(Request $request)
+    public function assembly_operations(Request $request, $id = null)
     {
         // Get filter inputs
         $assemblyOperationsId = $request->input('assembly_operations_id');
@@ -110,7 +110,7 @@ class AssemblyOperationsController extends Controller
 
         // Build the query
         $query = AssemblyOperationModel::with(['products' => function ($query) {
-            $query->select('assembly_operations_id', 'product_id', 'product_name', 'quantity', 'rate', 'godown', 'amount');
+            $query->select('id','assembly_operations_id', 'product_id', 'product_name', 'quantity', 'rate', 'godown', 'amount');
         }])
         ->select('assembly_operations_id', 'assembly_operations_date', 'type', 'product_id', 'product_name', 'godown', 'quantity', 'rate', 'amount')
         ->where('company_id', Auth::user()->company_id);
@@ -118,6 +118,10 @@ class AssemblyOperationsController extends Controller
         // Apply filters
         if ($assemblyOperationsId) {
             $query->where('assembly_operations_id', $assemblyOperationsId);
+        }
+
+        if ($id) {
+            $query->where('id', $id);
         }
         // if ($productId) {
         //     $query->where('product_id', $productId);
