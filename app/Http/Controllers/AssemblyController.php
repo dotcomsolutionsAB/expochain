@@ -253,7 +253,7 @@ class AssemblyController extends Controller
             }
 
             // Delete products that are not in the request but exist in the database for this assembly_operations_id
-            $productsDeleted = AssemblyProductsModel::where('assembly_id', $id)
+            $productsDeleted = AssemblyProductsModel::where('assembly_id', $request->input('assembly_id'))
                                                             ->where('product_id', $requestProductIDs)
                                                             ->delete();
 
