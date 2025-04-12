@@ -91,19 +91,22 @@ class StockTransferController extends Controller
             $offset = $request->input('offset', 0);               // default offset 0
 
             // Build query on the master table with its products
-            $query = StockTransferModel::with(['products' => function ($q) use ($productId, $productName, $productDesc) {
-                // Only select the columns that exist in t_stock_transfer_products
-                $q->select('stock_transfer_id', 'product_id', 'product_name', 'description', 'quantity');
-                if ($productId) {
-                    $q->where('product_id', $productId);
-                }
-                if ($productName) {
-                    $q->where('product_name', 'LIKE', '%' . $productName . '%');
-                }
-                if ($productDesc) {
-                    $q->where('description', 'LIKE', '%' . $productDesc . '%');
-                }
-            }])
+            $query = StockTransferModel::with([
+                'products' => function ($q) use ($productId, $productName, $productDesc) {
+                    $q->select('stock_transfer_id', 'product_id', 'product_name', 'description', 'quantity');
+                    if ($productId) {
+                        $q->where('product_id', $productId);
+                    }
+                    if ($productName) {
+                        $q->where('product_name', 'LIKE', '%' . $productName . '%');
+                    }
+                    if ($productDesc) {
+                        $q->where('description', 'LIKE', '%' . $productDesc . '%');
+                    }
+                },
+                'godownFrom:id,name,address,mobile,email',
+                'godownTo:id,name,address,mobile,email'
+            ])            
             ->select('id', 'transfer_id', 'godown_from', 'godown_to', 'transfer_date', 'remarks')
             ->where('company_id', $companyId);
 

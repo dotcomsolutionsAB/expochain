@@ -22,4 +22,14 @@ class StockTransferModel extends Model
     {
         return $this->hasMany(StockTransferProductsModel::class, 'stock_transfer_id', 'id');
     }
+
+    public function godownFrom()
+    {
+        return $this->belongsTo(GodownModel::class, 'godown_from');
+    }
+
+    public function godownTo()
+    {
+        return $this->belongsTo(GodownModel::class, 'godown_to');
+    }
 }
