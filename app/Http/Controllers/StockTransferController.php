@@ -104,8 +104,8 @@ class StockTransferController extends Controller
                         $q->where('description', 'LIKE', '%' . $productDesc . '%');
                     }
                 },
-                'godownFrom:id,name,address,mobile,email',
-                'godownTo:id,name,address,mobile,email'
+                'godownFrom:id,name',
+                'godownTo:id,name'
             ])            
             ->select('id', 'transfer_id', 'godown_from', 'godown_to', 'transfer_date', 'remarks')
             ->where('company_id', $companyId);
