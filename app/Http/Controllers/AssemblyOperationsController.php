@@ -22,6 +22,8 @@ class AssemblyOperationsController extends Controller
             'product_id' => 'required|integer|exists:t_products,id',
             'product_name' => 'required|string|exists:t_products,name',
             'godown' => 'required|integer|exists:t_godown,id',
+            'quantity' => 'required|integer',
+            'rate' => 'required|numeric',
             'amount' => 'required|numeric',
             'log_user' => 'required|string',
             'products' => 'required|array', // Validating array of products
@@ -50,6 +52,8 @@ class AssemblyOperationsController extends Controller
             'product_id' => $request->input('product_id'),
             'product_name' => $request->input('product_name'),
             'godown' => $request->input('godown'),
+            'quantity' => $request->input('quantity'),
+            'rate' => $request->input('rate'),
             'amount' => $request->input('amount'),
             'log_user' => $request->input('log_user')
         ]);

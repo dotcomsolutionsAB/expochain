@@ -17,6 +17,8 @@ class AssemblyOperationModel extends Model
         'product_id',
         'product_name',
         'godown',
+        'quantity',
+        'rate',
         'amount',
         'godown',
         'log_user'
