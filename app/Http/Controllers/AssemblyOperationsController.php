@@ -112,7 +112,7 @@ class AssemblyOperationsController extends Controller
         $query = AssemblyOperationModel::with(['products' => function ($query) {
             $query->select('assembly_operations_id', 'product_id', 'product_name', 'quantity', 'rate', 'godown', 'amount');
         }])
-        ->select('assembly_operations_id', 'assembly_operations_date', 'type', 'product_id', 'product_name', 'godown', 'amount')
+        ->select('assembly_operations_id', 'assembly_operations_date', 'type', 'product_id', 'product_name', 'godown', 'quantity', 'rate', 'amount')
         ->where('company_id', Auth::user()->company_id);
 
         // Apply filters
