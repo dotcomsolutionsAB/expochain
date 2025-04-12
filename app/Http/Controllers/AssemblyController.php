@@ -190,7 +190,6 @@ class AssemblyController extends Controller
             'product_id' => 'required|integer',
             'product_name' => 'required|string',
             // 'quantity' => 'required|integer',
-            'log_user' => 'required|string',
             'products' => 'required|array', // Validating array of products
             'products.*.assembly_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
@@ -198,7 +197,6 @@ class AssemblyController extends Controller
             'products.*.product_name' => 'required|string',
             'products.*.quantity' => 'required|integer',
             'products.*.quantity' => 'required|integer',
-            'products.*.log_user' => 'required|string',
         ]);
 
         // Fetch the assembly record by ID
