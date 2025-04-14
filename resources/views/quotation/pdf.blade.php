@@ -87,21 +87,21 @@
 
     <!-- Two-column layout for Customer and Quotation Info -->
     <table class="no-border">
-    <tr>
-        <td style="width: 50%; vertical-align: top;">
-            <strong>Customer Details :</strong><br>
-            ELECTROSTEEL CASTINGS LTD<br>
-            30 B.T ROAD, Kharadah, P.O - Sukchar<br>
-            KOLKATA - 700115, WEST BENGAL, INDIA<br>
-            GSTIN / UIN : 19AAACE4975B1ZP
-        </td>
-        <td style="width: 50%; vertical-align: top; text-align: right;">
-            Quotation No.: <strong>{{ $quotation_no }}</strong><br>
-            Dated: <strong>{{ $quotation_date }}</strong><br>
-            Enquiry No.: <strong>{{ $enquiry_no }}</strong><br>
-            Enquiry Date: <strong>{{ $enquiry_date }}</strong>
-        </td>
-    </tr>
+        <tr>
+            <td style="width: 50%; vertical-align: top;">
+                <strong>Customer Details :</strong><br>
+                ELECTROSTEEL CASTINGS LTD<br>
+                30 B.T ROAD, Kharadah, P.O - Sukchar<br>
+                KOLKATA - 700115, WEST BENGAL, INDIA<br>
+                GSTIN / UIN : 19AAACE4975B1ZP
+            </td>
+            <td style="width: 50%; vertical-align: top; padding-left: 20px;">
+                Quotation No.: <strong>{{ $quotation_no }}</strong><br>
+                Dated: <strong>{{ $quotation_date }}</strong><br>
+                Enquiry No.: <strong>{{ $enquiry_no }}</strong><br>
+                Enquiry Date: <strong>{{ $enquiry_date }}</strong>
+            </td>
+        </tr>
     </table>
 
 
