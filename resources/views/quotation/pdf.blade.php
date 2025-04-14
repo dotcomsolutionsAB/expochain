@@ -212,8 +212,7 @@
                     <tr>
                         <td style="width: 50%; text-align: left;">
                             <strong>for EXPO CHAIN &amp; BEARING STORES</strong>
-                        </td>
-                        <td style="width: 50%; text-align: right;">
+                       
                             <strong>Authorised Signatory</strong>
                         </td>
                     </tr>
