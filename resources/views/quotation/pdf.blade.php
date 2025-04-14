@@ -194,26 +194,36 @@
 
     <!-- Terms & Conditions -->
     <div class="terms" style="margin-top: 10px;">
-    <table style="width:100%; border-collapse: collapse;">
-        <tr>
-            <!-- Left Column -->
-            <td style="width:50%; vertical-align: top; padding-right: 10px; border-right: 1px dotted #000;">
-                <strong>TERMS & CONDITIONS:</strong><br>
-                <strong>F.O.R.</strong> : Kolkata<br>
-                <strong>P &amp; F</strong> : Nil<br>
-                <strong>Freight</strong> : Your Account<br>
-                <strong>Delivery</strong> : REady Stock subject to prior sale balance 3 weeks<br>
-                <strong>Payment</strong> : 30 days - msme<br>
-                <strong>Validity</strong> : 30 DAYS<br>
-            </td>
-            <!-- Right Column -->
-            <td style="width:50%; vertical-align: top; padding-left: 10px;">
-                <strong>for EXPO CHAIN &amp; BEARING STORES</strong><br><br>
-                Authorised Signatory
-            </td>
-        </tr>
-    </table>
-</div>
+        <table class="no-border" style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <!-- Left Column: Terms details -->
+                <td style="width:50%; vertical-align: top; padding-right: 10px; border-right: 1px dotted #000;">
+                    <strong>TERMS &amp; CONDITIONS:</strong><br>
+                    <strong>F.O.R.</strong> : Kolkata<br>
+                    <strong>P &amp; F</strong> : Nil<br>
+                    <strong>Freight</strong> : Your Account<br>
+                    <strong>Delivery</strong> : REady Stock subject to prior sale balance 3 weeks<br>
+                    <strong>Payment</strong> : 30 days - msme<br>
+                    <strong>Validity</strong> : 30 DAYS<br>
+                </td>
+                <!-- Right Column: Header text -->
+                <td style="width:50%; vertical-align: top; padding-left: 10px;">
+                    <strong>for EXPO CHAIN &amp; BEARING STORES</strong>
+                </td>
+            </tr>
+            <tr>
+                <!-- Left column empty, but maintain the vertical dotted separator -->
+                <td style="width:50%; vertical-align: top; padding-right: 10px; border-right: 1px dotted #000;">
+                    &nbsp;
+                </td>
+                <!-- Right Column: Authorised Signatory placed at bottom right -->
+                <td style="width:50%; vertical-align: bottom; padding-left: 10px; text-align: right;">
+                    Authorised Signatory
+                </td>
+            </tr>
+        </table>
+    </div>
+
 
 </div>
 </body>
