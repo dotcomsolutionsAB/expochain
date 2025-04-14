@@ -623,7 +623,7 @@ class DebitNoteController extends Controller
                 'debit_note_no' => !empty($record['dn_no']) ? $record['dn_no'] : 'Unknown',
                 'debit_note_date' => $record['dn_date'] ?? now(),
                 'si_no' => $record['si_no'] ?? '',
-                'effective_date' => $record['effective_date'] ?? '',
+                'effective_date' => $record['effective_date'] ?? null,
                 'type' => $record['type'] ?? '',
                 'remarks' => $record['remarks'] ?? '',
                 'cgst' => !empty($taxData['cgst']) ? (float) $taxData['cgst'] : 0,

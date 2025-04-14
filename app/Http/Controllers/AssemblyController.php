@@ -351,6 +351,7 @@ class AssemblyController extends Controller
             // Prepare Assembly data
             $assemblyData = [
                 'assembly_id' => $assembly_id,
+                'company_id' => Auth::user()->company_id,
                 'product_id' => $compositeProduct->id,
                 'product_name' => $compositeProduct->name,
                 'quantity' => 1, // Assuming quantity is 1 for the composite
@@ -398,6 +399,7 @@ class AssemblyController extends Controller
                     try {
                         AssemblyProductsModel::create([
                             'assembly_id' => $assembly_id,
+                            'company_id' => Auth::user()->company_id,
                             'product_id' => $spareProduct->id,
                             'product_name' => $spareProduct->name,
                             'quantity' => (int)($sparesData['quantity'][$index] ?? 1),
