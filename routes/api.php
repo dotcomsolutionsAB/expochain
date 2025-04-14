@@ -193,7 +193,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/purchase_return/{id?}', [PurchaseReturnController::class, 'view_purchase_return']);
     Route::post('/update_purchase_return/{id?}', [PurchaseReturnController::class, 'edit_purchase_return']);
     Route::delete('/purchase_return/{id?}', [PurchaseReturnController::class, 'delete_purchase_return']);
-
     Route::get('/purchase_return_migrate', [PurchaseReturnController::class, 'importPurchaseReturns']);
 
     Route::post('/add_debit_note', [DebitNoteController::class, 'add_debit_note']);
