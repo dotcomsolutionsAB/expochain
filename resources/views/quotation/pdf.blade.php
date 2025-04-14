@@ -9,12 +9,12 @@
             font-size: 12px;
             margin: 10px;
         }
-        /* Border around the entire page */
+        /* Page border */
         .page-border {
             border: 2px solid #000;
             padding: 15px;
         }
-        /* Center align text */
+        /* Center alignment */
         .center {
             text-align: center;
         }
@@ -23,13 +23,17 @@
             border-top: 1px dashed #000;
             margin: 10px 0;
         }
-        /* Two-column layout for customer and quotation info */
+        /* Two-column layout for info */
         .info-grid {
             display: flex;
             justify-content: space-between;
+            page-break-inside: avoid;
         }
         .info-grid .left, .info-grid .right {
             width: 48%;
+        }
+        .info-grid .right {
+            text-align: right;
         }
         table {
             width: 100%;
@@ -54,6 +58,14 @@
         .right-align {
             text-align: right;
         }
+        /* Avoid page-breaks within table rows */
+        tr { page-break-inside: avoid; }
+        /* Bank details in one line */
+        .bank {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 11px;
+        }
     </style>
 </head>
 <body>
@@ -61,7 +73,7 @@
 
     <div class="title">QUOTATION</div>
 
-    <!-- Company Header (centered) -->
+    <!-- Company header (centered) -->
     <div class="header center">
         <strong>EXPO CHAIN & BEARING STORES</strong><br>
         71/D N.S. ROAD, GROUND FLOOR,ROOM NO A-162<br>
@@ -73,12 +85,12 @@
     <!-- Dashed separator -->
     <div class="dash-line"></div>
 
-    <!-- Two-column section: Left side for Customer Details and Right side for Quotation Info -->
+    <!-- Two-column layout for Customer and Quotation Info -->
     <div class="info-grid">
         <div class="left">
             <strong>Customer Details :</strong><br>
             ELECTROSTEEL CASTINGS LTD<br>
-            30 B.T ROAD, KHARDAH, P.O - SUKCHAR<br>
+            30 B.T ROAD, Kharadah, P.O - Sukchar<br>
             KOLKATA - 700115, WEST BENGAL, INDIA<br>
             GSTIN / UIN : 19AAACE4975B1ZP
         </div>
@@ -166,14 +178,12 @@
         </tbody>
     </table>
 
-    <!-- Bank Details Section -->
-    <div class="bank" style="margin-top: 15px;">
-        <strong>BANK NAME :</strong> HDFC BANK LTD<br>
-        BRANCH : JARDINE HOUSE, CLIVE ROW<br>
-        A/C NO : 10152320001963, IFSC : HDFC0001015
+    <!-- Bank Details in a single line -->
+    <div class="bank">
+        <strong>BANK NAME :</strong> HDFC BANK LTD, BRANCH : JARDINE HOUSE, CLIVE ROW, A/C NO : 10152320001963, IFSC : HDFC0001015
     </div>
 
-    <!-- Terms & Conditions Section -->
+    <!-- Terms & Conditions -->
     <div class="terms" style="margin-top: 10px;">
         <strong>TERMS & CONDITIONS: for EXPO CHAIN & BEARING STORES</strong><br>
         F.O.R. : Kolkata<br>
