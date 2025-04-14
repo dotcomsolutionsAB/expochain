@@ -951,88 +951,134 @@ class QuotationsController extends Controller
     }
 
     // generate pdf
-    public function generateQuotationPDF()
+    public function generateQuotationPDF($id)
     {
+        // $data = [
+        //     'quotation_no' => 'EC/Q-0551/24-25',
+        //     'quotation_date' => '14-04-2025',
+        //     'enquiry_no' => 'E-mail',
+        //     'enquiry_date' => '14-04-2025',
+        //     'gross_total' => 31836.00,
+        //     'cgst' => 2865.24,
+        //     'sgst' => 2865.24,
+        //     'roundoff' => -0.48,
+        //     'grand_total' => 37566.00,
+        //     'grand_total_words' => 'Thirty Seven Thousands Five Hundred Sixty Six',
+        //     'items' => [
+        //         [
+        //             'desc' => 'SPARE FBC2-BUSH',
+        //             'make' => 'FENNER',
+        //             'hsn' => '401699',
+        //             'qty' => 60,
+        //             'unit' => 'PCS',
+        //             'rate' => '60.00',
+        //             'delivery' => 'READY',
+        //             'disc' => 30,
+        //             'amount' => 2520.00,
+        //         ],
+        //         [
+        //             'desc' => 'SPARE PIN & BUSH FOR FBC3',
+        //             'make' => 'FENNER',
+        //             'hsn' => '8483',
+        //             'qty' => 40,
+        //             'unit' => 'SETS',
+        //             'rate' => '554.00',
+        //             'delivery' => 'READY',
+        //             'disc' => 30,
+        //             'amount' => 15512.00,
+        //         ],
+        //         [
+        //             'desc' => 'SPARE FBC3- BUSH',
+        //             'make' => 'FENNER',
+        //             'hsn' => '401699',
+        //             'qty' => 40,
+        //             'unit' => 'PCS',
+        //             'rate' => '106.00',
+        //             'delivery' => 'READY',
+        //             'disc' => 30,
+        //             'amount' => 2968.00,
+        //         ],
+        //         [
+        //             'desc' => 'SPARE PIN AND BUSH FOR BC 2A',
+        //             'make' => 'FENNER',
+        //             'hsn' => '8483',
+        //             'qty' => 60,
+        //             'unit' => 'SETS',
+        //             'rate' => '258.00',
+        //             'delivery' => '30 SET READY',
+        //             'disc' => 30,
+        //             'amount' => 10836.00,
+        //         ]
+        //     ],
+        //     'tax_summary' => [
+        //         [
+        //             'hsn' => '401699',
+        //             'rate' => 18,
+        //             'taxable' => 5488.00,
+        //             'cgst' => 493.92,
+        //             'sgst' => 493.92,
+        //             'total_tax' => 987.84,
+        //         ],
+        //         [
+        //             'hsn' => '8483',
+        //             'rate' => 18,
+        //             'taxable' => 26348.00,
+        //             'cgst' => 2371.32,
+        //             'sgst' => 2371.32,
+        //             'total_tax' => 4742.64,
+        //         ]
+        //     ]
+        // ];
+
+        // $pdf = new Mpdf();
+        // $html = view('quotation.pdf', $data)->render();
+        // $pdf->WriteHTML($html);
+        // return $pdf->Output('quotation.pdf', 'I'); // I: inline; D: download; F: save to file
+
+        // Retrieve the quotation record by its id; aborts with 404 if not found.
+        $quotation = QuotationsModel::findOrFail($id);
+
+        // Get all the associated products using Eloquent.
+        $products = QuotationProductsModel::where('quotation_id', $id)->get();
+
+        // Transform each product into the format required by the view.
+        $items = [];
+        foreach ($products as $product) {
+            $items[] = [
+                'desc'     => $product->description,                  // from description column
+                'make'     => $product->product_name,                 // from product_name column
+                'hsn'      => $product->hsn,                          // from hsn column
+                'qty'      => $product->quantity,                     // from quantity column
+                'unit'     => $product->unit,                         // from unit column
+                'rate'     => $product->igst / 2,                     // calculated as igst/2
+                'delivery' => $product->delivery,                     // from delivery column
+                'disc'     => $product->discount,                     // from discount column
+                'cgst'     => $product->cgst,                         // from cgst column
+                'sgst'     => $product->sgst,                         // from sgst column
+                'amount'   => $product->amount,                       // from amount column
+            ];
+        }
+
+        // Build the data array for the view
         $data = [
-            'quotation_no' => 'EC/Q-0551/24-25',
-            'quotation_date' => '14-04-2025',
-            'enquiry_no' => 'E-mail',
-            'enquiry_date' => '14-04-2025',
-            'gross_total' => 31836.00,
-            'cgst' => 2865.24,
-            'sgst' => 2865.24,
-            'roundoff' => -0.48,
-            'grand_total' => 37566.00,
-            'grand_total_words' => 'Thirty Seven Thousands Five Hundred Sixty Six',
-            'items' => [
-                [
-                    'desc' => 'SPARE FBC2-BUSH',
-                    'make' => 'FENNER',
-                    'hsn' => '401699',
-                    'qty' => 60,
-                    'unit' => 'PCS',
-                    'rate' => '60.00',
-                    'delivery' => 'READY',
-                    'disc' => 30,
-                    'amount' => 2520.00,
-                ],
-                [
-                    'desc' => 'SPARE PIN & BUSH FOR FBC3',
-                    'make' => 'FENNER',
-                    'hsn' => '8483',
-                    'qty' => 40,
-                    'unit' => 'SETS',
-                    'rate' => '554.00',
-                    'delivery' => 'READY',
-                    'disc' => 30,
-                    'amount' => 15512.00,
-                ],
-                [
-                    'desc' => 'SPARE FBC3- BUSH',
-                    'make' => 'FENNER',
-                    'hsn' => '401699',
-                    'qty' => 40,
-                    'unit' => 'PCS',
-                    'rate' => '106.00',
-                    'delivery' => 'READY',
-                    'disc' => 30,
-                    'amount' => 2968.00,
-                ],
-                [
-                    'desc' => 'SPARE PIN AND BUSH FOR BC 2A',
-                    'make' => 'FENNER',
-                    'hsn' => '8483',
-                    'qty' => 60,
-                    'unit' => 'SETS',
-                    'rate' => '258.00',
-                    'delivery' => '30 SET READY',
-                    'disc' => 30,
-                    'amount' => 10836.00,
-                ]
-            ],
-            'tax_summary' => [
-                [
-                    'hsn' => '401699',
-                    'rate' => 18,
-                    'taxable' => 5488.00,
-                    'cgst' => 493.92,
-                    'sgst' => 493.92,
-                    'total_tax' => 987.84,
-                ],
-                [
-                    'hsn' => '8483',
-                    'rate' => 18,
-                    'taxable' => 26348.00,
-                    'cgst' => 2371.32,
-                    'sgst' => 2371.32,
-                    'total_tax' => 4742.64,
-                ]
-            ]
+            'quotation_no'      => $quotation->quotation_no,
+            'quotation_date'    => $quotation->quotation_date,
+            'enquiry_no'        => $quotation->enquiry_no,
+            'enquiry_date'      => $quotation->enquiry_date,
+            'gross_total'       => $quotation->gross,      // taken from the gross column
+            'cgst'              => $quotation->cgst,
+            'sgst'              => $quotation->sgst,
+            'roundoff'          => $quotation->roundoff,
+            'grand_total'       => $quotation->total,      // taken from the total column
+            'grand_total_words' => $this->convertNumberToWords($quotation->total),
+            'items'             => $items,
+            // Add additional fields if needed (for addons or terms, using QuotationAddonsModel or QuotationTermsModel)
         ];
 
+        // Create a new mPDF instance, render the view with the data, and output the PDF.
         $pdf = new Mpdf();
         $html = view('quotation.pdf', $data)->render();
         $pdf->WriteHTML($html);
-        return $pdf->Output('quotation.pdf', 'I'); // I: inline; D: download; F: save to file
+        return $pdf->Output('quotation.pdf', 'I'); // "I" for inline display; change to "D" for download, etc.
     }
 }

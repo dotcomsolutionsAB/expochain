@@ -142,8 +142,8 @@
                     <td>{{ $item['rate'] }}</td>
                     <td>{{ $item['delivery'] }}</td>
                     <td>{{ $item['disc'] }}%</td>
-                    <td>9%</td>
-                    <td>9%</td>
+                    <td>{{ $item['cgst'] }}%</td>
+                    <td>{{ $item['sgst'] }}%</td>
                     <td>{{ number_format($item['amount'], 2) }}</td>
                 </tr>
             @endforeach
