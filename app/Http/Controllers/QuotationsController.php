@@ -953,7 +953,7 @@ class QuotationsController extends Controller
     // generate pdf
     public function generateQuotationPDF($id)
     {
-        // Retrieve the quotation record by its ID; abort with 404 if not found.
+       // Retrieve the quotation record by its ID; abort with 404 if not found.
         $quotation = QuotationsModel::findOrFail($id);
 
         // Retrieve all the associated products using Eloquent.
@@ -977,11 +977,19 @@ class QuotationsController extends Controller
             ];
         }
 
-        // Retrieve tax summary data.
-        // If QuotationTermsModel contains tax summary rows for the quotation, fetch them;
-        // otherwise, supply an empty array.
+        // Retrieve and transform tax summary data.
         $taxSummaryRecords = QuotationTermsModel::where('quotation_id', $id)->get();
-        $tax_summary = $taxSummaryRecords->count() ? $taxSummaryRecords->toArray() : [];
+        $tax_summary = [];
+        foreach ($taxSummaryRecords as $record) {
+            $tax_summary[] = [
+                'hsn'        => $record->hsn ?? '',        // ensure the key exists
+                'rate'       => $record->rate ?? 0,
+                'taxable'    => $record->taxable ?? 0,
+                'cgst'       => $record->cgst ?? 0,
+                'sgst'       => $record->sgst ?? 0,
+                'total_tax'  => $record->total_tax ?? 0,
+            ];
+        }
 
         // Build the data array for the view.
         $data = [
@@ -1003,6 +1011,6 @@ class QuotationsController extends Controller
         $pdf = new \Mpdf\Mpdf();
         $html = view('quotation.pdf', $data)->render();
         $pdf->WriteHTML($html);
-        return $pdf->Output('quotation.pdf', 'I'); // "I" for inline display; change to "D" for download if needed.
+        return $pdf->Output('quotation.pdf', 'I'); // "I" for inline display
     }
 }
