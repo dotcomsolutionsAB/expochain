@@ -61,11 +61,17 @@
         /* Avoid page-breaks within table rows */
         tr { page-break-inside: avoid; }
         /* Bank details in one line */
-        .bank {
+        .bank-details {
             text-align: center;
-            margin-top: 15px;
             font-size: 11px;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            border-top: 1px dashed #000;
+            border-bottom: 1px dashed #000;
+            padding-top: 5px;
+            padding-bottom: 5px;
         }
+
     </style>
 </head>
 <body>
@@ -88,7 +94,7 @@
     <!-- Two-column layout for Customer and Quotation Info -->
     <table class="no-border">
         <tr>
-            <td style="width: 50%; vertical-align: top;">
+            <td style="width: 50%; vertical-align: top; padding-right: 10px; border-right: 1px dotted #000;">
                 <strong>Customer Details :</strong><br>
                 ELECTROSTEEL CASTINGS LTD<br>
                 30 B.T ROAD, Kharadah, P.O - Sukchar<br>
@@ -182,7 +188,7 @@
     </table>
 
     <!-- Bank Details in a single line -->
-    <div class="bank">
+    <div class="bank-details">
         <strong>BANK NAME :</strong> HDFC BANK LTD, BRANCH : JARDINE HOUSE, CLIVE ROW, A/C NO : 10152320001963, IFSC : HDFC0001015
     </div>
 
