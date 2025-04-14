@@ -196,7 +196,7 @@
     <div class="terms" style="margin-top: 10px;">
     <table class="no-border" style="width: 100%; border-collapse: collapse;">
         <tr>
-            <!-- Left Column: TERMS details (completely left aligned) -->
+            <!-- Left Column: Terms details (left aligned) -->
             <td style="width: 50%; vertical-align: top; padding-right: 10px; border-right: 1px dotted #000;">
                 <strong>TERMS &amp; CONDITIONS:</strong><br>
                 <strong>F.O.R.</strong> : Kolkata<br>
@@ -206,31 +206,22 @@
                 <strong>Payment</strong> : 30 days - msme<br>
                 <strong>Validity</strong> : 30 DAYS<br>
             </td>
-            <!-- Right Column: Nested table for header and signature -->
-            <td style="width: 50%; vertical-align: top; padding-left: 10px;">
-                <table class="no-border" style="width: 100%; border-collapse: collapse;">
+            <!-- Right Column: Single row with nested table for same-line text -->
+            <td style="width: 50%; vertical-align: middle; padding-left: 10px;">
+                <table class="no-border" style="width:100%; border-collapse: collapse;">
                     <tr>
-                        <td style="text-align: left;">
+                        <td style="width: 50%; text-align: left;">
                             <strong>for EXPO CHAIN &amp; BEARING STORES</strong>
                         </td>
-                    </tr>
-                    <!-- Spacer row -->
-                    <tr>
-                        <td style="height: 20px;"></td>
-                    </tr>
-                    <tr>
-                        <td style="text-align: right;">
-                            Authorised Signatory
+                        <td style="width: 50%; text-align: right;">
+                            <strong>Authorised Signatory</strong>
                         </td>
                     </tr>
                 </table>
             </td>
         </tr>
     </table>
-</div>
-
-
-
+    </div>
 </div>
 </body>
 </html>
