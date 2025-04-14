@@ -358,6 +358,7 @@ class AssemblyOperationsController extends Controller
             $assemblyOperationData = [
                 'assembly_operations_id' => $assembly_operations_id,
                 'assembly_operations_date' => $assembly_operations_date,
+                'company_id' => Auth::user()->company_id,
                 'type' => $type,
                 'product_id' => $compositeProduct->id,
                 'product_name' => $compositeProduct->name,
@@ -419,6 +420,7 @@ class AssemblyOperationsController extends Controller
                     try {
                         AssemblyOperationProductsModel::create([
                             'assembly_operations_id' => $assembly_operations_id,
+                            'company_id' => Auth::user()->company_id,
                             'product_id' => $itemProduct->id,
                             'product_name' => $itemProduct->name,
                             'quantity' => $itemQuantity,
