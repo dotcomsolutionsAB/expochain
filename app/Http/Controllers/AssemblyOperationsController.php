@@ -301,6 +301,10 @@ class AssemblyOperationsController extends Controller
     {
         set_time_limit(300);
 
+        // Clear the Assembly and related tables
+        AssemblyOperationModel::truncate();
+        AssemblyOperationProductsModel::truncate();
+
         // Define the external URL
         $url = 'https://expo.egsm.in/assets/custom/migrate/assembly_operation.php'; // Replace with the actual URL
 
