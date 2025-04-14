@@ -126,7 +126,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::delete('/quotations/{id?}', [QuotationsController::class, 'delete_quotations']);
     Route::get('/quotations_migrate', [QuotationsController::class, 'importQuotations']);
     Route::post('/update_quotation_status/{id}', [QuotationsController::class, 'updateQuotationStatus']);
-    Route::post('/quotation_generate_pdf', [QuotationsController::class, 'generateQuotationPDF']);
+    Route::post('/quotation_generate_pdf/{id}', [QuotationsController::class, 'generateQuotationPDF']);
 
     Route::post('/add_sales_order', [SalesOrderController::class, 'add_sales_order']);
     Route::post('/sales_order/{id?}', [SalesOrderController::class, 'view_sales_order']);
