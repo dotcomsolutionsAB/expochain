@@ -4,91 +4,50 @@
     <meta charset="utf-8">
     <title>Quotation</title>
     <style>
-        body {
-            font-family: sans-serif;
-            font-size: 12px;
-            margin: 10px;
-        }
-        .page-border {
-            border: 2px solid black;
-            padding: 15px;
-        }
-        .center {
-            text-align: center;
-        }
-        .header, .customer-section {
+        body { font-family: sans-serif; font-size: 12px; }
+        .header, .customer, .summary, .tax-summary, .bank, .terms {
             margin-bottom: 10px;
         }
-        .dash-line {
-            border-top: 1px dashed #000;
-            margin: 10px 0;
-        }
-        .info-grid {
-            display: flex;
-            justify-content: space-between;
-        }
-        .info-grid .left, .info-grid .right {
-            width: 48%;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 5px;
-        }
-        th, td {
-            border: 1px solid #000;
-            padding: 5px;
-            text-align: center;
-            font-size: 11px;
-        }
-        .no-border td {
-            border: none;
-        }
-        .title {
-            font-size: 18px;
-            text-align: center;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-        .right-align {
-            text-align: right;
-        }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        th, td { border: 1px solid #000; padding: 5px; text-align: center; font-size: 11px; }
+        .no-border td { border: none; }
+        .title { font-size: 18px; text-align: center; font-weight: bold; margin-bottom: 15px; }
+        .right { text-align: right; }
     </style>
 </head>
 <body>
-<div class="page-border">
 
-    <div class="title">QUOTATION</div>
+<div class="title">QUOTATION</div>
 
-    <div class="header center">
-        <strong>EXPO CHAIN & BEARING STORES</strong><br>
-        71/D N.S. ROAD, GROUND FLOOR,ROOM NO A-162<br>
-        KOLKATA - 700001, WEST BENGAL, India<br>
-        GST : 19AAAFE7147G1ZF<br>
-        +9133-40064388 | 22431939 , amit@expochain.com, 7059502488
-    </div>
+<div class="header">
+    <strong>EXPO CHAIN & BEARING STORES</strong><br>
+    71/D N.S. ROAD, GROUND FLOOR,ROOM NO A-162<br>
+    KOLKATA - 700001, WEST BENGAL, India<br>
+    GST : 19AAAFE7147G1ZF<br>
+    +9133-40064388 | 22431939 , amit@expochain.com, 7059502488
+</div>
 
-    <div class="dash-line"></div>
+<div class="customer">
+    <strong>Customer Details :</strong><br>
+    ELECTROSTEEL CASTINGS LTD<br>
+    30 B.T ROAD, KHARDAH, P.O - SUKCHAR<br>
+    KOLKATA - 700115, WEST BENGAL, INDIA<br>
+    GSTIN / UIN : 19AAACE4975B1ZP
+</div>
 
-    <div class="info-grid">
-        <div class="left">
-            <strong>Customer Details :</strong><br>
-            ELECTROSTEEL CASTINGS LTD<br>
-            30<br>
-            B.T ROAD, KHARDAH, P.O - SUKCHAR<br>
-            KOLKATA - 700115, WEST BENGAL, INDIA<br>
-            GSTIN / UIN : 19AAACE4975B1ZP
-        </div>
-        <div class="right">
-            Quotation No.: <strong>{{ $quotation_no }}</strong><br>
-            Dated: <strong>{{ $quotation_date }}</strong><br>
-            Enquiry No.: <strong>{{ $enquiry_no }}</strong><br>
-            Enquiry Date: <strong>{{ $enquiry_date }}</strong>
-        </div>
-    </div>
+<table class="no-border">
+    <tr>
+        <td>Quotation No.: <strong>{{ $quotation_no }}</strong></td>
+        <td>Dated: <strong>{{ $quotation_date }}</strong></td>
+    </tr>
+    <tr>
+        <td>Enquiry No.: <strong>{{ $enquiry_no }}</strong></td>
+        <td>Enquiry Date: <strong>{{ $enquiry_date }}</strong></td>
+    </tr>
+</table>
 
-    <table>
-        <thead>
+<table>
+    <thead>
         <tr>
             <th>SN</th>
             <th>DESCRIPTION OF GOODS</th>
@@ -102,8 +61,8 @@
             <th>SGST</th>
             <th>AMOUNT</th>
         </tr>
-        </thead>
-        <tbody>
+    </thead>
+    <tbody>
         @foreach($items as $i => $item)
             <tr>
                 <td>{{ $i + 1 }}</td>
@@ -119,21 +78,20 @@
                 <td>{{ number_format($item['amount'], 2) }}</td>
             </tr>
         @endforeach
-        </tbody>
-    </table>
+    </tbody>
+</table>
 
-    <div class="right-align" style="margin-top: 15px;">
-        <p><strong>Gross Total:</strong> ₹{{ number_format($gross_total, 2) }}</p>
-        <p><strong>Add : CGST</strong> ₹{{ number_format($cgst, 2) }}</p>
-        <p><strong>Add : SGST</strong> ₹{{ number_format($sgst, 2) }}</p>
-        <p><strong>Less : Rounded Off</strong> (₹{{ number_format($roundoff, 2) }})</p>
-        <h3>GRAND TOTAL: ₹{{ number_format($grand_total, 2) }}</h3>
-        <p><i>Rupees {{ $grand_total_words }} Only</i></p>
-    </div>
+<div class="summary right">
+    <p>Gross Total: {{ number_format($gross_total, 2) }}</p>
+    <p>Add : CGST {{ number_format($cgst, 2) }}</p>
+    <p>Add : SGST {{ number_format($sgst, 2) }}</p>
+    <p>Less : Rounded Off ({{ number_format($roundoff, 2) }})</p>
+    <h3>GRAND TOTAL: ₹{{ number_format($grand_total, 2) }}</h3>
+    <p><i>Rupees {{ $grand_total_words }} Only</i></p>
+</div>
 
-    <h4 style="margin-top: 20px;">Tax Summary:</h4>
-    <table>
-        <thead>
+<table>
+    <thead>
         <tr>
             <th>HSN/SAC</th>
             <th>Tax Rate</th>
@@ -142,8 +100,8 @@
             <th>SGST</th>
             <th>Total Tax</th>
         </tr>
-        </thead>
-        <tbody>
+    </thead>
+    <tbody>
         @foreach($tax_summary as $tax)
             <tr>
                 <td>{{ $tax['hsn'] }}</td>
@@ -154,26 +112,25 @@
                 <td>{{ number_format($tax['total_tax'], 2) }}</td>
             </tr>
         @endforeach
-        </tbody>
-    </table>
+    </tbody>
+</table>
 
-    <div class="bank" style="margin-top: 15px;">
-        <strong>BANK NAME :</strong> HDFC BANK LTD<br>
-        BRANCH : JARDINE HOUSE, CLIVE ROW<br>
-        A/C NO : 10152320001963, IFSC : HDFC0001015
-    </div>
-
-    <div class="terms" style="margin-top: 10px;">
-        <strong>TERMS & CONDITIONS: for EXPO CHAIN & BEARING STORES</strong><br>
-        F.O.R. : Kolkata<br>
-        P & F : Nil<br>
-        Freight : Your Account<br>
-        Delivery : REady Stock subject to prior sale balance 3 weeks<br>
-        Payment : 30 days - msme<br>
-        Validity : 30 DAYS<br>
-        Remarks : Authorised Signatory
-    </div>
-
+<div class="bank">
+    <strong>BANK NAME :</strong> HDFC BANK LTD<br>
+    BRANCH : JARDINE HOUSE, CLIVE ROW<br>
+    A/C NO : 10152320001963, IFSC : HDFC0001015
 </div>
+
+<div class="terms">
+    <strong>TERMS & CONDITIONS: for EXPO CHAIN & BEARING STORES</strong><br>
+    F.O.R. : Kolkata<br>
+    P & F : Nil<br>
+    Freight : Your Account<br>
+    Delivery : REady Stock subject to prior sale balance 3 weeks<br>
+    Payment : 30 days - msme<br>
+    Validity : 30 DAYS<br>
+    Remarks : Authorised Signatory
+</div>
+
 </body>
 </html>
