@@ -636,6 +636,20 @@ class SalesOrderController extends Controller
 
             // Map status
             $statusMapping = [1 => 'pending', 2 => 'partial', 3 => 'completed'];
+
+            // Gross calculation
+            $gross = 0;
+            if (!empty($itemsData['product'])) {
+                foreach ($itemsData['product'] as $index => $productName) {
+                    $qty = isset($itemsData['quantity'][$index]) ? (float)$itemsData['quantity'][$index] : 0;
+                    $price = isset($itemsData['price'][$index]) ? (float)$itemsData['price'][$index] : 0;
+                    $gross += $qty * $price;
+                }
+            }
+
+            // Roundoff (if available in addons)
+            $roundoff = isset($addonsData['roundoff']) ? (float)$addonsData['roundoff'] : 0;
+
             $salesOrdersBatch[] = [
                 'company_id' => Auth::user()->company_id,
                 'client_id' => $client->id,
@@ -650,6 +664,8 @@ class SalesOrderController extends Controller
                 'total' => (float)($record['total'] ?? 0),
                 'template' => json_decode($record['pdf_template'], true)['id'] ?? '0',
                 'status' => $statusMapping[$record['status']] ?? 'pending',
+                'gross' => $gross,
+                'round_off' => $roundoff,
                 'created_at' => now(),
                 'updated_at' => now()
             ];
