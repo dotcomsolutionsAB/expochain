@@ -984,10 +984,10 @@ class QuotationsController extends Controller
             $tax_summary[] = [
                 'hsn'        => $record->hsn ?? '',        // ensure the key exists
                 'rate'       => $record->rate ?? 0,
-                'taxable'    => $record->taxable ?? 0,
+                'taxable'    => $record->tax ?? 0,
                 'cgst'       => $record->cgst ?? 0,
                 'sgst'       => $record->sgst ?? 0,
-                'total_tax'  => $record->total_tax ?? 0,
+                'total_tax'  => $record->tax ?? 0,
             ];
         }
 
