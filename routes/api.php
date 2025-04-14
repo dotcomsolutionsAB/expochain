@@ -263,6 +263,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/quotation-terms', [QuotationTermMasterController::class, 'retrieve']);
     Route::post('/edit-quotation-terms/{id}', [QuotationTermMasterController::class, 'update']);
     Route::delete('/quotation-terms/{id}', [QuotationTermMasterController::class, 'delete']);
+    Route::post('/quotation_generate_pdf', [QuotationTermMasterController::class, 'generateQuotationPDF']);
 
     Route::post('/channel', [ChannelController::class, 'add']); // Create Channel
     Route::get('/channels', [ChannelController::class, 'retrieve']); // View All Channels

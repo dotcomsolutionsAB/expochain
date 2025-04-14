@@ -19,6 +19,7 @@ use Auth;
 use Carbon\Carbon;
 use DB;
 use NumberFormatter;
+use Mpdf\Mpdf;
 use Illuminate\Support\Facades\Log;
 
 class QuotationsController extends Controller
@@ -949,4 +950,89 @@ class QuotationsController extends Controller
         ], 200);
     }
 
+    // generate pdf
+    public function generateQuotationPDF()
+    {
+        $data = [
+            'quotation_no' => 'EC/Q-0551/24-25',
+            'quotation_date' => '14-04-2025',
+            'enquiry_no' => 'E-mail',
+            'enquiry_date' => '14-04-2025',
+            'gross_total' => 31836.00,
+            'cgst' => 2865.24,
+            'sgst' => 2865.24,
+            'roundoff' => -0.48,
+            'grand_total' => 37566.00,
+            'grand_total_words' => 'Thirty Seven Thousands Five Hundred Sixty Six',
+            'items' => [
+                [
+                    'desc' => 'SPARE FBC2-BUSH',
+                    'make' => 'FENNER',
+                    'hsn' => '401699',
+                    'qty' => 60,
+                    'unit' => 'PCS',
+                    'rate' => '60.00',
+                    'delivery' => 'READY',
+                    'disc' => 30,
+                    'amount' => 2520.00,
+                ],
+                [
+                    'desc' => 'SPARE PIN & BUSH FOR FBC3',
+                    'make' => 'FENNER',
+                    'hsn' => '8483',
+                    'qty' => 40,
+                    'unit' => 'SETS',
+                    'rate' => '554.00',
+                    'delivery' => 'READY',
+                    'disc' => 30,
+                    'amount' => 15512.00,
+                ],
+                [
+                    'desc' => 'SPARE FBC3- BUSH',
+                    'make' => 'FENNER',
+                    'hsn' => '401699',
+                    'qty' => 40,
+                    'unit' => 'PCS',
+                    'rate' => '106.00',
+                    'delivery' => 'READY',
+                    'disc' => 30,
+                    'amount' => 2968.00,
+                ],
+                [
+                    'desc' => 'SPARE PIN AND BUSH FOR BC 2A',
+                    'make' => 'FENNER',
+                    'hsn' => '8483',
+                    'qty' => 60,
+                    'unit' => 'SETS',
+                    'rate' => '258.00',
+                    'delivery' => '30 SET READY',
+                    'disc' => 30,
+                    'amount' => 10836.00,
+                ]
+            ],
+            'tax_summary' => [
+                [
+                    'hsn' => '401699',
+                    'rate' => 18,
+                    'taxable' => 5488.00,
+                    'cgst' => 493.92,
+                    'sgst' => 493.92,
+                    'total_tax' => 987.84,
+                ],
+                [
+                    'hsn' => '8483',
+                    'rate' => 18,
+                    'taxable' => 26348.00,
+                    'cgst' => 2371.32,
+                    'sgst' => 2371.32,
+                    'total_tax' => 4742.64,
+                ]
+            ]
+        ];
+
+        $pdf = new Mpdf();
+        $html = view('quotation.pdf', $data)->render();
+        $pdf->WriteHTML($html);
+        return $pdf->Output('quotation.pdf', 'I'); // I: inline; D: download; F: save to file
+    }
 }
