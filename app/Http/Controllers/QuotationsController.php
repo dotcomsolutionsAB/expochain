@@ -1059,20 +1059,27 @@ class QuotationsController extends Controller
             ];
         }
 
+         // Retrieve tax summary data.
+        // If QuotationTermsModel contains tax summary rows for the quotation, fetch them;
+        // otherwise, supply an empty array.
+        $taxSummaryRecords = QuotationTermsModel::where('quotation_id', $id)->get();
+        $tax_summary = $taxSummaryRecords->count() ? $taxSummaryRecords->toArray() : [];
+
         // Build the data array for the view
         $data = [
             'quotation_no'      => $quotation->quotation_no,
             'quotation_date'    => $quotation->quotation_date,
             'enquiry_no'        => $quotation->enquiry_no,
             'enquiry_date'      => $quotation->enquiry_date,
-            'gross_total'       => $quotation->gross,      // taken from the gross column
+            'gross_total'       => $quotation->gross,      // gross column
             'cgst'              => $quotation->cgst,
             'sgst'              => $quotation->sgst,
             'roundoff'          => $quotation->roundoff,
-            'grand_total'       => $quotation->total,      // taken from the total column
+            'grand_total'       => $quotation->total,      // total column
             'grand_total_words' => $this->convertNumberToWords($quotation->total),
             'items'             => $items,
-            // Add additional fields if needed (for addons or terms, using QuotationAddonsModel or QuotationTermsModel)
+            'tax_summary'       => $tax_summary,         // Now supplying tax_summary
+            // Add further fields if needed.
         ];
 
         // Create a new mPDF instance, render the view with the data, and output the PDF.
