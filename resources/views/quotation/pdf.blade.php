@@ -194,15 +194,29 @@
 
     <!-- Terms & Conditions -->
     <div class="terms" style="margin-top: 10px;">
-        <strong>TERMS & CONDITIONS: for EXPO CHAIN & BEARING STORES</strong><br>
+        <!-- Header Table with two columns and a vertical dotted line -->
+        <table class="no-border" style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td style="width:50%; vertical-align: top; padding-right: 5px; border-right: 1px dotted #000;">
+                    <strong>TERMS & CONDITIONS:</strong>
+                </td>
+                <td style="width:50%; vertical-align: top; padding-left: 5px;">
+                    for EXPO CHAIN & BEARING STORES
+                </td>
+            </tr>
+        </table>
+        <br>
+        <!-- Other Terms -->
         F.O.R. : Kolkata<br>
         P & F : Nil<br>
         Freight : Your Account<br>
         Delivery : REady Stock subject to prior sale balance 3 weeks<br>
         Payment : 30 days - msme<br>
         Validity : 30 DAYS<br>
-        Remarks : Authorised Signatory
+        <br>
+        <strong>Authorised Signatory</strong>
     </div>
+
 
 </div>
 </body>
