@@ -979,17 +979,33 @@ class QuotationsController extends Controller
 
         // Retrieve and transform tax summary data.
         $taxSummaryRecords = QuotationTermsModel::where('quotation_id', $id)->get();
+
         $tax_summary = [];
-        foreach ($taxSummaryRecords as $record) {
-            $tax_summary[] = [
-                'hsn'        => $record->hsn ?? '',        // ensure the key exists
-                'rate'       => $record->rate ?? 0,
-                'taxable'    => $record->tax ?? 0,
-                'cgst'       => $record->cgst ?? 0,
-                'sgst'       => $record->sgst ?? 0,
-                'total_tax'  => $record->tax ?? 0,
-            ];
-        }
+
+        $grouped = $products->groupBy('hsn');
+
+    foreach ($grouped as $hsn => $groupItems) {
+        $cgstSum = $groupItems->sum('cgst');
+        $sgstSum = $groupItems->sum('sgst');
+        $igstSum = $groupItems->sum('igst');
+
+        $totalTax = $cgstSum + $sgstSum + $igstSum;
+
+        $taxableSum = $groupItems->sum(function ($item) {
+            return ($item->amount ?? 0) - ($item->cgst ?? 0) - ($item->sgst ?? 0) - ($item->igst ?? 0);
+        });
+
+        $avgTaxRate = $groupItems->avg('tax') ?? 0;
+
+        $tax_summary[] = [
+            'hsn'        => $hsn,
+            'rate'       => round($avgTaxRate, 2),
+            'taxable'    => round($taxableSum, 2),
+            'cgst'       => round($cgstSum, 2),
+            'sgst'       => round($sgstSum, 2),
+            'total_tax'  => round($totalTax, 2),
+        ];
+    }
 
         // Build the data array for the view.
         $data = [
