@@ -7,6 +7,7 @@ use App\Models\PurchaseInvoiceModel;
 use Illuminate\Support\Facades\Auth;
 use App\Models\CounterModel;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class LotController extends Controller
 {
