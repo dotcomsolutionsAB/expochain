@@ -291,4 +291,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/fetch_lot/{id?}', [LotController::class, 'retrieve']); // View All Channels
     Route::post('/update_lot/{id}', [LotController::class, 'update']); // Update Channel
     Route::delete('/lot/{id}', [LotController::class, 'destroy']); // Delete Channel
+    Route::get('/lot_info_migrate', [LotController::class, 'importLotInfo']);
 });
