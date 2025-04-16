@@ -303,7 +303,7 @@ class LotController extends Controller
                     'lr_no'          => $record['lr_no'] ?? null,
                     'date'           => $record['lr_date'] ?? null,
                     'shipping_by'    => $record['lr_shipping'] ?? null,
-                    'freight'        => $record['lr_freight'] ?? null,
+                    'freight'        => is_numeric($record['lr_freight']) ? (float)$record['lr_freight'] : null,
                     'invoice'        => isset($record['lr_invoice']) 
                         ? str_replace(['["', '"]', '","'], [ '', '', ',' ], $record['lr_invoice']) 
                         : null,
