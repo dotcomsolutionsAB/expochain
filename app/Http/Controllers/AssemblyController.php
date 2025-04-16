@@ -159,6 +159,8 @@ class AssemblyController extends Controller
             });
         }        
 
+        // Get total record count before applying limit
+        $totalRecords = $query->count();
         // Apply limit and offset
         $query->offset($offset)->limit($limit);
 
@@ -173,6 +175,7 @@ class AssemblyController extends Controller
                 'message' => 'Assembly records fetched successfully!',
                 'data' => $get_assembly,
                 'count' => $get_assembly->count(),
+                'total_records' => $totalRecords,
             ], 200)
             : response()->json([
                 'code' => 404,

@@ -155,6 +155,8 @@ class AssemblyOperationsController extends Controller
             $query->where('quantity', $quantity);
         }
 
+        // Get total record count before applying limit
+        $totalRecords = $query->count();
         // Apply limit and offset
         $query->offset($offset)->limit($limit);
 
@@ -187,6 +189,7 @@ class AssemblyOperationsController extends Controller
                 'message' => 'Assembly Operations data fetched successfully!',
                 'data' => $get_assembly_operations,
                 'count' => $get_assembly_operations->count(),
+                'total_records' => $totalRecords,
             ], 200)
             : response()->json([
                 'code' => 404,
