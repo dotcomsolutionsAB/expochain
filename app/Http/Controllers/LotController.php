@@ -301,13 +301,13 @@ class LotController extends Controller
                     'name'           => null,
                     'company_id'     => Auth::user()->company_id,
                     'lr_no'          => $record['lr_no'] ?? null,
-                    'date'           => $record['lr_date'] ?? null,
+                    'date' => ($record['lr_date'] === '0000-00-00' || empty($record['lr_date'])) ? null : $record['lr_date'],
                     'shipping_by'    => $record['lr_shipping'] ?? null,
                     'freight'        => is_numeric($record['lr_freight']) ? (float)$record['lr_freight'] : null,
                     'invoice'        => isset($record['lr_invoice']) 
                         ? str_replace(['["', '"]', '","'], [ '', '', ',' ], $record['lr_invoice']) 
                         : null,
-                    'receiving_date' => $record['lr_receiving_date'] ?? null,
+                    'receiving_date' => ($record['lr_receiving_date'] === '0000-00-00' || empty($record['lr_receiving_date'])) ? null : $record['lr_receiving_date'],
                     'created_at'     => now(),
                     'updated_at'     => now()
                 ];
