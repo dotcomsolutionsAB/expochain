@@ -118,6 +118,8 @@ class StockTransferController extends Controller
                 $query->where('transfer_id', $transferIdFilter);
             }
 
+            // Get total record count before applying limit
+            $totalRecords = $query->count();
             // Apply pagination
             $query->offset($offset)->limit($limit);
 
@@ -128,7 +130,8 @@ class StockTransferController extends Controller
                 'success' => true,
                 'message' => 'Stock Transfers fetched successfully!',
                 'data' => $stockTransfers,
-                'count' => $stockTransfers->count()
+                'count' => $stockTransfers->count(),
+                'total_records' => $totalRecords,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([

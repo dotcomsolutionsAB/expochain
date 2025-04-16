@@ -104,7 +104,7 @@ class AssemblyController extends Controller
 
         // Build the query
         $query = AssemblyModel::with(['products' => function ($query) {
-            $query->select('assembly_id', 'product_id', 'product_name', 'quantity');
+            $query->select('id', 'assembly_id', 'product_id', 'product_name', 'quantity');
         }])
         ->select('assembly_id', 'product_id', 'product_name')
         ->where('company_id', Auth::user()->company_id);
