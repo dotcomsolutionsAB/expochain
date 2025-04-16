@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\AssemblyOperationModel;
 use App\Models\AssemblyOperationProductsModel;
 use App\Models\ProductsModel;
-use App\Models\GodownModels;
+use App\Models\GodownModel;
 use Carbon\Carbon;
 use Auth;
 
