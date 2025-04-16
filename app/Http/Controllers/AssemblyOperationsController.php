@@ -605,5 +605,4 @@ class AssemblyOperationsController extends Controller
         ], 200);
     }
 
-
 }

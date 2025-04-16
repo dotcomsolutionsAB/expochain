@@ -249,4 +249,90 @@ class LotController extends Controller
             ], 500);
         }
     }
+
+    // import
+    public function importLotInfo()
+    {
+        set_time_limit(300);
+
+        // Clear old data
+        LotModel::truncate(); // Adjust model if named differently
+
+        // Source URL
+        $url = 'https://expo.egsm.in/assets/custom/migrate/lot_info.php';
+
+        try {
+            $response = Http::timeout(120)->get($url);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code'    => 500,
+                'success' => false,
+                'error'   => 'Failed to fetch data: ' . $e->getMessage()
+            ], 500);
+        }
+
+        if ($response->failed()) {
+            return response()->json([
+                'code'    => 500,
+                'success' => false,
+                'error'   => 'Failed to fetch data from source.'
+            ], 500);
+        }
+
+        $data = $response->json('data');
+
+        if (empty($data)) {
+            return response()->json([
+                'code'    => 404,
+                'success' => false,
+                'message' => 'No lot data found!'
+            ], 404);
+        }
+
+        $userCompanyId = Auth::user()->company_id;
+        $batchData = [];
+        $successful = 0;
+        $errors = [];
+
+        foreach ($data as $record) {
+            try {
+                $batchData[] = [
+                    'name'           => null,
+                    'company_id'     => Auth::user()->company_id,
+                    'lr_no'          => $record['lr_no'] ?? null,
+                    'date'           => $record['lr_date'] ?? null,
+                    'shipping_by'    => $record['lr_shipping'] ?? null,
+                    'freight'        => $record['lr_freight'] ?? null,
+                    'invoice'        => isset($record['lr_invoice']) 
+                        ? str_replace(['["', '"]', '","'], [ '', '', ',' ], $record['lr_invoice']) 
+                        : null,
+                    'receiving_date' => $record['lr_receiving_date'] ?? null,
+                    'log_user'       => $record['log_user'] ?? null,
+                    'log_date'       => $record['log_date'] ?? now(),
+                    'company_id'     => $userCompanyId,
+                    'created_at'     => now(),
+                    'updated_at'     => now()
+                ];
+                $successful++;
+            } catch (\Exception $e) {
+                $errors[] = [
+                    'record' => $record,
+                    'error'  => 'Failed to parse record: ' . $e->getMessage()
+                ];
+            }
+        }
+
+        // Perform batch insert
+        if (!empty($batchData)) {
+            LotModel::insert($batchData);
+        }
+
+        return response()->json([
+            'code'    => 200,
+            'success' => true,
+            'message' => "Lot import completed with $successful successful records.",
+            'errors'  => $errors
+        ]);
+    }
+
 }
