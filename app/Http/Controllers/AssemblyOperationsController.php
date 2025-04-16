@@ -161,6 +161,24 @@ class AssemblyOperationsController extends Controller
         // Fetch data
         $get_assembly_operations = $query->get();
 
+        // Load godown names in one query to prevent N+1 problem
+        $godownMap = GodownModel::pluck('name', 'id')->toArray();
+
+        // Format godown fields in main and products
+        foreach ($get_assembly_operations as $operation) {
+            $operation->godown = [
+                'id' => $operation->godown,
+                'name' => $godownMap[$operation->godown] ?? 'Unknown'
+            ];
+
+            foreach ($operation->products as $product) {
+                $product->godown = [
+                    'id' => $product->godown,
+                    'name' => $godownMap[$product->godown] ?? 'Unknown'
+                ];
+            }
+        }
+
         // Return response
         return $get_assembly_operations->isNotEmpty()
             ? response()->json([
