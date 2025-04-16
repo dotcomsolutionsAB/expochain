@@ -308,9 +308,6 @@ class LotController extends Controller
                         ? str_replace(['["', '"]', '","'], [ '', '', ',' ], $record['lr_invoice']) 
                         : null,
                     'receiving_date' => $record['lr_receiving_date'] ?? null,
-                    'log_user'       => $record['log_user'] ?? null,
-                    'log_date'       => $record['log_date'] ?? now(),
-                    'company_id'     => $userCompanyId,
                     'created_at'     => now(),
                     'updated_at'     => now()
                 ];
