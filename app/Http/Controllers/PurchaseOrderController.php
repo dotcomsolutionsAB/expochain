@@ -663,10 +663,12 @@ class PurchaseOrderController extends Controller
             }
         }
 
+        // Delete Addons that are not part of the request
         PurchaseOrderAddonsModel::where('purchase_order_id', $id)
-                                    ->whereNotIn('product_id', $requestAddonIDs)
-                                    ->delete();
+        ->whereNotIn('name', $requestAddonNames)
+        ->delete();
 
+        // Handle Terms
         $terms = $request->input('terms');
         $requestTermsIDs = [];
 
@@ -691,8 +693,9 @@ class PurchaseOrderController extends Controller
             }
         }
 
+        // Delete Terms that are not part of the request
         PurchaseOrderTermsModel::where('purchase_order_id', $id)
-                                    ->whereNotIn('product_id', $requestTermsIDs)
+                                    ->whereNotIn('name', $requestTermsIDs)
                                     ->delete();
                                             
 

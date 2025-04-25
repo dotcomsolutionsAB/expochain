@@ -570,7 +570,7 @@ class PurchaseInvoiceController extends Controller
         }
 
         PurchaseInvoiceAddonsModel::where('purchase_invoice_id', $id)
-                                    ->whereNotIn('product_id', $requestAddonIDs)
+                                    ->whereNotIn('name', $requestAddonIDs)
                                     ->delete();
 
         unset($purchaseInvoice['created_at'], $purchaseInvoice['updated_at']);
