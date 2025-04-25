@@ -665,7 +665,7 @@ class PurchaseOrderController extends Controller
 
         // Delete Addons that are not part of the request
         PurchaseOrderAddonsModel::where('purchase_order_id', $id)
-        ->whereNotIn('name', $requestAddonNames)
+        ->whereNotIn('name', $requestAddonIDs)
         ->delete();
 
         // Handle Terms
