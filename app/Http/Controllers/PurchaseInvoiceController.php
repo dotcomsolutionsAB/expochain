@@ -155,8 +155,8 @@ class PurchaseInvoiceController extends Controller
         unset($register_purchase_invoice['id'], $register_purchase_invoice['created_at'], $register_purchase_invoice['updated_at']);
     
         return isset($register_purchase_invoice) && $register_purchase_invoice !== null
-        ? response()->json(['code' => 201,'success' => true, 'Purchase Invoice registered successfully!', 'data' => $register_purchase_invoice], 201)
-        : response()->json(['code' => 400,'success' => false, 'Failed to register Purchase Invoice record'], 400);
+        ? response()->json(['code' => 201,'success' => true, 'message' => 'Purchase Invoice registered successfully!', 'data' => $register_purchase_invoice], 201)
+        : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to register Purchase Invoice record'], 400);
     }
 
     // view
