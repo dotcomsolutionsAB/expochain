@@ -505,9 +505,9 @@ class PurchaseOrderController extends Controller
     {
         $request->validate([
             'supplier_id' => 'required|integer|exists:t_suppliers,id',
-            'name' => 'required|string|exists:t_suppliers,name',
+            'name' => 'nullable|string|exists:t_suppliers,name',
             'purchase_order_no' => 'required|string|max:255', // Matches DB column
-            'purchase_order_date' => 'required|date_format:Y-m-d',
+            'purchase_order_date' => 'required|date',
             'oa_no' => 'required|string', 
             'oa_date' => 'required|date', 
             'template' => 'required|integer|exists:t_pdf_template,id',
