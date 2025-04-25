@@ -133,7 +133,7 @@ class PurchaseInvoiceController extends Controller
                 'igst' => $product['igst'],
                 'amount' => $product['amount'],
                 'channel' => $product['channel'],
-                'godown' => $product['godown'],
+                'godown' => isset($product['godown']) ? $product['godown'] : null,
             ]);
         }
 
