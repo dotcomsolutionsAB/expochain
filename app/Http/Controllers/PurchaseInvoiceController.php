@@ -396,16 +396,15 @@ class PurchaseInvoiceController extends Controller
         ], 200);
     }
 
-
     // update
     public function edit_purchase_invoice(Request $request, $id)
     {
         $request->validate([
             // Purchase Invoice Fields
             'supplier_id' => 'required|integer|exists:t_suppliers,id',
-            'name' => 'required|string|exists:t_suppliers,name',
+            'name' => 'nullable|string|exists:t_suppliers,name',
             'purchase_invoice_no' => 'required|string|max:255',
-            'purchase_invoice_date' => 'required|date_format:Y-m-d',
+            'purchase_invoice_date' => 'required|date',
             'oa_no' => 'required|string|max:50',
             'ref_no' => 'required|string|max:50',
             'template' => 'required|integer|exists:t_pdf_template,id',
