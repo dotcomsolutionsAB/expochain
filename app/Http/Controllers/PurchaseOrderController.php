@@ -604,7 +604,7 @@ class PurchaseOrderController extends Controller
                 ]);
             } else {
                 PurchaseOrderProductsModel::create([
-                    'purchase_order_number' => $productData['purchase_order_number'],
+                    'purchase_order_id' => $id,
                     'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
@@ -711,13 +711,13 @@ class PurchaseOrderController extends Controller
         if ($get_purchase_order_id && $get_purchase_order_id->company_id === Auth::user()->company_id) {
             $delete_purchase_order = PurchaseOrderModel::where('id', $id)->delete();
 
-            $delete_purchase_order_products = PurchaseOrderProductsModel::where('purchase_order_number', $get_purchase_order_id->id)->delete();
+            $delete_purchase_order_products = PurchaseOrderProductsModel::where('purchase_order_id', $get_purchase_order_id->id)->delete();
 
-            $delete_purchase_order_addons = PurchaseOrderAddonsModel::where('purchase_order_number', $id)
+            $delete_purchase_order_addons = PurchaseOrderAddonsModel::where('purchase_order_id', $id)
                                                         ->where('company_id', $company_id)
                                                         ->delete();
 
-            $delete_purchase_order_addons = PurchaseOrderTermsModel::where('purchase_order_number', $id)
+            $delete_purchase_order_addons = PurchaseOrderTermsModel::where('purchase_order_id', $id)
                                                         ->where('company_id', $company_id)
                                                         ->delete();
 
