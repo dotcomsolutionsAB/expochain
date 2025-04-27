@@ -896,8 +896,8 @@ class PurchaseInvoiceController extends Controller
                         'discount_type' => "percentage",
                         'hsn' => $itemsData['hsn'][$index] ?? '',
                         'tax' => (float)($itemsData['tax'][$index] ?? 0),
-                        'cgst' => 0,
-                        'sgst' => 0,
+                        'cgst' => (float)($itemsData['cgst'][$index] ?? 0),
+                        'sgst' => (float)($itemsData['sgst'][$index] ?? 0),
                         'igst' => (float)($itemsData['igst'][$index] ?? 0),
                         'amount' => (
                             (isset($itemsData['quantity'][$index]) ? (float) $itemsData['quantity'][$index] : 0.0) *
