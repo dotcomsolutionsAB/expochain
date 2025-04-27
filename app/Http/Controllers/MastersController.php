@@ -480,16 +480,16 @@ class MastersController extends Controller
 
         foreach ($data as $record) {
             try {
-                if (empty($record['aid']) || empty($record['current_stock'])) {
+                if (empty($record['name']) || empty($record['current_stock'])) {
                     continue;
                 }
 
                 // Find product_id from products table
-                $product = ProductsModel::where('aid', $record['aid'])->first();
+                $product = ProductsModel::where('name', $record['name'])->first();
 
                 if (!$product) {
                     $errors[] = [
-                        'aid' => $record['aid'],
+                        'name' => $record['name'],
                         'error' => 'Product not found',
                     ];
                     continue;
