@@ -762,6 +762,13 @@ class SalesInvoiceController extends Controller
                                         : (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 2
                                             : (strtolower($itemsData['channel'][$index]) === 'cbs' ? 3 : null))))
                                 : null,
+                            'godown' => isset($itemsData['place'][$index])
+                            ? (
+                                strtoupper(trim($itemsData['place'][$index])) === 'OFFICE' ? 1 :
+                                (strtoupper(trim($itemsData['place'][$index])) === 'KUSHTIA' ? 2 :
+                                (strtoupper(trim($itemsData['place'][$index])) === 'ANKURHATI' ? 3 : null))
+                            )
+                            : null,
                            'so_id' => isset($itemsData['so_no'][$index]) 
                             ? (is_numeric($itemsData['so_no'][$index]) ? (int)$itemsData['so_no'][$index] : null)
                             : null,
