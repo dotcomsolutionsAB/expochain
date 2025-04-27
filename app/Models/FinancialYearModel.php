@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class FinancialYearModel extends Model
 {
     //
-    protected $table = ' t_financial_year';
+    protected $table = 't_financial_year';
 
     protected $fillable = [
         'name',
