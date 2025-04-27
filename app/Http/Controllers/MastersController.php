@@ -442,6 +442,113 @@ class MastersController extends Controller
         ], 200);
     }
 
+    public function importOpeningStock()
+    {
+        ini_set('max_execution_time', 1200); // Increase execution time
+        ini_set('memory_limit', '2048M');    // Increase memory limit
+
+        $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
+
+        try {
+            // Fetch data from external API
+            $response = Http::get($url);
+        } catch (\Exception $e) {
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data from the external source.'], 500);
+        }
+
+        if ($response->failed()) {
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
+        }
+
+        $data = $response->json('data');
+        if (empty($data)) {
+            return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
+        }
+
+        $godownMapping = [
+            'OFFICE' => 1,
+            'KUSHTIA' => 2,
+            'ANKURHATI' => 3,
+        ];
+
+        $companyId = 1;
+        $year = 8;
+        $batchSize = 1000;
+        $batchData = [];
+        $successfulInserts = 0;
+        $errors = [];
+
+        foreach ($data as $record) {
+            try {
+                if (empty($record['aid']) || empty($record['current_stock'])) {
+                    continue;
+                }
+
+                // Find product_id from products table
+                $product = ProductsModel::where('aid', $record['aid'])->first();
+
+                if (!$product) {
+                    $errors[] = [
+                        'aid' => $record['aid'],
+                        'error' => 'Product not found',
+                    ];
+                    continue;
+                }
+
+                $currentStock = json_decode($record['current_stock'], true);
+
+                if (empty($currentStock) || !is_array($currentStock)) {
+                    continue;
+                }
+
+                foreach ($godownMapping as $godownName => $godownId) {
+                    if (isset($currentStock[$godownName])) {
+                        $quantity = (float) $currentStock[$godownName];
+
+                        if ($quantity > 0) {
+                            $batchData[] = [
+                                'company_id' => $companyId,
+                                'year' => $year,
+                                'godown_id' => $godownId,
+                                'product_id' => $product->id,
+                                'quantity' => $quantity,
+                                'value' => 0, // If needed you can calculate based on cost price
+                                'sold' => 0,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ];
+                        }
+                    }
+                }
+
+                if (count($batchData) >= $batchSize) {
+                    OpeningStockModel::insert($batchData);
+                    $successfulInserts += count($batchData);
+                    $batchData = [];
+                }
+            } catch (\Exception $e) {
+                $errors[] = [
+                    'aid' => $record['aid'] ?? null,
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        // Insert remaining batch
+        if (!empty($batchData)) {
+            OpeningStockModel::insert($batchData);
+            $successfulInserts += count($batchData);
+        }
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => "Opening stock import completed. Successful inserts: $successfulInserts.",
+            'errors' => $errors,
+        ], 200);
+    }
+
+
     // export products
     public function export_products(Request $request)
     {

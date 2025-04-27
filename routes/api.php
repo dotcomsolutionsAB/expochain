@@ -79,6 +79,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/get_products', [MastersController::class, 'get_product']);
 
     Route::get('products_migrate', [MastersController::class, 'importProducts']);
+    Route::get('opening_stock_migrate', [MastersController::class, 'importOpeningStock']);
 
     Route::post('export_product', [MastersController::class, 'export_products']);
     
