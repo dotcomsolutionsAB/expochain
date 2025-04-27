@@ -548,6 +548,69 @@ class MastersController extends Controller
         ], 200);
     }
 
+    public function importFinancialYears()
+    {
+        ini_set('max_execution_time', 600); // Increase execution time
+        ini_set('memory_limit', '1024M');   // Increase memory limit
+
+        $url = 'https://expo.egsm.in/assets/custom/migrate/financial_years.php';
+
+        try {
+            // Fetch data from external API
+            $response = Http::get($url);
+        } catch (\Exception $e) {
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data from the external source.'], 500);
+        }
+
+        if ($response->failed()) {
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
+        }
+
+        $data = $response->json('data');
+
+        if (empty($data)) {
+            return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
+        }
+
+        $companyId = 1;
+        $batchData = [];
+        $successfulInserts = 0;
+        $errors = [];
+
+        foreach ($data as $record) {
+            try {
+                $batchData[] = [
+                    'name' => $record['year'],
+                    'company_id' => $companyId,
+                    'start_date' => $record['start'],
+                    'end_date' => $record['end'],
+                    'opening_stock' => is_numeric($record['opening']) ? (float) $record['opening'] : 0,
+                    'closing_stock' => is_numeric($record['closing']) ? (float) $record['closing'] : 0,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            } catch (\Exception $e) {
+                $errors[] = [
+                    'year' => $record['year'] ?? null,
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        if (!empty($batchData)) {
+            FinancialYearModel::insert($batchData);
+            $successfulInserts += count($batchData);
+        }
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => "Financial year data import completed. Successful inserts: $successfulInserts.",
+            'errors' => $errors,
+        ], 200);
+    }
+
+
 
     // export products
     public function export_products(Request $request)
