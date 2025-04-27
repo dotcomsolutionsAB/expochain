@@ -924,6 +924,14 @@ class PurchaseInvoiceController extends Controller
                                         )
                                 ) 
                                 : null,
+
+                        'godown' => isset($itemsData['place'][$index])
+                        ? (
+                            strtoupper(trim($itemsData['place'][$index])) === 'OFFICE' ? 1 :
+                            (strtoupper(trim($itemsData['place'][$index])) === 'KUSHTIA' ? 2 :
+                            (strtoupper(trim($itemsData['place'][$index])) === 'ANKURHATI' ? 3 : null))
+                        )
+                        : null,
                         'stock' => (float)($itemsData['instock'][$index] ?? 0),
                         'created_at' => now(),
                         'updated_at' => now(),
