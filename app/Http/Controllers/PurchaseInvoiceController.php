@@ -892,7 +892,10 @@ class PurchaseInvoiceController extends Controller
                         'quantity' => $itemsData['quantity'][$index] ?? 0,
                         'unit' => $itemsData['unit'][$index] ?? '',
                         'price' => isset($itemsData['price'][$index]) && $itemsData['price'][$index] !== '' ? (float)$itemsData['price'][$index] : 0,
-                        'discount' => (float)($itemsData['discount'][$index] ?? 0),
+                        'discount' => isset($itemsData['discount'][$index]) && $itemsData['discount'][$index] !== ''
+                        ? round((float)$itemsData['discount'][$index], 2)
+                        : 0,
+
                         'discount_type' => "percentage",
                         'hsn' => $itemsData['hsn'][$index] ?? '',
                         'tax' => (float)($itemsData['tax'][$index] ?? 0),
