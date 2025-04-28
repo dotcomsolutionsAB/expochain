@@ -465,6 +465,126 @@ class StockTransferController extends Controller
     //     ], 200);
     // }
 
+    // public function importStockTransfers()
+    // {
+    //     set_time_limit(300);
+
+    //     // Clear old stock transfer data
+    //     StockTransferModel::truncate();
+    //     StockTransferProductsModel::truncate();
+
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/stock_transfer.php';
+
+    //     try {
+    //         $response = Http::timeout(120)->get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => 'Failed to fetch data: ' . $e->getMessage()], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
+    //     }
+
+    //     $data = $response->json('data');
+
+    //     if (empty($data)) {
+    //         return response()->json(['message' => 'No data found'], 404);
+    //     }
+
+    //     $companyId = Auth::user()->company_id;
+    //     $successfulInserts = 0;
+    //     $errors = [];
+
+    //     $batchSize = 50; // You can adjust
+
+    //     $stockTransfersBatch = [];
+    //     $productsBatch = [];
+
+    //     $transferIdMap = []; // Map transfer_id => data for later linking
+
+    //     // Step 1: Prepare stock transfer records
+    //     foreach ($data as $record) {
+    //         $itemsData = json_decode($record['items'], true);
+
+    //         if (!is_array($itemsData) || !isset($itemsData['product'], $itemsData['desc'], $itemsData['quantity'], $itemsData['unit'], $itemsData['status'])) {
+    //             $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure in items field.'];
+    //             continue;
+    //         }
+
+    //         // Fetch Godown IDs
+    //         $godownFromId = GodownModel::where('name', $record['from'] ?? '')
+    //                             ->where('company_id', $companyId)
+    //                             ->value('id');
+
+    //         $godownToId = GodownModel::where('name', $record['to'] ?? '')
+    //                             ->where('company_id', $companyId)
+    //                             ->value('id');
+
+    //         $stockTransfersBatch[] = [
+    //             'transfer_id'    => $record['transfer_id'],
+    //             'company_id'     => $companyId,
+    //             'godown_from'    => $godownFromId,
+    //             'godown_to'      => $godownToId,
+    //             'transfer_date'  => !empty($record['t_date']) ? $record['t_date'] : now(),
+    //             // 'status'         => $record['status'] ?? '0',
+    //             // 'log_user'       => $record['log_user'] ?? 'Unknown',
+    //             'created_at'     => now(),
+    //             'updated_at'     => now(),
+    //         ];
+
+    //         // Store raw item data mapped with transfer_id
+    //         $transferIdMap[$record['transfer_id']] = $itemsData;
+
+    //         $successfulInserts++;
+    //     }
+
+    //     // Step 2: Insert stock transfers in batch
+    //     foreach (array_chunk($stockTransfersBatch, $batchSize) as $chunk) {
+    //         StockTransferModel::insert($chunk);
+    //     }
+
+    //     // Step 3: Fetch newly inserted Stock Transfer IDs if needed (Not needed here because `transfer_id` is custom, not auto_increment)
+
+    //     // Step 4: Prepare products batch
+    //     foreach ($transferIdMap as $transferId => $itemsData) {
+    //         foreach ($itemsData['product'] as $index => $productName) {
+    //             $product = ProductsModel::where('name', $productName)->first();
+
+    //             if (!$product) {
+    //                 $errors[] = [
+    //                     'transfer_id' => $transferId,
+    //                     'error' => "Product '{$productName}' not found."
+    //                 ];
+    //                 continue;
+    //             }
+
+    //             $productsBatch[] = [
+    //                 'stock_transfer_id'   => $transferId,
+    //                 'company_id'    => $companyId,
+    //                 'product_id'    => $product->id,
+    //                 'product_name'  => $itemsData['product_name'][$index] ?? $productName,
+    //                 'description'   => $itemsData['desc'][$index] ?? 'No Description',
+    //                 'quantity'      => isset($itemsData['quantity'][$index]) ? (int) $itemsData['quantity'][$index] : 0,
+    //                 // 'unit'          => $itemsData['unit'][$index] ?? 'PCS',
+    //                 // 'status'        => $itemsData['status'][$index] ?? '1',
+    //                 'created_at'    => now(),
+    //                 'updated_at'    => now(),
+    //             ];
+    //         }
+    //     }
+
+    //     // Step 5: Insert products in batch
+    //     foreach (array_chunk($productsBatch, $batchSize) as $chunk) {
+    //         StockTransferProductsModel::insert($chunk);
+    //     }
+
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => "Import completed with {$successfulInserts} stock transfers successfully imported.",
+    //         'errors' => $errors,
+    //     ], 200);
+    // }
     public function importStockTransfers()
     {
         set_time_limit(300);
@@ -495,12 +615,10 @@ class StockTransferController extends Controller
         $successfulInserts = 0;
         $errors = [];
 
-        $batchSize = 50; // You can adjust
+        $batchSize = 50; // You can adjust for performance
 
         $stockTransfersBatch = [];
-        $productsBatch = [];
-
-        $transferIdMap = []; // Map transfer_id => data for later linking
+        $productsDataMap = [];
 
         // Step 1: Prepare stock transfer records
         foreach ($data as $record) {
@@ -526,14 +644,14 @@ class StockTransferController extends Controller
                 'godown_from'    => $godownFromId,
                 'godown_to'      => $godownToId,
                 'transfer_date'  => !empty($record['t_date']) ? $record['t_date'] : now(),
-                // 'status'         => $record['status'] ?? '0',
-                // 'log_user'       => $record['log_user'] ?? 'Unknown',
+                'status'         => $record['status'] ?? '0',
+                'log_user'       => $record['log_user'] ?? 'Unknown',
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ];
 
-            // Store raw item data mapped with transfer_id
-            $transferIdMap[$record['transfer_id']] = $itemsData;
+            // Store products data separately mapped to `transfer_id`
+            $productsDataMap[$record['transfer_id']] = $itemsData;
 
             $successfulInserts++;
         }
@@ -543,10 +661,22 @@ class StockTransferController extends Controller
             StockTransferModel::insert($chunk);
         }
 
-        // Step 3: Fetch newly inserted Stock Transfer IDs if needed (Not needed here because `transfer_id` is custom, not auto_increment)
+        // Step 3: Fetch inserted stock transfers (transfer_id => id)
+        $transferIdToStockTransferId = StockTransferModel::whereIn('transfer_id', array_keys($productsDataMap))
+            ->pluck('id', 'transfer_id')
+            ->toArray();
 
-        // Step 4: Prepare products batch
-        foreach ($transferIdMap as $transferId => $itemsData) {
+        $productsBatch = [];
+
+        // Step 4: Prepare stock transfer products batch
+        foreach ($productsDataMap as $transferId => $itemsData) {
+            $stockTransferId = $transferIdToStockTransferId[$transferId] ?? null;
+
+            if (!$stockTransferId) {
+                $errors[] = ['transfer_id' => $transferId, 'error' => 'Stock Transfer ID not found after insert.'];
+                continue;
+            }
+
             foreach ($itemsData['product'] as $index => $productName) {
                 $product = ProductsModel::where('name', $productName)->first();
 
@@ -559,21 +689,21 @@ class StockTransferController extends Controller
                 }
 
                 $productsBatch[] = [
-                    'stock_transfer_id'   => $transferId,
-                    'company_id'    => $companyId,
-                    'product_id'    => $product->id,
-                    'product_name'  => $itemsData['product_name'][$index] ?? $productName,
-                    'description'   => $itemsData['desc'][$index] ?? 'No Description',
-                    'quantity'      => isset($itemsData['quantity'][$index]) ? (int) $itemsData['quantity'][$index] : 0,
-                    // 'unit'          => $itemsData['unit'][$index] ?? 'PCS',
-                    // 'status'        => $itemsData['status'][$index] ?? '1',
-                    'created_at'    => now(),
-                    'updated_at'    => now(),
+                    'stock_transfer_id' => $stockTransferId, // ✅ Now correct foreign key
+                    'company_id'        => $companyId,
+                    'product_id'        => $product->id,
+                    'product_name'      => $itemsData['product_name'][$index] ?? $productName,
+                    'description'       => $itemsData['desc'][$index] ?? 'No Description',
+                    'quantity'          => isset($itemsData['quantity'][$index]) ? (int) $itemsData['quantity'][$index] : 0,
+                    'unit'              => $itemsData['unit'][$index] ?? 'PCS',
+                    'status'            => $itemsData['status'][$index] ?? '1',
+                    'created_at'        => now(),
+                    'updated_at'        => now(),
                 ];
             }
         }
 
-        // Step 5: Insert products in batch
+        // Step 5: Batch Insert products
         foreach (array_chunk($productsBatch, $batchSize) as $chunk) {
             StockTransferProductsModel::insert($chunk);
         }
@@ -581,7 +711,7 @@ class StockTransferController extends Controller
         return response()->json([
             'code' => 200,
             'success' => true,
-            'message' => "Import completed with {$successfulInserts} stock transfers successfully imported.",
+            'message' => "Import completed with {$successfulInserts} successful Stock Transfers.",
             'errors' => $errors,
         ], 200);
     }
