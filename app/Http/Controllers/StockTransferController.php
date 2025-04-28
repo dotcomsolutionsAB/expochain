@@ -644,8 +644,8 @@ class StockTransferController extends Controller
                 'godown_from'    => $godownFromId,
                 'godown_to'      => $godownToId,
                 'transfer_date'  => !empty($record['t_date']) ? $record['t_date'] : now(),
-                'status'         => $record['status'] ?? '0',
-                'log_user'       => $record['log_user'] ?? 'Unknown',
+                // 'status'         => $record['status'] ?? '0',
+                // 'log_user'       => $record['log_user'] ?? 'Unknown',
                 'created_at'     => now(),
                 'updated_at'     => now(),
             ];
@@ -695,8 +695,8 @@ class StockTransferController extends Controller
                     'product_name'      => $itemsData['product_name'][$index] ?? $productName,
                     'description'       => $itemsData['desc'][$index] ?? 'No Description',
                     'quantity'          => isset($itemsData['quantity'][$index]) ? (int) $itemsData['quantity'][$index] : 0,
-                    'unit'              => $itemsData['unit'][$index] ?? 'PCS',
-                    'status'            => $itemsData['status'][$index] ?? '1',
+                    // 'unit'              => $itemsData['unit'][$index] ?? 'PCS',
+                    // 'status'            => $itemsData['status'][$index] ?? '1',
                     'created_at'        => now(),
                     'updated_at'        => now(),
                 ];
