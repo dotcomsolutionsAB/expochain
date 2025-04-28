@@ -565,8 +565,8 @@ class StockTransferController extends Controller
                     'product_name'  => $itemsData['product_name'][$index] ?? $productName,
                     'description'   => $itemsData['desc'][$index] ?? 'No Description',
                     'quantity'      => isset($itemsData['quantity'][$index]) ? (int) $itemsData['quantity'][$index] : 0,
-                    'unit'          => $itemsData['unit'][$index] ?? 'PCS',
-                    'status'        => $itemsData['status'][$index] ?? '1',
+                    // 'unit'          => $itemsData['unit'][$index] ?? 'PCS',
+                    // 'status'        => $itemsData['status'][$index] ?? '1',
                     'created_at'    => now(),
                     'updated_at'    => now(),
                 ];
