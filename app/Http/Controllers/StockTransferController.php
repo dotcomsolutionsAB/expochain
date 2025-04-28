@@ -353,11 +353,123 @@ class StockTransferController extends Controller
     //     ], 200);
     // }
 
+    // public function importStockTransfers()
+    // {
+    //     set_time_limit(300);
+
+    //     // Clear the StockTransfer and related tables
+    //     StockTransferModel::truncate();
+    //     StockTransferProductsModel::truncate();
+
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/stock_transfer.php';
+
+    //     try {
+    //         $response = Http::timeout(120)->get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['error' => 'Failed to fetch data: ' . $e->getMessage()], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['error' => 'Failed to fetch data.'], 500);
+    //     }
+
+    //     $data = $response->json('data');
+
+    //     if (empty($data)) {
+    //         return response()->json(['message' => 'No data found'], 404);
+    //     }
+
+    //     $successfulInserts = 0;
+    //     $errors = [];
+
+    //     $batchStockTransfers = [];
+    //     $batchStockTransferProducts = [];
+
+    //     $companyId = Auth::user()->company_id; // ✅ cache company_id
+
+    //     foreach ($data as $record) {
+
+    //         $itemsData = json_decode($record['items'], true);
+
+    //         if (!is_array($itemsData) || !isset($itemsData['product'], $itemsData['desc'], $itemsData['quantity'], $itemsData['unit'], $itemsData['status'])) {
+    //             $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure in items field.'];
+    //             continue;
+    //         }
+
+    //         // 🔵 Fetch Godown From ID
+    //         $godownFrom = GodownModel::where('name', $record['from'] ?? '')
+    //                         ->where('company_id', $companyId)
+    //                         ->value('id');
+
+    //         // 🔵 Fetch Godown To ID
+    //         $godownTo = GodownModel::where('name', $record['to'] ?? '')
+    //                         ->where('company_id', $companyId)
+    //                         ->value('id');
+
+    //         $batchStockTransfers[] = [
+    //             'transfer_id'   => $record['transfer_id'],
+    //             'company_id'    => $companyId,
+    //             'godown_from'   => $godownFrom ?? null,
+    //             'godown_to'     => $godownTo ?? null,
+    //             'transfer_date' => !empty($record['t_date']) ? $record['t_date'] : now(),
+    //             // 'status'        => $record['status'] ?? '0',
+    //             // 'log_user'      => $record['log_user'] ?? 'Unknown',
+    //             'created_at'    => now(),
+    //             'updated_at'    => now(),
+    //         ];
+
+    //         $successfulInserts++;
+
+    //         foreach ($itemsData['product'] as $index => $productName) {
+
+    //             $product = ProductsModel::where('name', $productName)->first();
+
+    //             if (!$product) {
+    //                 $errors[] = [
+    //                     'record' => $record,
+    //                     'error' => "Product with name '{$productName}' not found."
+    //                 ];
+    //                 continue;
+    //             }
+
+    //             $batchStockTransferProducts[] = [
+    //                 'transfer_id'   => $record['transfer_id'],
+    //                 'company_id'    => $companyId,
+    //                 'product_id'    => $product->id,
+    //                 'product_name'  => $itemsData['product_name'][$index] ?? $productName,
+    //                 'description'   => $itemsData['desc'][$index] ?? 'No Description',
+    //                 'quantity'      => isset($itemsData['quantity'][$index]) ? (int)$itemsData['quantity'][$index] : 0,
+    //                 // 'unit'          => $itemsData['unit'][$index] ?? 'PCS',
+    //                 // 'status'        => $itemsData['status'][$index] ?? '1',
+    //                 'created_at'    => now(),
+    //                 'updated_at'    => now(),
+    //             ];
+    //         }
+    //     }
+
+    //     // Batch Insert Stock Transfers
+    //     if (!empty($batchStockTransfers)) {
+    //         StockTransferModel::insert($batchStockTransfers);
+    //     }
+
+    //     // 🔵 Batch Insert Stock Transfer Products
+    //     if (!empty($batchStockTransferProducts)) {
+    //         StockTransferProductsModel::insert($batchStockTransferProducts);
+    //     }
+
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => "Import completed with {$successfulInserts} successful Stock Transfers.",
+    //         'errors' => $errors,
+    //     ], 200);
+    // }
+
     public function importStockTransfers()
     {
         set_time_limit(300);
 
-        // Clear the StockTransfer and related tables
+        // Clear old stock transfer data
         StockTransferModel::truncate();
         StockTransferProductsModel::truncate();
 
@@ -379,16 +491,19 @@ class StockTransferController extends Controller
             return response()->json(['message' => 'No data found'], 404);
         }
 
+        $companyId = Auth::user()->company_id;
         $successfulInserts = 0;
         $errors = [];
 
-        $batchStockTransfers = [];
-        $batchStockTransferProducts = [];
+        $batchSize = 50; // You can adjust
 
-        $companyId = Auth::user()->company_id; // ✅ cache company_id
+        $stockTransfersBatch = [];
+        $productsBatch = [];
 
+        $transferIdMap = []; // Map transfer_id => data for later linking
+
+        // Step 1: Prepare stock transfer records
         foreach ($data as $record) {
-
             $itemsData = json_decode($record['items'], true);
 
             if (!is_array($itemsData) || !isset($itemsData['product'], $itemsData['desc'], $itemsData['quantity'], $itemsData['unit'], $itemsData['status'])) {
@@ -396,49 +511,60 @@ class StockTransferController extends Controller
                 continue;
             }
 
-            // 🔵 Fetch Godown From ID
-            $godownFrom = GodownModel::where('name', $record['from'] ?? '')
-                            ->where('company_id', $companyId)
-                            ->value('id');
+            // Fetch Godown IDs
+            $godownFromId = GodownModel::where('name', $record['from'] ?? '')
+                                ->where('company_id', $companyId)
+                                ->value('id');
 
-            // 🔵 Fetch Godown To ID
-            $godownTo = GodownModel::where('name', $record['to'] ?? '')
-                            ->where('company_id', $companyId)
-                            ->value('id');
+            $godownToId = GodownModel::where('name', $record['to'] ?? '')
+                                ->where('company_id', $companyId)
+                                ->value('id');
 
-            $batchStockTransfers[] = [
-                'company_id'    => $companyId,
-                'transfer_id'   => $record['transfer_id'],
-                'godown_from'   => $godownFrom ?? null,
-                'godown_to'     => $godownTo ?? null,
-                'transfer_date' => !empty($record['t_date']) ? $record['t_date'] : now(),
-                'status'        => $record['status'] ?? '0',
-                'log_user'      => $record['log_user'] ?? 'Unknown',
-                'created_at'    => now(),
-                'updated_at'    => now(),
+            $stockTransfersBatch[] = [
+                'transfer_id'    => $record['transfer_id'],
+                'company_id'     => $companyId,
+                'godown_from'    => $godownFromId,
+                'godown_to'      => $godownToId,
+                'transfer_date'  => !empty($record['t_date']) ? $record['t_date'] : now(),
+                // 'status'         => $record['status'] ?? '0',
+                // 'log_user'       => $record['log_user'] ?? 'Unknown',
+                'created_at'     => now(),
+                'updated_at'     => now(),
             ];
 
+            // Store raw item data mapped with transfer_id
+            $transferIdMap[$record['transfer_id']] = $itemsData;
+
             $successfulInserts++;
+        }
 
+        // Step 2: Insert stock transfers in batch
+        foreach (array_chunk($stockTransfersBatch, $batchSize) as $chunk) {
+            StockTransferModel::insert($chunk);
+        }
+
+        // Step 3: Fetch newly inserted Stock Transfer IDs if needed (Not needed here because `transfer_id` is custom, not auto_increment)
+
+        // Step 4: Prepare products batch
+        foreach ($transferIdMap as $transferId => $itemsData) {
             foreach ($itemsData['product'] as $index => $productName) {
-
                 $product = ProductsModel::where('name', $productName)->first();
 
                 if (!$product) {
                     $errors[] = [
-                        'record' => $record,
-                        'error' => "Product with name '{$productName}' not found."
+                        'transfer_id' => $transferId,
+                        'error' => "Product '{$productName}' not found."
                     ];
                     continue;
                 }
 
-                $batchStockTransferProducts[] = [
+                $productsBatch[] = [
+                    'transfer_id'   => $transferId,
                     'company_id'    => $companyId,
-                    'transfer_id'   => $record['transfer_id'],
                     'product_id'    => $product->id,
                     'product_name'  => $itemsData['product_name'][$index] ?? $productName,
                     'description'   => $itemsData['desc'][$index] ?? 'No Description',
-                    'quantity'      => isset($itemsData['quantity'][$index]) ? (int)$itemsData['quantity'][$index] : 0,
+                    'quantity'      => isset($itemsData['quantity'][$index]) ? (int) $itemsData['quantity'][$index] : 0,
                     'unit'          => $itemsData['unit'][$index] ?? 'PCS',
                     'status'        => $itemsData['status'][$index] ?? '1',
                     'created_at'    => now(),
@@ -447,21 +573,17 @@ class StockTransferController extends Controller
             }
         }
 
-        // 🔵 Batch Insert Stock Transfers
-        if (!empty($batchStockTransfers)) {
-            StockTransferModel::insert($batchStockTransfers);
-        }
-
-        // 🔵 Batch Insert Stock Transfer Products
-        if (!empty($batchStockTransferProducts)) {
-            StockTransferProductsModel::insert($batchStockTransferProducts);
+        // Step 5: Insert products in batch
+        foreach (array_chunk($productsBatch, $batchSize) as $chunk) {
+            StockTransferProductsModel::insert($chunk);
         }
 
         return response()->json([
             'code' => 200,
             'success' => true,
-            'message' => "Import completed with {$successfulInserts} successful Stock Transfers.",
+            'message' => "Import completed with {$successfulInserts} stock transfers successfully imported.",
             'errors' => $errors,
         ], 200);
     }
+
 }
