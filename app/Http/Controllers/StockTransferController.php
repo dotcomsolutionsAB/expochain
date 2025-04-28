@@ -559,7 +559,7 @@ class StockTransferController extends Controller
                 }
 
                 $productsBatch[] = [
-                    'transfer_id'   => $transferId,
+                    'stock_transfer_id'   => $transferId,
                     'company_id'    => $companyId,
                     'product_id'    => $product->id,
                     'product_name'  => $itemsData['product_name'][$index] ?? $productName,

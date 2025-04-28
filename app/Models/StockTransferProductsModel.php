@@ -16,7 +16,7 @@ class StockTransferProductsModel extends Model
         'product_name',
         'description',
         'quantity',
-        'unit',
-        'status'
+        // 'unit',
+        // 'status'
     ];
 }
