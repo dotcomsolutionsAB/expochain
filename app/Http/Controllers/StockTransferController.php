@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\StockTransferModel;
 use App\Models\StockTransferProductsModel;
 use App\Models\ProductsModel;
-use App\Models\GodownModels;
+use App\Models\GodownModel;
 use Carbon\Carbon;
 use Auth;
 
@@ -464,7 +464,4 @@ class StockTransferController extends Controller
             'errors' => $errors,
         ], 200);
     }
-
-
-
 }
