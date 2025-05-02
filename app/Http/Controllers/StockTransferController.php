@@ -716,4 +716,42 @@ class StockTransferController extends Controller
         ], 200);
     }
 
+    // fetch by product id
+    public function fetchStockTransfersByProduct($productId)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            $transfers = StockTransferProductsModel::with([
+                    'stockTransfer:id,id,transfer_id,transfer_date,godown_from,godown_to',
+                    'stockTransfer.godownFrom:id,name',
+                    'stockTransfer.godownTo:id,name',
+                ])
+                ->where('company_id', $companyId)
+                ->where('product_id', $productId)
+                ->select('stock_transfer_id', 'product_id', 'quantity')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'transfer_id' => optional($item->stockTransfer)->transfer_id,
+                        'date'        => optional($item->stockTransfer)->transfer_date,
+                        'from'        => optional($item->stockTransfer->godownFrom)->name,
+                        'to'          => optional($item->stockTransfer->godownTo)->name,
+                        'quantity'    => $item->quantity,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Stock transfers fetched successfully.',
+                'data'    => $transfers,
+            ], 200);
+            
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching stock transfers: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }

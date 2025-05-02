@@ -19,4 +19,9 @@ class StockTransferProductsModel extends Model
         // 'unit',
         // 'status'
     ];
+
+    public function stockTransfer()
+    {
+        return $this->belongsTo(StockTransferModel::class, 'stock_transfer_id', 'id');
+    }
 }

@@ -219,6 +219,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/stock_transfer_migrate', [StockTransferController::class, 'importStockTransfers']);
 
+    Route::get('/stock_transfers_by_product/{productId}', [YourController::class, 'fetchStockTransfersByProduct']);
+
     Route::post('/add_assembly', [AssemblyController::class, 'add_assembly']);
     Route::post('/assembly/{id?}', [AssemblyController::class, 'view_assembly']);
     Route::post('/update_assembly/{id?}', [AssemblyController::class, 'edit_assembly']);
