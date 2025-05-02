@@ -272,7 +272,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/purchase_back', [PurchaseBackController::class, 'add_purchase_back']); // Create purchase-bcak
     Route::get('/purchase_back', [PurchaseBackController::class, 'fetch_purchase_back']); // View All purchase-back
 
-    Route::get('/dashboard', [HelperController::class, 'dashboard']);
+    Route::post('/dashboard', [HelperController::class, 'dashboard']);
 
     Route::get('/statistic', [HelperController::class, 'getSummary']);
 

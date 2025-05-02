@@ -9,36 +9,212 @@ use App\Models\PurchaseInvoiceModel;
 use App\Models\SalesInvoiceModel;
 use App\Models\PurchaseInvoiceProductsModel;
 use App\Models\SalesInvoiceProductsModel;
+use App\Models\ClosingStockModel;
+use App\Models\PurchaseOrderModel;
+use App\Models\PurchaseOrderProductsModel;
+use App\Models\SalesOrderModel;
+use App\Models\SalesOrderProductsModel;
+use App\Models\GodownModel;
 use DB;
 
 class HelperController extends Controller
 {
 
     // dashboard
-    public function dashboard()
+    // public function dashboard()
+    // {
+    //     try {
+    //         $companyId = Auth::user()->company_id;
+
+    //         // Get the total count of products
+    //         $totalProducts = ProductsModel::where('company_id', $companyId)->count();
+
+    //         // Fetch products with their group and category (using eager loading)
+    //         $products = ProductsModel::with([
+    //                 'groupRelation:id,name',
+    //                 'categoryRelation:id,name'
+    //             ])
+    //             ->where('company_id', $companyId)
+    //             ->select('id', 'name', 'alias', 'group', 'category')
+    //             ->get();
+
+    //         // Fetch closing stock with godown names
+    //         $closingStock = ClosingStockModel::where('company_id', $companyId)
+    //         ->with('godown:id,name')
+    //         ->get()
+    //         ->groupBy('product_id');
+
+    //         // Fetch pending purchase orders
+    //         $pendingPurchase = PurchaseOrderModel::where('company_id', $companyId)
+    //         ->where('status', 'pending')
+    //         ->with('products')
+    //         ->get()
+    //         ->flatMap(function ($order) {
+    //             return $order->products->pluck('product_id');
+    //         })
+    //         ->countBy();
+
+    //         // Fetch pending sales orders
+    //         $pendingSales = SalesOrderModel::where('company_id', $companyId)
+    //         ->where('status', 'pending')
+    //         ->with('products')
+    //         ->get()
+    //         ->flatMap(function ($order) {
+    //             return $order->products->pluck('product_id');
+    //         })
+    //         ->countBy();
+
+    //         // Transform the products so that only required fields are returned
+    //         // $productsTransformed = $products->map(function ($product) {
+    //         //     return [
+    //         //         'name'     => $product->name,
+    //         //         'alias'    => $product->alias,
+    //         //         'group'    => optional($product->groupRelation)->name,     // returns null if no group found
+    //         //         'category' => optional($product->categoryRelation)->name,   // returns null if no category found
+    //         //     ];
+    //         // });
+    //         $productsTransformed = $products->map(function ($product) use ($closingStock, $pendingPurchase, $pendingSales) {
+    //             $stockData = [];
+        
+    //             if (isset($closingStock[$product->id])) {
+    //                 foreach ($closingStock[$product->id] as $stock) {
+    //                     $stockData[] = [
+    //                         'godown_name' => optional($stock->godown)->name,
+    //                         'quantity' => $stock->quantity,
+    //                     ];
+    //                 }
+    //             }
+        
+    //             return [
+    //                 'id' => $product->id,
+    //                 'name' => $product->name,
+    //                 'alias' => $product->alias,
+    //                 'group' => optional($product->groupRelation)->name,
+    //                 'category' => optional($product->categoryRelation)->name,
+    //                 'stock_by_godown' => $stockData,
+    //                 'pending_purchase' => $pendingPurchase[$product->id] ?? 0,
+    //                 'pending_sales' => $pendingSales[$product->id] ?? 0,
+    //             ];
+    //         });
+
+    //         return response()->json([
+    //             'code' => 200,
+    //             'success' => true,
+    //             'message' => "Fetched successfully",
+    //             'data'     => [
+    //                 'total_products' => $totalProducts,
+    //             ],
+    //             'products' => $productsTransformed,
+    //         ], 200);
+    //     } catch (\Throwable $e) {
+    //         return response()->json([
+    //             'code' => 500,
+    //             'success' => false,
+    //             'message' => 'Something went wrong: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
+    public function dashboard(Request $request)
     {
         try {
             $companyId = Auth::user()->company_id;
 
-            // Get the total count of products
-            $totalProducts = ProductsModel::where('company_id', $companyId)->count();
+            // Extract filters from request
+            $limit = $request->input('limit', 50);
+            $offset = $request->input('offset', 0);
+            $filterProduct = $request->input('product');
+            $filterGroup = $request->input('group');
+            $filterCategory = $request->input('category');
+            $filterSubCategory = $request->input('sub_category');
+            $filterAlias = $request->input('alias');
 
-            // Fetch products with their group and category (using eager loading)
-            $products = ProductsModel::with([
-                    'groupRelation:id,name',
-                    'categoryRelation:id,name'
-                ])
-                ->where('company_id', $companyId)
+            // Base query
+            $productQuery = ProductsModel::with([
+                'groupRelation:id,name',
+                'categoryRelation:id,name'
+            ])
+            ->where('company_id', $companyId);
+
+            // Apply filters
+            if ($filterProduct) {
+                $productQuery->where('name', 'like', '%' . $filterProduct . '%');
+            }
+            if ($filterAlias) {
+                $productQuery->where('alias', 'like', '%' . $filterAlias . '%');
+            }
+            if ($filterGroup) {
+                $groupIds = explode(',', $filterGroup);
+                $productQuery->whereIn('group', $groupIds);
+            }
+            if ($filterCategory) {
+                $catIds = explode(',', $filterCategory);
+                $productQuery->whereIn('category', $catIds);
+            }
+            if ($filterSubCategory) {
+                $subCatIds = explode(',', $filterSubCategory);
+                $productQuery->whereIn('sub_category', $subCatIds);
+            }
+
+            // Get total count before pagination
+            $totalProducts = $productQuery->count();
+
+            // Apply pagination
+            $products = $productQuery
                 ->select('id', 'name', 'alias', 'group', 'category')
+                ->offset($offset)
+                ->limit($limit)
                 ->get();
 
-            // Transform the products so that only required fields are returned
-            $productsTransformed = $products->map(function ($product) {
+            // Fetch related stock
+            $closingStock = ClosingStockModel::where('company_id', $companyId)
+                ->with('godown:id,name')
+                ->get()
+                ->groupBy('product_id');
+
+            // Purchase orders (pending)
+            $pendingPurchase = PurchaseOrderModel::where('company_id', $companyId)
+                ->where('status', 'pending')
+                ->with('products')
+                ->get()
+                ->flatMap(fn($order) => $order->products->pluck('product_id'))
+                ->countBy();
+
+            // Sales orders (pending)
+            $pendingSales = SalesOrderModel::where('company_id', $companyId)
+                ->where('status', 'pending')
+                ->with('products')
+                ->get()
+                ->flatMap(fn($order) => $order->products->pluck('product_id'))
+                ->countBy();
+
+            // Format output
+            $productsTransformed = $products->map(function ($product) use ($closingStock, $pendingPurchase, $pendingSales) {
+                $stockData = [];
+                $totalQuantity = 0;
+
+                if (isset($closingStock[$product->id])) {
+                    foreach ($closingStock[$product->id] as $stock) {
+                        $qty = $stock->quantity ?? 0;
+                        $stockData[] = [
+                            'godown_name' => optional($stock->godown)->name,
+                            'quantity' => $qty
+                        ];
+                        $totalQuantity += $qty;
+                    }
+                }
+
                 return [
-                    'name'     => $product->name,
-                    'alias'    => $product->alias,
-                    'group'    => optional($product->groupRelation)->name,     // returns null if no group found
-                    'category' => optional($product->categoryRelation)->name,   // returns null if no category found
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'alias' => $product->alias,
+                    'group' => optional($product->groupRelation)->name,
+                    'category' => optional($product->categoryRelation)->name,
+                    'stock_by_godown' => $stockData,
+                    'total_quantity' => $totalQuantity,
+                    'stock_value' => 0,
+                    'pending_purchase' => $pendingPurchase[$product->id] ?? 0,
+                    'pending_sales' => $pendingSales[$product->id] ?? 0,
                 ];
             });
 
@@ -46,12 +222,14 @@ class HelperController extends Controller
                 'code' => 200,
                 'success' => true,
                 'message' => "Fetched successfully",
-                'data'     => [
+                'data' => [
                     'total_products' => $totalProducts,
-                ],
-                'products' => $productsTransformed,
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'records' => $productsTransformed,
+                ]
             ], 200);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return response()->json([
                 'code' => 500,
                 'success' => false,

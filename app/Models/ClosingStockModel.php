@@ -18,4 +18,9 @@ class ClosingStockModel extends Model
         'value',
         'sold'
     ];
+
+    public function godown()
+    {
+        return $this->belongsTo(GodownModel::class, 'godown_id');
+    }
 }
