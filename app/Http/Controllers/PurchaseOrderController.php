@@ -1131,7 +1131,6 @@ class PurchaseOrderController extends Controller
                         'qty' => $item->quantity,
                         'price' => $item->price,
                         'amount' => $item->amount,
-                        'place' => '-', // or optional($item->godownRelation)->name if applicable
                     ];
                 });
 
