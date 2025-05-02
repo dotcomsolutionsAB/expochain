@@ -1109,42 +1109,82 @@ class PurchaseOrderController extends Controller
     }
 
     // fetch by product id
+    // public function fetchPurchaseOrdersByProduct($productId)
+    // {
+    //     try {
+    //         $companyId = Auth::user()->company_id;
+
+    //         $orders = PurchaseOrderProductsModel::with([
+    //                 'purchaseOrder:id,purchase_order_no,purchase_order_date,supplier_id',
+    //                 'purchaseOrder.supplier:id,name',
+    //                 // 'godownRelation:id,name' // Uncomment if `godown` exists
+    //             ])
+    //             ->where('company_id', $companyId)
+    //             ->where('product_id', $productId)
+    //             ->select('purchase_order_id', 'product_id', 'quantity', 'price', 'amount')
+    //             ->get()
+    //             ->map(function ($item) {
+    //                 return [
+    //                     'order_no' => optional($item->purchaseOrder)->purchase_order_no,
+    //                     'date' => optional($item->purchaseOrder)->purchase_order_date,
+    //                     'supplier' => optional($item->purchaseOrder->supplier)->name,
+    //                     'qty' => $item->quantity,
+    //                     'price' => $item->price,
+    //                     'amount' => $item->amount,
+    //                 ];
+    //             });
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Purchase orders fetched successfully.',
+    //             'data' => $orders,
+    //         ], 200);
+
+    //     } catch (\Throwable $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Error fetching purchase orders: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
     public function fetchPurchaseOrdersByProduct($productId)
-    {
-        try {
-            $companyId = Auth::user()->company_id;
+{
+    try {
+        $companyId = Auth::user()->company_id;
 
-            $orders = PurchaseOrderProductsModel::with([
-                    'purchaseOrder:id,purchase_order_no,purchase_order_date,supplier_id',
-                    'purchaseOrder.supplier:id,name',
-                    // 'godownRelation:id,name' // Uncomment if `godown` exists
-                ])
-                ->where('company_id', $companyId)
-                ->where('product_id', $productId)
-                ->select('purchase_order_id', 'product_id', 'quantity', 'price', 'amount')
-                ->get()
-                ->map(function ($item) {
-                    return [
-                        'order_no' => optional($item->purchaseOrder)->purchase_order_no,
-                        'date' => optional($item->purchaseOrder)->purchase_order_date,
-                        'supplier' => optional($item->purchaseOrder->supplier)->name,
-                        'qty' => $item->quantity,
-                        'price' => $item->price,
-                        'amount' => $item->amount,
-                    ];
-                });
+        $orders = PurchaseOrderProductsModel::with([
+                'purchaseOrder:id,purchase_order_no,oa_no,purchase_order_date,supplier_id',
+                'purchaseOrder.supplier:id,name'
+            ])
+            ->where('company_id', $companyId)
+            ->where('product_id', $productId)
+            ->select('purchase_order_id', 'product_id', 'quantity', 'received', 'price', 'amount')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'order_no'  => optional($item->purchaseOrder)->purchase_order_no,
+                    'oa_no'     => optional($item->purchaseOrder)->oa_no,
+                    'date'      => optional($item->purchaseOrder)->purchase_order_date,
+                    'supplier'  => optional($item->purchaseOrder->supplier)->name,
+                    'qty'       => $item->quantity,
+                    'received'  => $item->received,
+                    'price'     => $item->price,
+                    'amount'    => $item->amount,
+                ];
+            });
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Purchase orders fetched successfully.',
-                'data' => $orders,
-            ], 200);
+        return response()->json([
+            'success' => true,
+            'message' => 'Purchase orders fetched successfully.',
+            'data' => $orders,
+        ], 200);
 
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error fetching purchase orders: ' . $e->getMessage(),
-            ], 500);
-        }
+    } catch (\Throwable $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching purchase orders: ' . $e->getMessage(),
+        ], 500);
     }
+}
+
 }
