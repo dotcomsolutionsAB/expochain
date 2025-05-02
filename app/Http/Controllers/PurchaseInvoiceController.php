@@ -1158,43 +1158,43 @@ class PurchaseInvoiceController extends Controller
     }
 
      // fetch by product id
-    public function fetchPurchasesByProduct($productId)
-    {
-        try {
-            $companyId = Auth::user()->company_id;
-
-            $purchases = PurchaseInvoiceProductsModel::with([
-                    'purchaseInvoice:id,purchase_invoice_no,purchase_invoice_date,supplier_id',
-                    'purchaseInvoice.supplier:id,name',
-                ])
-                ->where('company_id', $companyId)
-                ->where('product_id', $productId)
-                ->select('purchase_invoice_id', 'product_id', 'quantity', 'price', 'amount', 'godown')
-                ->get()
-                ->map(function ($item) {
-                    return [
-                        'invoice'  => optional($item->purchaseInvoice)->purchase_invoice_no,
-                        'date'     => optional($item->purchaseInvoice)->purchase_invoice_date,
-                        'supplier' => optional($item->purchaseInvoice->supplier)->name,
-                        'qty'      => $item->quantity,
-                        'price'    => $item->price,
-                        'amount'   => $item->amount,
-                        'place'    => $item->godown ?? '-',  // You can resolve this via relationship if godown model is defined
-                    ];
-                });
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Purchase records fetched successfully.',
-                'data'    => $purchases,
-            ], 200);
-
-        } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error fetching purchases: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
+     public function fetchPurchasesByProduct($productId)
+     {
+         try {
+             $companyId = Auth::user()->company_id;
+     
+             $purchases = PurchaseInvoiceProductsModel::with([
+                     'purchaseInvoice:id,purchase_invoice_no,purchase_invoice_date,supplier_id',
+                     'purchaseInvoice.supplier:id,name',
+                     'godownRelation:id,name', // Eager load godown name
+                 ])
+                 ->where('company_id', $companyId)
+                 ->where('product_id', $productId)
+                 ->select('purchase_invoice_id', 'product_id', 'quantity', 'price', 'amount', 'godown')
+                 ->get()
+                 ->map(function ($item) {
+                     return [
+                         'invoice'  => optional($item->purchaseInvoice)->purchase_invoice_no,
+                         'date'     => optional($item->purchaseInvoice)->purchase_invoice_date,
+                         'supplier' => optional($item->purchaseInvoice->supplier)->name,
+                         'qty'      => $item->quantity,
+                         'price'    => $item->price,
+                         'amount'   => $item->amount,
+                         'place'    => optional($item->godownRelation)->name ?? '-',
+                     ];
+                 });
+     
+             return response()->json([
+                 'success' => true,
+                 'message' => 'Purchase records fetched successfully.',
+                 'data'    => $purchases,
+             ], 200);
+     
+         } catch (\Throwable $e) {
+             return response()->json([
+                 'success' => false,
+                 'message' => 'Error fetching purchases: ' . $e->getMessage(),
+             ], 500);
+         }
+     }
 }
