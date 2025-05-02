@@ -980,7 +980,6 @@ class SalesOrderController extends Controller
         ]);
     }
 
-
     // export
     public function export_sales_orders(Request $request)
     {
@@ -1310,4 +1309,44 @@ class SalesOrderController extends Controller
             ], 500);
         }
     }
+
+    // fetch by product id
+    public function fetchSalesOrdersByProduct($productId)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            $orders = SalesOrderProductsModel::with([
+                    'salesOrder:id,sales_order_no,sales_order_date,client_id',
+                    'salesOrder.client:id,name',
+                ])
+                ->where('company_id', $companyId)
+                ->where('product_id', $productId)
+                ->select('sales_order_id', 'product_id', 'quantity', 'price', 'amount')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'order_no' => optional($item->salesOrder)->sales_order_no,
+                        'date'     => optional($item->salesOrder)->sales_order_date,
+                        'client'   => optional($item->salesOrder->client)->name,
+                        'qty'      => $item->quantity,
+                        'price'    => $item->price,
+                        'amount'   => $item->amount,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sales order records fetched successfully.',
+                'data'    => $orders,
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching sales orders: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
 }
