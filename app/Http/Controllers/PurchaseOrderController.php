@@ -852,10 +852,14 @@ class PurchaseOrderController extends Controller
 
                 // Insert Products
                 foreach ($itemsData['product'] as $index => $productName) {
+
+                    $get_product = ProductsModel::where('name', $productName)->first();
+                    $productId = $get_product ? $get_product->id : null;
+
                     $productsBatch[] = [
                         'purchase_order_id' => $purchaseOrderId,
                         'company_id' => Auth::user()->company_id,
-                        'product_id' => $index + 1,
+                        'product_id' => $productId,
                         'product_name' => $productName,
                             'description' => $itemsData['desc'][$index] ?? 'No Description',
                             'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
