@@ -854,7 +854,7 @@ class PurchaseOrderController extends Controller
                 foreach ($itemsData['product'] as $index => $productName) {
 
                     $get_product = ProductsModel::where('name', $productName)->first();
-                    $productId = $get_product ? $get_product->id : null;
+                    $productId = $get_product ? $get_product->id : 0;
 
                     $productsBatch[] = [
                         'purchase_order_id' => $purchaseOrderId,
