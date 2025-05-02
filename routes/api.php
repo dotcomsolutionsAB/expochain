@@ -195,6 +195,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/export_purchase_invoice_report', [PurchaseInvoiceController::class, 'exportPurchaseInvoiceReport']);
 
+    Route::get('/sales_by_product/{id}', [PurchaseInvoiceController::class, 'fetchPurchasesByProduct']);
+
     Route::post('/add_purchase_return', [PurchaseReturnController::class, 'add_purchase_return']);
     Route::post('/purchase_return/{id?}', [PurchaseReturnController::class, 'view_purchase_return']);
     Route::post('/update_purchase_return/{id?}', [PurchaseReturnController::class, 'edit_purchase_return']);
