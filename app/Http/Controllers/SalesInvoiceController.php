@@ -959,4 +959,48 @@ class SalesInvoiceController extends Controller
             ]);
         }
     }
+
+    // fetch by product id
+    public function fetchSalesByProduct($productId)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            $sales = SalesInvoiceProductsModel::with([
+                    'salesInvoice:id,sales_invoice_no,sales_invoice_date,client_id',
+                    'salesInvoice.client:id,name',
+                    'godownRelation:id,name',
+                ])
+                ->where('company_id', $companyId)
+                ->where('product_id', $productId)
+                ->select('sales_invoice_id', 'product_id', 'quantity', 'price', 'amount', 'profit', 'godown')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'invoice' => optional($item->salesInvoice)->sales_invoice_no,
+                        'date' => optional($item->salesInvoice)->sales_invoice_date,
+                        'client' => optional($item->salesInvoice->client)->name,
+                        'qty' => $item->quantity,
+                        'price' => $item->price,
+                        'amount' => $item->amount,
+                        'profit' => $item->profit,
+                        'place' => optional($item->godownRelation)->name,
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Sales records fetched successfully.',
+                'data' => $sales,
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching sales: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
 }

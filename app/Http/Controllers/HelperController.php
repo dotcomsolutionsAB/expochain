@@ -125,8 +125,8 @@ class HelperController extends Controller
                     'stock_by_godown' => $stockData,
                     'total_quantity' => $totalQuantity,
                     'stock_value' => 0,
-                    'pending_purchase' => $pendingPurchase[$product->id] ?? 0,
-                    'pending_sales' => $pendingSales[$product->id] ?? 0,
+                    'pending_po' => $pendingPurchase[$product->id] ?? 0,
+                    'pending_so' => $pendingSales[$product->id] ?? 0,
                 ];
             });
 

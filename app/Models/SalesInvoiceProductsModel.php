@@ -37,11 +37,16 @@ class SalesInvoiceProductsModel extends Model
 
     public function salesInvoice()
     {
-        return $this->belongsTo(SalesInvoiceModel::class, 'sales_invoice_id');
+        return $this->belongsTo(SalesInvoiceModel::class, 'sales_invoice_id', 'id');
     }
 
     public function product()
     {
-        return $this->belongsTo(ProductsModel::class, 'product_id');
+        return $this->belongsTo(ProductsModel::class, 'product_id', 'id');
+    }
+
+    public function godownRelation()
+    {
+        return $this->belongsTo(GodownModel::class, 'godown', 'id');
     }
 }

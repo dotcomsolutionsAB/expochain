@@ -152,6 +152,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/export_sales_invoice_report', [SalesInvoiceController::class, 'exportSalesInvoiceReport']);
 
+    Route::get('/sales/by_product/{id}', [SalesInvoiceController::class, 'fetchSalesByProduct']);
+
     Route::post('/add_sales_return', [SalesReturnController::class, 'add_sales_return']);
     Route::post('/sales_return/{id?}', [SalesReturnController::class, 'view_sales_return']);
     Route::post('/update_sales_return/{id?}', [SalesReturnController::class, 'edit_sales_return']);
