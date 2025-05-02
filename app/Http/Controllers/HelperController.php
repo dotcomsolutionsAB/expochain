@@ -16,6 +16,7 @@ use App\Models\SalesOrderModel;
 use App\Models\SalesOrderProductsModel;
 use App\Models\GodownModel;
 use DB;
+use Auth;
 
 class HelperController extends Controller
 {
