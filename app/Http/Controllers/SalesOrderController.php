@@ -1348,75 +1348,162 @@ class SalesOrderController extends Controller
     //         ], 500);
     //     }
     // }
+    // public function fetchSalesOrdersByProduct(Request $request, $productId)
+    // {
+    //     try {
+    //         $companyId = Auth::user()->company_id;
+
+    //         // Pagination inputs
+    //         $page = (int)$request->input('page', 1);
+    //         $perPage = (int)$request->input('per_page', 20);
+    //         $offset = ($page - 1) * $perPage;
+
+    //         // Sorting inputs
+    //         $sortField = $request->input('sort_field', 'date'); // 'order_no', 'client', 'qty', 'price', 'amount'
+    //         $sortOrder = strtolower($request->input('sort_order', 'asc')); // 'asc' or 'desc'
+
+    //         // Fetch all matching records
+    //         $records = SalesOrderProductsModel::with([
+    //                 'salesOrder:id,sales_order_no,sales_order_date,client_id',
+    //                 'salesOrder.client:id,name',
+    //             ])
+    //             ->where('company_id', $companyId)
+    //             ->where('product_id', $productId)
+    //             ->select('sales_order_id', 'product_id', 'quantity', 'price', 'amount')
+    //             ->get()
+    //             ->map(function ($item) {
+    //                 return [
+    //                     'order_no' => optional($item->salesOrder)->sales_order_no,
+    //                     'date'     => optional($item->salesOrder)->sales_order_date,
+    //                     'client'   => optional($item->salesOrder->client)->name,
+    //                     'qty'      => $item->quantity,
+    //                     'price'    => $item->price,
+    //                     'amount'   => $item->amount,
+    //                 ];
+    //             })
+    //             ->toArray();
+
+    //         // Sort using PHP
+    //         usort($records, function ($a, $b) use ($sortField, $sortOrder) {
+    //             $valA = $a[$sortField] ?? null;
+    //             $valB = $b[$sortField] ?? null;
+
+    //             if ($valA == $valB) return 0;
+
+    //             return $sortOrder === 'desc'
+    //                 ? ($valA < $valB ? 1 : -1)
+    //                 : ($valA > $valB ? 1 : -1);
+    //         });
+
+    //         // Paginate
+    //         $paginated = array_slice($records, $offset, $perPage);
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Sales order records fetched successfully.',
+    //             'meta' => [
+    //                 'page' => $page,
+    //                 'per_page' => $perPage,
+    //                 'total' => count($records),
+    //                 'total_pages' => ceil(count($records) / $perPage),
+    //             ],
+    //             'data' => $paginated,
+    //         ], 200);
+
+    //     } catch (\Throwable $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Error fetching sales orders: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
     public function fetchSalesOrdersByProduct(Request $request, $productId)
     {
         try {
             $companyId = Auth::user()->company_id;
-
-            // Pagination inputs
-            $page = (int)$request->input('page', 1);
-            $perPage = (int)$request->input('per_page', 20);
+    
+            // Pagination
+            $page = (int) $request->input('page', 1);
+            $perPage = (int) $request->input('per_page', 20);
             $offset = ($page - 1) * $perPage;
-
-            // Sorting inputs
-            $sortField = $request->input('sort_field', 'date'); // 'order_no', 'client', 'qty', 'price', 'amount'
+    
+            // Sorting
+            $sortField = $request->input('sort_field', 'date'); // Default
             $sortOrder = strtolower($request->input('sort_order', 'asc')); // 'asc' or 'desc'
-
-            // Fetch all matching records
+    
+            $validFields = ['order', 'client_order', 'date', 'client', 'qty', 'sent', 'price', 'amount'];
+            if (!in_array($sortField, $validFields)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid sort field.'
+                ], 422);
+            }
+    
+            // Fetch full data
             $records = SalesOrderProductsModel::with([
                     'salesOrder:id,sales_order_no,sales_order_date,client_id',
                     'salesOrder.client:id,name',
                 ])
                 ->where('company_id', $companyId)
                 ->where('product_id', $productId)
-                ->select('sales_order_id', 'product_id', 'quantity', 'price', 'amount')
+                ->select('sales_order_id', 'product_id', 'quantity', 'sent', 'price', 'amount')
                 ->get()
                 ->map(function ($item) {
                     return [
-                        'order_no' => optional($item->salesOrder)->sales_order_no,
-                        'date'     => optional($item->salesOrder)->sales_order_date,
-                        'client'   => optional($item->salesOrder->client)->name,
-                        'qty'      => $item->quantity,
-                        'price'    => $item->price,
-                        'amount'   => $item->amount,
+                        'order'         => optional($item->salesOrder)->sales_order_no,
+                        'client_order'  => optional($item->salesOrder)->sales_order_no, // duplicate label as requested
+                        'date'          => optional($item->salesOrder)->sales_order_date,
+                        'client'        => optional($item->salesOrder->client)->name,
+                        'qty'           => (float) $item->quantity,
+                        'sent'          => (float) $item->sent,
+                        'price'         => (float) $item->price,
+                        'amount'        => (float) $item->amount,
                     ];
-                })
-                ->toArray();
-
-            // Sort using PHP
+                })->toArray();
+    
+            // Total sums before pagination
+            $totalQty = array_sum(array_column($records, 'qty'));
+            $totalPrice = array_sum(array_column($records, 'price'));
+    
+            // Sort in PHP
             usort($records, function ($a, $b) use ($sortField, $sortOrder) {
-                $valA = $a[$sortField] ?? null;
-                $valB = $b[$sortField] ?? null;
-
-                if ($valA == $valB) return 0;
-
                 return $sortOrder === 'desc'
-                    ? ($valA < $valB ? 1 : -1)
-                    : ($valA > $valB ? 1 : -1);
+                    ? ($a[$sortField] < $b[$sortField] ? 1 : -1)
+                    : ($a[$sortField] > $b[$sortField] ? 1 : -1);
             });
-
+    
             // Paginate
             $paginated = array_slice($records, $offset, $perPage);
-
+    
+            // Subtotal (for current page)
+            $subQty = array_sum(array_column($paginated, 'qty'));
+            $subPrice = array_sum(array_column($paginated, 'price'));
+    
             return response()->json([
                 'success' => true,
                 'message' => 'Sales order records fetched successfully.',
                 'meta' => [
                     'page' => $page,
                     'per_page' => $perPage,
-                    'total' => count($records),
+                    'total_records' => count($records),
                     'total_pages' => ceil(count($records) / $perPage),
+                    'sub_totals' => [
+                        'qty' => $subQty,
+                        'price' => $subPrice,
+                    ],
+                    'totals' => [
+                        'qty' => $totalQty,
+                        'price' => $totalPrice,
+                    ],
                 ],
                 'data' => $paginated,
             ], 200);
-
+    
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error fetching sales orders: ' . $e->getMessage(),
             ], 500);
         }
-    }
-
-
+    }    
 }
