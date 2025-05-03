@@ -717,13 +717,70 @@ class StockTransferController extends Controller
     }
 
     // fetch by product id
-    public function fetchStockTransfersByProduct($productId)
+    // public function fetchStockTransfersByProduct($productId)
+    // {
+    //     try {
+    //         $companyId = Auth::user()->company_id;
+
+    //         $transfers = StockTransferProductsModel::with([
+    //                 'stockTransfer:id,id,transfer_id,transfer_date,godown_from,godown_to',
+    //                 'stockTransfer.godownFrom:id,name',
+    //                 'stockTransfer.godownTo:id,name',
+    //             ])
+    //             ->where('company_id', $companyId)
+    //             ->where('product_id', $productId)
+    //             ->select('stock_transfer_id', 'product_id', 'quantity')
+    //             ->get()
+    //             ->map(function ($item) {
+    //                 return [
+    //                     'transfer_id' => optional($item->stockTransfer)->transfer_id,
+    //                     'date'        => optional($item->stockTransfer)->transfer_date,
+    //                     'from'        => optional($item->stockTransfer->godownFrom)->name,
+    //                     'to'          => optional($item->stockTransfer->godownTo)->name,
+    //                     'quantity'    => $item->quantity,
+    //                 ];
+    //             });
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Stock transfers fetched successfully.',
+    //             'data'    => $transfers,
+    //         ], 200);
+            
+    //     } catch (\Throwable $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Error fetching stock transfers: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+    public function fetchStockTransfersByProduct(Request $request, $productId)
     {
         try {
             $companyId = Auth::user()->company_id;
 
-            $transfers = StockTransferProductsModel::with([
-                    'stockTransfer:id,id,transfer_id,transfer_date,godown_from,godown_to',
+            // Inputs
+            $sortField = $request->input('sort_field', 'date');
+            $sortOrder = strtolower($request->input('sort_order', 'asc'));
+            $limit = (int) $request->input('limit', 10);
+            $offset = (int) $request->input('offset', 0);
+            $searchTransferId = $request->input('transfer_id');
+
+            $validFields = ['transfer_id', 'date', 'quantity', 'from', 'to'];
+            if (!in_array($sortField, $validFields)) {
+                return response()->json([
+                    'code' => 422,
+                    'success' => false,
+                    'message' => 'Invalid sort field.',
+                    'data' => [],
+                    'count' => 0,
+                    'total_records' => 0
+                ], 422);
+            }
+
+            // Fetch all transfers
+            $records = StockTransferProductsModel::with([
+                    'stockTransfer:id,transfer_id,transfer_date,godown_from,godown_to',
                     'stockTransfer.godownFrom:id,name',
                     'stockTransfer.godownTo:id,name',
                 ])
@@ -735,22 +792,59 @@ class StockTransferController extends Controller
                     return [
                         'transfer_id' => optional($item->stockTransfer)->transfer_id,
                         'date'        => optional($item->stockTransfer)->transfer_date,
+                        'quantity'    => (float) $item->quantity,
                         'from'        => optional($item->stockTransfer->godownFrom)->name,
                         'to'          => optional($item->stockTransfer->godownTo)->name,
-                        'quantity'    => $item->quantity,
                     ];
-                });
+                })
+                ->toArray();
 
+            // Filter by transfer_id
+            if (!empty($searchTransferId)) {
+                $records = array_filter($records, fn($r) =>
+                    stripos((string) $r['transfer_id'], $searchTransferId) !== false
+                );
+            }
+
+            // Sort
+            usort($records, function ($a, $b) use ($sortField, $sortOrder) {
+                return $sortOrder === 'asc'
+                    ? $a[$sortField] <=> $b[$sortField]
+                    : $b[$sortField] <=> $a[$sortField];
+            });
+
+            // Total (before pagination)
+            $totalQty = array_sum(array_column($records, 'quantity'));
+            $totalRecords = count($records);
+
+            // Pagination
+            $paginated = array_slice($records, $offset, $limit);
+            $subQty = array_sum(array_column($paginated, 'quantity'));
+
+            // Response
             return response()->json([
+                'code' => 200,
                 'success' => true,
-                'message' => 'Stock transfers fetched successfully.',
-                'data'    => $transfers,
+                'message' => 'Fetch data successfully!',
+                'data' => $paginated,
+                'count' => count($paginated),
+                'total_records' => $totalRecords,
+                'sub_total' => [
+                    'quantity' => $subQty,
+                ],
+                'total' => [
+                    'quantity' => $totalQty,
+                ]
             ], 200);
-            
+
         } catch (\Throwable $e) {
             return response()->json([
+                'code' => 500,
                 'success' => false,
                 'message' => 'Error fetching stock transfers: ' . $e->getMessage(),
+                'data' => [],
+                'count' => 0,
+                'total_records' => 0
             ], 500);
         }
     }
