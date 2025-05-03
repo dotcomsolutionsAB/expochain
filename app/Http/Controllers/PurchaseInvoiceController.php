@@ -1158,6 +1158,103 @@ class PurchaseInvoiceController extends Controller
     }
 
     // fetch by product id
+    // public function fetchPurchasesByProduct(Request $request, $productId)
+    // {
+    //     try {
+    //         $companyId = Auth::user()->company_id;
+
+    //         // Input Parameters
+    //         $sortField = $request->input('sort_field', 'date');
+    //         $sortOrder = $request->input('sort_order', 'asc');
+    //         $limit = (int) $request->input('limit', 10);
+    //         $offset = (int) $request->input('offset', 0);
+
+    //         // Validate sort field
+    //         $validFields = ['invoice', 'oa', 'date', 'supplier', 'qty', 'in_stock', 'price', 'amount', 'place'];
+    //         if (!in_array($sortField, $validFields)) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Invalid sort field.',
+    //             ], 422);
+    //         }
+
+    //         // Fetch records
+    //         $records = PurchaseInvoiceProductsModel::with([
+    //                 'purchaseInvoice:id,purchase_invoice_no,purchase_invoice_date,oa_no,supplier_id',
+    //                 'purchaseInvoice.supplier:id,name',
+    //                 'godownRelation:id,name'
+    //             ])
+    //             ->where('company_id', $companyId)
+    //             ->where('product_id', $productId)
+    //             ->select('purchase_invoice_id', 'product_id', 'quantity', 'stock', 'price', 'amount', 'godown')
+    //             ->get()
+    //             ->map(function ($item) {
+    //                 return [
+    //                     'invoice'   => optional($item->purchaseInvoice)->purchase_invoice_no,
+    //                     'oa'        => optional($item->purchaseInvoice)->oa_no,
+    //                     'date'      => optional($item->purchaseInvoice)->purchase_invoice_date,
+    //                     'supplier'  => optional($item->purchaseInvoice->supplier)->name,
+    //                     'qty'       => $item->quantity,
+    //                     'in_stock'  => $item->stock,
+    //                     'price'     => $item->price,
+    //                     'amount'    => $item->amount,
+    //                     'place'     => optional($item->godownRelation)->name ?? '-',
+    //                 ];
+    //             })->toArray();
+
+    //         // Sort data in PHP
+    //         usort($records, function ($a, $b) use ($sortField, $sortOrder) {
+    //             return $sortOrder === 'asc'
+    //                 ? $a[$sortField] <=> $b[$sortField]
+    //                 : $b[$sortField] <=> $a[$sortField];
+    //         });
+
+    //         // Total values (before pagination)
+    //         $totalQty = array_sum(array_column($records, 'qty'));
+    //         $totalStock = array_sum(array_column($records, 'in_stock'));
+    //         $totalPrice = array_sum(array_column($records, 'price'));
+    //         $totalAmount = array_sum(array_column($records, 'amount'));
+
+    //         // Apply pagination
+    //         $paginated = array_slice($records, $offset, $limit);
+
+    //         // Sub Totals for paginated result
+    //         $subQty = array_sum(array_column($paginated, 'qty'));
+    //         $subStock = array_sum(array_column($paginated, 'in_stock'));
+    //         $subPrice = array_sum(array_column($paginated, 'price'));
+    //         $subAmount = array_sum(array_column($paginated, 'amount'));
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Purchase records fetched successfully.',
+    //             'data' => [
+    //                 'total' => count($records),
+    //                 'limit' => $limit,
+    //                 'offset' => $offset,
+    //                 'records' => $paginated,
+    //                 'sub_total' => [
+    //                     'qty' => $subQty,
+    //                     'in_stock' => $subStock,
+    //                     'price' => $subPrice,
+    //                     'amount' => $subAmount,
+    //                 ],
+    //                 'total_sum' => [
+    //                     'qty' => $totalQty,
+    //                     'in_stock' => $totalStock,
+    //                     'price' => $totalPrice,
+    //                     'amount' => $totalAmount,
+    //                 ]
+    //             ]
+    //         ], 200);
+
+    //     } catch (\Throwable $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Error fetching purchases: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+
     public function fetchPurchasesByProduct(Request $request, $productId)
     {
         try {
@@ -1168,18 +1265,23 @@ class PurchaseInvoiceController extends Controller
             $sortOrder = $request->input('sort_order', 'asc');
             $limit = (int) $request->input('limit', 10);
             $offset = (int) $request->input('offset', 0);
+            $filterInvoice = $request->input('invoice');
+            $filterSupplier = $request->input('supplier');
 
-            // Validate sort field
             $validFields = ['invoice', 'oa', 'date', 'supplier', 'qty', 'in_stock', 'price', 'amount', 'place'];
             if (!in_array($sortField, $validFields)) {
                 return response()->json([
+                    'code' => 422,
                     'success' => false,
                     'message' => 'Invalid sort field.',
+                    'data' => [],
+                    'count' => 0,
+                    'total_records' => 0
                 ], 422);
             }
 
-            // Fetch records
-            $records = PurchaseInvoiceProductsModel::with([
+            // Fetch all relevant records
+            $rawRecords = PurchaseInvoiceProductsModel::with([
                     'purchaseInvoice:id,purchase_invoice_no,purchase_invoice_date,oa_no,supplier_id',
                     'purchaseInvoice.supplier:id,name',
                     'godownRelation:id,name'
@@ -1202,56 +1304,74 @@ class PurchaseInvoiceController extends Controller
                     ];
                 })->toArray();
 
-            // Sort data in PHP
-            usort($records, function ($a, $b) use ($sortField, $sortOrder) {
+            // Apply search filters (case-insensitive)
+            if (!empty($filterInvoice)) {
+                $rawRecords = array_filter($rawRecords, function ($item) use ($filterInvoice) {
+                    return stripos($item['invoice'], $filterInvoice) !== false;
+                });
+            }
+
+            if (!empty($filterSupplier)) {
+                $rawRecords = array_filter($rawRecords, function ($item) use ($filterSupplier) {
+                    return stripos($item['supplier'], $filterSupplier) !== false;
+                });
+            }
+
+            // Sort the filtered data
+            usort($rawRecords, function ($a, $b) use ($sortField, $sortOrder) {
                 return $sortOrder === 'asc'
                     ? $a[$sortField] <=> $b[$sortField]
                     : $b[$sortField] <=> $a[$sortField];
             });
 
-            // Total values (before pagination)
-            $totalQty = array_sum(array_column($records, 'qty'));
-            $totalStock = array_sum(array_column($records, 'in_stock'));
-            $totalPrice = array_sum(array_column($records, 'price'));
-            $totalAmount = array_sum(array_column($records, 'amount'));
+            $totalRecords = count($rawRecords);
 
-            // Apply pagination
-            $paginated = array_slice($records, $offset, $limit);
+            // Totals before pagination
+            $totalQty = array_sum(array_column($rawRecords, 'qty'));
+            $totalStock = array_sum(array_column($rawRecords, 'in_stock'));
+            $totalPrice = array_sum(array_column($rawRecords, 'price'));
+            $totalAmount = array_sum(array_column($rawRecords, 'amount'));
 
-            // Sub Totals for paginated result
+            // Paginate
+            $paginated = array_slice($rawRecords, $offset, $limit);
+
+            // Sub-totals for paginated records
             $subQty = array_sum(array_column($paginated, 'qty'));
             $subStock = array_sum(array_column($paginated, 'in_stock'));
             $subPrice = array_sum(array_column($paginated, 'price'));
             $subAmount = array_sum(array_column($paginated, 'amount'));
 
             return response()->json([
+                'code' => 200,
                 'success' => true,
-                'message' => 'Purchase records fetched successfully.',
-                'data' => [
-                    'total' => count($records),
-                    'limit' => $limit,
-                    'offset' => $offset,
-                    'records' => $paginated,
-                    'sub_total' => [
-                        'qty' => $subQty,
-                        'in_stock' => $subStock,
-                        'price' => $subPrice,
-                        'amount' => $subAmount,
-                    ],
-                    'total_sum' => [
-                        'qty' => $totalQty,
-                        'in_stock' => $totalStock,
-                        'price' => $totalPrice,
-                        'amount' => $totalAmount,
-                    ]
+                'message' => 'Fetch data successfully!',
+                'data' => $paginated,
+                'count' => count($paginated),
+                'total_records' => $totalRecords,
+                'sub_total' => [
+                    'qty' => $subQty,
+                    'in_stock' => $subStock,
+                    'price' => $subPrice,
+                    'amount' => $subAmount,
+                ],
+                'total' => [
+                    'qty' => $totalQty,
+                    'in_stock' => $totalStock,
+                    'price' => $totalPrice,
+                    'amount' => $totalAmount,
                 ]
-            ], 200);
+            ]);
 
         } catch (\Throwable $e) {
             return response()->json([
+                'code' => 500,
                 'success' => false,
                 'message' => 'Error fetching purchases: ' . $e->getMessage(),
+                'data' => [],
+                'count' => 0,
+                'total_records' => 0
             ], 500);
         }
     }
+
 }
