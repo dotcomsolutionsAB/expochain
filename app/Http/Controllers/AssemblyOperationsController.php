@@ -609,75 +609,178 @@ class AssemblyOperationsController extends Controller
     }
 
     // fetch by product id
+    // public function fetchAssemblyByProduct(Request $request, $productId)
+    // {
+    //     try {
+    //         $companyId = Auth::user()->company_id;
+
+    //         // Input Parameters
+    //         $sortField = $request->input('sort_field', 'date');
+    //         $sortOrder = $request->input('sort_order', 'asc');
+    //         $limit = (int) $request->input('limit', 10);
+    //         $offset = (int) $request->input('offset', 0);
+
+    //         // Validate sort field
+    //         $validSortFields = ['date', 'quantity', 'operation', 'user'];
+    //         if (!in_array($sortField, $validSortFields)) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Invalid sort field.',
+    //             ], 422);
+    //         }
+
+    //         // Fetch assembly operations with products
+    //         $operations = AssemblyOperationModel::where('company_id', $companyId)
+    //             ->with(['products' => function ($query) use ($productId) {
+    //                 $query->where('product_id', $productId);
+    //             }])
+    //             ->get();
+
+    //         // Flatten and transform
+    //         $records = [];
+
+    //         foreach ($operations as $operation) {
+    //             foreach ($operation->products as $product) {
+    //                 $records[] = [
+    //                     'date' => $operation->assembly_operations_date,
+    //                     'quantity' => $product->quantity,
+    //                     'operation' => $operation->type,
+    //                     'user' => $operation->log_user,
+    //                 ];
+    //             }
+    //         }
+
+    //         // Sort in PHP
+    //         usort($records, function ($a, $b) use ($sortField, $sortOrder) {
+    //             if ($a[$sortField] == $b[$sortField]) return 0;
+    //             return ($sortOrder === 'asc')
+    //                 ? ($a[$sortField] <=> $b[$sortField])
+    //                 : ($b[$sortField] <=> $a[$sortField]);
+    //         });
+
+    //         // Pagination
+    //         $total = count($records);
+    //         $paginated = array_slice($records, $offset, $limit);
+
+    //         // Response
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Assembly operations fetched successfully.',
+    //             'data' => [
+    //                 'total' => $total,
+    //                 'limit' => $limit,
+    //                 'offset' => $offset,
+    //                 'records' => $paginated,
+    //             ]
+    //         ]);
+
+    //     } catch (\Throwable $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Error: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
     public function fetchAssemblyByProduct(Request $request, $productId)
     {
         try {
             $companyId = Auth::user()->company_id;
 
-            // Input Parameters
+            // Inputs
             $sortField = $request->input('sort_field', 'date');
             $sortOrder = $request->input('sort_order', 'asc');
             $limit = (int) $request->input('limit', 10);
             $offset = (int) $request->input('offset', 0);
 
-            // Validate sort field
+            $searchOrder = $request->input('order');      // assembly_operations_id
+            $searchOperation = $request->input('operation');
+            $searchUser = $request->input('user');
+
             $validSortFields = ['date', 'quantity', 'operation', 'user'];
             if (!in_array($sortField, $validSortFields)) {
                 return response()->json([
+                    'code' => 422,
                     'success' => false,
                     'message' => 'Invalid sort field.',
+                    'data' => [],
+                    'count' => 0,
+                    'total_records' => 0
                 ], 422);
             }
 
-            // Fetch assembly operations with products
+            // Fetch all assembly operations
             $operations = AssemblyOperationModel::where('company_id', $companyId)
                 ->with(['products' => function ($query) use ($productId) {
                     $query->where('product_id', $productId);
                 }])
                 ->get();
 
-            // Flatten and transform
             $records = [];
 
             foreach ($operations as $operation) {
                 foreach ($operation->products as $product) {
                     $records[] = [
-                        'date' => $operation->assembly_operations_date,
-                        'quantity' => $product->quantity,
+                        'order'     => $operation->assembly_operations_id,
+                        'date'      => $operation->assembly_operations_date,
+                        'quantity'  => (float) $product->quantity,
                         'operation' => $operation->type,
-                        'user' => $operation->log_user,
+                        'user'      => $operation->log_user,
                     ];
                 }
             }
 
-            // Sort in PHP
+            // Apply search filters
+            if (!empty($searchOrder)) {
+                $records = array_filter($records, fn($r) => stripos((string)$r['order'], $searchOrder) !== false);
+            }
+            if (!empty($searchOperation)) {
+                $records = array_filter($records, fn($r) => stripos($r['operation'], $searchOperation) !== false);
+            }
+            if (!empty($searchUser)) {
+                $records = array_filter($records, fn($r) => stripos($r['user'], $searchUser) !== false);
+            }
+
+            // Sort
             usort($records, function ($a, $b) use ($sortField, $sortOrder) {
-                if ($a[$sortField] == $b[$sortField]) return 0;
-                return ($sortOrder === 'asc')
-                    ? ($a[$sortField] <=> $b[$sortField])
-                    : ($b[$sortField] <=> $a[$sortField]);
+                return $sortOrder === 'asc'
+                    ? $a[$sortField] <=> $b[$sortField]
+                    : $b[$sortField] <=> $a[$sortField];
             });
 
+            // Totals
+            $totalQty = array_sum(array_column($records, 'quantity'));
+
             // Pagination
-            $total = count($records);
+            $totalRecords = count($records);
             $paginated = array_slice($records, $offset, $limit);
+
+            // Subtotal
+            $subQty = array_sum(array_column($paginated, 'quantity'));
 
             // Response
             return response()->json([
+                'code' => 200,
                 'success' => true,
-                'message' => 'Assembly operations fetched successfully.',
-                'data' => [
-                    'total' => $total,
-                    'limit' => $limit,
-                    'offset' => $offset,
-                    'records' => $paginated,
+                'message' => 'Fetch data successfully!',
+                'data' => $paginated,
+                'count' => count($paginated),
+                'total_records' => $totalRecords,
+                'sub_total' => [
+                    'quantity' => $subQty
+                ],
+                'total' => [
+                    'quantity' => $totalQty
                 ]
             ]);
 
         } catch (\Throwable $e) {
             return response()->json([
+                'code' => 500,
                 'success' => false,
                 'message' => 'Error: ' . $e->getMessage(),
+                'data' => [],
+                'count' => 0,
+                'total_records' => 0
             ], 500);
         }
     }
