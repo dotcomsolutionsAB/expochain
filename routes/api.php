@@ -235,6 +235,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/assembly_operations_migrate', [AssemblyOperationsController::class, 'importAssemblyOperations']);
 
+    Route::get('/assembly_operations_by_product/{productId}', [AssemblyOperationsController::class, 'fetchAssemblyByProduct']);
+
     Route::post('/add_fabrication', [FabricationController::class, 'add_fabrication']);
     Route::post('/fabrication', [FabricationController::class, 'view_fabrication']);
     Route::post('/update_fabrication/{id?}', [FabricationController::class, 'edit_fabrication']);
