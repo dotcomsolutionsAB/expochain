@@ -1421,16 +1421,15 @@ class SalesOrderController extends Controller
     {
         try {
             $companyId = Auth::user()->company_id;
-    
-            // Pagination
-            $page = (int) $request->input('page', 1);
-            $perPage = (int) $request->input('per_page', 20);
-            $offset = ($page - 1) * $perPage;
-    
+
+            // Use limit & offset for pagination
+            $limit = (int) $request->input('limit', 20);
+            $offset = (int) $request->input('offset', 0);
+
             // Sorting
-            $sortField = $request->input('sort_field', 'date'); // Default
+            $sortField = $request->input('sort_field', 'date'); // Default field
             $sortOrder = strtolower($request->input('sort_order', 'asc')); // 'asc' or 'desc'
-    
+
             $validFields = ['order', 'client_order', 'date', 'client', 'qty', 'sent', 'price', 'amount'];
             if (!in_array($sortField, $validFields)) {
                 return response()->json([
@@ -1438,8 +1437,8 @@ class SalesOrderController extends Controller
                     'message' => 'Invalid sort field.'
                 ], 422);
             }
-    
-            // Fetch full data
+
+            // Fetch full records
             $records = SalesOrderProductsModel::with([
                     'salesOrder:id,sales_order_no,sales_order_date,client_id',
                     'salesOrder.client:id,name',
@@ -1451,7 +1450,7 @@ class SalesOrderController extends Controller
                 ->map(function ($item) {
                     return [
                         'order'         => optional($item->salesOrder)->sales_order_no,
-                        'client_order'  => optional($item->salesOrder)->sales_order_no, // duplicate label as requested
+                        'client_order'  => optional($item->salesOrder)->sales_order_no,
                         'date'          => optional($item->salesOrder)->sales_order_date,
                         'client'        => optional($item->salesOrder->client)->name,
                         'qty'           => (float) $item->quantity,
@@ -1460,33 +1459,32 @@ class SalesOrderController extends Controller
                         'amount'        => (float) $item->amount,
                     ];
                 })->toArray();
-    
-            // Total sums before pagination
+
+            // Compute totals (all records)
             $totalQty = array_sum(array_column($records, 'qty'));
             $totalPrice = array_sum(array_column($records, 'price'));
-    
-            // Sort in PHP
+
+            // Sort records in PHP
             usort($records, function ($a, $b) use ($sortField, $sortOrder) {
                 return $sortOrder === 'desc'
                     ? ($a[$sortField] < $b[$sortField] ? 1 : -1)
                     : ($a[$sortField] > $b[$sortField] ? 1 : -1);
             });
-    
-            // Paginate
-            $paginated = array_slice($records, $offset, $perPage);
-    
-            // Subtotal (for current page)
+
+            // Paginate using offset and limit
+            $paginated = array_slice($records, $offset, $limit);
+
+            // Sub-totals
             $subQty = array_sum(array_column($paginated, 'qty'));
             $subPrice = array_sum(array_column($paginated, 'price'));
-    
+
             return response()->json([
                 'success' => true,
                 'message' => 'Sales order records fetched successfully.',
                 'meta' => [
-                    'page' => $page,
-                    'per_page' => $perPage,
+                    'limit' => $limit,
+                    'offset' => $offset,
                     'total_records' => count($records),
-                    'total_pages' => ceil(count($records) / $perPage),
                     'sub_totals' => [
                         'qty' => $subQty,
                         'price' => $subPrice,
@@ -1498,12 +1496,12 @@ class SalesOrderController extends Controller
                 ],
                 'data' => $paginated,
             ], 200);
-    
+
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error fetching sales orders: ' . $e->getMessage(),
             ], 500);
         }
-    }    
+    }
 }
