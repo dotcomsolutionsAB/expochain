@@ -1311,28 +1311,123 @@ class SalesOrderController extends Controller
     }
 
     // fetch by product id
+    // public function fetchSalesOrdersByProduct(Request $request, $productId)
+    // {
+    //     try {
+    //         $companyId = Auth::user()->company_id;
+
+    //         // Use limit & offset for pagination
+    //         $limit = (int) $request->input('limit', 10);
+    //         $offset = (int) $request->input('offset', 0);
+
+    //         // Sorting
+    //         $sortField = $request->input('sort_field', 'date'); // Default field
+    //         $sortOrder = strtolower($request->input('sort_order', 'asc')); // 'asc' or 'desc'
+
+    //         $validFields = ['order', 'client_order', 'date', 'client', 'qty', 'sent', 'price', 'amount'];
+    //         if (!in_array($sortField, $validFields)) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Invalid sort field.'
+    //             ], 422);
+    //         }
+
+    //         // Fetch full records
+    //         $records = SalesOrderProductsModel::with([
+    //                 'salesOrder:id,sales_order_no,sales_order_date,client_id',
+    //                 'salesOrder.client:id,name',
+    //             ])
+    //             ->where('company_id', $companyId)
+    //             ->where('product_id', $productId)
+    //             ->select('sales_order_id', 'product_id', 'quantity', 'sent', 'price', 'amount')
+    //             ->get()
+    //             ->map(function ($item) {
+    //                 return [
+    //                     'order'         => optional($item->salesOrder)->sales_order_no,
+    //                     'client_order'  => optional($item->salesOrder)->sales_order_no,
+    //                     'date'          => optional($item->salesOrder)->sales_order_date,
+    //                     'client'        => optional($item->salesOrder->client)->name,
+    //                     'qty'           => (float) $item->quantity,
+    //                     'sent'          => (float) $item->sent,
+    //                     'price'         => (float) $item->price,
+    //                     'amount'        => (float) $item->amount,
+    //                 ];
+    //             })->toArray();
+
+    //         // Compute totals (all records)
+    //         $totalQty = array_sum(array_column($records, 'qty'));
+    //         $totalPrice = array_sum(array_column($records, 'price'));
+
+    //         // Sort records in PHP
+    //         usort($records, function ($a, $b) use ($sortField, $sortOrder) {
+    //             return $sortOrder === 'desc'
+    //                 ? ($a[$sortField] < $b[$sortField] ? 1 : -1)
+    //                 : ($a[$sortField] > $b[$sortField] ? 1 : -1);
+    //         });
+
+    //         // Paginate using offset and limit
+    //         $paginated = array_slice($records, $offset, $limit);
+
+    //         // Sub-totals
+    //         $subQty = array_sum(array_column($paginated, 'qty'));
+    //         $subPrice = array_sum(array_column($paginated, 'price'));
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Sales order records fetched successfully.',
+    //             'meta' => [
+    //                 'limit' => $limit,
+    //                 'offset' => $offset,
+    //                 'total_records' => count($records),
+    //                 'sub_totals' => [
+    //                     'qty' => $subQty,
+    //                     'price' => $subPrice,
+    //                 ],
+    //                 'totals' => [
+    //                     'qty' => $totalQty,
+    //                     'price' => $totalPrice,
+    //                 ],
+    //             ],
+    //             'data' => $paginated,
+    //         ], 200);
+
+    //     } catch (\Throwable $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Error fetching sales orders: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
     public function fetchSalesOrdersByProduct(Request $request, $productId)
     {
         try {
             $companyId = Auth::user()->company_id;
 
-            // Use limit & offset for pagination
+            // Pagination and Sorting Inputs
             $limit = (int) $request->input('limit', 10);
             $offset = (int) $request->input('offset', 0);
+            $sortField = $request->input('sort_field', 'date');
+            $sortOrder = strtolower($request->input('sort_order', 'asc'));
 
-            // Sorting
-            $sortField = $request->input('sort_field', 'date'); // Default field
-            $sortOrder = strtolower($request->input('sort_order', 'asc')); // 'asc' or 'desc'
+            // Search Filters
+            $searchOrder = $request->input('order');
+            $searchClientOrder = $request->input('client_order');
+            $searchClient = $request->input('client');
 
+            // Allowed fields
             $validFields = ['order', 'client_order', 'date', 'client', 'qty', 'sent', 'price', 'amount'];
             if (!in_array($sortField, $validFields)) {
                 return response()->json([
+                    'code' => 422,
                     'success' => false,
-                    'message' => 'Invalid sort field.'
+                    'message' => 'Invalid sort field.',
+                    'data' => [],
+                    'count' => 0,
+                    'total_records' => 0
                 ], 422);
             }
 
-            // Fetch full records
+            // Fetch & Transform
             $records = SalesOrderProductsModel::with([
                     'salesOrder:id,sales_order_no,sales_order_date,client_id',
                     'salesOrder.client:id,name',
@@ -1354,18 +1449,31 @@ class SalesOrderController extends Controller
                     ];
                 })->toArray();
 
-            // Compute totals (all records)
-            $totalQty = array_sum(array_column($records, 'qty'));
-            $totalPrice = array_sum(array_column($records, 'price'));
+            // Apply Filters
+            if (!empty($searchOrder)) {
+                $records = array_filter($records, fn($r) => stripos($r['order'], $searchOrder) !== false);
+            }
 
-            // Sort records in PHP
+            if (!empty($searchClientOrder)) {
+                $records = array_filter($records, fn($r) => stripos($r['client_order'], $searchClientOrder) !== false);
+            }
+
+            if (!empty($searchClient)) {
+                $records = array_filter($records, fn($r) => stripos($r['client'], $searchClient) !== false);
+            }
+
+            // Sort
             usort($records, function ($a, $b) use ($sortField, $sortOrder) {
                 return $sortOrder === 'desc'
                     ? ($a[$sortField] < $b[$sortField] ? 1 : -1)
                     : ($a[$sortField] > $b[$sortField] ? 1 : -1);
             });
 
-            // Paginate using offset and limit
+            // Totals (before pagination)
+            $totalQty = array_sum(array_column($records, 'qty'));
+            $totalPrice = array_sum(array_column($records, 'price'));
+
+            // Paginate
             $paginated = array_slice($records, $offset, $limit);
 
             // Sub-totals
@@ -1373,28 +1481,30 @@ class SalesOrderController extends Controller
             $subPrice = array_sum(array_column($paginated, 'price'));
 
             return response()->json([
+                'code' => 200,
                 'success' => true,
-                'message' => 'Sales order records fetched successfully.',
-                'meta' => [
-                    'limit' => $limit,
-                    'offset' => $offset,
-                    'total_records' => count($records),
-                    'sub_totals' => [
-                        'qty' => $subQty,
-                        'price' => $subPrice,
-                    ],
-                    'totals' => [
-                        'qty' => $totalQty,
-                        'price' => $totalPrice,
-                    ],
-                ],
+                'message' => 'Fetch data successfully!',
                 'data' => $paginated,
-            ], 200);
+                'count' => count($paginated),
+                'total_records' => count($records),
+                'sub_total' => [
+                    'qty' => $subQty,
+                    'price' => $subPrice,
+                ],
+                'total' => [
+                    'qty' => $totalQty,
+                    'price' => $totalPrice,
+                ]
+            ]);
 
         } catch (\Throwable $e) {
             return response()->json([
+                'code' => 500,
                 'success' => false,
                 'message' => 'Error fetching sales orders: ' . $e->getMessage(),
+                'data' => [],
+                'count' => 0,
+                'total_records' => 0
             ], 500);
         }
     }
