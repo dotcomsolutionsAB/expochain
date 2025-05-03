@@ -1109,12 +1109,67 @@ class PurchaseOrderController extends Controller
     }
 
     // fetch by product id
-    public function fetchPurchaseOrdersByProduct($productId)
+    // public function fetchPurchaseOrdersByProduct($productId)
+    // {
+    //     try {
+    //         $companyId = Auth::user()->company_id;
+
+    //         $orders = PurchaseOrderProductsModel::with([
+    //                 'purchaseOrder:id,purchase_order_no,oa_no,purchase_order_date,supplier_id',
+    //                 'purchaseOrder.supplier:id,name'
+    //             ])
+    //             ->where('company_id', $companyId)
+    //             ->where('product_id', $productId)
+    //             ->select('purchase_order_id', 'product_id', 'quantity', 'received', 'price', 'amount')
+    //             ->get()
+    //             ->map(function ($item) {
+    //                 return [
+    //                     'order_no'  => optional($item->purchaseOrder)->purchase_order_no,
+    //                     'oa_no'     => optional($item->purchaseOrder)->oa_no,
+    //                     'date'      => optional($item->purchaseOrder)->purchase_order_date,
+    //                     'supplier'  => optional($item->purchaseOrder->supplier)->name,
+    //                     'qty'       => $item->quantity,
+    //                     'received'  => $item->received,
+    //                     'price'     => $item->price,
+    //                     'amount'    => $item->amount,
+    //                 ];
+    //             });
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Purchase orders fetched successfully.',
+    //             'data' => $orders,
+    //         ], 200);
+
+    //     } catch (\Throwable $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Error fetching purchase orders: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // }
+    public function fetchPurchaseOrdersByProduct(Request $request, $productId)
     {
         try {
             $companyId = Auth::user()->company_id;
-
-            $orders = PurchaseOrderProductsModel::with([
+    
+            // Input Parameters
+            $sortField = $request->input('sort_field', 'date');
+            $sortOrder = $request->input('sort_order', 'asc');
+            $limit = (int) $request->input('limit', 10);
+            $offset = (int) $request->input('offset', 0);
+    
+            // Valid sort fields
+            $validSortFields = ['order_no', 'oa_no', 'date', 'supplier', 'qty', 'received', 'price', 'amount'];
+            if (!in_array($sortField, $validSortFields)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid sort field.',
+                ], 422);
+            }
+    
+            // Fetch all records
+            $records = PurchaseOrderProductsModel::with([
                     'purchaseOrder:id,purchase_order_no,oa_no,purchase_order_date,supplier_id',
                     'purchaseOrder.supplier:id,name'
                 ])
@@ -1128,25 +1183,60 @@ class PurchaseOrderController extends Controller
                         'oa_no'     => optional($item->purchaseOrder)->oa_no,
                         'date'      => optional($item->purchaseOrder)->purchase_order_date,
                         'supplier'  => optional($item->purchaseOrder->supplier)->name,
-                        'qty'       => $item->quantity,
-                        'received'  => $item->received,
-                        'price'     => $item->price,
-                        'amount'    => $item->amount,
+                        'qty'       => (float) $item->quantity,
+                        'received'  => (float) $item->received,
+                        'price'     => (float) $item->price,
+                        'amount'    => (float) $item->amount,
                     ];
-                });
-
+                })->toArray();
+    
+            // Sort
+            usort($records, function ($a, $b) use ($sortField, $sortOrder) {
+                return $sortOrder === 'asc'
+                    ? $a[$sortField] <=> $b[$sortField]
+                    : $b[$sortField] <=> $a[$sortField];
+            });
+    
+            // Calculate totals before pagination
+            $totalQty = array_sum(array_column($records, 'qty'));
+            $totalReceived = array_sum(array_column($records, 'received'));
+            $totalAmount = array_sum(array_column($records, 'amount'));
+    
+            // Apply pagination
+            $paginated = array_slice($records, $offset, $limit);
+    
+            // Subtotals (current page only)
+            $subQty = array_sum(array_column($paginated, 'qty'));
+            $subReceived = array_sum(array_column($paginated, 'received'));
+            $subAmount = array_sum(array_column($paginated, 'amount'));
+    
+            // Final response
             return response()->json([
                 'success' => true,
                 'message' => 'Purchase orders fetched successfully.',
-                'data' => $orders,
-            ], 200);
-
+                'data' => [
+                    'total' => count($records),
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'sub_totals' => [
+                        'qty' => $subQty,
+                        'received' => $subReceived,
+                        'amount' => $subAmount,
+                    ],
+                    'totals' => [
+                        'qty' => $totalQty,
+                        'received' => $totalReceived,
+                        'amount' => $totalAmount,
+                    ],
+                    'records' => $paginated
+                ]
+            ]);
+    
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Error fetching purchase orders: ' . $e->getMessage(),
             ], 500);
         }
-    }
-
+    }    
 }

@@ -186,7 +186,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/export_purchase_order_report', [PurchaseOrderController::class, 'exportPurchaseOrdersReport']);
 
-    Route::get('/purchase_order_by_product/{id}', [PurchaseOrderController::class, 'fetchPurchaseOrdersByProduct']);
+    Route::post('/purchase_order_by_product/{id}', [PurchaseOrderController::class, 'fetchPurchaseOrdersByProduct']);
 
     Route::post('/add_purchase_invoice', [PurchaseInvoiceController::class, 'add_purchase_invoice']);
     Route::post('/purchase_invoice/{id?}', [PurchaseInvoiceController::class, 'view_purchase_invoice']);
