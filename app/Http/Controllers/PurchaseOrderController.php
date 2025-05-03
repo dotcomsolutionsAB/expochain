@@ -1109,27 +1109,125 @@ class PurchaseOrderController extends Controller
     }
 
     // fetch by product id
+    // public function fetchPurchaseOrdersByProduct(Request $request, $productId)
+    // {
+    //     try {
+    //         $companyId = Auth::user()->company_id;
+    
+    //         // Input Parameters
+    //         $sortField = $request->input('sort_field', 'date');
+    //         $sortOrder = $request->input('sort_order', 'asc');
+    //         $limit = (int) $request->input('limit', 10);
+    //         $offset = (int) $request->input('offset', 0);
+    
+    //         // Valid sort fields
+    //         $validSortFields = ['order_no', 'oa_no', 'date', 'supplier', 'qty', 'received', 'price', 'amount'];
+    //         if (!in_array($sortField, $validSortFields)) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Invalid sort field.',
+    //             ], 422);
+    //         }
+    
+    //         // Fetch all records
+    //         $records = PurchaseOrderProductsModel::with([
+    //                 'purchaseOrder:id,purchase_order_no,oa_no,purchase_order_date,supplier_id',
+    //                 'purchaseOrder.supplier:id,name'
+    //             ])
+    //             ->where('company_id', $companyId)
+    //             ->where('product_id', $productId)
+    //             ->select('purchase_order_id', 'product_id', 'quantity', 'received', 'price', 'amount')
+    //             ->get()
+    //             ->map(function ($item) {
+    //                 return [
+    //                     'order_no'  => optional($item->purchaseOrder)->purchase_order_no,
+    //                     'oa_no'     => optional($item->purchaseOrder)->oa_no,
+    //                     'date'      => optional($item->purchaseOrder)->purchase_order_date,
+    //                     'supplier'  => optional($item->purchaseOrder->supplier)->name,
+    //                     'qty'       => (float) $item->quantity,
+    //                     'received'  => (float) $item->received,
+    //                     'price'     => (float) $item->price,
+    //                     'amount'    => (float) $item->amount,
+    //                 ];
+    //             })->toArray();
+    
+    //         // Sort
+    //         usort($records, function ($a, $b) use ($sortField, $sortOrder) {
+    //             return $sortOrder === 'asc'
+    //                 ? $a[$sortField] <=> $b[$sortField]
+    //                 : $b[$sortField] <=> $a[$sortField];
+    //         });
+    
+    //         // Calculate totals before pagination
+    //         $totalQty = array_sum(array_column($records, 'qty'));
+    //         $totalReceived = array_sum(array_column($records, 'received'));
+    //         $totalAmount = array_sum(array_column($records, 'amount'));
+    
+    //         // Apply pagination
+    //         $paginated = array_slice($records, $offset, $limit);
+    
+    //         // Subtotals (current page only)
+    //         $subQty = array_sum(array_column($paginated, 'qty'));
+    //         $subReceived = array_sum(array_column($paginated, 'received'));
+    //         $subAmount = array_sum(array_column($paginated, 'amount'));
+    
+    //         // Final response
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Purchase orders fetched successfully.',
+    //             'data' => [
+    //                 'total' => count($records),
+    //                 'limit' => $limit,
+    //                 'offset' => $offset,
+    //                 'sub_totals' => [
+    //                     'qty' => $subQty,
+    //                     'received' => $subReceived,
+    //                     'amount' => $subAmount,
+    //                 ],
+    //                 'totals' => [
+    //                     'qty' => $totalQty,
+    //                     'received' => $totalReceived,
+    //                     'amount' => $totalAmount,
+    //                 ],
+    //                 'records' => $paginated
+    //             ]
+    //         ]);
+    
+    //     } catch (\Throwable $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Error fetching purchase orders: ' . $e->getMessage(),
+    //         ], 500);
+    //     }
+    // } 
     public function fetchPurchaseOrdersByProduct(Request $request, $productId)
     {
         try {
             $companyId = Auth::user()->company_id;
-    
+
             // Input Parameters
             $sortField = $request->input('sort_field', 'date');
             $sortOrder = $request->input('sort_order', 'asc');
             $limit = (int) $request->input('limit', 10);
             $offset = (int) $request->input('offset', 0);
-    
+            $filterOrderNo = $request->input('order_no');
+            $filterOaNo = $request->input('oa_no');
+            $filterSupplier = $request->input('supplier');
+
             // Valid sort fields
             $validSortFields = ['order_no', 'oa_no', 'date', 'supplier', 'qty', 'received', 'price', 'amount'];
             if (!in_array($sortField, $validSortFields)) {
                 return response()->json([
+                    'code' => 422,
                     'success' => false,
                     'message' => 'Invalid sort field.',
+                    'data' => [],
+                    'count' => 0,
+                    'total_records' => 0
                 ], 422);
             }
-    
-            // Fetch all records
+
+            // Fetch records
             $records = PurchaseOrderProductsModel::with([
                     'purchaseOrder:id,purchase_order_no,oa_no,purchase_order_date,supplier_id',
                     'purchaseOrder.supplier:id,name'
@@ -1150,54 +1248,78 @@ class PurchaseOrderController extends Controller
                         'amount'    => (float) $item->amount,
                     ];
                 })->toArray();
-    
+
+            // Apply filters
+            if (!empty($filterOrderNo)) {
+                $records = array_filter($records, function ($item) use ($filterOrderNo) {
+                    return stripos($item['order_no'], $filterOrderNo) !== false;
+                });
+            }
+
+            if (!empty($filterOaNo)) {
+                $records = array_filter($records, function ($item) use ($filterOaNo) {
+                    return stripos($item['oa_no'], $filterOaNo) !== false;
+                });
+            }
+
+            if (!empty($filterSupplier)) {
+                $records = array_filter($records, function ($item) use ($filterSupplier) {
+                    return stripos($item['supplier'], $filterSupplier) !== false;
+                });
+            }
+
             // Sort
             usort($records, function ($a, $b) use ($sortField, $sortOrder) {
                 return $sortOrder === 'asc'
                     ? $a[$sortField] <=> $b[$sortField]
                     : $b[$sortField] <=> $a[$sortField];
             });
-    
-            // Calculate totals before pagination
+
+            $totalRecords = count($records);
+
+            // Totals (before pagination)
             $totalQty = array_sum(array_column($records, 'qty'));
             $totalReceived = array_sum(array_column($records, 'received'));
             $totalAmount = array_sum(array_column($records, 'amount'));
-    
-            // Apply pagination
+
+            // Pagination
             $paginated = array_slice($records, $offset, $limit);
-    
-            // Subtotals (current page only)
+
+            // Subtotals (current page)
             $subQty = array_sum(array_column($paginated, 'qty'));
             $subReceived = array_sum(array_column($paginated, 'received'));
             $subAmount = array_sum(array_column($paginated, 'amount'));
-    
-            // Final response
+
+            // Final Response
             return response()->json([
+                'code' => 200,
                 'success' => true,
-                'message' => 'Purchase orders fetched successfully.',
-                'data' => [
-                    'total' => count($records),
-                    'limit' => $limit,
-                    'offset' => $offset,
-                    'sub_totals' => [
-                        'qty' => $subQty,
-                        'received' => $subReceived,
-                        'amount' => $subAmount,
-                    ],
-                    'totals' => [
-                        'qty' => $totalQty,
-                        'received' => $totalReceived,
-                        'amount' => $totalAmount,
-                    ],
-                    'records' => $paginated
+                'message' => 'Fetch data successfully!',
+                'data' => $paginated,
+                'count' => count($paginated),
+                'total_records' => $totalRecords,
+                'sub_total' => [
+                    'qty' => $subQty,
+                    'received' => $subReceived,
+                    'amount' => $subAmount,
+                ],
+                'total' => [
+                    'qty' => $totalQty,
+                    'received' => $totalReceived,
+                    'amount' => $totalAmount,
                 ]
-            ]);
-    
+            ], 200);
+
         } catch (\Throwable $e) {
             return response()->json([
+                'code' => 500,
                 'success' => false,
                 'message' => 'Error fetching purchase orders: ' . $e->getMessage(),
+                'data' => [],
+                'count' => 0,
+                'total_records' => 0
             ], 500);
         }
-    }    
+    }
+   
 }
