@@ -143,7 +143,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/export_sales_order_report', [SalesOrderController::class, 'exportSalesOrderReport']);
 
-    Route::get('/sales_order_by_product/{id}', [SalesOrderController::class, 'fetchSalesOrdersByProduct']);
+    Route::post('/sales_order_by_product/{id}', [SalesOrderController::class, 'fetchSalesOrdersByProduct']);
 
     Route::post('/add_sales_invoice', [SalesInvoiceController::class, 'add_sales_invoice']);
     Route::post('/sales_invoice/{id?}', [SalesInvoiceController::class, 'view_sales_invoice']);
@@ -235,7 +235,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/assembly_operations_migrate', [AssemblyOperationsController::class, 'importAssemblyOperations']);
 
-    Route::get('/assembly_operations_by_product/{productId}', [AssemblyOperationsController::class, 'fetchAssemblyByProduct']);
+    Route::post('/assembly_operations_by_product/{productId}', [AssemblyOperationsController::class, 'fetchAssemblyByProduct']);
 
     Route::post('/add_fabrication', [FabricationController::class, 'add_fabrication']);
     Route::post('/fabrication', [FabricationController::class, 'view_fabrication']);
