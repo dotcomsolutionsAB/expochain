@@ -1423,7 +1423,7 @@ class SalesOrderController extends Controller
             $companyId = Auth::user()->company_id;
 
             // Use limit & offset for pagination
-            $limit = (int) $request->input('limit', 20);
+            $limit = (int) $request->input('limit', 10);
             $offset = (int) $request->input('offset', 0);
 
             // Sorting

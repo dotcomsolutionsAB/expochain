@@ -617,7 +617,7 @@ class AssemblyOperationsController extends Controller
             // Input Parameters
             $sortField = $request->input('sort_field', 'date');
             $sortOrder = $request->input('sort_order', 'asc');
-            $limit = (int) $request->input('limit', 20);
+            $limit = (int) $request->input('limit', 10);
             $offset = (int) $request->input('offset', 0);
 
             // Validate sort field
