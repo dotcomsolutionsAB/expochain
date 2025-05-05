@@ -255,7 +255,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/reset_calculation', [ResetController::class, 'stock_calculation']);
 
-    Route::get('/reset_product', [ResetController::class, 'reset_product']);
+    Route::post('/reset_product', [ResetController::class, 'reset_product']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
