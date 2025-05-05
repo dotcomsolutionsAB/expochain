@@ -20,6 +20,6 @@ class AssemblyModel extends Model
 
     public function products()
     {
-        return $this->hasMany(AssemblyProductsModel::class, 'assembly_id', 'assembly_id');
+        return $this->hasMany(AssemblyProductsModel::class, 'assembly_id', 'id');
     }
 }

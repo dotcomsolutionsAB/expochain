@@ -260,22 +260,21 @@ class AssemblyController extends Controller
     }
 
     // update
-    public function edit_assembly(Request $request)
+    public function edit_assembly(Request $request, $id)
     {
         $request->validate([
             'assembly_id' => 'required|integer',
             'product_id' => 'required|integer',
             'product_name' => 'required|string',
-            // 'quantity' => 'required|integer',
+            'quantity' => 'nullable|integer',
             'products' => 'required|array', // Validating array of products
-            'products.*.assembly_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.quantity' => 'required|integer',
         ]);
 
         // Fetch the assembly record by ID
-        $assembly = AssemblyModel::where('assembly_id', $request->input('assembly_id'))->first();
+        $assembly = AssemblyModel::where('assembly_id', $id)->first();
 
         if($assembly)
         {
@@ -284,7 +283,7 @@ class AssemblyController extends Controller
                 'product_id' => $request->input('product_id'),
                 'product_name' => $request->input('product_name'),
                 'quantity' => $request->input('quantity'),
-                'log_user' => $request->input('log_user'),
+                //'log_user' => $request->input('log_user'),
             ]);
 
             // Get the list of products from the request
@@ -297,7 +296,7 @@ class AssemblyController extends Controller
                 $requestProductIDs[] = $productData['product_id'];
 
                 // Check if the product exists for this assembly_operations_id and product_id
-                $existingProduct = AssemblyProductsModel::where('assembly_id', $productData['assembly_id'])
+                $existingProduct = AssemblyProductsModel::where('assembly_id', $id)
                                                                 ->where('product_id', $productData['product_id'])
                                                                 ->first();
 
@@ -316,7 +315,7 @@ class AssemblyController extends Controller
                 {
                     // Create a new product if not exists
                     AssemblyProductsModel::create([
-                        'assembly_id' => $productData['assembly_id'],
+                        'assembly_id' => $id,
                         'company_id' => Auth::user()->company_id,
                         'product_id' => $productData['product_id'],
                         'product_name' => $productData['product_name'],
@@ -328,12 +327,13 @@ class AssemblyController extends Controller
             }
 
             // Delete products that are not in the request but exist in the database for this assembly_operations_id
-            $productsDeleted = AssemblyProductsModel::where('assembly_id', $request->input('assembly_id'))
-                                                            ->where('product_id', $requestProductIDs)
+            $productsDeleted = AssemblyProductsModel::where('assembly_id', $id)
+                                                            ->whereNotIn('product_id', $requestProductIDs)
                                                             ->delete();
 
             // Remove timestamps from the response for neatness
-            unset($assembly['created_at'], $assembly['updated_at']);
+            //unset($assembly['created_at'], $assembly['updated_at']);
+            $data = $assembly->makeHidden(['created_at', 'updated_at']);
 
             return ($assemblyUpdated || $productsDeleted)
                 ? response()->json(['code' => 200,'success' => true, 'message' => 'Assembly and products updated successfully!', 'data' => $assembly], 200)
