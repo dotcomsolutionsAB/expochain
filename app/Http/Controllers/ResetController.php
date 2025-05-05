@@ -137,29 +137,53 @@ class ResetController extends Controller
         });
 
         // Step 3: Update PurchaseInvoiceProductsModel stock = quantity
-        $updatedCount = PurchaseInvoiceProductsModel::where('company_id', $companyId)
-            ->where('product_id', $productId)
-            ->whereHas('purchaseInvoice', function ($query) {
-                $query->whereDate('purchase_invoice_date', '>=', '2024-04-01');
-            })
-            ->update([
-                'stock' => DB::raw('quantity')
-            ]);
+        $purchaseItems = PurchaseInvoiceProductsModel::where('company_id', $companyId)
+        ->where('product_id', $productId)
+        ->whereHas('purchaseInvoice', function ($query) {
+            $query->whereDate('purchase_invoice_date', '>=', '2024-04-01');
+        })
+        ->with(['purchaseInvoice:id,purchase_invoice_date']) // Eager load invoice date
+        ->get();
 
-        // Step 4: Return SalesInvoiceModel data
-        $sales = SalesInvoiceModel::where('company_id', $companyId)
-            ->whereDate('sales_invoice_date', '>=', '2024-04-01')
-            ->whereHas('products', function ($q) use ($productId) {
-                $q->where('product_id', $productId);
+        $updatedCount = 0;
+        $purchaseUpdateDetails = [];
+
+        foreach ($purchaseItems as $item) {
+            $item->stock = $item->quantity;
+            $item->save();
+            $updatedCount++;
+
+            $purchaseUpdateDetails[] = [
+                'purchase_invoice_date' => $item->purchaseInvoice->purchase_invoice_date,
+                'godown' => $item->godown,
+                'quantity' => $item->quantity,
+            ];
+        }
+
+        // Step 4: Fetch Sales data
+        $salesItems = SalesInvoiceProductsModel::where('company_id', $companyId)
+            ->where('product_id', $productId)
+            ->whereHas('salesInvoice', function ($query) {
+                $query->whereDate('sales_invoice_date', '>=', '2024-04-01');
             })
+            ->with(['salesInvoice:id,sales_invoice_date']) // Eager load invoice date
             ->get();
+
+        $salesData = $salesItems->map(function ($item) {
+            return [
+                'sales_invoice_date' => $item->salesInvoice->sales_invoice_date,
+                'godown' => $item->godown,
+                'quantity' => $item->quantity,
+            ];
+        });
 
         return response()->json([
             'message' => 'Reset completed successfully.',
             'godown_stock' => $godownData,
             'purchase_stock_updated' => $updatedCount,
-            'sales_invoices' => $sales
-        ]);
+            'purchase_update_details' => $purchaseUpdateDetails,
+            'sales_invoice_data' => $salesData,
+        ]);    
     }
 
 }
