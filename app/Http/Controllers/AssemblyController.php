@@ -343,7 +343,6 @@ class AssemblyController extends Controller
     $request->validate([
         'product_id' => 'required|integer',
         'product_name' => 'required|string',
-        'log_user' => 'required|string',
         'products' => 'required|array',
         'products.*.product_id' => 'required|integer',
         'products.*.product_name' => 'required|string',
