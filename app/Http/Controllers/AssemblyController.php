@@ -266,7 +266,7 @@ class AssemblyController extends Controller
             'assembly_id' => 'required|integer',
             'product_id' => 'required|integer',
             'product_name' => 'required|string',
-            'quantity' => 'nullable|integer',
+            // 'quantity' => 'nullable|integer',
             'products' => 'required|array', // Validating array of products
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
@@ -282,7 +282,7 @@ class AssemblyController extends Controller
             $assemblyUpdated = $assembly->update([
                 'product_id' => $request->input('product_id'),
                 'product_name' => $request->input('product_name'),
-                'quantity' => $request->input('quantity'),
+                // 'quantity' => $request->input('quantity'),
                 //'log_user' => $request->input('log_user'),
             ]);
 
