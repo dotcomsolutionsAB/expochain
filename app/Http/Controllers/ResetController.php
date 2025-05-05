@@ -103,4 +103,61 @@ class ResetController extends Controller
                         ->update(['sold' => $left_sell_amount]);
         }
     }
+
+    public function reset_product(Request $request)
+    {
+        $request->validate([
+            'product_id' => 'required|integer|exists:products,id'
+        ]);
+
+        $companyId = auth()->user()->company_id;
+        $productId = $request->product_id;
+
+        // Step 1: Fetch all godowns for the company
+        $godowns = GodownModel::where('company_id', $companyId)->get(['id', 'name']);
+
+        // Step 2: Fetch godown-wise stock and value
+        $stockSummary = OpeningStockModel::where('company_id', $companyId)
+            ->where('product_id', $productId)
+            ->selectRaw('godown_id, SUM(quantity) as total_quantity, SUM(quantity * value) as stock_value')
+            ->groupBy('godown_id')
+            ->get()
+            ->keyBy('godown_id');
+
+        $godownData = $godowns->map(function ($godown) use ($stockSummary) {
+            $entry = $stockSummary->get($godown->id);
+            return [
+                'godown_id' => $godown->id,
+                'godown_name' => $godown->name,
+                'quantity' => $entry->total_quantity ?? 0,
+                'stock_value' => $entry->stock_value ?? 0,
+            ];
+        });
+
+        // Step 3: Update PurchaseInvoiceProductsModel stock = quantity
+        $updatedCount = PurchaseInvoiceProductsModel::where('company_id', $companyId)
+            ->where('product_id', $productId)
+            ->whereHas('purchaseInvoice', function ($query) {
+                $query->whereDate('purchase_invoice_date', '>=', '2024-04-01');
+            })
+            ->update([
+                'stock' => DB::raw('quantity')
+            ]);
+
+        // Step 4: Return SalesInvoiceModel data
+        $sales = SalesInvoiceModel::where('company_id', $companyId)
+            ->whereDate('sales_invoice_date', '>=', '2024-04-01')
+            ->whereHas('salesInvoiceProducts', function ($q) use ($productId) {
+                $q->where('product_id', $productId);
+            })
+            ->get();
+
+        return response()->json([
+            'message' => 'Reset completed successfully.',
+            'godown_stock' => $godownData,
+            'purchase_stock_updated' => $updatedCount,
+            'sales_invoices' => $sales
+        ]);
+    }
+
 }
