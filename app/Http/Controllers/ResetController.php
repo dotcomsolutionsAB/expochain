@@ -149,7 +149,7 @@ class ResetController extends Controller
         // Step 4: Return SalesInvoiceModel data
         $sales = SalesInvoiceModel::where('company_id', $companyId)
             ->whereDate('sales_invoice_date', '>=', '2024-04-01')
-            ->whereHas('salesInvoiceProducts', function ($q) use ($productId) {
+            ->whereHas('products', function ($q) use ($productId) {
                 $q->where('product_id', $productId);
             })
             ->get();

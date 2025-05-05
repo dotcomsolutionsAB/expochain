@@ -223,6 +223,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/add_assembly', [AssemblyController::class, 'add_assembly']);
     Route::post('/assembly/{id?}', [AssemblyController::class, 'view_assembly']);
+    Route::post('/product_assembly/{id?}', [AssemblyController::class, 'view_product_assembly']);
     Route::post('/update_assembly/{id?}', [AssemblyController::class, 'edit_assembly']);
     Route::delete('/assembly/{id?}', [AssemblyController::class, 'delete_assembly']);
 

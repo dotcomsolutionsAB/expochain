@@ -109,6 +109,97 @@ class AssemblyController extends Controller
         ->select('id', 'assembly_id', 'product_id', 'product_name')
         ->where('company_id', Auth::user()->company_id);
 
+        // If an $id is provided, filter based on id and return a single assembly record
+        if ($id) {
+            $assembly = $query->where('id', $id)->first();
+            
+            if (!$assembly) {
+                return response()->json([
+                    'code'    => 404,
+                    'success' => false,
+                    'message' => 'Assembly record not found!',
+                ], 404);
+            }
+
+            return response()->json([
+                'code'    => 200,
+                'success' => true,
+                'message' => 'Assembly record fetched successfully!',
+                'data'    => $assembly,
+            ], 200);
+        }
+
+        // Apply filters
+        if ($assemblyId) {
+            $query->where('assembly_id', $assemblyId);
+        }
+        // if ($productId) {
+        //     $query->where('product_id', $productId);
+        // }
+
+        if ($productId) {
+            $query->where(function ($q) use ($productId) {
+                $q->where('product_id', $productId)
+                  ->orWhereHas('products', function ($q2) use ($productId) {
+                      $q2->where('product_id', $productId);
+                  });
+            });
+        }
+
+        // if ($productName) {
+        //     $query->where('product_name', 'LIKE', '%' . $productName . '%');
+        // }
+
+        if ($productName) {
+            $query->where(function ($q) use ($productName) {
+                $q->where('product_name', 'LIKE', '%' . $productName . '%')
+                  ->orWhereHas('products', function ($q2) use ($productName) {
+                      $q2->where('product_name', 'LIKE', '%' . $productName . '%');
+                  });
+            });
+        }        
+
+        // Get total record count before applying limit
+        $totalRecords = $query->count();
+        // Apply limit and offset
+        $query->offset($offset)->limit($limit);
+
+        // Fetch data
+        $get_assembly = $query->get();
+
+        // Return response
+        return $get_assembly->isNotEmpty()
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Assembly records fetched successfully!',
+                'data' => $get_assembly,
+                'count' => $get_assembly->count(),
+                'total_records' => $totalRecords,
+            ], 200)
+            : response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'No Assembly records found!',
+            ], 404);
+    }
+
+    public function view_product_assembly(Request $request, $id = null)
+    {
+        // Get filter inputs
+        $assemblyId = $request->input('assembly_id');
+        $productId = $request->input('product_id');
+        $productName = $request->input('product_name');
+        $limit = $request->input('limit', 10); // Default limit to 10
+        $offset = $request->input('offset', 0); // Default offset to 0
+
+        // Build the query
+        $query = AssemblyModel::with(['products' => function ($query) {
+            $query->select('id', 'assembly_id', 'product_id', 'product_name', 'quantity');
+        }])
+        ->select('id', 'assembly_id', 'product_id', 'product_name')
+        ->where('company_id', Auth::user()->company_id);
+
         // If an $id is provided, filter based on product_id and return a single assembly record
         if ($id) {
             $assembly = $query->where('product_id', $id)->first();
@@ -183,7 +274,6 @@ class AssemblyController extends Controller
                 'message' => 'No Assembly records found!',
             ], 404);
     }
-
 
     // update
     public function edit_assembly(Request $request)
