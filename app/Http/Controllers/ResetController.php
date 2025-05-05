@@ -107,7 +107,7 @@ class ResetController extends Controller
     public function reset_product(Request $request)
     {
         $request->validate([
-            'product_id' => 'required|integer|exists:products,id'
+            'product_id' => 'required|integer|exists:t_products,id'
         ]);
 
         $companyId = auth()->user()->company_id;
