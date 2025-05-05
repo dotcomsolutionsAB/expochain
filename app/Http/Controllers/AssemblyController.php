@@ -286,9 +286,7 @@ class AssemblyController extends Controller
             'products' => 'required|array', // Validating array of products
             'products.*.assembly_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
-            'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
-            'products.*.quantity' => 'required|integer',
             'products.*.quantity' => 'required|integer',
         ]);
 
