@@ -8,6 +8,8 @@ use App\Models\ClosingStockModel;
 use App\Models\PurchaseInvoiceProductsModel;
 use App\Models\SalesInvoiceProductsModel;
 use App\Models\ResetQueueModel;
+use App\Models\GodownModel;
+use App\Models\SalesInvoiceModel;
 use Carbon\Carbon;
 use Auth;
 use DB;
