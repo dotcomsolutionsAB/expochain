@@ -77,22 +77,6 @@ class AssemblyController extends Controller
     }
 
     // view
-    // public function view_assembly()
-    // {        
-    //     $get_assembly = AssemblyModel::with(['products' => function ($query)
-    //     {
-    //         $query->select('assembly_id','product_id','product_name','quantity','log_user');
-    //     }])
-    //     ->select('assembly_id','product_id','product_name','quantity','log_user')
-    //     ->where('company_id',Auth::user()->company_id) 
-    //     ->get();
-        
-
-    //     return isset($get_assembly) && $get_assembly->isNotEmpty()
-    //     ? response()->json(['Assembly record fetch successfully!', 'data' => $get_assembly, 'count' => count($get_assembly)], 200)
-    //     : response()->json(['Failed to fetch data'], 404); 
-    // }
-
     public function view_assembly(Request $request, $id = null)
     {
         // Get filter inputs
@@ -337,7 +321,7 @@ class AssemblyController extends Controller
                         'product_id' => $productData['product_id'],
                         'product_name' => $productData['product_name'],
                         'quantity' => $productData['quantity'],
-                        'log_user' => $productData['log_user'],
+                        'log_user' => Auth::user()->name,
                                         
                     ]);
                 }
