@@ -274,7 +274,7 @@ class AssemblyController extends Controller
         ]);
 
         // Fetch the assembly record by ID
-        $assembly = AssemblyModel::where('assembly_id', $id)->first();
+        $assembly = AssemblyModel::where('id', $id)->first();
 
         if($assembly)
         {
