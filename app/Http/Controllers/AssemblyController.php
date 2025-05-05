@@ -58,7 +58,7 @@ class AssemblyController extends Controller
         foreach ($products as $product) 
         {
             AssemblyProductsModel::create([
-                'assembly_id' => $assembly_id,
+                'assembly_id' => $register_assembly['id'],
                 'company_id' => Auth::user()->company_id,
                 'product_id' => $product['product_id'],
                 'product_name' => $product['product_name'],
