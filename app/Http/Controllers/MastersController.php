@@ -614,7 +614,7 @@ class MastersController extends Controller
                                 'godown_id' => $godownId,
                                 'product_id' => $product->id,
                                 'quantity' => $quantity,
-                                'value' => $product->cost_price * $quantity,
+                                'value' => $product->cost_price,
                                 'sold' => 0,
                                 'created_at' => now(),
                                 'updated_at' => now(),
