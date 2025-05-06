@@ -1123,31 +1123,36 @@ class SalesInvoiceController extends Controller
         $limit = (int) $request->input('limit', 10);
         $offset = (int) $request->input('offset', 0);
         $companyId = Auth::user()->company_id;
-
-        $query = SalesInvoiceProductsModel::with('salesInvoice')
-            ->whereHas('salesInvoice', function ($q) use ($companyId, $search) {
-                $q->where('company_id', $companyId);
-                if (!empty($search)) {
-                    $q->whereHas('client', function ($q2) use ($search) {
-                        $q2->where('name', 'like', '%' . $search . '%');
-                    });
-                }
-            })
-            ->join('t_sales_invoice', 't_sales_invoice.id', '=', 't_sales_invoice_products.sales_invoice_id')
-            ->join('t_clients', 'clients.id', '=', 't_sales_invoice.client_id')
+    
+        $baseQuery = SalesInvoiceProductsModel::join('t_sales_invoice', 't_sales_invoice.id', '=', 't_sales_invoice_products.sales_invoice_id')
+            ->join('t_clients', 't_clients.id', '=', 't_sales_invoice.client_id')
+            ->where('t_sales_invoice.company_id', $companyId);
+    
+        if (!empty($search)) {
+            $baseQuery->where('t_clients.name', 'like', "%$search%");
+        }
+    
+        $clonedQuery = clone $baseQuery;
+    
+        $totalRecords = $clonedQuery
+            ->select('t_sales_invoice.client_id', 't_clients.name')
+            ->groupBy('t_sales_invoice.client_id', 't_clients.name')
+            ->get()
+            ->count();
+    
+        $data = $baseQuery
             ->selectRaw('
                 t_sales_invoice.client_id,
-                clients.name as client_name,
-                SUM(t_sales_invoice_products.amount) as total_amount,
-                SUM(t_sales_invoice_products.profit) as total_profit
+                t_clients.name as client_name,
+                ROUND(SUM(t_sales_invoice_products.amount), 2) as total_amount,
+                ROUND(SUM(t_sales_invoice_products.profit), 2) as total_profit
             ')
-            ->groupBy('t_sales_invoice.client_id', 'clients.name')
-            ->orderBy('total_profit', $order);
-
-        $totalRecords = $query->count(); // total before pagination
-
-        $data = $query->offset($offset)->limit($limit)->get();
-
+            ->groupBy('t_sales_invoice.client_id', 't_clients.name')
+            ->orderBy('total_profit', $order)
+            ->offset($offset)
+            ->limit($limit)
+            ->get();
+    
         return response()->json([
             'code' => 200,
             'success' => true,
@@ -1156,6 +1161,5 @@ class SalesInvoiceController extends Controller
             'count' => $data->count(),
             'total_records' => $totalRecords
         ]);
-    }
-
+    }    
 }
