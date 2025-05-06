@@ -231,7 +231,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/add_assembly_operations', [AssemblyOperationsController::class, 'add_assembly_operations']);
     Route::post('/assembly_operations/{id?}', [AssemblyOperationsController::class, 'assembly_operations']);
-    Route::post('/update_assembly_operations/{id?}', [AssemblyOperationsController::class, 'edit_assembly_operations']);
+    Route::post('/update_assembly_operations/{id}', [AssemblyOperationsController::class, 'edit_assembly_operations']);
     Route::delete('/assembly_operations/{id?}', [AssemblyOperationsController::class, 'delete_assembly_operations']);
 
     Route::get('/assembly_operations_migrate', [AssemblyOperationsController::class, 'importAssemblyOperations']);
