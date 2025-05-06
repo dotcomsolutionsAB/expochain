@@ -285,9 +285,7 @@ class AssemblyOperationsController extends Controller
     public function delete_assembly_operations($id)
     {
         // Fetch the assembly operation by internal ID
-        $operation = AssemblyOperationModel::select('assembly_operations_id', 'company_id')
-                        ->where('id', $id)
-                        ->first();
+        $operation = AssemblyOperationModel::where('id', $id)->first();
 
         if ($operation && $operation->company_id === Auth::user()->company_id) {
             // Delete associated products using assembly_operations_id
