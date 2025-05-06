@@ -1204,8 +1204,17 @@ class SalesInvoiceController extends Controller
         }
 
         $fileName = 'product_wise_profit_' . now()->format('Ymd_His') . '.xlsx';
-        $filePath = public_path("storage/product_wise_profit/{$fileName}");
+        $directoryPath = public_path("storage/product_wise_profit/");
+        if (!file_exists($directoryPath)) {
+            mkdir($directoryPath, 0755, true);
+        }
+        $filePath = $directoryPath . $fileName;
         $writer = new Xlsx($spreadsheet);
+        $directoryPath = public_path("storage/product_wise_profit/");
+        if (!file_exists($directoryPath)) {
+            mkdir($directoryPath, 0755, true);
+        }
+
         $writer->save($filePath);
 
         return response()->json([
@@ -1257,7 +1266,11 @@ class SalesInvoiceController extends Controller
         }
 
         $fileName = 'client_wise_profit_' . now()->format('Ymd_His') . '.xlsx';
-        $filePath = public_path("storage/client_wise_profit/{$fileName}");
+        $directoryPath = public_path("storage/cient_wise_profit/");
+        if (!file_exists($directoryPath)) {
+            mkdir($directoryPath, 0755, true);
+        }
+        $filePath = $directoryPath . $fileName;
         $writer = new Xlsx($spreadsheet);
         $writer->save($filePath);
 
