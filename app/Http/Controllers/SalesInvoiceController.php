@@ -23,6 +23,8 @@ use Carbon\Carbon;
 use Auth;
 use DB;
 use NumberFormatter;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class SalesInvoiceController extends Controller
 {
@@ -1162,4 +1164,108 @@ class SalesInvoiceController extends Controller
             'total_records' => $totalRecords
         ]);
     }    
+
+    public function exportProductWiseProfitExcel(Request $request)
+    {
+        $search = $request->input('search_product');
+        $order = $request->input('order_product') === 'asc' ? 'asc' : 'desc';
+        $companyId = Auth::user()->company_id;
+
+        $query = DB::table('t_sales_invoice_products')
+            ->select(
+                'product_id',
+                'product_name',
+                DB::raw('ROUND(SUM(amount), 2) as total_amount'),
+                DB::raw('ROUND(SUM(profit), 2) as total_profit')
+            )
+            ->where('company_id', $companyId)
+            ->groupBy('product_id', 'product_name');
+
+        if (!empty($search)) {
+            $query->where('product_name', 'like', "%$search%");
+        }
+
+        $products = $query->orderBy('total_profit', $order)->get();
+
+        // Generate Excel
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Product Wise Profit');
+
+        $sheet->fromArray(['Product ID', 'Product Name', 'Total Amount', 'Total Profit'], NULL, 'A1');
+        $row = 2;
+
+        foreach ($products as $product) {
+            $sheet->setCellValue("A{$row}", $product->product_id);
+            $sheet->setCellValue("B{$row}", $product->product_name);
+            $sheet->setCellValue("C{$row}", $product->total_amount);
+            $sheet->setCellValue("D{$row}", $product->total_profit);
+            $row++;
+        }
+
+        $fileName = 'product_wise_profit_' . now()->format('Ymd_His') . '.xlsx';
+        $filePath = public_path("storage/product_wise_profit/{$fileName}");
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($filePath);
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Product-wise profit report exported.',
+            'download_url' => asset("storage/product_wise_profit/{$fileName}")
+        ]);
+    }
+
+    public function exportClientWiseProfitExcel(Request $request)
+    {
+        $search = $request->input('search_client');
+        $order = $request->input('order_client') === 'asc' ? 'asc' : 'desc';
+        $companyId = Auth::user()->company_id;
+
+        $query = DB::table('t_sales_invoice_products')
+            ->join('t_sales_invoice', 't_sales_invoice.id', '=', 't_sales_invoice_products.sales_invoice_id')
+            ->join('t_clients', 't_clients.id', '=', 't_sales_invoice.client_id')
+            ->where('t_sales_invoice.company_id', $companyId)
+            ->select(
+                't_sales_invoice.client_id',
+                't_clients.name as client_name',
+                DB::raw('ROUND(SUM(t_sales_invoice_products.amount), 2) as total_amount'),
+                DB::raw('ROUND(SUM(t_sales_invoice_products.profit), 2) as total_profit')
+            )
+            ->groupBy('t_sales_invoice.client_id', 't_clients.name');
+
+        if (!empty($search)) {
+            $query->where('t_clients.name', 'like', "%$search%");
+        }
+
+        $clients = $query->orderBy('total_profit', $order)->get();
+
+        // Generate Excel
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Client Wise Profit');
+
+        $sheet->fromArray(['Client ID', 'Client Name', 'Total Amount', 'Total Profit'], NULL, 'A1');
+        $row = 2;
+
+        foreach ($clients as $client) {
+            $sheet->setCellValue("A{$row}", $client->client_id);
+            $sheet->setCellValue("B{$row}", $client->client_name);
+            $sheet->setCellValue("C{$row}", $client->total_amount);
+            $sheet->setCellValue("D{$row}", $client->total_profit);
+            $row++;
+        }
+
+        $fileName = 'client_wise_profit_' . now()->format('Ymd_His') . '.xlsx';
+        $filePath = public_path("storage/client_wise_profit/{$fileName}");
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($filePath);
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Client-wise profit report exported.',
+            'download_url' => asset("storage/client_wise_profit/{$fileName}")
+        ]);
+    }
 }
