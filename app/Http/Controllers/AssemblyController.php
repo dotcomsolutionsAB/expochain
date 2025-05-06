@@ -339,121 +339,124 @@ class AssemblyController extends Controller
     //     return response()->json(['code' => 404,'success' => false, 'message' => 'Sorry, record not available!.'], 404);
     // }
     public function edit_assembly(Request $request, $id)
-{
-    $request->validate([
-        'product_id' => 'required|integer',
-        'product_name' => 'required|string',
-        'products' => 'required|array',
-        'products.*.product_id' => 'required|integer',
-        'products.*.product_name' => 'required|string',
-        'products.*.quantity' => 'required|integer',
-    ]);
+    {
+        $request->validate([
+            'product_id' => 'required|integer',
+            'product_name' => 'required|string',
+            'products' => 'required|array',
+            'products.*.product_id' => 'required|integer',
+            'products.*.product_name' => 'required|string',
+            'products.*.quantity' => 'required|integer',
+        ]);
 
-    // Fetch the assembly record by ID
-    $assembly = AssemblyModel::where('id', $id)->first();
+        // Fetch the assembly record by ID
+        $assembly = AssemblyModel::where('id', $id)->first();
 
-    if (!$assembly) {
-        return response()->json([
-            'code' => 404,
-            'success' => false,
-            'message' => 'Sorry, record not available!',
-        ], 404);
-    }
-
-    // Update assembly main data
-    $assemblyUpdated = $assembly->update([
-        'product_id'   => $request->input('product_id'),
-        'product_name' => $request->input('product_name'),
-        'log_user'     => $request->input('log_user'),
-    ]);
-
-    $products = $request->input('products');
-    $requestProductIDs = [];
-
-    foreach ($products as $productData) {
-        $requestProductIDs[] = $productData['product_id'];
-
-        $existingProduct = AssemblyProductsModel::where('assembly_id', $id)
-            ->where('product_id', $productData['product_id'])
-            ->first();
-
-        if ($existingProduct) {
-            $existingProduct->update([
-                'product_name' => $productData['product_name'],
-                'quantity'     => $productData['quantity'],
-                'rate'         => $productData['rate'] ?? null,
-                'godown'       => $productData['godown'] ?? null,
-                'amount'       => $productData['amount'] ?? null,
-                'log_user'     => $request->input('log_user'),
-            ]);
-        } else {
-            AssemblyProductsModel::create([
-                'assembly_id'  => $id,
-                'company_id'   => Auth::user()->company_id,
-                'product_id'   => $productData['product_id'],
-                'product_name' => $productData['product_name'],
-                'quantity'     => $productData['quantity'],
-                'rate'         => $productData['rate'] ?? null,
-                'godown'       => $productData['godown'] ?? null,
-                'amount'       => $productData['amount'] ?? null,
-                'log_user'     => $request->input('log_user'),
-            ]);
+        if (!$assembly) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'Sorry, record not available!',
+            ], 404);
         }
+
+        // Update assembly main data
+        $assemblyUpdated = $assembly->update([
+            'product_id'   => $request->input('product_id'),
+            'product_name' => $request->input('product_name'),
+            'log_user'     => $request->input('log_user'),
+        ]);
+
+        $products = $request->input('products');
+        $requestProductIDs = [];
+
+        foreach ($products as $productData) {
+            $requestProductIDs[] = $productData['product_id'];
+
+            $existingProduct = AssemblyProductsModel::where('assembly_id', $id)
+                ->where('product_id', $productData['product_id'])
+                ->first();
+
+            if ($existingProduct) {
+                $existingProduct->update([
+                    'product_name' => $productData['product_name'],
+                    'quantity'     => $productData['quantity'],
+                    'rate'         => $productData['rate'] ?? null,
+                    'godown'       => $productData['godown'] ?? null,
+                    'amount'       => $productData['amount'] ?? null,
+                    'log_user'     => $request->input('log_user'),
+                ]);
+            } else {
+                AssemblyProductsModel::create([
+                    'assembly_id'  => $id,
+                    'company_id'   => Auth::user()->company_id,
+                    'product_id'   => $productData['product_id'],
+                    'product_name' => $productData['product_name'],
+                    'quantity'     => $productData['quantity'],
+                    'rate'         => $productData['rate'] ?? null,
+                    'godown'       => $productData['godown'] ?? null,
+                    'amount'       => $productData['amount'] ?? null,
+                    'log_user'     => $request->input('log_user'),
+                ]);
+            }
+        }
+
+        // Delete removed products
+        $productsDeleted = AssemblyProductsModel::where('assembly_id', $id)
+            ->whereNotIn('product_id', $requestProductIDs)
+            ->delete();
+
+        $data = $assembly->fresh()->makeHidden(['created_at', 'updated_at']);
+
+        return ($assemblyUpdated || $productsDeleted)
+            ? response()->json([
+                'code'    => 200,
+                'success' => true,
+                'message' => 'Assembly and products updated successfully!',
+                'data'    => $data,
+            ], 200)
+            : response()->json([
+                'code'    => 304,
+                'success' => false,
+                'message' => 'No changes detected.',
+            ], 304);
     }
-
-    // Delete removed products
-    $productsDeleted = AssemblyProductsModel::where('assembly_id', $id)
-        ->whereNotIn('product_id', $requestProductIDs)
-        ->delete();
-
-    $data = $assembly->fresh()->makeHidden(['created_at', 'updated_at']);
-
-    return ($assemblyUpdated || $productsDeleted)
-        ? response()->json([
-            'code'    => 200,
-            'success' => true,
-            'message' => 'Assembly and products updated successfully!',
-            'data'    => $data,
-        ], 200)
-        : response()->json([
-            'code'    => 304,
-            'success' => false,
-            'message' => 'No changes detected.',
-        ], 304);
-}
-
-
-
+    
     // delete
     public function delete_assembly($id)
     {
-        // Try to find the client by the given ID
-        $get_assembly_id = AssemblyModel::select('assembly_id', 'company_id')
-                                        ->where('id', $id)
-                                        ->first();
-        
-        // Check if the client exists
-
-        if ($get_assembly_id && $get_assembly_id->company_id === Auth::user()->company_id) 
-        {
-            // Delete the client
-            $delete_assembly = AssemblyModel::where('id', $id)->delete();
-
-            // Delete associated contacts by customer_id
-            $delete_assembly_products = AssemblyProductsModel::where('assembly_id', $get_assembly_id->assembly_id)->delete();
-
-            // Return success response if deletion was successful
-            return $delete_assembly && $delete_assembly_products
-            ? response()->json(['code' => 200,'success' => true, 'message' => 'Assembly and associated products deleted successfully!'], 200)
-            : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Assembly or products.'], 400);
-
-        } 
-        else 
-        {
-            // Return error response if client not found
-            return response()->json(['code' => 404,'success' => false, 'message' => 'Assembly not found.'], 404);
+        // Fetch the assembly record
+        $assembly = AssemblyModel::where('id', $id)->first();
+    
+        // Check if found and belongs to the same company
+        if ($assembly && $assembly->company_id === Auth::user()->company_id) {
+            // Delete associated products first
+            $deleteProducts = AssemblyProductsModel::where('assembly_id', $id)->delete();
+    
+            // Then delete the assembly
+            $deleteAssembly = $assembly->delete();
+    
+            return ($deleteAssembly || $deleteProducts)
+                ? response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'Assembly and associated products deleted successfully!'
+                ], 200)
+                : response()->json([
+                    'code' => 400,
+                    'success' => false,
+                    'message' => 'Failed to delete Assembly or products.'
+                ], 400);
         }
+    
+        // If not found or not authorized
+        return response()->json([
+            'code' => 404,
+            'success' => false,
+            'message' => 'Assembly not found or unauthorized.'
+        ], 404);
     }
+    
 
     public function importAssemblies()
     {
