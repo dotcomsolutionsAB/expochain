@@ -1266,7 +1266,7 @@ class SalesInvoiceController extends Controller
         }
 
         $fileName = 'client_wise_profit_' . now()->format('Ymd_His') . '.xlsx';
-        $directoryPath = public_path("storage/cient_wise_profit/");
+        $directoryPath = public_path("storage/client_wise_profit/");
         if (!file_exists($directoryPath)) {
             mkdir($directoryPath, 0755, true);
         }
