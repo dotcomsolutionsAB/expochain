@@ -26,6 +26,6 @@ class AssemblyOperationModel extends Model
 
     public function products()
     {
-        return $this->hasMany(AssemblyOperationProductsModel::class, 'assembly_operations_id', 'assembly_operations_id');
+        return $this->hasMany(AssemblyOperationProductsModel::class, 'assembly_operations_id', 'id');
     }
 }

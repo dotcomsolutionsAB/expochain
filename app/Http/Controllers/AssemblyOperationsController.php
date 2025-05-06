@@ -65,7 +65,7 @@ class AssemblyOperationsController extends Controller
         foreach ($products as $product) 
         {
             AssemblyOperationProductsModel::create([
-                'assembly_operations_id' => $assembly_operations_id,
+                'assembly_operations_id' => $register_assembly_operations['id'],
                 'company_id' => Auth::user()->company_id,
                 'product_id' => $product['product_id'],
                 'product_name' => $product['product_name'],
@@ -84,21 +84,6 @@ class AssemblyOperationsController extends Controller
     }
 
     // view
-    // public function assembly_operations()
-    // {        
-    //     $get_assembly_operations = AssemblyOperationModel::with(['products' => function ($query)
-    //     {
-    //         $query->select('assembly_operations_id','product_id','product_name','quantity','rate','godown','amount');
-    //     }])
-    //     ->select('assembly_operations_id','assembly_operations_date','type','product_id','product_name','quantity','godown','rate','amount')
-    //     ->where('company_id',Auth::user()->company_id) 
-    //     ->get();
-
-    //     return isset($get_assembly_operations) && $get_assembly_operations->isNotEmpty()
-    //     ? response()->json(['Assembly Operations data successfully!', 'data' => $get_assembly_operations], 200)
-    //     : response()->json(['Failed to fetch data'], 404); 
-    // }
-
     public function assembly_operations(Request $request, $id = null)
     {
         // Get filter inputs
@@ -199,7 +184,7 @@ class AssemblyOperationsController extends Controller
     }
 
     // update
-    public function edit_assembly_operations(Request $request)
+    public function edit_assembly_operations(Request $request, $id)
     {
         $request->validate([
             'assembly_operations_id' => 'required|integer',
@@ -213,7 +198,6 @@ class AssemblyOperationsController extends Controller
             'amount' => 'required|numeric',
             'log_user' => 'required|string',
             'products' => 'required|array', // Validating array of products
-            'products.*.assembly_operations_id' => 'required|integer',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.quantity' => 'required|integer',
@@ -223,7 +207,15 @@ class AssemblyOperationsController extends Controller
         ]);
 
         // Get the assembly operation record by ID
-        $assemblyOperation = AssemblyOperationModel::where('assembly_operations_id', $request->input('assembly_operations_id'))->first();
+        $assemblyOperation = AssemblyOperationModel::where('assembly_operations_id', $id)->first();
+
+        if (!$assemblyOperation) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'Assembly operation not found.',
+            ], 404);
+        }
 
         // Update the assembly operation details
         $assemblyUpdated = $assemblyOperation->update([
@@ -247,7 +239,7 @@ class AssemblyOperationsController extends Controller
             $requestProductIDs[] = $productData['product_id'];
 
             // Check if the product exists for this assembly_operations_id and product_id
-            $existingProduct = AssemblyOperationProductsModel::where('assembly_operations_id',  $productData['assembly_operations_id'])
+            $existingProduct = AssemblyOperationProductsModel::where('assembly_operations_id',  $id)
                                                             ->where('product_id', $productData['product_id'])
                                                             ->first();
 
@@ -263,7 +255,7 @@ class AssemblyOperationsController extends Controller
             } else {
                 // Create a new product if not exists
                 AssemblyOperationProductsModel::create([
-                    'assembly_operations_id' => $productData['assembly_operations_id'],
+                    'assembly_operations_id' => $id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'quantity' => $productData['quantity'],
@@ -275,46 +267,51 @@ class AssemblyOperationsController extends Controller
         }
 
             // Delete products that are not in the request but exist in the database for this assembly_operations_id
-            $productsDeleted = AssemblyOperationProductsModel::where('assembly_operations_id', $request->input('assembly_operations_id'))
-                                                            ->where('product_id', $requestProductIDs)
+            $productsDeleted = AssemblyOperationProductsModel::where('assembly_operations_id', $id)
+                                                            ->whereNotIn('product_id', $requestProductIDs)
                                                             ->delete();
 
             // Remove timestamps from the response for neatness
-            unset($assemblyOperation['created_at'], $assemblyOperation['updated_at']);
+            //unset($assemblyOperation['created_at'], $assemblyOperation['updated_at']);
+            $data = $assemblyOperation->makeHidden(['created_at', 'updated_at']);
 
             return ($assemblyUpdated || $productsDeleted)
-                ? response()->json(['code' => 200,'success' => true, 'message' => 'Assembly operation and products updated successfully!', 'data' => $assemblyOperation], 200)
+                ? response()->json(['code' => 200,'success' => true, 'message' => 'Assembly operation and products updated successfully!', 'data' => $data], 200)
                 : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
     }
 
     // delete
     public function delete_assembly_operations($id)
     {
-        // Try to find the client by the given ID
-        $get_assembly_operations_id = AssemblyOperationModel::select('assembly_operations_id', 'company_id')
-                                        ->where('id', $id)
-                                        ->first();
-        
-        // Check if the client exists
+        // Fetch the assembly operation by internal ID
+        $operation = AssemblyOperationModel::select('assembly_operations_id', 'company_id')
+                        ->where('id', $id)
+                        ->first();
 
-        if ($get_assembly_operations_id && $get_assembly_operations_id->company_id === Auth::user()->company_id) 
-        {
-            // Delete the client
-            $delete_assembly_operations = AssemblyOperationModel::where('id', $id)->delete();
+        if ($operation && $operation->company_id === Auth::user()->company_id) {
+            // Delete associated products using assembly_operations_id
+            $productsDeleted = AssemblyOperationProductsModel::where('assembly_operations_id', $operation->assembly_operations_id)->delete();
 
-            // Delete associated contacts by customer_id
-            $delete_assembly_operations_products = AssemblyOperationProductsModel::where('assembly_operations_id', $get_assembly_operations_id->assembly_operations_id)->delete();
+            // Delete the main assembly operation using internal ID
+            $operationDeleted = AssemblyOperationModel::where('id', $id)->delete();
 
-            // Return success response if deletion was successful
-            return $delete_assembly_operations && $delete_assembly_operations_products
-            ? response()->json(['code' => 200,'success' => true, 'message' => 'Assembly Operations and associated products deleted successfully!'], 200)
-            : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Assembly Operations or products.'], 400);
-
-        } 
-        else 
-        {
-            // Return error response if client not found
-            return response()->json(['code' => 404,'success' => false, 'message' => 'Assembly Operations not found.'], 404);
+            return ($operationDeleted || $productsDeleted)
+                ? response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'Assembly operation and associated products deleted successfully!'
+                ], 200)
+                : response()->json([
+                    'code' => 400,
+                    'success' => false,
+                    'message' => 'Failed to delete assembly operation or its products.'
+                ], 400);
+        } else {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'Assembly operation not found or unauthorized.'
+            ], 404);
         }
     }
 
@@ -322,12 +319,11 @@ class AssemblyOperationsController extends Controller
     // {
     //     set_time_limit(300);
 
-    //     // Clear the Assembly and related tables
+    //     // Clear the tables
     //     AssemblyOperationModel::truncate();
     //     AssemblyOperationProductsModel::truncate();
 
-    //     // Define the external URL
-    //     $url = 'https://expo.egsm.in/assets/custom/migrate/assembly_operation.php'; // Replace with the actual URL
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/assembly_operation.php';
 
     //     try {
     //         $response = Http::timeout(120)->get($url);
@@ -345,25 +341,23 @@ class AssemblyOperationsController extends Controller
     //         return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
     //     }
 
-    //     $successfulInserts = 0;
+    //     $userCompanyId = Auth::user()->company_id;
+
+    //     $assemblyInsertData = [];
+    //     $productInsertData = [];
     //     $errors = [];
+    //     $successfulInserts = 0;
 
     //     foreach ($data as $record) {
 
+    //         // Generate unique ID
     //         do {
-    //             // Generate a random assembly_operations_id
     //             $assembly_operations_id = rand(1111111111, 9999999999);
-                
-    //             $exists = AssemblyOperationModel::where('assembly_operations_id', $assembly_operations_id)->exists();
-    //         } while ($exists);
+    //         } while (AssemblyOperationModel::where('assembly_operations_id', $assembly_operations_id)->exists());
 
-    //         // Generate a static date for assembly_operations_date
     //         $assembly_operations_date = '2021-05-13';
-
-    //         // Determine the type based on the operation
     //         $type = ($record['operation'] === 'Disassembled') ? 'de-assemble' : 'assemble';
 
-    //         // Fetch product details for the composite
     //         $compositeProduct = ProductsModel::where('name', $record['composite'])->first();
 
     //         if (!$compositeProduct) {
@@ -371,10 +365,9 @@ class AssemblyOperationsController extends Controller
     //                 'record' => $record,
     //                 'error' => "Composite product '{$record['composite']}' not found."
     //             ];
-    //             continue; // Skip if composite product is not found
+    //             continue;
     //         }
 
-    //         // Calculate the amount (quantity * rate)
     //         $quantity = (float)$record['quantity'];
     //         $rate = (float)$record['rate'];
     //         $amount = $quantity * $rate;
@@ -382,55 +375,26 @@ class AssemblyOperationsController extends Controller
     //         $godownName = $record['place'] ?? 'Unknown';
     //         $godownId = GodownModel::where('name', $godownName)->value('id') ?? 0;
 
-    //         // Prepare main assembly operation data
-    //         $assemblyOperationData = [
-    //             'assembly_operations_id' => $assembly_operations_id,
+    //         $assemblyInsertData[] = [
+    //             'assembly_operations_id'   => $assembly_operations_id,
     //             'assembly_operations_date' => $assembly_operations_date,
-    //             'company_id' => Auth::user()->company_id,
-    //             'type' => $type,
-    //             'product_id' => $compositeProduct->id,
-    //             'product_name' => $compositeProduct->name,
-    //             'quantity' => $quantity,
-    //             // 'godown' => $record['place'] ?? 'Unknown',
-    //             'godown' => $godownId, // resolved from GodownModel
-    //             'rate' => $rate,
-    //             'amount' => $amount,
-    //             'log_user' => $record['log_user'] ?? 'Unknown'
+    //             'company_id'               => $userCompanyId,
+    //             'type'                     => $type,
+    //             'product_id'               => $compositeProduct->id,
+    //             'product_name'             => $compositeProduct->name,
+    //             'quantity'                 => $quantity,
+    //             'godown'                   => $godownId,
+    //             'rate'                     => $rate,
+    //             'amount'                   => $amount,
+    //             'log_user'                 => $record['log_user'] ?? 'Unknown',
+    //             'created_at'               => now(),
+    //             'updated_at'               => now(),
     //         ];
 
-    //         // Validate main assembly operation data
-    //         $validator = Validator::make($assemblyOperationData, [
-    //             'assembly_operations_id' => 'required|integer',
-    //             'assembly_operations_date' => 'required|date',
-    //             'type' => 'required|in:assemble,de-assemble',
-    //             'product_id' => 'required|integer',
-    //             'product_name' => 'required|string',
-    //             'quantity' => 'required|numeric',
-    //             'godown' => 'required|string',
-    //             'rate' => 'required|numeric',
-    //             'amount' => 'required|numeric',
-    //             'log_user' => 'required|string',
-    //         ]);
-
-    //         if ($validator->fails()) {
-    //             $errors[] = ['record' => $record, 'errors' => $validator->errors()];
-    //             continue;
-    //         }
-
-    //         try {
-    //             $assemblyOperation = AssemblyOperationModel::create($assemblyOperationData);
-    //             $successfulInserts++;
-    //         } catch (\Exception $e) {
-    //             $errors[] = ['record' => $record, 'error' => 'Failed to insert assembly operation: ' . $e->getMessage()];
-    //             continue;
-    //         }
-
-    //         // Parse and handle items
     //         $itemsData = json_decode($record['items'], true);
 
     //         if (is_array($itemsData) && isset($itemsData['product'], $itemsData['quantity'], $itemsData['rate'], $itemsData['place'])) {
     //             foreach ($itemsData['product'] as $index => $productName) {
-    //                 // Fetch product details for each item
     //                 $itemProduct = ProductsModel::where('name', $productName)->first();
 
     //                 if (!$itemProduct) {
@@ -438,41 +402,48 @@ class AssemblyOperationsController extends Controller
     //                         'record' => $record,
     //                         'error' => "Item product '{$productName}' not found."
     //                     ];
-    //                     continue; // Skip this item if not found
+    //                     continue;
     //                 }
 
-    //                 // Calculate the item amount (quantity * rate)
     //                 $itemQuantity = (float)$itemsData['quantity'][$index];
     //                 $itemRate = (float)$itemsData['rate'][$index];
     //                 $itemAmount = $itemQuantity * $itemRate;
 
-    //                 try {
+    //                 $itemGodownName = $itemsData['place'][$index] ?? 'Unknown';
+    //                 $itemGodownId = GodownModel::where('name', $itemGodownName)->value('id') ?? 0;
 
-    //                     $itemGodownName = $itemsData['place'][$index] ?? 'Unknown';
-    //                     $itemGodownId = GodownModel::where('name', $itemGodownName)->value('id') ?? 0;
-
-    //                     AssemblyOperationProductsModel::create([
-    //                         'assembly_operations_id' => $assembly_operations_id,
-    //                         'company_id' => Auth::user()->company_id,
-    //                         'product_id' => $itemProduct->id,
-    //                         'product_name' => $itemProduct->name,
-    //                         'quantity' => $itemQuantity,
-    //                         'rate' => $itemRate,
-    //                         'godown' => $itemGodownId,
-    //                         'amount' => $itemAmount,
-    //                     ]);
-    //                 } catch (\Exception $e) {
-    //                     $errors[] = ['record' => $record, 'error' => 'Failed to insert item product: ' . $e->getMessage()];
-    //                 }
+    //                 $productInsertData[] = [
+    //                     'assembly_operations_id' => $assembly_operations_id,
+    //                     'company_id'             => $userCompanyId,
+    //                     'product_id'             => $itemProduct->id,
+    //                     'product_name'           => $itemProduct->name,
+    //                     'quantity'               => $itemQuantity,
+    //                     'rate'                   => $itemRate,
+    //                     'godown'                 => $itemGodownId,
+    //                     'amount'                 => $itemAmount,
+    //                     'created_at'             => now(),
+    //                     'updated_at'             => now(),
+    //                 ];
     //             }
     //         }
+
+    //         $successfulInserts++;
+    //     }
+
+    //     // Final batch insert
+    //     if (!empty($assemblyInsertData)) {
+    //         AssemblyOperationModel::insert($assemblyInsertData);
+    //     }
+
+    //     if (!empty($productInsertData)) {
+    //         AssemblyOperationProductsModel::insert($productInsertData);
     //     }
 
     //     return response()->json([
-    //         'code' => 200,
+    //         'code'    => 200,
     //         'success' => true,
     //         'message' => "Import completed with $successfulInserts successful inserts.",
-    //         'errors' => $errors,
+    //         'errors'  => $errors,
     //     ], 200);
     // }
 
@@ -508,13 +479,14 @@ class AssemblyOperationsController extends Controller
         $productInsertData = [];
         $errors = [];
         $successfulInserts = 0;
+        $randomCodeMap = []; // [generated_code => array of items]
 
         foreach ($data as $record) {
 
-            // Generate unique ID
+            // Generate unique assembly_operations_id (random string only for temp map)
             do {
-                $assembly_operations_id = rand(1111111111, 9999999999);
-            } while (AssemblyOperationModel::where('assembly_operations_id', $assembly_operations_id)->exists());
+                $generated_code = rand(1111111111, 9999999999);
+            } while (isset($randomCodeMap[$generated_code]));
 
             $assembly_operations_date = '2021-05-13';
             $type = ($record['operation'] === 'Disassembled') ? 'de-assemble' : 'assemble';
@@ -537,7 +509,7 @@ class AssemblyOperationsController extends Controller
             $godownId = GodownModel::where('name', $godownName)->value('id') ?? 0;
 
             $assemblyInsertData[] = [
-                'assembly_operations_id'   => $assembly_operations_id,
+                'assembly_operations_id'   => $generated_code, // temp ID
                 'assembly_operations_date' => $assembly_operations_date,
                 'company_id'               => $userCompanyId,
                 'type'                     => $type,
@@ -552,6 +524,22 @@ class AssemblyOperationsController extends Controller
                 'updated_at'               => now(),
             ];
 
+            // Store items temporarily under the same generated code
+            $randomCodeMap[$generated_code] = $record;
+            $successfulInserts++;
+        }
+
+        // Batch insert parent assembly operations
+        AssemblyOperationModel::insert($assemblyInsertData);
+
+        // Fetch inserted IDs and map them using the generated temp ID
+        $realIdMap = AssemblyOperationModel::whereIn('assembly_operations_id', array_keys($randomCodeMap))
+            ->pluck('id', 'assembly_operations_id') // [generated_code => id]
+            ->toArray();
+
+        // Now prepare child product records using real auto-increment IDs
+        foreach ($realIdMap as $generated_code => $realId) {
+            $record = $randomCodeMap[$generated_code];
             $itemsData = json_decode($record['items'], true);
 
             if (is_array($itemsData) && isset($itemsData['product'], $itemsData['quantity'], $itemsData['rate'], $itemsData['place'])) {
@@ -574,7 +562,7 @@ class AssemblyOperationsController extends Controller
                     $itemGodownId = GodownModel::where('name', $itemGodownName)->value('id') ?? 0;
 
                     $productInsertData[] = [
-                        'assembly_operations_id' => $assembly_operations_id,
+                        'assembly_operations_id' => $realId,
                         'company_id'             => $userCompanyId,
                         'product_id'             => $itemProduct->id,
                         'product_name'           => $itemProduct->name,
@@ -587,15 +575,9 @@ class AssemblyOperationsController extends Controller
                     ];
                 }
             }
-
-            $successfulInserts++;
         }
 
-        // Final batch insert
-        if (!empty($assemblyInsertData)) {
-            AssemblyOperationModel::insert($assemblyInsertData);
-        }
-
+        // Final batch insert products
         if (!empty($productInsertData)) {
             AssemblyOperationProductsModel::insert($productInsertData);
         }
@@ -607,6 +589,7 @@ class AssemblyOperationsController extends Controller
             'errors'  => $errors,
         ], 200);
     }
+
 
     // fetch by product id
     // public function fetchAssemblyByProduct(Request $request, $productId)
