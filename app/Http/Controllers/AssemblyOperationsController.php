@@ -256,6 +256,7 @@ class AssemblyOperationsController extends Controller
                 // Create a new product if not exists
                 AssemblyOperationProductsModel::create([
                     'assembly_operations_id' => $id,
+                    'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'quantity' => $productData['quantity'],
