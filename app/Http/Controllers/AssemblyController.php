@@ -457,7 +457,6 @@ class AssemblyController extends Controller
         ], 404);
     }
     
-
     public function importAssemblies()
     {
         set_time_limit(300);
@@ -557,7 +556,7 @@ class AssemblyController extends Controller
 
                     try {
                         AssemblyProductsModel::create([
-                            'assembly_id' => $assembly_id,
+                            'assembly_id' => $assembly->id,
                             'company_id' => Auth::user()->company_id,
                             'product_id' => $spareProduct->id,
                             'product_name' => $spareProduct->name,
@@ -578,5 +577,4 @@ class AssemblyController extends Controller
             'errors' => $errors,
         ], 200);
     }
-
 }
