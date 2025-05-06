@@ -1074,4 +1074,86 @@ class SalesInvoiceController extends Controller
         }
     }
 
+    // product wise profit
+    public function product_wise_profit(Request $request)
+    {
+        $search = $request->input('search_product');
+        $order = $request->input('order_product') === 'asc' ? 'asc' : 'desc';
+        $limit = $request->input('limit', 10);
+        $offset = $request->input('offset', 0);
+        $companyId = Auth::user()->company_id;
+
+        $query = SalesInvoiceProductsModel::select(
+            'product_id',
+            'product_name',
+            \DB::raw('SUM(amount) as total_amount'),
+            \DB::raw('SUM(profit) as total_profit')
+        )
+        ->where('company_id', $companyId)
+        ->groupBy('product_id', 'product_name');
+
+        if (!empty($search)) {
+            $query->where('product_name', 'like', "%$search%");
+        }
+
+        $totalRecords = $query->count(DB::raw('DISTINCT product_id'));
+
+        $products = $query->orderBy('total_profit', $order)
+            ->offset($offset)
+            ->limit($limit)
+            ->get();
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Product-wise profit data fetched successfully.',
+            'data' => $products,
+            'count' => $products->count(),
+            'total_records' => $totalRecords,
+        ]);
+    }
+
+    // client wise profit
+    public function client_wise_profit(Request $request)
+    {
+        $search = $request->input('search_client');
+        $order = $request->input('order_client') === 'asc' ? 'asc' : 'desc';
+        $limit = (int) $request->input('limit', 10);
+        $offset = (int) $request->input('offset', 0);
+        $companyId = Auth::user()->company_id;
+
+        $query = SalesInvoiceProductsModel::with('salesInvoice')
+            ->whereHas('salesInvoice', function ($q) use ($companyId, $search) {
+                $q->where('company_id', $companyId);
+                if (!empty($search)) {
+                    $q->whereHas('client', function ($q2) use ($search) {
+                        $q2->where('name', 'like', '%' . $search . '%');
+                    });
+                }
+            })
+            ->join('t_sales_invoice', 't_sales_invoice.id', '=', 't_sales_invoice_products.sales_invoice_id')
+            ->join('clients', 'clients.id', '=', 't_sales_invoice.client_id')
+            ->selectRaw('
+                t_sales_invoice.client_id,
+                clients.name as client_name,
+                SUM(t_sales_invoice_products.amount) as total_amount,
+                SUM(t_sales_invoice_products.profit) as total_profit
+            ')
+            ->groupBy('t_sales_invoice.client_id', 'clients.name')
+            ->orderBy('total_profit', $order);
+
+        $totalRecords = $query->count(); // total before pagination
+
+        $data = $query->offset($offset)->limit($limit)->get();
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Client-wise profit fetched successfully.',
+            'data' => $data,
+            'count' => $data->count(),
+            'total_records' => $totalRecords
+        ]);
+    }
+
 }
