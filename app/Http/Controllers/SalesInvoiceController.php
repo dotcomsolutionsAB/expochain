@@ -1086,8 +1086,8 @@ class SalesInvoiceController extends Controller
         $query = SalesInvoiceProductsModel::select(
             'product_id',
             'product_name',
-            \DB::raw('SUM(amount) as total_amount'),
-            \DB::raw('SUM(profit) as total_profit')
+            \DB::raw('ROUND(SUM(amount), 2) as total_amount'),
+            \DB::raw('ROUND(SUM(profit), 2) as total_profit')
         )
         ->where('company_id', $companyId)
         ->groupBy('product_id', 'product_name');
@@ -1096,7 +1096,7 @@ class SalesInvoiceController extends Controller
             $query->where('product_name', 'like', "%$search%");
         }
 
-        $totalRecords = $query->count(DB::raw('DISTINCT product_id'));
+        $totalRecords = $query->count();
 
         $products = $query->orderBy('total_profit', $order)
             ->offset($offset)
@@ -1132,7 +1132,7 @@ class SalesInvoiceController extends Controller
                 }
             })
             ->join('t_sales_invoice', 't_sales_invoice.id', '=', 't_sales_invoice_products.sales_invoice_id')
-            ->join('clients', 'clients.id', '=', 't_sales_invoice.client_id')
+            ->join('t_clients', 'clients.id', '=', 't_sales_invoice.client_id')
             ->selectRaw('
                 t_sales_invoice.client_id,
                 clients.name as client_name,
