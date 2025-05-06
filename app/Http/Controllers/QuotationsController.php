@@ -984,28 +984,28 @@ class QuotationsController extends Controller
 
         $grouped = $products->groupBy('hsn');
 
-    foreach ($grouped as $hsn => $groupItems) {
-        $cgstSum = $groupItems->sum('cgst');
-        $sgstSum = $groupItems->sum('sgst');
-        $igstSum = $groupItems->sum('igst');
+        foreach ($grouped as $hsn => $groupItems) {
+            $cgstSum = $groupItems->sum('cgst');
+            $sgstSum = $groupItems->sum('sgst');
+            $igstSum = $groupItems->sum('igst');
 
-        $totalTax = $cgstSum + $sgstSum + $igstSum;
+            $totalTax = $cgstSum + $sgstSum + $igstSum;
 
-        $taxableSum = $groupItems->sum(function ($item) {
-            return ($item->amount ?? 0) - ($item->cgst ?? 0) - ($item->sgst ?? 0) - ($item->igst ?? 0);
-        });
+            $taxableSum = $groupItems->sum(function ($item) {
+                return ($item->amount ?? 0) - ($item->cgst ?? 0) - ($item->sgst ?? 0) - ($item->igst ?? 0);
+            });
 
-        $avgTaxRate = $groupItems->avg('tax') ?? 0;
+            $avgTaxRate = $groupItems->avg('tax') ?? 0;
 
-        $tax_summary[] = [
-            'hsn'        => $hsn,
-            'rate'       => round($avgTaxRate, 2),
-            'taxable'    => round($taxableSum, 2),
-            'cgst'       => round($cgstSum, 2),
-            'sgst'       => round($sgstSum, 2),
-            'total_tax'  => round($totalTax, 2),
-        ];
-    }
+            $tax_summary[] = [
+                'hsn'        => $hsn,
+                'rate'       => round($avgTaxRate, 2),
+                'taxable'    => round($taxableSum, 2),
+                'cgst'       => round($cgstSum, 2),
+                'sgst'       => round($sgstSum, 2),
+                'total_tax'  => round($totalTax, 2),
+            ];
+        }
 
         // Build the data array for the view.
         $data = [

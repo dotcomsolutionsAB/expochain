@@ -1096,10 +1096,9 @@ class SalesInvoiceController extends Controller
             $query->where('product_name', 'like', "%$search%");
         }
 
-         // Clone for total record count
-        $totalRecords = \DB::table(\DB::raw("({$baseQuery->toSql()}) as sub"))
-        ->mergeBindings($baseQuery->getQuery()) // Required for binding values
-        ->count();
+        // Clone the query to get total records *before* pagination
+        $clonedQuery = clone $query;
+        $totalRecords = $clonedQuery->get()->count();
 
         $products = $query->orderBy('total_profit', $order)
             ->offset($offset)
