@@ -207,7 +207,7 @@ class AssemblyOperationsController extends Controller
         ]);
 
         // Get the assembly operation record by ID
-        $assemblyOperation = AssemblyOperationModel::where('assembly_operations_id', $id)->first();
+        $assemblyOperation = AssemblyOperationModel::where('id', $id)->first();
 
         if (!$assemblyOperation) {
             return response()->json([
