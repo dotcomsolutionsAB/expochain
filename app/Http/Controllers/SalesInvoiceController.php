@@ -1356,15 +1356,44 @@ class SalesInvoiceController extends Controller
     // export cash
     public function exportCashInvoices(Request $request)
     {
-        $invoices = $this->buildSalesInvoiceExportQuery($request, ['cash' => 1])->get();
+        $companyId = Auth::user()->company_id;
+        $client = $request->input('client');
+        $orderBy = $request->input('order_by', 'date');
+        $orderType = $request->input('order', 'desc');
+    
+        $query = SalesInvoiceModel::join('t_clients', 't_clients.id', '=', 't_sales_invoice.client_id')
+            ->where('t_sales_invoice.company_id', $companyId)
+            ->where('cash', 1)
+            ->when(!empty($client), function ($q) use ($client) {
+                $q->where('t_clients.name', 'like', "%{$client}%");
+            })
+            ->select(
+                't_sales_invoice.id',
+                't_sales_invoice.sales_invoice_date as date',
+                't_sales_invoice.sales_invoice_no as invoice',
+                't_clients.name as client',
+                't_sales_invoice.total as amount'
+            );
 
+        // Apply ordering
+        switch ($orderBy) {
+            case 'client':
+                $query->orderBy('t_clients.name', $orderType);
+                break;
+            case 'amount':
+                $query->orderBy('t_sales_invoice.total', $orderType);
+                break;
+            default:
+                $query->orderBy('t_sales_invoice.sales_invoice_date', $orderType);
+        }
+
+        $invoices = $query->get();
+    
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Cash Invoices');
-
-        // Set header row
-        $sheet->fromArray(['ID', 'Date', 'Invoice', 'Client', 'Amount'], NULL, 'A1');
-
+        $sheet->fromArray(['ID', 'Date', 'Invoice', 'Client', 'Amount'], null, 'A1');
+    
         $row = 2;
         foreach ($invoices as $inv) {
             $sheet->setCellValue("A{$row}", $inv->id);
@@ -1374,17 +1403,17 @@ class SalesInvoiceController extends Controller
             $sheet->setCellValue("E{$row}", $inv->amount);
             $row++;
         }
-
+    
         $fileName = 'cash_invoice_' . now()->format('Ymd_His') . '.xlsx';
         $directory = public_path('storage/export_cash_invoice');
-
+    
         if (!file_exists($directory)) {
             mkdir($directory, 0755, true);
         }
-
+    
         $filePath = $directory . '/' . $fileName;
         (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save($filePath);
-
+    
         return response()->json([
             'code' => 200,
             'success' => true,
@@ -1396,13 +1425,43 @@ class SalesInvoiceController extends Controller
     // export cash
     public function exportCommissionInvoices(Request $request)
     {
-        $invoices = $this->buildSalesInvoiceExportQuery($request, [['commission', '>', 0]])->get();
+        $companyId = Auth::user()->company_id;
+        $client = $request->input('client');
+        $orderBy = $request->input('order_by', 'date'); // can be: date, client, amount
+        $orderType = $request->input('order', 'desc');  // can be: asc or desc
+
+        $query = SalesInvoiceModel::join('t_clients', 't_clients.id', '=', 't_sales_invoice.client_id')
+            ->where('t_sales_invoice.company_id', $companyId)
+            ->where('commission', '>', 0)
+            ->when(!empty($client), function ($q) use ($client) {
+                $q->where('t_clients.name', 'like', "%{$client}%");
+            })
+            ->select(
+                't_sales_invoice.id',
+                't_sales_invoice.sales_invoice_date as date',
+                't_sales_invoice.sales_invoice_no as invoice',
+                't_clients.name as client',
+                't_sales_invoice.total as amount'
+            );
+
+        // Apply ordering
+        switch ($orderBy) {
+            case 'client':
+                $query->orderBy('t_clients.name', $orderType);
+                break;
+            case 'amount':
+                $query->orderBy('t_sales_invoice.total', $orderType);
+                break;
+            default:
+                $query->orderBy('t_sales_invoice.sales_invoice_date', $orderType);
+        }
+
+        $invoices = $query->get();
 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Commission Invoices');
-
-        $sheet->fromArray(['ID', 'Date', 'Invoice', 'Client', 'Amount'], NULL, 'A1');
+        $sheet->fromArray(['ID', 'Date', 'Invoice', 'Client', 'Amount'], null, 'A1');
 
         $row = 2;
         foreach ($invoices as $inv) {
