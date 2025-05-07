@@ -22,6 +22,7 @@ return new class extends Migration
             $table->date('sales_order_date')->nullable();
             $table->integer('template');
             $table->integer('sales_person')->nullable();
+            $table->float('commission')->default(0);
             $table->enum('cash', ['0', '1']);
             $table->integer('user');
             $table->float('cgst');

@@ -42,6 +42,7 @@ class SalesInvoiceController extends Controller
             'sales_order_date' => 'required|date_format:Y-m-d',
             'template' => 'required|integer|exists:t_pdf_template,id',
             'sales_person' => 'required|integer|exists:users,id',
+            'commission' => 'nullable|numeric',
             'cash' => 'required|in:0,1',
             'cgst' => 'required|numeric|min:0',
             'sgst' => 'required|numeric|min:0',
@@ -129,6 +130,7 @@ class SalesInvoiceController extends Controller
             'sales_order_date' => $request->input('sales_order_date'),
             'template' => $request->input('template'),
             'sales_person' => $request->input('sales_person'),
+            'commission' => $request->input('commission'),
             'cash' => $request->input('cash'),
             'user' => Auth::user()->id,
             'cgst' => $request->input('cgst'),
@@ -268,7 +270,7 @@ class SalesInvoiceController extends Controller
             DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date'), 
             'user', 'sales_order_id', 
             DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 
-            'template', 'sales_person', 'cash', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
+            'template', 'sales_person', 'commission', 'cash', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
         )
         ->where('company_id', Auth::user()->company_id);
 
@@ -406,6 +408,7 @@ class SalesInvoiceController extends Controller
             'sales_order_date' => 'required|date_format:Y-m-d',
             'template' => 'required|integer|exists:t_pdf_template,id',
             'sales_person' => 'required|integer|exists:users,id',
+            'commission' => 'nullable|numeric',
             'cash' => 'required|in:0,1',
             'cgst' => 'required|numeric|min:0',
             'sgst' => 'required|numeric|min:0',
@@ -456,6 +459,7 @@ class SalesInvoiceController extends Controller
             'sales_order_date' => $request->input('sales_order_date'),
             'template' => $request->input('template'),
             'sales_person' => $request->input('sales_person'),
+            'commission' => $request->input('commission'),
             'cash' => $request->input('cash'),
             'user' => Auth::user()->id,
             'cgst' => $request->input('cgst'),
@@ -681,6 +685,7 @@ class SalesInvoiceController extends Controller
                     )
                     : null,
                     'template' => json_decode($record['pdf_template'], true)['id'] ?? '0',
+                    'commission' => !empty($record['commission']) ? (float) $record['commission'] : 0,
                     'cash' => !empty($record['cash']) ? (string) $record['cash'] : '0',
                     'user' => Auth::user()->id,
                     'cgst' => $taxData['cgst'] ?? 0,
