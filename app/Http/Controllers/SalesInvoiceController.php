@@ -1316,7 +1316,7 @@ class SalesInvoiceController extends Controller
             ->where($baseFilter)
             ->select(
                 't_sales_invoice.id',
-                't_sales_invoice.sales_invoice_date as date',
+                DB::raw("DATE_FORMAT(t_sales_invoice.sales_invoice_date, '%d-%m-%Y') as date"),
                 't_sales_invoice.sales_invoice_no as invoice',
                 't_clients.name as client',
                 't_sales_invoice.total as amount',
@@ -1406,7 +1406,7 @@ class SalesInvoiceController extends Controller
         $row = 2;
         foreach ($invoices as $inv) {
             $sheet->setCellValue("A{$row}", $inv->id);
-            $sheet->setCellValue("B{$row}", $inv->date);
+            $sheet->setCellValue("B{$row}", date('d-m-Y', strtotime($inv->date)));
             $sheet->setCellValue("C{$row}", $inv->invoice);
             $sheet->setCellValue("D{$row}", $inv->client);
             $sheet->setCellValue("E{$row}", $inv->amount);
@@ -1476,7 +1476,7 @@ class SalesInvoiceController extends Controller
         $row = 2;
         foreach ($invoices as $inv) {
             $sheet->setCellValue("A{$row}", $inv->id);
-            $sheet->setCellValue("B{$row}", $inv->date);
+            $sheet->setCellValue("B{$row}", date('d-m-Y', strtotime($inv->date)));
             $sheet->setCellValue("C{$row}", $inv->invoice);
             $sheet->setCellValue("D{$row}", $inv->client);
             $sheet->setCellValue("E{$row}", $inv->amount);
