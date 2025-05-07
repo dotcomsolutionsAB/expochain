@@ -1170,6 +1170,7 @@ class SalesInvoiceController extends Controller
         ]);
     }    
 
+    // export product wise profit
     public function exportProductWiseProfitExcel(Request $request)
     {
         $search = $request->input('search_product');
@@ -1230,6 +1231,7 @@ class SalesInvoiceController extends Controller
         ]);
     }
 
+    // export client wise profit
     public function exportClientWiseProfitExcel(Request $request)
     {
         $search = $request->input('search_client');
@@ -1284,6 +1286,149 @@ class SalesInvoiceController extends Controller
             'success' => true,
             'message' => 'Client-wise profit report exported.',
             'download_url' => asset("storage/client_wise_profit/{$fileName}")
+        ]);
+    }
+
+    // cash
+    public function getCashSalesInvoices(Request $request)
+    {
+        return $this->getFilteredInvoices($request, ['cash' => 1]);
+    }
+
+    // commission
+    public function getCommissionSalesInvoices(Request $request)
+    {
+        return $this->getFilteredInvoices($request, [['commission', '>', 0]]);
+    }
+
+    // private function for process
+    private function getFilteredInvoices(Request $request, $baseFilter)
+    {
+        $companyId = auth()->user()->company_id;
+        $client = $request->input('client');
+        $orderBy = $request->input('order_by', 'date'); // date, client, amount
+        $orderType = $request->input('order', 'desc'); // asc or desc
+        $limit = (int) $request->input('limit', 10);
+        $offset = (int) $request->input('offset', 0);
+
+        $query = SalesInvoiceModel::join('t_clients', 't_clients.id', '=', 't_sales_invoice.client_id')
+            ->where('t_sales_invoice.company_id', $companyId)
+            ->where($baseFilter)
+            ->select(
+                't_sales_invoice.id',
+                't_sales_invoice.sales_invoice_date as date',
+                't_sales_invoice.sales_invoice_no as invoice',
+                't_clients.name as client',
+                't_sales_invoice.total as amount'
+            );
+
+        // Client name filter
+        if (!empty($client)) {
+            $query->where('t_clients.name', 'like', '%' . $client . '%');
+        }
+
+        // Total count before pagination
+        $totalRecords = (clone $query)->count();
+
+        // Total sum of amount (filtered, paginated)
+        $sumAmount = (clone $query)->sum('t_sales_invoice.total');
+
+        // Apply order
+        if (in_array($orderBy, ['date', 'client', 'amount'])) {
+            $query->orderBy($orderBy === 'date' ? 't_sales_invoice.sales_invoice_date' :
+                            ($orderBy === 'client' ? 't_clients.name' : 't_sales_invoice.total'), $orderType);
+        }
+
+        // Fetch results with limit and offset
+        $results = $query->offset($offset)->limit($limit)->get();
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Filtered sales invoices fetched successfully.',
+            'data' => $results,
+            'count' => $results->count(),
+            'total_records' => $totalRecords,
+            'total_amount' => round($sumAmount, 2)
+        ]);
+    }
+
+    // export cash
+    public function exportCashInvoices(Request $request)
+    {
+        $invoices = $this->buildSalesInvoiceExportQuery($request, ['cash' => 1])->get();
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Cash Invoices');
+
+        // Set header row
+        $sheet->fromArray(['ID', 'Date', 'Invoice', 'Client', 'Amount'], NULL, 'A1');
+
+        $row = 2;
+        foreach ($invoices as $inv) {
+            $sheet->setCellValue("A{$row}", $inv->id);
+            $sheet->setCellValue("B{$row}", $inv->date);
+            $sheet->setCellValue("C{$row}", $inv->invoice);
+            $sheet->setCellValue("D{$row}", $inv->client);
+            $sheet->setCellValue("E{$row}", $inv->amount);
+            $row++;
+        }
+
+        $fileName = 'cash_invoice_' . now()->format('Ymd_His') . '.xlsx';
+        $directory = public_path('storage/export_cash_invoice');
+
+        if (!file_exists($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        $filePath = $directory . '/' . $fileName;
+        (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save($filePath);
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Cash invoices exported successfully.',
+            'download_url' => asset("storage/export_cash_invoice/{$fileName}")
+        ]);
+    }
+
+    // export cash
+    public function exportCommissionInvoices(Request $request)
+    {
+        $invoices = $this->buildSalesInvoiceExportQuery($request, [['commission', '>', 0]])->get();
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Commission Invoices');
+
+        $sheet->fromArray(['ID', 'Date', 'Invoice', 'Client', 'Amount'], NULL, 'A1');
+
+        $row = 2;
+        foreach ($invoices as $inv) {
+            $sheet->setCellValue("A{$row}", $inv->id);
+            $sheet->setCellValue("B{$row}", $inv->date);
+            $sheet->setCellValue("C{$row}", $inv->invoice);
+            $sheet->setCellValue("D{$row}", $inv->client);
+            $sheet->setCellValue("E{$row}", $inv->amount);
+            $row++;
+        }
+
+        $fileName = 'commission_invoice_' . now()->format('Ymd_His') . '.xlsx';
+        $directory = public_path('storage/export_commission');
+
+        if (!file_exists($directory)) {
+            mkdir($directory, 0755, true);
+        }
+
+        $filePath = $directory . '/' . $fileName;
+        (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save($filePath);
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Commission invoices exported successfully.',
+            'download_url' => asset("storage/export_commission/{$fileName}")
         ]);
     }
 }

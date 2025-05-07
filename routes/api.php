@@ -162,6 +162,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/export_product_wise', [SalesInvoiceController::class, 'exportProductWiseProfitExcel']);
     Route::post('/export_client_wise', [SalesInvoiceController::class, 'exportClientWiseProfitExcel']);
 
+    Route::post('/cash_invoice', [SalesInvoiceController::class, 'getCashSalesInvoices']);
+    Route::post('/commission_invoice', [SalesInvoiceController::class, 'getCommissionSalesInvoices']);
+
+    Route::post('/export_cash_invoice', [SalesInvoiceController::class, 'exportProductWiseProfitExcel']);
+    Route::post('/export_cash_invoice', [SalesInvoiceController::class, 'exportClientWiseProfitExcel']);
+
     Route::post('/add_sales_return', [SalesReturnController::class, 'add_sales_return']);
     Route::post('/sales_return/{id?}', [SalesReturnController::class, 'view_sales_return']);
     Route::post('/update_sales_return/{id?}', [SalesReturnController::class, 'edit_sales_return']);
