@@ -1320,7 +1320,7 @@ class SalesInvoiceController extends Controller
                 't_sales_invoice.sales_invoice_no as invoice',
                 't_clients.name as client',
                 't_sales_invoice.total as amount',
-                't_sales_invoice.commission'
+                DB::raw("IFNULL(t_sales_invoice.commission, 0) as commission")
             );
 
         // Client name filter
@@ -1342,6 +1342,14 @@ class SalesInvoiceController extends Controller
 
         // Fetch results with limit and offset
         $results = $query->offset($offset)->limit($limit)->get();
+
+        // Safer check
+        if (isset($baseFilter['cash']) && $baseFilter['cash'] === 1) {
+            $results->transform(function ($item) {
+                unset($item->commission);
+                return $item;
+            });
+        }
 
         return response()->json([
             'code' => 200,
