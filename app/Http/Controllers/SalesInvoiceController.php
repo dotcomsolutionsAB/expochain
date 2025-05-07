@@ -1442,7 +1442,8 @@ class SalesInvoiceController extends Controller
                 't_sales_invoice.sales_invoice_date as date',
                 't_sales_invoice.sales_invoice_no as invoice',
                 't_clients.name as client',
-                't_sales_invoice.total as amount'
+                't_sales_invoice.total as amount',
+                't_sales_invoice.commission'
             );
 
         // Apply ordering
@@ -1471,6 +1472,7 @@ class SalesInvoiceController extends Controller
             $sheet->setCellValue("C{$row}", $inv->invoice);
             $sheet->setCellValue("D{$row}", $inv->client);
             $sheet->setCellValue("E{$row}", $inv->amount);
+            $sheet->setCellValue("F{$row}", $inv->commission);
             $row++;
         }
 
