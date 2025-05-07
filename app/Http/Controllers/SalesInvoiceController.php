@@ -1471,7 +1471,7 @@ class SalesInvoiceController extends Controller
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Commission Invoices');
-        $sheet->fromArray(['ID', 'Date', 'Invoice', 'Client', 'Amount'], null, 'A1');
+        $sheet->fromArray(['ID', 'Date', 'Invoice', 'Client', 'Amount', "Commission"], null, 'A1');
 
         $row = 2;
         foreach ($invoices as $inv) {
