@@ -1319,7 +1319,8 @@ class SalesInvoiceController extends Controller
                 't_sales_invoice.sales_invoice_date as date',
                 't_sales_invoice.sales_invoice_no as invoice',
                 't_clients.name as client',
-                't_sales_invoice.total as amount'
+                't_sales_invoice.total as amount',
+                't_sales_invoice.commission'
             );
 
         // Client name filter
