@@ -72,6 +72,8 @@ class HelperController extends Controller
                 ->limit($limit)
                 ->get();
 
+            $paginatedCount = $products->count(); // This is the count of current page items
+
             // Fetch all godowns
             $godowns = GodownModel::where('company_id', $companyId)->select('id', 'name')->get();
 
@@ -136,6 +138,8 @@ class HelperController extends Controller
                 'message' => "Fetched successfully",
                 'data' => [
                     'total_products' => $totalProducts,
+                    'count' => $paginatedCount,           
+                    'total_records' => $totalProducts,    
                     'limit' => $limit,
                     'offset' => $offset,
                     'records' => $productsTransformed,
