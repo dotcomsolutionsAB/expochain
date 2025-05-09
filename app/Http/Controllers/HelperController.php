@@ -36,6 +36,9 @@ class HelperController extends Controller
             $filterSubCategory = $request->input('sub_category');
             $filterAlias = $request->input('alias');
 
+            $sortBy = $request->input('sort_by', 'name'); // name, group, category, sub_category, godown
+            $sortOrder = $request->input('sort_order', 'asc'); // asc or desc
+
             // Base product query
             $productQuery = ProductsModel::with([
                 'groupRelation:id,name',
@@ -62,6 +65,23 @@ class HelperController extends Controller
                 $productQuery->whereIn('sub_category', $subCatIds);
             }
 
+            switch ($sortBy) {
+                case 'group':
+                    $productQuery->orderBy('group', $sortOrder);
+                    break;
+                case 'category':
+                    $productQuery->orderBy('category', $sortOrder);
+                    break;
+                case 'sub_category':
+                    $productQuery->orderBy('sub_category', $sortOrder);
+                    break;
+                case 'alias':
+                    $productQuery->orderBy('alias', $sortOrder);
+                    break;
+                default:
+                    $productQuery->orderBy('name', $sortOrder); // default to name
+            }
+
             // Get total count before pagination
             $totalProducts = $productQuery->count();
 
@@ -71,8 +91,6 @@ class HelperController extends Controller
                 ->offset($offset)
                 ->limit($limit)
                 ->get();
-
-            $paginatedCount = $products->count(); // This is the count of current page items
 
             // Fetch all godowns
             $godowns = GodownModel::where('company_id', $companyId)->select('id', 'name')->get();
@@ -138,7 +156,7 @@ class HelperController extends Controller
                 'message' => "Fetched successfully",
                 'data' => [
                     'total_products' => $totalProducts,
-                    'count' => $paginatedCount,           
+                    'count' => $products->count(),          
                     'total_records' => $totalProducts,    
                     'limit' => $limit,
                     'offset' => $offset,
