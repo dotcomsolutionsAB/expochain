@@ -996,4 +996,61 @@ class HelperController extends Controller
         }
     }
 
+    // profit distribution
+    public function getDailyProfitDistribution(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            // Parse the start and end dates from the request
+            $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
+
+            // Fetch daily profit using raw SQL
+            $dailyProfitData = DB::table('t_sales_invoice as si')
+                ->join('t_sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
+                ->selectRaw('
+                    DATE(si.sales_invoice_date) as invoice_date,
+                    ROUND(SUM(sip.profit), 2) as daily_profit
+                ')
+                ->where('si.company_id', $companyId)
+                ->whereBetween('si.sales_invoice_date', [$startDate, $endDate])
+                ->groupBy(DB::raw('DATE(si.sales_invoice_date)'))
+                ->orderBy(DB::raw('DATE(si.sales_invoice_date)'))
+                ->get();
+
+            // If no data found, return an empty array
+            if ($dailyProfitData->isEmpty()) {
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'No profit data found for the given date range.',
+                    'data' => []
+                ]);
+            }
+
+            // Format the data to match the desired structure
+            $formattedData = $dailyProfitData->map(function ($item) {
+                return [
+                    'date' => $item->invoice_date,
+                    'daily_profit' => $item->daily_profit
+                ];
+            });
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Daily profit distribution fetched successfully.',
+                'data' => $formattedData
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Error occurred while processing data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }

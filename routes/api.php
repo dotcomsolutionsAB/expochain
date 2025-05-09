@@ -311,6 +311,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/sales_graph', [HelperController::class, 'getMonthlyCumulativeSalesSummary']);
 
+    Route::post('/profit_distribution', [HelperController::class, 'getDailyProfitDistribution']);
+
     Route::post('/product_profit', [HelperController::class, 'getProductWiseSalesSummary']);
 
     Route::post('/client_profit', [HelperController::class, 'getClientWiseSalesSummary']);
