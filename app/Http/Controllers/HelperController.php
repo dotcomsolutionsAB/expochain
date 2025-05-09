@@ -1076,7 +1076,7 @@ class HelperController extends Controller
 
             // Query to fetch total amounts and count grouped by month and status
             $query = DB::table('t_quotations')
-                ->selectRaw('MONTH(quotation_date) as month, YEAR(quotation_date) as year, status, SUM(total) as total_amount')
+              ->selectRaw('MONTH(quotation_date) as month, YEAR(quotation_date) as year, status, ROUND(SUM(total), 2) as total_amount')
                 ->where('company_id', $companyId)
                 ->whereBetween('quotation_date', [$startDate, $endDate])
                 ->groupBy(DB::raw('YEAR(quotation_date), MONTH(quotation_date), status'))
