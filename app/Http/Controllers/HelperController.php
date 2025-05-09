@@ -156,7 +156,6 @@ class HelperController extends Controller
                 'success' => true,
                 'message' => "Fetched successfully",
                 'data' => [
-                    'total_products' => $totalProducts,
                     'count' => $products->count(),          
                     'total_records' => $totalProducts,    
                     'limit' => $limit,
