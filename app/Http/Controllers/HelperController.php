@@ -1151,5 +1151,141 @@ class HelperController extends Controller
         }
     }
 
+    // product wise quotation
+    public function getProductWiseQuotations(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            // Extract filters and pagination from request
+            $limit = $request->input('limit', 50);
+            $offset = $request->input('offset', 0);
+            $searchProduct = $request->input('product');
+            $orderBy = $request->input('order_by', 'product_name');  // name, quantity
+            $orderType = $request->input('order', 'asc'); // asc or desc
+
+            $query = DB::table('t_quotation_products')
+                ->join('t_quotations', 't_quotations.id', '=', 't_quotation_products.quotation_id')
+                ->join('t_products', 't_products.id', '=', 't_quotation_products.product_id')
+                ->where('t_quotations.company_id', $companyId)
+                ->select(
+                    't_quotation_products.product_id',
+                    't_products.name as product_name',
+                    DB::raw('SUM(t_quotation_products.quantity) as total_quantity')
+                )
+                ->groupBy('t_quotation_products.product_id', 't_products.name');
+
+            // Apply search filter for product name
+            if (!empty($searchProduct)) {
+                $query->where('t_products.name', 'like', "%$searchProduct%");
+            }
+
+            // Apply sorting
+            if (in_array($orderBy, ['product_name', 'total_quantity'])) {
+                $query->orderBy($orderBy === 'product_name' ? 't_products.name' : 'total_quantity', $orderType);
+            }
+
+            // Get total count before pagination
+            $totalRecords = (clone $query)->count();
+
+            // Apply pagination
+            $products = $query->offset($offset)
+                ->limit($limit)
+                ->get();
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Product-wise quotations fetched successfully.',
+                'data' => [
+                    'total_records' => $totalRecords,
+                    'count' => $products->count(),
+                    'records' => $products,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // export product wise quotation
+    public function exportProductWiseQuotations(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            // Extract filters and pagination from request
+            $searchProduct = $request->input('product');
+            $orderBy = $request->input('order_by', 'product_name');
+            $orderType = $request->input('order', 'asc');
+
+            $query = DB::table('t_quotation_products')
+                ->join('t_quotations', 't_quotations.id', '=', 't_quotation_products.quotation_id')
+                ->join('t_products', 't_products.id', '=', 't_quotation_products.product_id')
+                ->where('t_quotations.company_id', $companyId)
+                ->select(
+                    't_quotation_products.product_id',
+                    't_products.name as product_name',
+                    DB::raw('SUM(t_quotation_products.quantity) as total_quantity')
+                )
+                ->groupBy('t_quotation_products.product_id', 't_products.name');
+
+            // Apply search filter for product name
+            if (!empty($searchProduct)) {
+                $query->where('t_products.name', 'like', "%$searchProduct%");
+            }
+
+            // Apply sorting
+            if (in_array($orderBy, ['product_name', 'total_quantity'])) {
+                $query->orderBy($orderBy === 'product_name' ? 't_products.name' : 'total_quantity', $orderType);
+            }
+
+            $products = $query->get();
+
+            // Generate Excel file
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Product Wise Quotations');
+
+            // Set header row
+            $sheet->fromArray(['Product ID', 'Product Name', 'Total Quantity'], NULL, 'A1');
+
+            // Write data to Excel
+            $row = 2;
+            foreach ($products as $product) {
+                $sheet->setCellValue("A{$row}", $product->product_id);
+                $sheet->setCellValue("B{$row}", $product->product_name);
+                $sheet->setCellValue("C{$row}", $product->total_quantity);
+                $row++;
+            }
+
+            // Save file
+            $fileName = 'product_wise_quotations_' . now()->format('Ymd_His') . '.xlsx';
+            $directory = public_path('storage/export_product_wise_quotations');
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
+            $filePath = $directory . '/' . $fileName;
+            (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save($filePath);
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Product-wise quotations exported successfully.',
+                'download_url' => asset("storage/export_product_wise_quotations/{$fileName}")
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
 
 }
