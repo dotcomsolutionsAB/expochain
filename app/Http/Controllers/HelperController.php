@@ -943,5 +943,43 @@ class HelperController extends Controller
         }
     }
 
+    // sales vs sales graph
+    public function getMonthlyCumulativeSalesSummary(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+            $year = $request->input('year'); // For example, 2024
+
+            // SQL query to get monthly cumulative sales
+            $sales = DB::table('t_sales_invoice as si')
+                ->join('t_sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
+                ->selectRaw('
+                    MONTH(si.sales_invoice_date) AS month,
+                    YEAR(si.sales_invoice_date) AS year,
+                    SUM(sip.amount) AS monthly_sales_amount,
+                    SUM(SUM(sip.amount)) OVER (ORDER BY YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)) AS cumulative_sales_amount
+                ')
+                ->where('si.company_id', $companyId)
+                ->whereYear('si.sales_invoice_date', $year)
+                ->groupBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)'))
+                ->orderBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)'))
+                ->get();
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Monthly cumulative sales fetched successfully.',
+                'data' => $sales
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Error occurred while processing data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 
 }
