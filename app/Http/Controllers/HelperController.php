@@ -1288,22 +1288,20 @@ class HelperController extends Controller
     }
 
     // client wise quotation
-    public function getClientWiseQuotations(Request $request)
+    public function getClientWiseQuotation(Request $request)
     {
         try {
             $companyId = Auth::user()->company_id;
 
-            // Extract filters and pagination from request
-            $limit = $request->input('limit', 50);
-            $offset = $request->input('offset', 0);
-            $searchName = $request->input('name');
-            $searchType = $request->input('type');
-            $searchCategory = $request->input('category');
-            $orderBy = $request->input('order_by', 'name');
-            $orderType = $request->input('order', 'asc');
+            // Extract filters from request
+            $filterName = $request->input('name');
+            $filterType = $request->input('type');
+            $filterCategory = $request->input('category');
+            $orderBy = $request->input('order_by', 'name'); // name, type, category
+            $orderType = $request->input('order', 'asc'); // asc or desc
 
-            $query = DB::table('t_quotations')
-                ->join('t_clients', 't_clients.id', '=', 't_quotations.client_id')
+            // Base query for client-wise quotation
+            $query = QuotationsModel::join('t_clients', 't_clients.id', '=', 't_quotations.client_id')
                 ->where('t_quotations.company_id', $companyId)
                 ->select(
                     't_clients.name as client_name',
@@ -1313,17 +1311,20 @@ class HelperController extends Controller
                     DB::raw('SUM(CASE WHEN t_quotations.status = "completed" THEN t_quotations.total ELSE 0 END) as completed_amount'),
                     DB::raw('SUM(CASE WHEN t_quotations.status = "pending" THEN t_quotations.total ELSE 0 END) as pending_amount'),
                     DB::raw('SUM(CASE WHEN t_quotations.status = "rejected" THEN t_quotations.total ELSE 0 END) as rejected_amount')
-                );
+                )
+                ->groupBy('t_quotations.client_id', 't_clients.name', 't_clients.type', 't_clients.category');
 
             // Apply filters
-            if (!empty($searchName)) {
-                $query->where('t_clients.name', 'like', '%' . $searchName . '%');
+            if ($filterName) {
+                $query->where('t_clients.name', 'like', '%' . $filterName . '%');
             }
-            if (!empty($searchType)) {
-                $query->whereIn('t_clients.type', explode(',', $searchType));
+
+            if ($filterType) {
+                $query->where('t_clients.type', $filterType);
             }
-            if (!empty($searchCategory)) {
-                $query->whereIn('t_clients.category', explode(',', $searchCategory));
+
+            if ($filterCategory) {
+                $query->where('t_clients.category', $filterCategory);
             }
 
             // Apply sorting
@@ -1334,50 +1335,22 @@ class HelperController extends Controller
                 case 'category':
                     $query->orderBy('t_clients.category', $orderType);
                     break;
+                case 'name':
                 default:
                     $query->orderBy('t_clients.name', $orderType);
+                    break;
             }
 
-            // Get total record count before pagination
-            $totalRecords = (clone $query)->count();
-
-            // Apply pagination
-            $clients = $query->groupBy('t_quotations.client_id')
-                ->offset($offset)
-                ->limit($limit)
-                ->get();
-
-            // Format results with completed percentage
-            $clientsTransformed = $clients->map(function ($client) {
-                $completedPercentage = $client->total_amount > 0
-                    ? round(($client->completed_amount / $client->total_amount) * 100, 2)
-                    : 0;
-
-                return [
-                    'client_name' => $client->client_name,
-                    'client_type' => $client->client_type,
-                    'client_category' => $client->client_category,
-                    'total_amount' => round($client->total_amount, 2),
-                    'completed_amount' => round($client->completed_amount, 2),
-                    'pending_amount' => round($client->pending_amount, 2),
-                    'rejected_amount' => round($client->rejected_amount, 2),
-                    'completed_percentage' => $completedPercentage
-                ];
-            });
+            // Get the results
+            $clients = $query->get();
 
             return response()->json([
                 'code' => 200,
                 'success' => true,
-                'message' => 'Client-wise quotation report fetched successfully.',
-                'data' => [
-                    'total_clients' => $totalRecords,
-                    'limit' => $limit,
-                    'offset' => $offset,
-                    'clients' => $clientsTransformed,
-                ]
-            ], 200);
-
-        } catch (\Throwable $e) {
+                'message' => 'Client-wise quotation data fetched successfully.',
+                'data' => $clients,
+            ]);
+        } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
                 'success' => false,
