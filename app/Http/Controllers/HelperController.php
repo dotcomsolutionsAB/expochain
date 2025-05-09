@@ -957,10 +957,22 @@ class HelperController extends Controller
             $sales = DB::table('t_sales_invoice as si')
                 ->join('t_sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
                 ->selectRaw('
-                    MONTH(si.sales_invoice_date) AS month,
-                    YEAR(si.sales_invoice_date) AS year,
-                    SUM(sip.amount) AS monthly_sales_amount,
-                    SUM(SUM(sip.amount)) OVER (ORDER BY YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)) AS cumulative_sales_amount
+                    CASE 
+                        WHEN MONTH(si.sales_invoice_date) = 1 THEN "January"
+                        WHEN MONTH(si.sales_invoice_date) = 2 THEN "February"
+                        WHEN MONTH(si.sales_invoice_date) = 3 THEN "March"
+                        WHEN MONTH(si.sales_invoice_date) = 4 THEN "April"
+                        WHEN MONTH(si.sales_invoice_date) = 5 THEN "May"
+                        WHEN MONTH(si.sales_invoice_date) = 6 THEN "June"
+                        WHEN MONTH(si.sales_invoice_date) = 7 THEN "July"
+                        WHEN MONTH(si.sales_invoice_date) = 8 THEN "August"
+                        WHEN MONTH(si.sales_invoice_date) = 9 THEN "September"
+                        WHEN MONTH(si.sales_invoice_date) = 10 THEN "October"
+                        WHEN MONTH(si.sales_invoice_date) = 11 THEN "November"
+                        WHEN MONTH(si.sales_invoice_date) = 12 THEN "December"
+                    END AS month_name,
+                    ROUND(SUM(sip.amount), 2) as monthly_sales_amount,
+                    ROUND(SUM(SUM(sip.amount)) OVER (ORDER BY YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)), 2) as cumulative_sales_amount
                 ')
                 ->where('si.company_id', $companyId)
                 ->whereBetween('si.sales_invoice_date', [$startDate, $endDate])
@@ -983,4 +995,5 @@ class HelperController extends Controller
             ], 500);
         }
     }
+
 }
