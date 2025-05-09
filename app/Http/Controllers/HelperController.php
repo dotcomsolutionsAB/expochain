@@ -878,4 +878,70 @@ class HelperController extends Controller
         }
     }
 
+    // sales vs sales barchart
+    public function getMonthlySalesSummary(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            // Parse start and end dates from the request
+            $startDate = Carbon::parse($request->start_date)->startOfMonth();
+            $endDate = Carbon::parse($request->end_date)->endOfMonth();
+
+            // Initialize empty arrays to store results
+            $months = [];
+            $salesTotals = [];
+            $invoiceCounts = [];
+
+            // Generate months between start and end dates
+            $current = $startDate->copy();
+
+            while ($current <= $endDate) {
+                $monthStart = $current->copy()->startOfMonth();
+                $monthEnd = $current->copy()->endOfMonth();
+                $monthName = $current->format('F Y'); // e.g., "January 2022"
+
+                // Query sales for this month
+                $salesStats = DB::table('t_sales_invoice as si')
+                    ->join('t_sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
+                    ->where('si.company_id', $companyId)
+                    ->whereBetween('si.sales_invoice_date', [$monthStart, $monthEnd])
+                    ->selectRaw('SUM(sip.amount) as total, COUNT(DISTINCT si.id) as invoice_count')
+                    ->first();
+
+                // If no data found for this month, default to 0
+                $salesTotal = $salesStats->total ?? 0;
+                $invoiceCount = $salesStats->invoice_count ?? 0;
+
+                // Populate results for the current month
+                $months[] = $monthName;
+                $salesTotals[] = round($salesTotal, 2); // If no sales, default to 0
+                $invoiceCounts[] = $invoiceCount;
+
+                // Move to the next month
+                $current->addMonth();
+            }
+
+            // Return the monthly sales data
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Monthly sales summary fetched successfully!',
+                'data' => [
+                    'month' => $months,
+                    'sales_total' => $salesTotals,
+                    'invoice_count' => $invoiceCounts,
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Error occurred while processing data: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+
 }
