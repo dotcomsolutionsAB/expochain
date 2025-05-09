@@ -1288,7 +1288,7 @@ class HelperController extends Controller
     }
 
     // client wise quotation
-    public function getClientWiseQuotation(Request $request)
+    public function getClientWiseQuotations(Request $request)
     {
         try {
             $companyId = Auth::user()->company_id;
