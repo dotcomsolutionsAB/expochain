@@ -1158,7 +1158,7 @@ class HelperController extends Controller
             $companyId = Auth::user()->company_id;
 
             // Extract filters and pagination from request
-            $limit = $request->input('limit', 50);
+            $limit = $request->input('limit', 10);
             $offset = $request->input('offset', 0);
             $searchProduct = $request->input('product');
             $orderBy = $request->input('order_by', 'product_name');  // name, quantity
@@ -1287,5 +1287,206 @@ class HelperController extends Controller
         }
     }
 
+    // client wise quotation
+    public function getClientWiseQuotations(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
 
+            // Extract filters and pagination from request
+            $limit = $request->input('limit', 50);
+            $offset = $request->input('offset', 0);
+            $searchName = $request->input('name');
+            $searchType = $request->input('type');
+            $searchCategory = $request->input('category');
+            $orderBy = $request->input('order_by', 'name');
+            $orderType = $request->input('order', 'asc');
+
+            $query = DB::table('t_quotations')
+                ->join('t_clients', 't_clients.id', '=', 't_quotations.client_id')
+                ->where('t_quotations.company_id', $companyId)
+                ->select(
+                    't_clients.name as client_name',
+                    't_clients.type as client_type',
+                    't_clients.category as client_category',
+                    DB::raw('SUM(t_quotations.total) as total_amount'),
+                    DB::raw('SUM(CASE WHEN t_quotations.status = "completed" THEN t_quotations.total ELSE 0 END) as completed_amount'),
+                    DB::raw('SUM(CASE WHEN t_quotations.status = "pending" THEN t_quotations.total ELSE 0 END) as pending_amount'),
+                    DB::raw('SUM(CASE WHEN t_quotations.status = "rejected" THEN t_quotations.total ELSE 0 END) as rejected_amount')
+                );
+
+            // Apply filters
+            if (!empty($searchName)) {
+                $query->where('t_clients.name', 'like', '%' . $searchName . '%');
+            }
+            if (!empty($searchType)) {
+                $query->whereIn('t_clients.type', explode(',', $searchType));
+            }
+            if (!empty($searchCategory)) {
+                $query->whereIn('t_clients.category', explode(',', $searchCategory));
+            }
+
+            // Apply sorting
+            switch ($orderBy) {
+                case 'type':
+                    $query->orderBy('t_clients.type', $orderType);
+                    break;
+                case 'category':
+                    $query->orderBy('t_clients.category', $orderType);
+                    break;
+                default:
+                    $query->orderBy('t_clients.name', $orderType);
+            }
+
+            // Get total record count before pagination
+            $totalRecords = (clone $query)->count();
+
+            // Apply pagination
+            $clients = $query->groupBy('t_quotations.client_id')
+                ->offset($offset)
+                ->limit($limit)
+                ->get();
+
+            // Format results with completed percentage
+            $clientsTransformed = $clients->map(function ($client) {
+                $completedPercentage = $client->total_amount > 0
+                    ? round(($client->completed_amount / $client->total_amount) * 100, 2)
+                    : 0;
+
+                return [
+                    'client_name' => $client->client_name,
+                    'client_type' => $client->client_type,
+                    'client_category' => $client->client_category,
+                    'total_amount' => round($client->total_amount, 2),
+                    'completed_amount' => round($client->completed_amount, 2),
+                    'pending_amount' => round($client->pending_amount, 2),
+                    'rejected_amount' => round($client->rejected_amount, 2),
+                    'completed_percentage' => $completedPercentage
+                ];
+            });
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Client-wise quotation report fetched successfully.',
+                'data' => [
+                    'total_clients' => $totalRecords,
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'clients' => $clientsTransformed,
+                ]
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Error occurred: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // export client wise quotation
+    public function exportClientWiseQuotations(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            // Extract filters and pagination from request
+            $searchName = $request->input('name');
+            $searchType = $request->input('type');
+            $searchCategory = $request->input('category');
+            $orderBy = $request->input('order_by', 'name');
+            $orderType = $request->input('order', 'asc');
+
+            $query = DB::table('t_quotations')
+                ->join('t_clients', 't_clients.id', '=', 't_quotations.client_id')
+                ->where('t_quotations.company_id', $companyId)
+                ->select(
+                    't_clients.name as client_name',
+                    't_clients.type as client_type',
+                    't_clients.category as client_category',
+                    DB::raw('SUM(t_quotations.total) as total_amount'),
+                    DB::raw('SUM(CASE WHEN t_quotations.status = "completed" THEN t_quotations.total ELSE 0 END) as completed_amount'),
+                    DB::raw('SUM(CASE WHEN t_quotations.status = "pending" THEN t_quotations.total ELSE 0 END) as pending_amount'),
+                    DB::raw('SUM(CASE WHEN t_quotations.status = "rejected" THEN t_quotations.total ELSE 0 END) as rejected_amount')
+                );
+
+            // Apply filters
+            if (!empty($searchName)) {
+                $query->where('t_clients.name', 'like', '%' . $searchName . '%');
+            }
+            if (!empty($searchType)) {
+                $query->whereIn('t_clients.type', explode(',', $searchType));
+            }
+            if (!empty($searchCategory)) {
+                $query->whereIn('t_clients.category', explode(',', $searchCategory));
+            }
+
+            // Apply sorting
+            switch ($orderBy) {
+                case 'type':
+                    $query->orderBy('t_clients.type', $orderType);
+                    break;
+                case 'category':
+                    $query->orderBy('t_clients.category', $orderType);
+                    break;
+                default:
+                    $query->orderBy('t_clients.name', $orderType);
+            }
+
+            // Get all the data
+            $clients = $query->groupBy('t_quotations.client_id')->get();
+
+            // Generate Excel
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('Client Wise Quotations');
+
+            // Set header row
+            $sheet->fromArray(['Client Name', 'Client Type', 'Client Category', 'Total Amount', 'Completed Amount', 'Pending Amount', 'Rejected Amount', 'Completed Percentage'], NULL, 'A1');
+
+            $row = 2;
+            foreach ($clients as $client) {
+                $completedPercentage = $client->total_amount > 0
+                    ? round(($client->completed_amount / $client->total_amount) * 100, 2)
+                    : 0;
+
+                $sheet->setCellValue("A{$row}", $client->client_name);
+                $sheet->setCellValue("B{$row}", $client->client_type);
+                $sheet->setCellValue("C{$row}", $client->client_category);
+                $sheet->setCellValue("D{$row}", round($client->total_amount, 2));
+                $sheet->setCellValue("E{$row}", round($client->completed_amount, 2));
+                $sheet->setCellValue("F{$row}", round($client->pending_amount, 2));
+                $sheet->setCellValue("G{$row}", round($client->rejected_amount, 2));
+                $sheet->setCellValue("H{$row}", $completedPercentage);
+                $row++;
+            }
+
+            // Save Excel file
+            $fileName = 'client_wise_quotations_' . now()->format('Ymd_His') . '.xlsx';
+            $filePath = public_path('storage/export_client_wise_quotations/' . $fileName);
+            $directory = public_path('storage/export_client_wise_quotations');
+
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
+
+            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+            $writer->save($filePath);
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Client-wise quotations exported successfully.',
+                'download_url' => asset("storage/export_client_wise_quotations/{$fileName}")
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Error occurred: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 }

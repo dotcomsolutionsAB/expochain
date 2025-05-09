@@ -319,6 +319,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/export_product_quotation', [HelperController::class, 'exportProductWiseQuotations']);
 
+    Route::post('/client_quotation', [HelperController::class, 'getClientWiseQuotations']);
+
+    Route::post('/export_client_quotation', [HelperController::class, 'exportClientWiseQuotations']);
+
     Route::post('/product_profit', [HelperController::class, 'getProductWiseSalesSummary']);
 
     Route::post('/client_profit', [HelperController::class, 'getClientWiseSalesSummary']);
