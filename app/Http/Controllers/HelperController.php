@@ -15,6 +15,7 @@ use App\Models\PurchaseOrderProductsModel;
 use App\Models\SalesOrderModel;
 use App\Models\SalesOrderProductsModel;
 use App\Models\GodownModel;
+use App\Models\QuotationsModel;
 use DB;
 use Auth;
 
