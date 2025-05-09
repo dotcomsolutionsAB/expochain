@@ -1344,14 +1344,14 @@ class HelperController extends Controller
                     break;
             }
 
-             // Get total count before pagination
+            // Get total count before pagination
             $totalRecords = $query->count();
 
             // Apply pagination
             $clients = $query->offset($offset)->limit($limit)->get();
 
-            // Calculate total amount
-            $totalAmount = $clients->sum('total_amount');
+            // Calculate total amount for the current page
+            $totalAmount = $clients->sum('total_amount'); // Sum of total_amount for the current page
 
             return response()->json([
                 'code' => 200,
@@ -1376,7 +1376,7 @@ class HelperController extends Controller
     }
 
     // export client wise quotation
-    public function exportClientWiseQuotations(Request $request)
+   public function exportClientWiseQuotations(Request $request)
     {
         try {
             $companyId = Auth::user()->company_id;
@@ -1388,6 +1388,7 @@ class HelperController extends Controller
             $orderBy = $request->input('order_by', 'name');
             $orderType = $request->input('order', 'asc');
 
+            // Base query for client-wise quotation
             $query = QuotationsModel::join('t_clients', 't_clients.id', '=', 't_quotations.client_id')
                 ->where('t_quotations.company_id', $companyId)
                 ->select(
@@ -1425,7 +1426,7 @@ class HelperController extends Controller
             }
 
             // Get all the data
-            $clients = $query->groupBy('t_quotations.client_id')->get();
+            $clients = $query->get();
 
             // Generate Excel
             $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
@@ -1433,7 +1434,10 @@ class HelperController extends Controller
             $sheet->setTitle('Client Wise Quotations');
 
             // Set header row
-            $sheet->fromArray(['Client Name', 'Client Type', 'Client Category', 'Total Amount', 'Completed Amount', 'Pending Amount', 'Rejected Amount', 'Completed Percentage'], NULL, 'A1');
+            $sheet->fromArray([
+                'Client Name', 'Client Type', 'Client Category', 'Total Amount', 
+                'Completed Amount', 'Pending Amount', 'Rejected Amount', 'Completed Percentage'
+            ], null, 'A1');
 
             $row = 2;
             foreach ($clients as $client) {
@@ -1452,15 +1456,17 @@ class HelperController extends Controller
                 $row++;
             }
 
-            // Save Excel file
+            // Define file name and path
             $fileName = 'client_wise_quotations_' . now()->format('Ymd_His') . '.xlsx';
-            $filePath = public_path('storage/export_client_wise_quotations/' . $fileName);
-            $directory = public_path('storage/export_client_wise_quotations');
+            $filePath = storage_path('app/public/export_client_wise_quotations/' . $fileName);
+            $directory = storage_path('app/public/export_client_wise_quotations');
 
+            // Check if directory exists, if not create it
             if (!file_exists($directory)) {
                 mkdir($directory, 0755, true);
             }
 
+            // Save Excel file
             $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
             $writer->save($filePath);
 
@@ -1468,7 +1474,7 @@ class HelperController extends Controller
                 'code' => 200,
                 'success' => true,
                 'message' => 'Client-wise quotations exported successfully.',
-                'download_url' => asset("storage/export_client_wise_quotations/{$fileName}")
+                'download_url' => asset('storage/export_client_wise_quotations/' . $fileName)
             ]);
         } catch (\Exception $e) {
             return response()->json([
