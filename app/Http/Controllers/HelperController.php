@@ -1350,8 +1350,12 @@ class HelperController extends Controller
             // Apply pagination
             $clients = $query->offset($offset)->limit($limit)->get();
 
-            // Calculate total amount for the current page
-            $totalAmount = $clients->sum('total_amount'); // Sum of total_amount for the current page
+            // Calculate completed percentage for each client
+            foreach ($clients as $client) {
+                $client->complete_percentage = ($client->total_amount > 0)
+                    ? round(($client->completed_amount / $client->total_amount) * 100, 2)
+                    : 0;
+            }
 
             return response()->json([
                 'code' => 200,
@@ -1363,7 +1367,6 @@ class HelperController extends Controller
                     'limit' => $limit,
                     'offset' => $offset,
                     'records' => $clients,
-                    'total_amount' => round($totalAmount, 2), // Sum of total amounts for current page
                 ]
             ]);
         } catch (\Exception $e) {
