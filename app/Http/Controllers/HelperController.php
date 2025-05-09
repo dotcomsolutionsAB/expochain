@@ -1300,6 +1300,8 @@ class HelperController extends Controller
             $filterCategory = $request->input('category');
             $orderBy = $request->input('order_by', 'name'); // name, type, category
             $orderType = $request->input('order', 'asc'); // asc or desc
+            $limit = $request->input('limit', 10);  // Pagination limit
+            $offset = $request->input('offset', 0); // Pagination offset
 
             // Base query for client-wise quotation
             $query = QuotationsModel::join('t_clients', 't_clients.id', '=', 't_quotations.client_id')
@@ -1342,14 +1344,27 @@ class HelperController extends Controller
                     break;
             }
 
-            // Get the results
-            $clients = $query->get();
+             // Get total count before pagination
+            $totalRecords = $query->count();
+
+            // Apply pagination
+            $clients = $query->offset($offset)->limit($limit)->get();
+
+            // Calculate total amount
+            $totalAmount = $clients->sum('total_amount');
 
             return response()->json([
                 'code' => 200,
                 'success' => true,
                 'message' => 'Client-wise quotation data fetched successfully.',
-                'data' => $clients,
+                'data' => [
+                    'total_records' => $totalRecords,   // Total records count without pagination
+                    'count' => $clients->count(),       // Number of records for the current page
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'records' => $clients,
+                    'total_amount' => round($totalAmount, 2), // Sum of total amounts for current page
+                ]
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -1373,8 +1388,7 @@ class HelperController extends Controller
             $orderBy = $request->input('order_by', 'name');
             $orderType = $request->input('order', 'asc');
 
-            $query = DB::table('t_quotations')
-                ->join('t_clients', 't_clients.id', '=', 't_quotations.client_id')
+            $query = QuotationsModel::join('t_clients', 't_clients.id', '=', 't_quotations.client_id')
                 ->where('t_quotations.company_id', $companyId)
                 ->select(
                     't_clients.name as client_name',
@@ -1384,7 +1398,8 @@ class HelperController extends Controller
                     DB::raw('SUM(CASE WHEN t_quotations.status = "completed" THEN t_quotations.total ELSE 0 END) as completed_amount'),
                     DB::raw('SUM(CASE WHEN t_quotations.status = "pending" THEN t_quotations.total ELSE 0 END) as pending_amount'),
                     DB::raw('SUM(CASE WHEN t_quotations.status = "rejected" THEN t_quotations.total ELSE 0 END) as rejected_amount')
-                );
+                )
+                ->groupBy('t_quotations.client_id', 't_clients.name', 't_clients.type', 't_clients.category');
 
             // Apply filters
             if (!empty($searchName)) {
