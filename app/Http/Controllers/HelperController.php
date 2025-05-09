@@ -1344,7 +1344,7 @@ class HelperController extends Controller
             }
 
             // Get total count before pagination
-            $totalRecords = $query->count();
+            $totalRecords = (clone $query)->count();
 
             // Apply pagination
             $clients = $query->offset($offset)->limit($limit)->get();
