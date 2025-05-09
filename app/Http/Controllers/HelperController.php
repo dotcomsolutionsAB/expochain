@@ -948,7 +948,10 @@ class HelperController extends Controller
     {
         try {
             $companyId = Auth::user()->company_id;
-            $year = $request->input('year'); // For example, 2024
+
+            // Parse the start and end dates from the request
+            $startDate = Carbon::parse($request->input('start_date'))->startOfMonth();
+            $endDate = Carbon::parse($request->input('end_date'))->endOfMonth();
 
             // SQL query to get monthly cumulative sales
             $sales = DB::table('t_sales_invoice as si')
@@ -960,7 +963,7 @@ class HelperController extends Controller
                     SUM(SUM(sip.amount)) OVER (ORDER BY YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)) AS cumulative_sales_amount
                 ')
                 ->where('si.company_id', $companyId)
-                ->whereYear('si.sales_invoice_date', $year)
+                ->whereBetween('si.sales_invoice_date', [$startDate, $endDate])
                 ->groupBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)'))
                 ->orderBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)'))
                 ->get();
@@ -980,6 +983,4 @@ class HelperController extends Controller
             ], 500);
         }
     }
-
-
 }
