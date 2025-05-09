@@ -1053,4 +1053,103 @@ class HelperController extends Controller
         }
     }
 
+    // quotation statistic
+    public function getMonthlyQuotationStatusReport(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+            $startDate = Carbon::parse($request->start_date);
+            $endDate = Carbon::parse($request->end_date);
+
+            // Generate all months between start date and end date
+            $months = collect();
+            $current = $startDate->copy();
+
+            while ($current <= $endDate) {
+                $months->push([
+                    'month' => $current->format('F Y'),
+                    'month_num' => $current->format('m'),
+                    'year' => $current->format('Y'),
+                ]);
+                $current->addMonth();
+            }
+
+            // Query to fetch total amounts and count grouped by month and status
+            $query = DB::table('t_quotations')
+                ->selectRaw('MONTH(quotation_date) as month, YEAR(quotation_date) as year, status, SUM(total) as total_amount')
+                ->where('company_id', $companyId)
+                ->whereBetween('quotation_date', [$startDate, $endDate])
+                ->groupBy(DB::raw('YEAR(quotation_date), MONTH(quotation_date), status'))
+                ->get();
+
+            // Initialize the result arrays for each status
+            $result = [
+                'pending' => [],
+                'rejected' => [],
+                'completed' => [],
+            ];
+
+            // Populate the result arrays with the appropriate data
+            foreach ($months as $month) {
+                // Default to 0 if no data exists for this month in any status
+                $result['pending'][] = [
+                    'month' => $month['month'],
+                    'total_amount' => 0,
+                ];
+                $result['rejected'][] = [
+                    'month' => $month['month'],
+                    'total_amount' => 0,
+                ];
+                $result['completed'][] = [
+                    'month' => $month['month'],
+                    'total_amount' => 0,
+                ];
+            }
+
+            // Populate the result arrays with data from the query
+            foreach ($query as $record) {
+                $monthName = Carbon::createFromFormat('Y-m', "{$record->year}-{$record->month}")->format('F Y');
+
+                if ($record->status == 'pending') {
+                    $result['pending'] = array_map(function ($item) use ($monthName, $record) {
+                        if ($item['month'] == $monthName) {
+                            $item['total_amount'] = round($record->total_amount, 2);
+                        }
+                        return $item;
+                    }, $result['pending']);
+                } elseif ($record->status == 'rejected') {
+                    $result['rejected'] = array_map(function ($item) use ($monthName, $record) {
+                        if ($item['month'] == $monthName) {
+                            $item['total_amount'] = round($record->total_amount, 2);
+                        }
+                        return $item;
+                    }, $result['rejected']);
+                } elseif ($record->status == 'completed') {
+                    $result['completed'] = array_map(function ($item) use ($monthName, $record) {
+                        if ($item['month'] == $monthName) {
+                            $item['total_amount'] = round($record->total_amount, 2);
+                        }
+                        return $item;
+                    }, $result['completed']);
+                }
+            }
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Monthly quotation report fetched successfully.',
+                'data' => $result
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Error occurred while fetching data',
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+
 }
