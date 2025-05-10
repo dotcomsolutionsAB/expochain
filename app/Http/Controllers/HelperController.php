@@ -1016,7 +1016,7 @@ class HelperController extends Controller
                 ->join('t_sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
                 ->selectRaw('
                     DATE(si.sales_invoice_date) as invoice_date,
-                    ROUND(SUM(sip.profit), 2) as daily_profit
+                    ROUND(SUM(sip.profit)) as daily_profit
                 ')
                 ->where('si.company_id', $companyId)
                 ->whereBetween('si.sales_invoice_date', [$startDate, $endDate])
