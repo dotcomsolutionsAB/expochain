@@ -915,7 +915,7 @@ class HelperController extends Controller
 
                 // Populate results for the current month
                 $months[] = $monthName;
-                $salesTotals[] = round($salesTotal, 2); // If no sales, default to 0
+                $salesTotals[] = round($salesTotal); // If no sales, default to 0
                 $invoiceCounts[] = $invoiceCount;
 
                 // Move to the next month
