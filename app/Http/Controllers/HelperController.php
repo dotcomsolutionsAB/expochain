@@ -971,7 +971,7 @@ class HelperController extends Controller
                         WHEN MONTH(si.sales_invoice_date) = 11 THEN "November"
                         WHEN MONTH(si.sales_invoice_date) = 12 THEN "December"
                     END AS month_name,
-                    ROUND(SUM(sip.amount)) as monthly_sales_amount,
+                    ROUND(SUM(sip.amount), 2) as monthly_sales_amount,
                     ROUND(SUM(SUM(sip.amount)) OVER (ORDER BY YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)), 2) as cumulative_sales_amount
                 ')
                 ->where('si.company_id', $companyId)
