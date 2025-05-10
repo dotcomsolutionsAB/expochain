@@ -43,7 +43,8 @@ class HelperController extends Controller
             // Base product query
             $productQuery = ProductsModel::with([
                 'groupRelation:id,name',
-                'categoryRelation:id,name'
+                'categoryRelation:id,name',
+                'subCategoryRelation:id,name'
             ])->where('company_id', $companyId);
 
             // Apply filters
@@ -88,7 +89,7 @@ class HelperController extends Controller
 
             // Apply pagination
             $products = $productQuery
-                ->select('id', 'name', 'alias', 'group', 'category')
+                ->select('id', 'name', 'alias', 'group', 'category', 'sub_category', 'unit')
                 ->offset($offset)
                 ->limit($limit)
                 ->get();
@@ -143,6 +144,8 @@ class HelperController extends Controller
                     'alias' => $product->alias,
                     'group' => optional($product->groupRelation)->name,
                     'category' => optional($product->categoryRelation)->name,
+                    'sub_category' => optional($product->subCategoryRelation)->name,
+                    'unit' => $product->unit,
                     'stock_by_godown' => $stockData,
                     'total_quantity' => $totalQuantity,
                     'stock_value' => 0,
@@ -1293,7 +1296,7 @@ class HelperController extends Controller
     }
 
     // client wise quotation
-   public function getClientWiseQuotations(Request $request)
+    public function getClientWiseQuotations(Request $request)
     {
         try {
             $companyId = Auth::user()->company_id;
@@ -1349,7 +1352,10 @@ class HelperController extends Controller
             }
 
             // Get total count before pagination
-            $totalRecords = (clone $query)->count();
+            // $totalRecords = (clone $query)->count();
+            $totalRecords = DB::table(DB::raw("({$query->toSql()}) as sub"))
+                ->mergeBindings($query->getQuery()) // keep parameter bindings
+                ->count();
 
             // Apply pagination
             $clients = $query->offset($offset)->limit($limit)->get();
@@ -1383,7 +1389,7 @@ class HelperController extends Controller
     }
 
     // export client wise quotation
-   public function exportClientWiseQuotations(Request $request)
+    public function exportClientWiseQuotations(Request $request)
     {
         try {
             $companyId = Auth::user()->company_id;
