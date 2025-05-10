@@ -944,7 +944,7 @@ class HelperController extends Controller
     }
 
     // sales vs sales graph
-    public function getMonthlyCumulativeSalesSummary(Request $request)
+   public function getMonthlyCumulativeSalesSummary(Request $request)
     {
         try {
             $companyId = Auth::user()->company_id;
@@ -953,38 +953,43 @@ class HelperController extends Controller
             $startDate = Carbon::parse($request->input('start_date'))->startOfMonth();
             $endDate = Carbon::parse($request->input('end_date'))->endOfMonth();
 
-            // SQL query to get monthly cumulative sales
-            $sales = DB::table('t_sales_invoice as si')
-                ->join('t_sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
-                ->selectRaw('
-                    CASE 
-                        WHEN MONTH(si.sales_invoice_date) = 1 THEN "January"
-                        WHEN MONTH(si.sales_invoice_date) = 2 THEN "February"
-                        WHEN MONTH(si.sales_invoice_date) = 3 THEN "March"
-                        WHEN MONTH(si.sales_invoice_date) = 4 THEN "April"
-                        WHEN MONTH(si.sales_invoice_date) = 5 THEN "May"
-                        WHEN MONTH(si.sales_invoice_date) = 6 THEN "June"
-                        WHEN MONTH(si.sales_invoice_date) = 7 THEN "July"
-                        WHEN MONTH(si.sales_invoice_date) = 8 THEN "August"
-                        WHEN MONTH(si.sales_invoice_date) = 9 THEN "September"
-                        WHEN MONTH(si.sales_invoice_date) = 10 THEN "October"
-                        WHEN MONTH(si.sales_invoice_date) = 11 THEN "November"
-                        WHEN MONTH(si.sales_invoice_date) = 12 THEN "December"
-                    END AS month_name,
-                    ROUND(SUM(sip.amount), 2) as monthly_sales_amount,
-                    ROUND(SUM(SUM(sip.amount)) OVER (ORDER BY YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)), 2) as cumulative_sales_amount
-                ')
+            // SQL query to get monthly sales
+            $sales = SalesInvoiceModel::join('t_sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
                 ->where('si.company_id', $companyId)
                 ->whereBetween('si.sales_invoice_date', [$startDate, $endDate])
-                ->groupBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)'))
-                ->orderBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)'))
+                ->selectRaw('
+                    MONTH(si.sales_invoice_date) as month,
+                    YEAR(si.sales_invoice_date) as year,
+                    SUM(sip.amount) as monthly_sales_amount
+                ')
+                ->from('t_sales_invoice as si') // Alias the SalesInvoiceModel table as 'si'
+                ->groupBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)')) // Group by year and month
+                ->orderBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)')) // Order by year and month
                 ->get();
+
+            // Initialize variables to calculate cumulative sales
+            $cumulativeSales = 0;
+            $salesWithCumulative = [];
+
+            // Iterate through sales data and calculate cumulative sales
+            foreach ($sales as $sale) {
+                // Add the current month's sales to the cumulative total
+                $cumulativeSales += $sale->monthly_sales_amount;
+
+                // Store the month name and cumulative total
+                $monthName = Carbon::createFromFormat('m', $sale->month)->format('F Y');
+                $salesWithCumulative[] = [
+                    'month' => $monthName,
+                    'monthly_sales_amount' => round($sale->monthly_sales_amount),
+                    'cumulative_sales_amount' => round($cumulativeSales),
+                ];
+            }
 
             return response()->json([
                 'code' => 200,
                 'success' => true,
                 'message' => 'Monthly cumulative sales fetched successfully.',
-                'data' => $sales
+                'data' => $salesWithCumulative
             ]);
         } catch (\Exception $e) {
             return response()->json([
