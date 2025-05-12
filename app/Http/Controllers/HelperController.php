@@ -31,11 +31,10 @@ class HelperController extends Controller
             // Extract filters from request
             $limit = $request->input('limit', 50);
             $offset = $request->input('offset', 0);
-            $filterProduct = $request->input('product');
             $filterGroup = $request->input('group');
             $filterCategory = $request->input('category');
             $filterSubCategory = $request->input('sub_category');
-            $filterAlias = $request->input('alias');
+            $search = $request->input('search');
 
             $sortBy = $request->input('sort_by', 'name'); // name, group, category, sub_category, godown
             $sortOrder = $request->input('sort_order', 'asc'); // asc or desc
@@ -47,13 +46,15 @@ class HelperController extends Controller
                 'subCategoryRelation:id,name'
             ])->where('company_id', $companyId);
 
-            // Apply filters
-            if ($filterProduct) {
-                $productQuery->where('name', 'like', '%' . $filterProduct . '%');
+            // Apply search filter (for both product name and alias)
+            if (!empty($search)) {
+                $productQuery->where(function ($query) use ($search) {
+                    $query->where('name', 'like', '%' . $search . '%')
+                        ->orWhere('alias', 'like', '%' . $search . '%');
+                });
             }
-            if ($filterAlias) {
-                $productQuery->where('alias', 'like', '%' . $filterAlias . '%');
-            }
+
+            // Apply filters (for group, category, sub_category)
             if ($filterGroup) {
                 $groupIds = explode(',', $filterGroup);
                 $productQuery->whereIn('group', $groupIds);
