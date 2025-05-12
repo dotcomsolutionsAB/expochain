@@ -457,7 +457,6 @@ class AssemblyOperationsController extends Controller
         ], 200);
     }
 
-
     // fetch by product id
     public function fetchAssemblyByProduct(Request $request, $productId)
     {
@@ -470,9 +469,8 @@ class AssemblyOperationsController extends Controller
             $limit = (int) $request->input('limit', 10);
             $offset = (int) $request->input('offset', 0);
 
-            $searchOrder = $request->input('order');      // assembly_operations_id
-            $searchOperation = $request->input('operation');
-            $searchUser = $request->input('user');
+            // Search Input (Single search variable for filtering order, operation, or user)
+            $search = $request->input('search'); // This is the new single search variable
 
             $validSortFields = ['date', 'quantity', 'operation', 'user'];
             if (!in_array($sortField, $validSortFields)) {
@@ -507,17 +505,14 @@ class AssemblyOperationsController extends Controller
                 }
             }
 
-            // Apply search filters
-            if (!empty($searchOrder)) {
-                $records = array_filter($records, fn($r) => stripos((string)$r['order'], $searchOrder) !== false);
+            // Apply filter using the $search variable
+            if (!empty($search)) {
+                $records = array_filter($records, function ($item) use ($search) {
+                    return stripos($item['order'], $search) !== false || 
+                        stripos($item['operation'], $search) !== false || 
+                        stripos($item['user'], $search) !== false;
+                });
             }
-            if (!empty($searchOperation)) {
-                $records = array_filter($records, fn($r) => stripos($r['operation'], $searchOperation) !== false);
-            }
-            if (!empty($searchUser)) {
-                $records = array_filter($records, fn($r) => stripos($r['user'], $searchUser) !== false);
-            }
-
             // Sort
             usort($records, function ($a, $b) use ($sortField, $sortOrder) {
                 return $sortOrder === 'asc'

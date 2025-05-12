@@ -1322,11 +1322,9 @@ class SalesOrderController extends Controller
             $sortField = $request->input('sort_field', 'date');
             $sortOrder = strtolower($request->input('sort_order', 'asc'));
 
-            // Search Filters
-            $searchOrder = $request->input('order');
-            $searchClientOrder = $request->input('client_order');
-            $searchClient = $request->input('client');
-
+            // Generic Search
+            $search = $request->input('search'); // Single search variable for both order_no and client
+            
             // Allowed fields
             $validFields = ['order', 'client_order', 'date', 'client', 'qty', 'sent', 'price', 'amount'];
             if (!in_array($sortField, $validFields)) {
@@ -1362,19 +1360,13 @@ class SalesOrderController extends Controller
                     ];
                 })->toArray();
 
-            // Apply Filters
-            if (!empty($searchOrder)) {
-                $records = array_filter($records, fn($r) => stripos($r['order'], $searchOrder) !== false);
+            // Apply filters based on the generic search variable
+            if (!empty($search)) {
+                $records = array_filter($records, function ($item) use ($search) {
+                    return stripos($item['order'], $search) !== false || 
+                        stripos($item['client'], $search) !== false;
+                });
             }
-
-            if (!empty($searchClientOrder)) {
-                $records = array_filter($records, fn($r) => stripos($r['client_order'], $searchClientOrder) !== false);
-            }
-
-            if (!empty($searchClient)) {
-                $records = array_filter($records, fn($r) => stripos($r['client'], $searchClient) !== false);
-            }
-
             // Sort
             usort($records, function ($a, $b) use ($sortField, $sortOrder) {
                 return $sortOrder === 'desc'

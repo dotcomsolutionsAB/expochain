@@ -978,8 +978,7 @@ class SalesInvoiceController extends Controller
             $sortOrder = strtolower($request->input('sort_order', 'asc'));
             $limit = (int) $request->input('limit', 10);
             $offset = (int) $request->input('offset', 0);
-            $filterInvoice = $request->input('invoice');
-            $filterClient = $request->input('client');
+            $search = $request->input('search'); // General search field for both invoice and client
 
             // Valid sort fields
             $validSortFields = ['invoice', 'date', 'client', 'qty', 'price', 'amount', 'profit', 'place'];
@@ -1018,19 +1017,14 @@ class SalesInvoiceController extends Controller
                 })->toArray();
 
             // Apply filters
-            if (!empty($filterInvoice)) {
-                $records = array_filter($records, function ($item) use ($filterInvoice) {
-                    return stripos($item['invoice'], $filterInvoice) !== false;
+            if (!empty($search)) {
+                $records = array_filter($records, function ($item) use ($search) {
+                    return stripos($item['invoice'], $search) !== false || 
+                        stripos($item['client'], $search) !== false;
                 });
             }
 
-            if (!empty($filterClient)) {
-                $records = array_filter($records, function ($item) use ($filterClient) {
-                    return stripos($item['client'], $filterClient) !== false;
-                });
-            }
-
-            // Sort
+            // Sort the filtered data
             usort($records, function ($a, $b) use ($sortField, $sortOrder) {
                 return $sortOrder === 'asc'
                     ? $a[$sortField] <=> $b[$sortField]

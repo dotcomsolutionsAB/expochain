@@ -1119,9 +1119,7 @@ class PurchaseOrderController extends Controller
             $sortOrder = $request->input('sort_order', 'asc');
             $limit = (int) $request->input('limit', 10);
             $offset = (int) $request->input('offset', 0);
-            $filterOrderNo = $request->input('order_no');
-            $filterOaNo = $request->input('oa_no');
-            $filterSupplier = $request->input('supplier');
+            $search = $request->input('search');
 
             // Valid sort fields
             $validSortFields = ['order_no', 'oa_no', 'date', 'supplier', 'qty', 'received', 'price', 'amount'];
@@ -1159,21 +1157,11 @@ class PurchaseOrderController extends Controller
                 })->toArray();
 
             // Apply filters
-            if (!empty($filterOrderNo)) {
-                $records = array_filter($records, function ($item) use ($filterOrderNo) {
-                    return stripos($item['order_no'], $filterOrderNo) !== false;
-                });
-            }
-
-            if (!empty($filterOaNo)) {
-                $records = array_filter($records, function ($item) use ($filterOaNo) {
-                    return stripos($item['oa_no'], $filterOaNo) !== false;
-                });
-            }
-
-            if (!empty($filterSupplier)) {
-                $records = array_filter($records, function ($item) use ($filterSupplier) {
-                    return stripos($item['supplier'], $filterSupplier) !== false;
+            if (!empty($search)) {
+                $records = array_filter($records, function ($item) use ($search) {
+                    return stripos($item['order_no'], $search) !== false ||
+                        stripos($item['oa_no'], $search) !== false ||
+                        stripos($item['supplier'], $search) !== false;
                 });
             }
 

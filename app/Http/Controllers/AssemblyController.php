@@ -171,9 +171,7 @@ class AssemblyController extends Controller
     public function view_product_assembly(Request $request, $id = null)
     {
         // Get filter inputs
-        $assemblyId = $request->input('assembly_id');
-        $productId = $request->input('product_id');
-        $productName = $request->input('product_name');
+        $search = $request->input('search'); // Single search variable to filter by either assembly_id or product_name
         $limit = $request->input('limit', 10); // Default limit to 10
         $offset = $request->input('offset', 0); // Default offset to 0
 
@@ -204,35 +202,18 @@ class AssemblyController extends Controller
             ], 200);
         }
 
-        // Apply filters
-        if ($assemblyId) {
-            $query->where('assembly_id', $assemblyId);
-        }
-        // if ($productId) {
-        //     $query->where('product_id', $productId);
-        // }
-
-        if ($productId) {
-            $query->where(function ($q) use ($productId) {
-                $q->where('product_id', $productId)
-                  ->orWhereHas('products', function ($q2) use ($productId) {
-                      $q2->where('product_id', $productId);
-                  });
+        // Apply filters using the $search variable
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                // Check if search is numeric and filter by assembly_id
+                if (is_numeric($search)) {
+                    $q->where('assembly_id', $search);
+                } else {
+                    // Else filter by product_name
+                    $q->where('product_name', 'LIKE', '%' . $search . '%');
+                }
             });
         }
-
-        // if ($productName) {
-        //     $query->where('product_name', 'LIKE', '%' . $productName . '%');
-        // }
-
-        if ($productName) {
-            $query->where(function ($q) use ($productName) {
-                $q->where('product_name', 'LIKE', '%' . $productName . '%')
-                  ->orWhereHas('products', function ($q2) use ($productName) {
-                      $q2->where('product_name', 'LIKE', '%' . $productName . '%');
-                  });
-            });
-        }        
 
         // Get total record count before applying limit
         $totalRecords = $query->count();

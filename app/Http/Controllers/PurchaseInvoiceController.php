@@ -1168,8 +1168,7 @@ class PurchaseInvoiceController extends Controller
             $sortOrder = $request->input('sort_order', 'asc');
             $limit = (int) $request->input('limit', 10);
             $offset = (int) $request->input('offset', 0);
-            $filterInvoice = $request->input('invoice');
-            $filterSupplier = $request->input('supplier');
+            $search = $request->input('search');
 
             $validFields = ['invoice', 'oa', 'date', 'supplier', 'qty', 'in_stock', 'price', 'amount', 'place'];
             if (!in_array($sortField, $validFields)) {
@@ -1208,17 +1207,13 @@ class PurchaseInvoiceController extends Controller
                 })->toArray();
 
             // Apply search filters (case-insensitive)
-            if (!empty($filterInvoice)) {
-                $rawRecords = array_filter($rawRecords, function ($item) use ($filterInvoice) {
-                    return stripos($item['invoice'], $filterInvoice) !== false;
+            if (!empty($search)) {
+                $rawRecords = array_filter($rawRecords, function ($item) use ($search) {
+                    return stripos($item['invoice'], $search) !== false ||
+                        stripos($item['supplier'], $search) !== false;
                 });
             }
 
-            if (!empty($filterSupplier)) {
-                $rawRecords = array_filter($rawRecords, function ($item) use ($filterSupplier) {
-                    return stripos($item['supplier'], $filterSupplier) !== false;
-                });
-            }
 
             // Sort the filtered data
             usort($rawRecords, function ($a, $b) use ($sortField, $sortOrder) {
