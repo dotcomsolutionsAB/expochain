@@ -10,6 +10,7 @@ class UploadsModel extends Model
     protected $table = 't_uploads';
 
     protected $fillable = [
+        'company_id',
         'file_ext',
         'file_url',
         'file_size',
