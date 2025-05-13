@@ -1919,7 +1919,7 @@ class MastersController extends Controller
             }
 
             // Step 3: Store customer visit record
-            $register_visit = CustomerVisit::create([
+            $register_visit = CustomerVisitModel::create([
                 'company_id' => Auth::user()->company_id,
                 'date' => $validated['date'],
                 'customer' => $validated['customer'],
@@ -2052,7 +2052,7 @@ class MastersController extends Controller
             $validated = $validator->validated();
 
             // Find the existing record
-            $visit = CustomerVisit::find($validated['id']);
+            $visit = CustomerVisitModel::find($validated['id']);
             $existingUploadIds = array_filter(explode(',', $visit->upload));
 
             // Process new uploads if provided
@@ -2146,7 +2146,7 @@ class MastersController extends Controller
                 ], 200);
             }
 
-            $visit = CustomerVisit::find($id);
+            $visit = CustomerVisitModel::find($id);
             $deleteIds = array_filter(explode(',', $request->delete_ids));
             $existingIds = array_filter(explode(',', $visit->upload));
 
