@@ -1001,7 +1001,7 @@ class MastersController extends Controller
                     $relativePath = 'uploads/pdf_template/' . $filename;
 
                     // $file->storeAs('uploads/pdf_template', $filename);
-                    Storage::disk('public')->putFileAs('uploads/customer_visit', $file, $filename);
+                    Storage::disk('public')->putFileAs('uploads/pdf_template', $file, $filename);
 
                     $upload = UploadsModel::create([
                         'company_id' => Auth::user()->company_id,
@@ -1144,7 +1144,7 @@ class MastersController extends Controller
                 $filename = Str::random(20) . '.' . $ext;
                 $relativePath = $uploadPath . $filename;
                 // $file->storeAs('public/' . dirname($relativePath), basename($relativePath));
-                 Storage::disk('public')->putFileAs('uploads/customer_visit', $file, $filename);
+                 Storage::disk('public')->putFileAs('uploads/pdf_template', $file, $filename);
 
                 $upload = UploadsModel::create([
                     'company_id' => Auth::user()->company_id,
