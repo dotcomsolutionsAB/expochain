@@ -1935,9 +1935,9 @@ class MastersController extends Controller
                 'growth' => $validated['growth'] ?? null,
                 'expense' => $validated['expense'] ?? null,
                 'amount_expense' => $validated['amount_expense'] ?? 0,
-                'upload' => count($uploadedIds) === 1
-                    ? $uploadedIds[0]
-                    : implode(',', $uploadedIds),
+                'upload' => !empty($uploadedIds)
+                    ? implode(',', array_filter($uploadedIds))
+                    : null,
             ]);
 
             unset($register_visit['id'], $register_visit['created_at'], $register_visit['updated_at']);
