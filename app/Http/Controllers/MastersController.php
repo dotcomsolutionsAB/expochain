@@ -1905,6 +1905,7 @@ class MastersController extends Controller
                     $file->storeAs('public/' . dirname($relativePath), basename($relativePath));
 
                     $upload = UploadsModel::create([
+                        'company_id' => Auth::user()->company_id,
                         'file_ext' => $ext,
                         'file_url' => $relativePath, // relative path only
                         'file_size' => $file->getSize(),
@@ -1919,6 +1920,7 @@ class MastersController extends Controller
 
             // Step 3: Store customer visit record
             $register_visit = CustomerVisit::create([
+                'company_id' => Auth::user()->company_id,
                 'date' => $validated['date'],
                 'customer' => $validated['customer'],
                 'location' => $validated['location'] ?? null,
@@ -2066,6 +2068,7 @@ class MastersController extends Controller
                     $file->storeAs('public/' . dirname($relativePath), basename($relativePath));
 
                     $upload = UploadsModel::create([
+                        'company_id' => Auth::user()->company_id,
                         'file_ext' => $ext,
                         'file_url' => $relativePath, // relative only
                         'file_size' => $file->getSize(),
@@ -2081,6 +2084,7 @@ class MastersController extends Controller
             $allUploadIds = array_merge($existingUploadIds, $newUploadIds);
 
             // Update fields
+            $visit->company_id = Auth::user()->company_id;
             $visit->date = $validated['date'];
             $visit->customer = $validated['customer'];
             $visit->location = $validated['location'] ?? null;
