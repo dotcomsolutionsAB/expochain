@@ -12,6 +12,8 @@ use App\Models\SubCategoryModel;
 use App\Models\GroupModel;
 use App\Models\OpeningStockModel;
 use App\Models\ClosingStockModel;
+use App\Models\UploadsModel;
+use App\Models\CustomerVisitModel;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
@@ -1250,7 +1252,7 @@ class MastersController extends Controller
         ]);
 
         $register_godown = GodownModel::create([
-            'company_id' => 1,
+            'company_id' => Auth::user()->company_id,
             'name' => $request->input('name'),
             'address' => $request->input('address'),
             'mobile' => $request->input('email'),
@@ -1610,7 +1612,6 @@ class MastersController extends Controller
     {
         // Validate the request
         $validatedData = $request->validate([
-            'company_id' => 'required|integer',
             'year' => 'required|string',
             'godown_id' => 'required|integer',
             'product_id' => 'required|integer',
@@ -1621,7 +1622,7 @@ class MastersController extends Controller
 
         // Insert into the database
         $register_opening_stock =  OpeningStockModel::create([
-            'company_id' => $validatedData['company_id'],
+            'company_id' => Auth::user()->company_id,
             'year' => $validatedData['year'],
             'godown_id' => $validatedData['godown_id'],
             'product_id' => $validatedData['product_id'],
@@ -1654,7 +1655,6 @@ class MastersController extends Controller
     {
         // Validate the request
         $validatedData = $request->validate([
-            'company_id' => 'required|integer',
             'year' => 'required|string',
             'godown_id' => 'required|integer',
             'product_id' => 'required|integer',
@@ -1665,7 +1665,7 @@ class MastersController extends Controller
 
         // Insert into the database
         $register_closing_stock =  ClosingStockModel::create([
-            'company_id' => $validatedData['company_id'],
+            'company_id' => Auth::user()->company_id,
             'year' => $validatedData['year'],
             'godown_id' => $validatedData['godown_id'],
             'product_id' => $validatedData['product_id'],
@@ -1749,5 +1749,156 @@ class MastersController extends Controller
             'message' => 'Clients categories fetched successfully.',
             'data' => $clietsCategories,
         ], 200);
+    }
+
+    public function register_customer_visit(Request $request)
+    {
+        try {
+            // Step 1: Validate input
+            $validator = Validator::make($request->all(), [
+                'date' => 'required|date',
+                'customer' => 'required|string|max:255',
+                'location' => 'nullable|string|max:255',
+                'contact_person_name' => 'nullable|string|max:255',
+                'designation' => 'nullable|string|max:255',
+                'mobile' => 'nullable|string|max:20',
+                'email' => 'nullable|email|max:255',
+                'champion' => 'nullable|numeric',
+                'fenner' => 'nullable|numeric',
+                'details' => 'nullable|string',
+                'growth' => 'nullable|string',
+                'expense' => 'nullable|string|max:255',
+                'amount_expense' => 'nullable|numeric',
+                'uploads.*' => 'nullable|file|max:10240',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed.',
+                    'errors' => $validator->errors(),
+                ], 200);
+            }
+
+            $validated = $validator->validated();
+
+            // Step 2: Handle uploads
+            $uploadedIds = [];
+
+            if ($request->hasFile('uploads')) {
+                foreach ($request->file('uploads') as $file) {
+                    $ext = $file->getClientOriginalExtension();
+                    $originalName = $file->getClientOriginalName();
+                    $filename = Str::random(20) . '.' . $ext;
+
+                    $relativePath = 'uploads/customer_visit/' . $filename;
+                    $file->storeAs('public/' . dirname($relativePath), basename($relativePath));
+
+                    $upload = UploadsModel::create([
+                        'file_ext' => $ext,
+                        'file_url' => $relativePath, // relative path only
+                        'file_size' => $file->getSize(),
+                        'file_name' => $originalName,
+                    ]);
+
+                    unset($upload['id'], $upload['created_at'], $upload['updated_at']);
+
+                    $uploadedIds[] = $upload->id;
+                }
+            }
+
+            // Step 3: Store customer visit record
+            $register_visit = CustomerVisit::create([
+                'date' => $validated['date'],
+                'customer' => $validated['customer'],
+                'location' => $validated['location'] ?? null,
+                'contact_person_name' => $validated['contact_person_name'] ?? null,
+                'designation' => $validated['designation'] ?? null,
+                'mobile' => $validated['mobile'] ?? null,
+                'email' => $validated['email'] ?? null,
+                'champion' => $validated['champion'] ?? 0,
+                'fenner' => $validated['fenner'] ?? 0,
+                'details' => $validated['details'] ?? null,
+                'growth' => $validated['growth'] ?? null,
+                'expense' => $validated['expense'] ?? null,
+                'amount_expense' => $validated['amount_expense'] ?? 0,
+                'upload' => count($uploadedIds) === 1
+                    ? $uploadedIds[0]
+                    : implode(',', $uploadedIds),
+            ]);
+
+            unset($register_visit['id'], $register_visit['created_at'], $register_visit['updated_at']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Customer visit created successfully.',
+                'data' => $register_visit,
+            ], 201);
+
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while creating the customer visit.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function fetch(Request $request)
+    {
+        try {
+            $limit = $request->input('limit', 10);
+            $offset = $request->input('offset', 0);
+            $search = $request->input('search', '');
+
+            $query = CustomerVisitModel::query();
+
+            // Apply search filters
+            if (!empty($search)) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('customer', 'like', "%$search%")
+                    ->orWhere('location', 'like', "%$search%")
+                    ->orWhere('contact_person_name', 'like', "%$search%")
+                    ->orWhere('expense', 'like', "%$search%");
+                });
+            }
+
+            $totalRecords = $query->count();
+
+            $visits = $query
+                ->orderByDesc('date')
+                ->limit($limit)
+                ->offset($offset)
+                ->get();
+
+            // Convert upload IDs to actual file URLs
+            foreach ($visits as $visit) {
+                $uploadIds = array_filter(explode(',', $visit->upload));
+                $uploadUrls = [];
+
+                if (!empty($uploadIds)) {
+                    $uploads = UploadsModel::whereIn('id', $uploadIds)->get();
+                    foreach ($uploads as $upload) {
+                        $uploadUrls[] = asset('storage/' . $upload->file_url);
+                    }
+                }
+
+                $visit->upload_urls = $uploadUrls;
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Customer visits fetched successfully.',
+                'count' => count($visits),
+                'total_records' => $totalRecords,
+                'data' => $visits,
+            ], 200);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch customer visits.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

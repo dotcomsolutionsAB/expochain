@@ -122,6 +122,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/pdf_template_migrate', [MastersController::class, 'importPdfTemplates']);
 
+    Route::prefix('customer_visit')->group(function () {
+        Route::post('/register_customer_visit', [CouponController::class, 'store']); // Create Products
+        Route::get('/fetch', [CouponController::class, 'index']); // Retrieve products
+        Route::post('/edit/{id}', [CouponController::class, 'update']); // Update a specific user
+        Route::delete('/{id}', [CouponController::class, 'destroy']); // Update a specific user
+    });
+
     Route::post('/add_quotations', [QuotationsController::class, 'add_quotations']);
     Route::post('/quotations/{id?}', [QuotationsController::class, 'view_quotations']);
     Route::post('/update_quotations/{id?}', [QuotationsController::class, 'update_quotations']);
