@@ -1916,7 +1916,7 @@ class MastersController extends Controller
                     ]);
 
                     $uploadedIds[] = $upload->id;
-                    
+
                     unset($upload['id'], $upload['created_at'], $upload['updated_at']);
                 }
             }
@@ -1969,7 +1969,7 @@ class MastersController extends Controller
             $offset = $request->input('offset', 0);
             $search = $request->input('search', '');
 
-             $query = CustomerVisitModel::where('company_id', $companyId); // Filter by company_id
+             $query = CustomerVisitModel::where('company_id', Auth::user()->company_id); // Filter by company_id
 
             // Apply search filters
             if (!empty($search)) {
