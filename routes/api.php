@@ -127,7 +127,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/index', [MastersController::class, 'fetch']); // Retrieve products
         Route::post('/update/{id}', [MastersController::class, 'edit']); // Update a specific user
         Route::post('/delete_specific_uploads/{id}', [MastersController::class, 'deleteUploads']); // Update a specific user
-        Route::delete('/{id}', [MastersController::class, 'destroy']); // Update a specific user
+        Route::delete('/{id}', [MastersController::class, 'delete']); // Update a specific user
     });
 
     Route::post('/add_quotations', [QuotationsController::class, 'add_quotations']);

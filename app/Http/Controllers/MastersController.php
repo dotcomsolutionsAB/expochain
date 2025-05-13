@@ -969,54 +969,85 @@ class MastersController extends Controller
     public function add_pdf_template(Request $request)
     {
         try {
+            $validated = $request->validate([
+                'name' => 'required|string',
+                'phone_number' => 'required|string',
+                'mobile' => 'required|string',
+                'email' => 'required|string',
+                'address_line_1' => 'required|string',
+                'address_line_2' => 'required|string',
+                'city' => 'required|string',
+                'pincode' => 'required|string',
+                'state' => 'required|string',
+                'country' => 'required|string',
+                'gstin' => 'required|string',
+                'bank_number' => 'required|string',
+                'bank_account_name' => 'required|string',
+                'bank_account_number' => 'required|string',
+                'bank_ifsc' => 'required|string',
+                'header' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
+                'footer' => 'required|file|mimes:jpg,jpeg,png,pdf|max:10240',
+            ]);
 
-        $request->validate([
-            'name' => 'required|string',
-            'phone_number' => 'required|string',
-            'mobile' => 'required|string',
-            'email' => 'required|string',
-            'address_line_1' => 'required|string',
-            'address_line_2' => 'required|string',
-            'city' => 'required|string',
-            'pincode' => 'required',
-            'state' => 'required',
-            'country' => 'required',
-            'gstin' => 'required|string',
-            'bank_number' => 'required',
-            'bank_account_name' => 'required',
-            'bank_account_number' => 'required',
-            'bank_ifsc' => 'required',
-            'header' => 'required',
-            'footer' => 'required',
+            $uploadIds = [];
 
-        ]);
+            foreach (['header', 'footer'] as $key) {
+                if ($request->hasFile($key)) {
+                    $file = $request->file($key);
+                    $ext = $file->getClientOriginalExtension();
+                    $originalName = $file->getClientOriginalName();
+                    $filename = Str::random(20) . '.' . $ext;
+                    $relativePath = 'uploads/customer_visit/' . $filename;
 
-        $register_pdf_template = PdfTemplateModel::create([
-            'company_id' => Auth::user()->company_id,
-            'name' => $request->input('name'),
-            'phone_number' => $request->input('phone_number'),
-            'mobile' => $request->input('mobile'),
-            'email' => $request->input('email'),
-            'address_line_1' => $request->input('address_line_1'),
-            'address_line_2' => $request->input('address_line_2'),
-            'city' => $request->input('city'),
-            'pincode' => $request->input('pincode'),
-            'state' => $request->input('state'),
-            'country' => $request->input('country'),
-            'gstin' => $request->input('gstin'),
-            'bank_number' => $request->input('bank_number'),
-            'bank_account_name' => $request->input('bank_account_name'),
-            'bank_account_number' => $request->input('bank_account_number'),
-            'bank_ifsc' => $request->input('bank_ifsc'),
-            'header' => $request->input('header'),
-            'footer' => $request->input('footer'),
-        ]);
-        
-        unset($register_pdf_template['id'], $register_pdf_template['created_at'], $register_pdf_template['updated_at']);
+                    $file->storeAs('public/' . dirname($relativePath), basename($relativePath));
 
-        return isset($register_pdf_template) && $register_pdf_template !== null
-        ? response()->json(['code' => 200, 'success' => true, 'message' => 'Pdf Template registered successfully!', 'data' => $register_pdf_template], 201)
-        : response()->json(['code' => 400, 'success' => false, 'Failed to register Pdf Template record'], 400);
+                    $upload = UploadModel::create([
+                        'file_ext' => $ext,
+                        'file_url' => $relativePath,
+                        'file_size' => $file->getSize(),
+                        'file_name' => $originalName,
+                    ]);
+
+                    $uploadIds[$key] = $upload->id;
+                } else {
+                    return response()->json([
+                        'code' => 422,
+                        'success' => false,
+                        'message' => "The {$key} file is missing or invalid.",
+                    ], 422);
+                }
+            }
+
+            $register_pdf_template = PdfTemplateModel::create([
+                'company_id' => Auth::user()->company_id,
+                'name' => $validated['name'],
+                'phone_number' => $validated['phone_number'],
+                'mobile' => $validated['mobile'],
+                'email' => $validated['email'],
+                'address_line_1' => $validated['address_line_1'],
+                'address_line_2' => $validated['address_line_2'],
+                'city' => $validated['city'],
+                'pincode' => $validated['pincode'],
+                'state' => $validated['state'],
+                'country' => $validated['country'],
+                'gstin' => $validated['gstin'],
+                'bank_number' => $validated['bank_number'],
+                'bank_account_name' => $validated['bank_account_name'],
+                'bank_account_number' => $validated['bank_account_number'],
+                'bank_ifsc' => $validated['bank_ifsc'],
+                'header' => $uploadIds['header'],
+                'footer' => $uploadIds['footer'],
+            ]);
+
+            unset($register_pdf_template['id'], $register_pdf_template['created_at'], $register_pdf_template['updated_at']);
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'PDF Template registered successfully!',
+                'data' => $register_pdf_template
+            ], 201);
+
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
@@ -1033,6 +1064,19 @@ class MastersController extends Controller
         $get_pdf_template = PdfTemplateModel::select('name','phone_number','mobile','email','address_line_1', 'address_line_2','city','pincode','state','country', 'gstin', 'bank_number', 'bank_account_name', 'bank_account_number', 'bank_ifsc','header', 'footer')
         ->where('company_id', Auth::user()->company_id)
         ->get();
+
+        // Add file URLs for header and footer
+        $templates->transform(function ($template) {
+            $template->header = $template->header
+                ? asset('storage/' . optional(UploadModel::find($template->header))->file_url)
+                : null;
+
+            $template->footer = $template->footer
+                ? asset('storage/' . optional(UploadModel::find($template->footer))->file_url)
+                : null;
+
+            return $template;
+        });
 
         return isset($get_pdf_template) && $get_pdf_template !== null
         ? response()->json([
@@ -1067,14 +1111,52 @@ class MastersController extends Controller
                 'gstin' => 'required|string',
                 'bank_number' => 'required',
                 'bank_account_name' => 'required',
-                'bank_account_number' => 'required',
-                'bank_ifsc' => 'required',
-                'header' => 'required',
-                'footer' => 'required',
+                'bank_account_number' => 'required|string',
+                'bank_ifsc' => 'required|string',
+                'header' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
+                'footer' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:10240',
             ]);
 
-            $update_pdf_template = PdfTemplateModel::where('id', $id)
-            ->update([
+            $template = PdfTemplateModel::findOrFail($id);
+
+        $uploadPath = 'uploads/customer_visit/';
+        $uploadIds = [];
+
+        foreach (['header', 'footer'] as $key) {
+            if ($request->hasFile($key)) {
+                // Delete old file if exists
+                $oldUploadId = $template->$key;
+                if ($oldUploadId) {
+                    $oldUpload = UploadModel::find($oldUploadId);
+                    if ($oldUpload) {
+                        $filePath = storage_path('app/public/' . $oldUpload->file_url);
+                        if (File::exists($filePath)) File::delete($filePath);
+                        $oldUpload->delete();
+                    }
+                }
+
+                // Upload new file
+                $file = $request->file($key);
+                $ext = $file->getClientOriginalExtension();
+                $filename = Str::random(20) . '.' . $ext;
+                $relativePath = $uploadPath . $filename;
+                $file->storeAs('public/' . dirname($relativePath), basename($relativePath));
+
+                $upload = UploadModel::create([
+                    'file_ext' => $ext,
+                    'file_url' => $relativePath,
+                    'file_size' => $file->getSize(),
+                    'file_name' => $file->getClientOriginalName(),
+                ]);
+
+                $uploadIds[$key] = $upload->id;
+            } else {
+                // Keep existing if not uploaded again
+                $uploadIds[$key] = $template->$key;
+            }
+        }
+
+            $template->update([
                 'name' => $request->input('name'),
                 'phone_number' => $request->input('phone_number'),
                 'mobile' => $request->input('mobile'),
@@ -1090,8 +1172,8 @@ class MastersController extends Controller
                 'bank_account_name' => $request->input('bank_account_name'),
                 'bank_account_number' => $request->input('bank_account_number'),
                 'bank_ifsc' => $request->input('bank_ifsc'),
-                'header' => $request->input('header'),
-                'footer' => $request->input('footer'),
+                'header' => $uploadIds['header'],
+                'footer' => $uploadIds['footer'],
             ]);
             
             return $update_pdf_template
@@ -1110,15 +1192,51 @@ class MastersController extends Controller
     // delete
     public function delete_pdf_template($id)
     {
-        // Delete the client
-        $delete_pdf_template = PdfTemplateModel::where('id', $id)
-                                ->where('company_id', Auth::user()->company_id)
-                                ->delete();
+        try {
+            $template = PdfTemplateModel::where('id', $id)
+                ->where('company_id', Auth::user()->company_id)
+                ->first();
 
-        // Return success response if deletion was successful
-        return $delete_pdf_template
-        ? response()->json(['message' => 'Delete Pdf template successfully!'], 204)
-        : response()->json(['code' => 400, 'success' => false, 'message' => 'Sorry, Pdf Template not found'], 400);
+            if (!$template) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'PDF Template not found or access denied.'
+                ], 404);
+            }
+
+            // Delete header & footer files if they exist
+            foreach (['header', 'footer'] as $key) {
+                $uploadId = $template->$key;
+                if ($uploadId) {
+                    $upload = UploadModel::find($uploadId);
+                    if ($upload) {
+                        $filePath = storage_path('app/public/' . $upload->file_url);
+                        if (File::exists($filePath)) {
+                            File::delete($filePath);
+                        }
+                        $upload->delete();
+                    }
+                }
+            }
+
+            // Delete the PDF template
+            $template->delete();
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'PDF Template and associated files deleted successfully.'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong while deleting the PDF template.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     // migrate
