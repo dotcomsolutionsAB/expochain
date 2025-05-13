@@ -1003,6 +1003,7 @@ class MastersController extends Controller
                     $file->storeAs('public/' . dirname($relativePath), basename($relativePath));
 
                     $upload = UploadsModel::create([
+                        'company_id' => Auth::user()->company_id,
                         'file_ext' => $ext,
                         'file_url' => $relativePath,
                         'file_size' => $file->getSize(),
@@ -1144,6 +1145,7 @@ class MastersController extends Controller
                 $file->storeAs('public/' . dirname($relativePath), basename($relativePath));
 
                 $upload = UploadsModel::create([
+                    'company_id' => Auth::user()->company_id,
                     'file_ext' => $ext,
                     'file_url' => $relativePath,
                     'file_size' => $file->getSize(),
