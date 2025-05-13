@@ -1068,7 +1068,7 @@ class MastersController extends Controller
         ->get();
 
         // Add file URLs for header and footer
-        $templates->transform(function ($template) {
+        $get_pdf_template->transform(function ($template) {
             $template->header = $template->header
                 ? asset('storage/' . optional(UploadsModel::find($template->header))->file_url)
                 : null;
@@ -1405,7 +1405,7 @@ class MastersController extends Controller
             'email' => 'required|string',
         ]);
 
-        $update_pdf_template = GodownModel::where('id', $id)
+        $update_godown = GodownModel::where('id', $id)
         ->update([
             'name' => $request->input('name'),
             'address' => $request->input('address'),
@@ -1413,8 +1413,8 @@ class MastersController extends Controller
             'email' => $request->input('email'),
         ]);
         
-        return $update_pdf_template
-        ? response()->json(['Products updated successfully!', 'data' => $update_pdf_template], 200)
+        return $update_godown
+        ? response()->json(['Products updated successfully!', 'data' => $update_godown], 200)
         : response()->json(['No changes detected'], 204);
     }
 
