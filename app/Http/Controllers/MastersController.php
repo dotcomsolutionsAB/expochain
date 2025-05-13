@@ -1000,7 +1000,7 @@ class MastersController extends Controller
                     $filename = Str::random(20) . '.' . $ext;
                     $relativePath = 'uploads/pdf_template/' . $filename;
 
-                    $file->storeAs('public/' . dirname($relativePath), basename($relativePath));
+                    $file->storeAs('public/uploads/pdf_template', $filename);
 
                     $upload = UploadsModel::create([
                         'company_id' => Auth::user()->company_id,
