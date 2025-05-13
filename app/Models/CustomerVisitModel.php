@@ -7,14 +7,23 @@ use Illuminate\Database\Eloquent\Model;
 class CustomerVisitModel extends Model
 {
     //
-    protected $table = 't_test_certificate_products';
+    protected $table = 't_customer_visits';
 
     protected $fillable = [
-        'tc_id',
         'company_id',
-        'product_id',
-        'product_name',
-        'quantity',
-        'sales_invoice_no'
+        'date',
+        'customer',
+        'location',
+        'contact_person_name',
+        'designation',
+        'mobile',
+        'email',
+        'champion',
+        'fenner',
+        'details',
+        'growth',
+        'expense',
+        'amount_expense',
+        'upload'
     ];
 }
