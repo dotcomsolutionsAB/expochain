@@ -1498,4 +1498,24 @@ class HelperController extends Controller
             ], 500);
         }
     }
+
+    // return type
+    public function types()
+    {
+        $types = [
+            'OIL',
+            'SOIL',
+            'QTMS',
+            'Cash Discount',
+            'TOD',
+            'ACI'
+        ];
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Types fetched successfully.',
+            'data' => $types
+        ], 200);
+    }
 }

@@ -123,10 +123,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/pdf_template_migrate', [MastersController::class, 'importPdfTemplates']);
 
     Route::prefix('customer_visit')->group(function () {
-        Route::post('/register_customer_visit', [CouponController::class, 'store']); // Create Products
-        Route::get('/fetch', [CouponController::class, 'index']); // Retrieve products
-        Route::post('/edit/{id}', [CouponController::class, 'update']); // Update a specific user
-        Route::delete('/{id}', [CouponController::class, 'destroy']); // Update a specific user
+        Route::post('/store', [MastersController::class, 'register_customer_visit']); // Create Products
+        Route::get('/index', [MastersController::class, 'fetch']); // Retrieve products
+        Route::post('/update/{id}', [MastersController::class, 'edit']); // Update a specific user
+        Route::post('/delete_specific_uploads/{id}', [MastersController::class, 'deleteUploads']); // Update a specific user
+        Route::delete('/{id}', [MastersController::class, 'destroy']); // Update a specific user
     });
 
     Route::post('/add_quotations', [QuotationsController::class, 'add_quotations']);
@@ -337,6 +338,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/product_profit_fy', [HelperController::class, 'getProductWiseYearlySalesSummary']);
 
     Route::get('/client_profit_fy', [HelperController::class, 'getClientWiseYearlySalesSummary']);
+
+    Route::get('/get_types', [HelperController::class, 'types']);
 
 
     Route::post('/add_lot', [LotController::class, 'add']); // Create Channel

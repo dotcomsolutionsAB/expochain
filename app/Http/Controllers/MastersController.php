@@ -1751,6 +1751,7 @@ class MastersController extends Controller
         ], 200);
     }
 
+    // add
     public function register_customer_visit(Request $request)
     {
         try {
@@ -1830,6 +1831,7 @@ class MastersController extends Controller
             unset($register_visit['id'], $register_visit['created_at'], $register_visit['updated_at']);
 
             return response()->json([
+                'code' => 201,
                 'success' => true,
                 'message' => 'Customer visit created successfully.',
                 'data' => $register_visit,
@@ -1837,6 +1839,7 @@ class MastersController extends Controller
 
         } catch (Exception $e) {
             return response()->json([
+                'code' => 500,
                 'success' => false,
                 'message' => 'An error occurred while creating the customer visit.',
                 'error' => $e->getMessage(),
@@ -1844,6 +1847,7 @@ class MastersController extends Controller
         }
     }
 
+    // fetch
     public function fetch(Request $request)
     {
         try {
@@ -1851,7 +1855,7 @@ class MastersController extends Controller
             $offset = $request->input('offset', 0);
             $search = $request->input('search', '');
 
-            $query = CustomerVisitModel::query();
+             $query = CustomerVisitModel::where('company_id', $companyId); // Filter by company_id
 
             // Apply search filters
             if (!empty($search)) {
@@ -1887,6 +1891,7 @@ class MastersController extends Controller
             }
 
             return response()->json([
+                'code' => 200,
                 'success' => true,
                 'message' => 'Customer visits fetched successfully.',
                 'count' => count($visits),
@@ -1895,8 +1900,227 @@ class MastersController extends Controller
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
+                'code' => 500,
                 'success' => false,
                 'message' => 'Failed to fetch customer visits.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // update
+    public function edit(Request $request, $id)
+    {
+        try {
+            // Validate input
+            $validator = Validator::make($request->all(), [
+                'date' => 'required|date',
+                'customer' => 'required|string|max:255',
+                'location' => 'nullable|string|max:255',
+                'contact_person_name' => 'nullable|string|max:255',
+                'designation' => 'nullable|string|max:255',
+                'mobile' => 'nullable|string|max:20',
+                'email' => 'nullable|email|max:255',
+                'champion' => 'nullable|numeric',
+                'fenner' => 'nullable|numeric',
+                'details' => 'nullable|string',
+                'growth' => 'nullable|string',
+                'expense' => 'nullable|string|max:255',
+                'amount_expense' => 'nullable|numeric',
+                'uploads.*' => 'nullable|file|max:10240',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed.',
+                    'errors' => $validator->errors(),
+                ], 200);
+            }
+
+            $validated = $validator->validated();
+
+            // Find the existing record
+            $visit = CustomerVisit::find($validated['id']);
+            $existingUploadIds = array_filter(explode(',', $visit->upload));
+
+            // Process new uploads if provided
+            $newUploadIds = [];
+
+            if ($request->hasFile('uploads')) {
+                foreach ($request->file('uploads') as $file) {
+                    $ext = $file->getClientOriginalExtension();
+                    $originalName = $file->getClientOriginalName();
+                    $filename = Str::random(20) . '.' . $ext;
+                    $relativePath = 'uploads/customer_visit/' . $filename;
+
+                    $file->storeAs('public/' . dirname($relativePath), basename($relativePath));
+
+                    $upload = UploadsModel::create([
+                        'file_ext' => $ext,
+                        'file_url' => $relativePath, // relative only
+                        'file_size' => $file->getSize(),
+                        'file_name' => $originalName,
+                    ]);
+
+                    unset($upload['id'], $upload['created_at'], $upload['updated_at']);
+
+                    $newUploadIds[] = $upload->id;
+                }
+            }
+
+            $allUploadIds = array_merge($existingUploadIds, $newUploadIds);
+
+            // Update fields
+            $visit->date = $validated['date'];
+            $visit->customer = $validated['customer'];
+            $visit->location = $validated['location'] ?? null;
+            $visit->contact_person_name = $validated['contact_person_name'] ?? null;
+            $visit->designation = $validated['designation'] ?? null;
+            $visit->mobile = $validated['mobile'] ?? null;
+            $visit->email = $validated['email'] ?? null;
+            $visit->champion = $validated['champion'] ?? 0;
+            $visit->fenner = $validated['fenner'] ?? 0;
+            $visit->details = $validated['details'] ?? null;
+            $visit->growth = $validated['growth'] ?? null;
+            $visit->expense = $validated['expense'] ?? null;
+            $visit->amount_expense = $validated['amount_expense'] ?? 0;
+            $visit->upload = count($allUploadIds) > 0 ? implode(',', $allUploadIds) : null;
+            $visit->save();
+
+            // Generate resolved file URLs
+            $uploadUrls = [];
+            if (!empty($allUploadIds)) {
+                $uploads = UploadsModel::whereIn('id', $allUploadIds)->get();
+                foreach ($uploads as $u) {
+                    $uploadUrls[] = asset('storage/' . $u->file_url);
+                }
+            }
+
+            unset($visit['id'], $visit['created_at'], $visit['updated_at']);
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Customer visit updated successfully.',
+                'data' => $visit,
+                'upload_urls' => $uploadUrls,
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'An error occurred while updating the customer visit.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // delete specific uploads
+    public function deleteUploads(Request $request, $id)
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'delete_ids' => 'required|string' // e.g. "12,14"
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed.',
+                    'errors' => $validator->errors(),
+                ], 200);
+            }
+
+            $visit = CustomerVisit::find($id);
+            $deleteIds = array_filter(explode(',', $request->delete_ids));
+            $existingIds = array_filter(explode(',', $visit->upload));
+
+            // Filter IDs that actually exist in current upload
+            $toDelete = array_intersect($existingIds, $deleteIds);
+
+            if (empty($toDelete)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No valid upload IDs found to delete.',
+                ], 200);
+            }
+
+            // Delete files from server and DB
+            $uploads = UploadsModel::whereIn('id', $toDelete)->get();
+
+            foreach ($uploads as $upload) {
+                $filePath = storage_path('app/public/' . $upload->file_url);
+                if (File::exists($filePath)) {
+                    File::delete($filePath);
+                }
+                $upload->delete();
+            }
+
+            // Update visit upload column
+            $remainingIds = array_diff($existingIds, $toDelete);
+            $visit->upload = count($remainingIds) > 0 ? implode(',', $remainingIds) : null;
+            $visit->save();
+
+            // Get updated upload URLs
+            $updatedUrls = [];
+            if (!empty($remainingIds)) {
+                $remainingUploads = UploadsModel::whereIn('id', $remainingIds)->get();
+                foreach ($remainingUploads as $file) {
+                    $updatedUrls[] = asset('storage/' . $file->file_url);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Selected files deleted successfully.',
+                'upload_ids' => $remainingIds,
+                'upload_urls' => $updatedUrls
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while deleting files.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // delete
+    public function delete($id)
+    {
+        try {
+            $visit = CustomerVisit::find($request->id);
+            $uploadIds = array_filter(explode(',', $visit->upload));
+
+            // Delete upload files and records
+            if (!empty($uploadIds)) {
+                $uploads = UploadsModel::whereIn('id', $uploadIds)->get();
+                foreach ($uploads as $upload) {
+                    $filePath = storage_path('app/public/' . $upload->file_url);
+                    if (File::exists($filePath)) {
+                        File::delete($filePath);
+                    }
+                    $upload->delete();
+                }
+            }
+
+            // Delete customer visit record
+            $visit->delete();
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Customer visit and associated files deleted successfully.',
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'An error occurred while deleting the visit.',
                 'error' => $e->getMessage(),
             ], 500);
         }
