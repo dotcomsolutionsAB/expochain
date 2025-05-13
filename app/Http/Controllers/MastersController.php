@@ -998,7 +998,7 @@ class MastersController extends Controller
                     $ext = $file->getClientOriginalExtension();
                     $originalName = $file->getClientOriginalName();
                     $filename = Str::random(20) . '.' . $ext;
-                    $relativePath = 'uploads/customer_visit/' . $filename;
+                    $relativePath = 'uploads/pdf_template/' . $filename;
 
                     $file->storeAs('public/' . dirname($relativePath), basename($relativePath));
 
@@ -1121,7 +1121,7 @@ class MastersController extends Controller
 
             $template = PdfTemplateModel::findOrFail($id);
 
-        $uploadPath = 'uploads/customer_visit/';
+        $uploadPath = 'uploads/pdf_template/';
         $uploadIds = [];
 
         foreach (['header', 'footer'] as $key) {
