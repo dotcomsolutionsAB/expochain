@@ -1002,7 +1002,7 @@ class MastersController extends Controller
 
                     $file->storeAs('public/' . dirname($relativePath), basename($relativePath));
 
-                    $upload = UploadModel::create([
+                    $upload = UploadsModel::create([
                         'file_ext' => $ext,
                         'file_url' => $relativePath,
                         'file_size' => $file->getSize(),
@@ -1069,11 +1069,11 @@ class MastersController extends Controller
         // Add file URLs for header and footer
         $templates->transform(function ($template) {
             $template->header = $template->header
-                ? asset('storage/' . optional(UploadModel::find($template->header))->file_url)
+                ? asset('storage/' . optional(UploadsModel::find($template->header))->file_url)
                 : null;
 
             $template->footer = $template->footer
-                ? asset('storage/' . optional(UploadModel::find($template->footer))->file_url)
+                ? asset('storage/' . optional(UploadsModel::find($template->footer))->file_url)
                 : null;
 
             return $template;
@@ -1128,7 +1128,7 @@ class MastersController extends Controller
                 // Delete old file if exists
                 $oldUploadId = $template->$key;
                 if ($oldUploadId) {
-                    $oldUpload = UploadModel::find($oldUploadId);
+                    $oldUpload = UploadsModel::find($oldUploadId);
                     if ($oldUpload) {
                         $filePath = storage_path('app/public/' . $oldUpload->file_url);
                         if (File::exists($filePath)) File::delete($filePath);
@@ -1143,7 +1143,7 @@ class MastersController extends Controller
                 $relativePath = $uploadPath . $filename;
                 $file->storeAs('public/' . dirname($relativePath), basename($relativePath));
 
-                $upload = UploadModel::create([
+                $upload = UploadsModel::create([
                     'file_ext' => $ext,
                     'file_url' => $relativePath,
                     'file_size' => $file->getSize(),
@@ -1210,7 +1210,7 @@ class MastersController extends Controller
             foreach (['header', 'footer'] as $key) {
                 $uploadId = $template->$key;
                 if ($uploadId) {
-                    $upload = UploadModel::find($uploadId);
+                    $upload = UploadsModel::find($uploadId);
                     if ($upload) {
                         $filePath = storage_path('app/public/' . $upload->file_url);
                         if (File::exists($filePath)) {
