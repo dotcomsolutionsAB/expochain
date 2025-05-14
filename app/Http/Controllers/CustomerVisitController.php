@@ -407,6 +407,12 @@ class CustomerVisitController extends Controller
     // import
     public function importCustomerVisits()
     {
+         // Increase the maximum execution time for large data sets
+        set_time_limit(300);
+    
+        // Clear existing records from the related tables
+        CustomerVisitModel::truncate();
+
         $url = 'https://expo.egsm.in/assets/custom/migrate/customer_visit.php';
 
         try {
