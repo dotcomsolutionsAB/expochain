@@ -1182,6 +1182,8 @@ class MastersController extends Controller
                 'footer' => $uploadIds['footer'],
             ]);
             
+             unset($template['id'], $template['created_at'], $template['updated_at']);
+
             return $template
             ? response()->json(['code' => 200, 'success' => true, 'message' => 'Products updated successfully!', 'data' => $template], 200)
             : response()->json(['code' => 200, 'success' => false, 'message' => 'No changes detected'], 200);
