@@ -437,6 +437,14 @@ class CustomerVisitController extends Controller
             $contact = json_decode($record['contact_person'] ?? '{}', true);
             $annual = json_decode($record['annual_purchase'] ?? '{}', true);
 
+            $champion = $annual['champion'] ?? null;
+            $fenner = $annual['fenner'] ?? null;
+            $amountExpense = $record['expense_amount'] ?? null;
+
+            $champion = is_numeric($champion) ? floatval($champion) : 0;
+            $fenner = is_numeric($fenner) ? floatval($fenner) : 0;
+            $amountExpense = is_numeric($amountExpense) ? floatval($amountExpense) : 0;
+
             $importData[] = [
                 'company_id' => $companyId,
                 'date' => $record['date'],
@@ -446,12 +454,12 @@ class CustomerVisitController extends Controller
                 'designation' => $contact['designation'] ?? null,
                 'mobile' => $contact['mobile'] ?? null,
                 'email' => $contact['email'] ?? null,
-                'champion' => $annual['champion'] ?? null,
-                'fenner' => $annual['fenner'] ?? null,
+                'champion' => $champion,
+                'fenner' => $fenner,
                 'details' => $record['details'],
                 'growth' => $record['growth'],
                 'expense' => $record['expense'],
-                'amount_expense' => $record['expense_amount'] ?: 0,
+                'amount_expense' => $amountExpense,
                 'upload' => null,
                 'created_at' => now(),
                 'updated_at' => now(),
