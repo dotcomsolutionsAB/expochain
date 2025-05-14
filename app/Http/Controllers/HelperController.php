@@ -1580,13 +1580,15 @@ class HelperController extends Controller
             });
 
             // 6. Add final totals row
-            $final = $formatted->push([
+            $totals = [
                 'month' => 'Total',
-                'standard_billing' => round($formatted->sum('standard_billing'), 2),
-                'non_standard_billing' => round($formatted->sum('non_standard_billing'), 2),
-                'customer_support_billing' => round($formatted->sum('customer_support_billing'), 2),
-                'total' => round($formatted->sum('total'), 2),
-            ]);
+                'standard_billing' => round($billing->sum('standard_billing'), 2),
+                'non_standard_billing' => round($billing->sum('non_standard_billing'), 2),
+                'customer_support_billing' => round($billing->sum('customer_support_billing'), 2),
+                'total' => round($billing->sum('total'), 2),
+            ];
+
+            $final = $formatted->push($totals);
 
             return response()->json([
                 'code' => 200,
