@@ -1521,91 +1521,6 @@ class HelperController extends Controller
     }
 
     // report channel wise
-    // public function getMonthlyBillingSummary(Request $request)
-    // {
-    //     try {
-    //         $companyId = Auth::user()->company_id;
-    //         $financialYearId = $request->input('financial_year_id');
-    //         $groupId = $request->input('group_id');
-
-    //         // 1. Get financial year range (fallback to last record)
-    //         $financialYear = $financialYearId
-    //             ? FinancialYearModel::where('company_id', $companyId)->find($financialYearId)
-    //             : FinancialYearModel::where('company_id', $companyId)->latest('id')->first();
-
-    //         if (!$financialYear) {
-    //             return response()->json([
-    //                 'code' => 404,
-    //                 'success' => false,
-    //                 'message' => 'Financial year not found.'
-    //             ], 404);
-    //         }
-
-    //         $startDate = $financialYear->start_date;
-    //         $endDate = $financialYear->end_date;
-
-    //         // 2. Base query from sales_invoice_products with sales_invoice join
-    //         $query = DB::table('t_sales_invoice_products as sip')
-    //             ->join('t_sales_invoice as si', 'sip.sales_invoice_id', '=', 'si.id')
-    //             ->where('si.company_id', $companyId)
-    //             ->whereBetween('si.sales_invoice_date', [$startDate, $endDate]);
-
-    //         // 3. If group_id is passed, join products table and filter
-    //         if ($groupId) {
-    //             $query->join('t_products as p', 'p.id', '=', 'sip.product_id')
-    //                 ->where('p.group', $groupId);
-    //         }
-
-    //         // 4. Group and aggregate billing
-    //         $billing = $query->selectRaw("
-    //                 MONTH(si.sales_invoice_date) as month,
-    //                 SUM(CASE WHEN sip.channel = 1 THEN sip.amount ELSE 0 END) as standard_billing,
-    //                 SUM(CASE WHEN sip.channel = 2 THEN sip.amount ELSE 0 END) as non_standard_billing,
-    //                 SUM(CASE WHEN sip.channel = 3 THEN sip.amount ELSE 0 END) as customer_support_billing,
-    //                 SUM(sip.amount) as total
-    //             ")
-    //             ->groupBy(DB::raw('MONTH(si.sales_invoice_date)'))
-    //             ->orderBy(DB::raw('MONTH(si.sales_invoice_date)'))
-    //             ->get();
-
-    //         // 5. Format month and collect totals
-    //         $formatted = $billing->map(function ($row) {
-    //             return [
-    //                 'month' => Carbon::create()->month($row->month)->format('F'),
-    //                 'standard_billing' => round($row->standard_billing, 2),
-    //                 'non_standard_billing' => round($row->non_standard_billing, 2),
-    //                 'customer_support_billing' => round($row->customer_support_billing, 2),
-    //                 'total' => round($row->total, 2),
-    //             ];
-    //         });
-
-    //         // 6. Add final totals row
-    //         $totals = [
-    //             'month' => 'Total',
-    //             'standard_billing' => round($billing->sum('standard_billing'), 2),
-    //             'non_standard_billing' => round($billing->sum('non_standard_billing'), 2),
-    //             'customer_support_billing' => round($billing->sum('customer_support_billing'), 2),
-    //             'total' => round($billing->sum('total'), 2),
-    //         ];
-
-    //         $final = $formatted->push($totals);
-
-    //         return response()->json([
-    //             'code' => 200,
-    //             'success' => true,
-    //             'message' => 'Monthly billing summary fetched successfully.',
-    //             'data' => $final
-    //         ], 200);
-
-    //     } catch (\Exception $e) {
-    //         return response()->json([
-    //             'code' => 500,
-    //             'success' => false,
-    //             'message' => 'Failed to fetch summary.',
-    //             'error' => $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
     public function getMonthlyBillingSummary(Request $request)
     {
         try {
@@ -1692,4 +1607,128 @@ class HelperController extends Controller
         }
     }
 
+    // export channel wise report
+    public function exportMonthlyBillingSummary(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+            $financialYearId = $request->input('financial_year_id');
+            $groupId = $request->input('group_id');
+
+            // Get financial year
+            $financialYear = $financialYearId
+                ? FinancialYearModel::where('company_id', $companyId)->find($financialYearId)
+                : FinancialYearModel::where('company_id', $companyId)->latest('id')->first();
+
+            if (!$financialYear) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'Financial year not found.'
+                ], 404);
+            }
+
+            $startDate = $financialYear->start_date;
+            $endDate = $financialYear->end_date;
+            $yearSuffix = Carbon::parse($startDate)->format('Y');
+
+            // Build base query
+            $query = DB::table('t_sales_invoice_products as sip')
+                ->join('t_sales_invoice as si', 'sip.sales_invoice_id', '=', 'si.id')
+                ->where('si.company_id', $companyId)
+                ->whereBetween('si.sales_invoice_date', [$startDate, $endDate]);
+
+            if ($groupId) {
+                $query->join('t_products as p', 'p.id', '=', 'sip.product_id')
+                    ->where('p.group', $groupId);
+            }
+
+            $billing = $query->selectRaw("
+                    MONTH(si.sales_invoice_date) as month,
+                    SUM(CASE WHEN sip.channel = 1 THEN sip.amount ELSE 0 END) as standard_billing,
+                    SUM(CASE WHEN sip.channel = 2 THEN sip.amount ELSE 0 END) as non_standard_billing,
+                    SUM(CASE WHEN sip.channel = 3 THEN sip.amount ELSE 0 END) as customer_support_billing
+                ")
+                ->groupBy(DB::raw('MONTH(si.sales_invoice_date)'))
+                ->orderBy(DB::raw('MONTH(si.sales_invoice_date)'))
+                ->get();
+
+            // Format data
+            $rows = [];
+            $totals = [
+                'standard_billing' => 0,
+                'non_standard_billing' => 0,
+                'customer_support_billing' => 0,
+                'total' => 0
+            ];
+
+            foreach ($billing as $row) {
+                $monthName = Carbon::create()->month($row->month)->format('F') . " " . $yearSuffix;
+
+                $standard = round($row->standard_billing, 2);
+                $nonStandard = round($row->non_standard_billing, 2);
+                $support = round($row->customer_support_billing, 2);
+                $monthlyTotal = $standard + $nonStandard + $support;
+
+                $rows[] = [
+                    'month' => $monthName,
+                    'standard_billing' => $standard,
+                    'non_standard_billing' => $nonStandard,
+                    'customer_support_billing' => $support,
+                    'total' => round($monthlyTotal, 2),
+                ];
+
+                // Accumulate totals
+                $totals['standard_billing'] += $standard;
+                $totals['non_standard_billing'] += $nonStandard;
+                $totals['customer_support_billing'] += $support;
+                $totals['total'] += $monthlyTotal;
+            }
+
+            // Create Excel Sheet
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+
+            // Header row
+            $sheet->fromArray(['Month', 'Standard Billing', 'Non-standard Billing', 'Customer Support Billing', 'Total'], null, 'A1');
+
+            // Data rows
+            $sheet->fromArray($rows, null, 'A2');
+
+            // Totals row
+            $totalRowIndex = count($rows) + 2;
+            $sheet->setCellValue("A{$totalRowIndex}", 'Total');
+            $sheet->setCellValue("B{$totalRowIndex}", round($totals['standard_billing'], 2));
+            $sheet->setCellValue("C{$totalRowIndex}", round($totals['non_standard_billing'], 2));
+            $sheet->setCellValue("D{$totalRowIndex}", round($totals['customer_support_billing'], 2));
+            $sheet->setCellValue("E{$totalRowIndex}", round($totals['total'], 2));
+
+            // File generation
+            $fileName = 'channel_wise_billing_report_' . now()->format('Ymd_His') . '.xlsx';
+            $filePath = 'uploads/channel_wise_report/' . $fileName;
+
+            // Ensure directory exists
+            Storage::disk('public')->makeDirectory('uploads/channel_wise_report');
+
+            // Save to storage
+            $writer = new Xlsx($spreadsheet);
+            $writer->save(storage_path('app/public/' . $filePath));
+
+            // Return success response
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Excel report generated successfully.',
+                'file_url' => asset('storage/' . $filePath),
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Failed to generate report.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }

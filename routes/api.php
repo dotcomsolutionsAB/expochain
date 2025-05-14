@@ -345,6 +345,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/get_types', [HelperController::class, 'types']);
 
         Route::post('/monthly_billing_summary', [HelperController::class, 'getMonthlyBillingSummary']);
+
+        Route::post('/export_monthly_billing_summary', [HelperController::class, 'exportMonthlyBillingSummary']);
     });
 
 
