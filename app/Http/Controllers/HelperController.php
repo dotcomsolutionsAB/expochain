@@ -1669,9 +1669,9 @@ class HelperController extends Controller
             foreach ($billing as $row) {
                 $monthName = Carbon::create()->month($row->month)->format('F') . " " . $yearSuffix;
 
-                $standard = round($row->standard_billing, 2);
-                $nonStandard = round($row->non_standard_billing, 2);
-                $support = round($row->customer_support_billing, 2);
+                $standard = round($row->standard_billing ?? 0, 2);
+                $nonStandard = round($row->non_standard_billing ?? 0, 2);
+                $support = round($row->customer_support_billing ?? 0, 2);
                 $monthlyTotal = $standard + $nonStandard + $support;
 
                 $rows[] = [
