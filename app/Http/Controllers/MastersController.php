@@ -2124,7 +2124,7 @@ class MastersController extends Controller
                     ]);
 
                     $newUploadIds[] = $upload->id;
-                    
+
                     unset($upload['id'], $upload['created_at'], $upload['updated_at']);
                 }
             }
@@ -2158,7 +2158,7 @@ class MastersController extends Controller
                 }
             }
 
-            unset($visit['id'], $visit['created_at'], $visit['updated_at']);
+            unset($visit['id'], $visit['upload'], $visit['created_at'], $visit['updated_at']);
 
             return response()->json([
                 'code' => 200,
