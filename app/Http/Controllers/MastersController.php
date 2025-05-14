@@ -2113,7 +2113,8 @@ class MastersController extends Controller
                     $filename = Str::random(20) . '.' . $ext;
                     $relativePath = 'uploads/customer_visit/' . $filename;
 
-                    $file->storeAs('public/' . dirname($relativePath), basename($relativePath));
+                    // $file->storeAs('public/' . dirname($relativePath), basename($relativePath));
+                    Storage::disk('public')->putFileAs('uploads/customer_visit', $file, $filename);
 
                     $upload = UploadsModel::create([
                         'company_id' => Auth::user()->company_id,
