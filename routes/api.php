@@ -30,6 +30,7 @@ use App\Http\Controllers\QuotationTermMasterController;
 use App\Http\Controllers\PurchaseBackController;
 use App\Http\Controllers\HelperController;
 use App\Http\Controllers\LotController;
+use App\Http\Controllers\CustomerVisitController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -123,11 +124,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/pdf_template_migrate', [MastersController::class, 'importPdfTemplates']);
 
     Route::prefix('customer_visit')->group(function () {
-        Route::post('/store', [MastersController::class, 'register_customer_visit']); // Create Products
-        Route::get('/index', [MastersController::class, 'fetch']); // Retrieve products
-        Route::post('/update/{id}', [MastersController::class, 'edit']); // Update a specific user
-        Route::post('/delete_specific_uploads/{id}', [MastersController::class, 'deleteUploads']); // Update a specific user
-        Route::delete('/{id}', [MastersController::class, 'delete']); // Update a specific user
+        Route::post('/store', [CustomerVisitController::class, 'register_customer_visit']); // Create Products
+        Route::get('/index', [CustomerVisitController::class, 'fetch']); // Retrieve products
+        Route::post('/update/{id}', [CustomerVisitController::class, 'edit']); // Update a specific user
+        Route::post('/delete_specific_uploads/{id}', [CustomerVisitController::class, 'deleteUploads']); // Update a specific user
+        Route::delete('/{id}', [CustomerVisitController::class, 'delete']); // Update a specific user
+        Route::get('/customer_visit_migrate', [CustomerVisitController::class, 'importCustomerVisitData']);
     });
 
     Route::post('/add_quotations', [QuotationsController::class, 'add_quotations']);
