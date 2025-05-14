@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use App\Models\UploadsModel;
 use App\Models\CustomerVisitModel;
+use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
@@ -92,6 +93,8 @@ class CustomerVisitController extends Controller
                 'upload' => !empty($uploadedIds)
                     ? implode(',', array_filter($uploadedIds))
                     : null,
+                'log_user' => Auth::id(), // or Auth::user()->id
+                'log_date' => now()->toDateString(), // Only the date portion
             ]);
 
             unset($register_visit['id'], $register_visit['company_id'], $register_visit['created_at'], $register_visit['updated_at']);
@@ -121,7 +124,8 @@ class CustomerVisitController extends Controller
             $offset = $request->input('offset', 0);
             $search = $request->input('search', '');
 
-             $query = CustomerVisitModel::where('company_id', Auth::user()->company_id); // Filter by company_id
+             $query = CustomerVisitModel::with('logUser')
+                        ->where('company_id', Auth::user()->company_id); // Filter by company_id
 
             // Apply search filters
             if (!empty($search)) {
@@ -154,6 +158,9 @@ class CustomerVisitController extends Controller
                 }
 
                 $visit->upload_urls = $uploadUrls;
+
+                // Map log user name
+                $visit->log_user_name = optional($visit->logUser)->name;
             }
 
             return response()->json([
@@ -255,6 +262,8 @@ class CustomerVisitController extends Controller
             $visit->expense = $validated['expense'] ?? null;
             $visit->amount_expense = $validated['amount_expense'] ?? 0;
             $visit->upload = count($allUploadIds) > 0 ? implode(',', $allUploadIds) : null;
+            $visit->log_user = Auth::id();
+            $visit->log_date = now()->toDateString();
             $visit->save();
 
             // Generate resolved file URLs
@@ -445,6 +454,10 @@ class CustomerVisitController extends Controller
             $fenner = is_numeric($fenner) ? floatval($fenner) : 0;
             $amountExpense = is_numeric($amountExpense) ? floatval($amountExpense) : 0;
 
+            $logUserId = User::where('username', $record['log_user'])->value('id') ?? 0;
+
+            $logDate = $record['log_date'] ?? null;
+
             $importData[] = [
                 'company_id' => $companyId,
                 'date' => $record['date'],
@@ -461,6 +474,8 @@ class CustomerVisitController extends Controller
                 'expense' => $record['expense'],
                 'amount_expense' => $amountExpense,
                 'upload' => null,
+                'log_user' => $logUserId,
+                'log_date' => $logDate,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];

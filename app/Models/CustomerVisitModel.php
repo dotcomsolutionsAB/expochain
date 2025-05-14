@@ -24,6 +24,14 @@ class CustomerVisitModel extends Model
         'growth',
         'expense',
         'amount_expense',
-        'upload'
+        'upload',
+        'log_user',
+        'log_date'
     ];
+
+    public function logUser()
+    {
+        return $this->belongsTo(User::class, 'log_user');
+    }
+
 }

@@ -27,6 +27,8 @@ return new class extends Migration
             $table->string('expense')->nullable();
             $table->float('amount_expense')->default(0);
             $table->string('upload')->nullable();
+            $table->unsignedBigInteger('log_user');
+            $table->date('log_date');
             $table->timestamps();
         });
     }
