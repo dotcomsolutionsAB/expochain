@@ -1571,7 +1571,7 @@ class HelperController extends Controller
             // 5. Format month and collect totals
             $formatted = $billing->map(function ($row) {
                 return [
-                    'month' => \Carbon\Carbon::create()->month($row->month)->format('F'),
+                    'month' => Carbon::create()->month($row->month)->format('F'),
                     'standard_billing' => round($row->standard_billing, 2),
                     'non_standard_billing' => round($row->non_standard_billing, 2),
                     'customer_support_billing' => round($row->customer_support_billing, 2),
