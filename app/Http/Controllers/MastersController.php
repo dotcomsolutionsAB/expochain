@@ -1182,8 +1182,8 @@ class MastersController extends Controller
                 'footer' => $uploadIds['footer'],
             ]);
             
-            return $update_pdf_template
-            ? response()->json(['code' => 200, 'success' => true, 'message' => 'Products updated successfully!', 'data' => $update_pdf_template], 200)
+            return $template
+            ? response()->json(['code' => 200, 'success' => true, 'message' => 'Products updated successfully!', 'data' => $template], 200)
             : response()->json(['code' => 200, 'success' => false, 'message' => 'No changes detected'], 200);
         } catch (\Exception $e) {
             return response()->json([
