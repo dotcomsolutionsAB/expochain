@@ -1836,7 +1836,7 @@ class HelperController extends Controller
     // export stats compare
     public function exportClientWiseSummary(Request $request)
     {
-        $summaryData = $this->getClientWiseSummary($request)->getData(true)['data'];
+        $summaryData = $this->getClientYearlySalesSummary($request)->getData(true)['data'];
         $yearIds = collect(explode(',', $request->input('financial_year_ids', '')))
                     ->filter()
                     ->map(fn($id) => (int) trim($id))
