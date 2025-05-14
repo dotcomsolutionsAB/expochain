@@ -2254,7 +2254,7 @@ class MastersController extends Controller
     public function delete($id)
     {
         try {
-            $visit = CustomerVisit::find($request->id);
+            $visit = CustomerVisitModel::find($id);
             $uploadIds = array_filter(explode(',', $visit->upload));
 
             // Delete upload files and records
