@@ -1043,7 +1043,7 @@ class MastersController extends Controller
                 'footer' => $uploadIds['footer'],
             ]);
 
-            unset($register_pdf_template['id'], $register_pdf_template['created_at'], $register_pdf_template['updated_at']);
+            unset($register_pdf_template['id'], $register_pdf_template['company_id'], $register_pdf_template['created_at'], $register_pdf_template['updated_at']);
 
             return response()->json([
                 'code' => 200,
