@@ -125,7 +125,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::prefix('customer_visit')->group(function () {
         Route::post('/store', [CustomerVisitController::class, 'register_customer_visit']); // Create Products
-        Route::get('/index', [CustomerVisitController::class, 'fetch']); // Retrieve products
+        Route::post('/index', [CustomerVisitController::class, 'fetch']); // Retrieve products
         Route::post('/update/{id}', [CustomerVisitController::class, 'edit']); // Update a specific user
         Route::post('/delete_specific_uploads/{id}', [CustomerVisitController::class, 'deleteUploads']); // Update a specific user
         Route::delete('/{id}', [CustomerVisitController::class, 'delete']); // Update a specific user
