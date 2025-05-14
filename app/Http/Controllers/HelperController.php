@@ -1648,7 +1648,7 @@ class HelperController extends Controller
                     SUM(CASE WHEN sip.channel = 1 THEN sip.amount ELSE 0 END) as standard_billing,
                     SUM(CASE WHEN sip.channel = 2 THEN sip.amount ELSE 0 END) as non_standard_billing,
                     SUM(CASE WHEN sip.channel = 3 THEN sip.amount ELSE 0 END) as customer_support_billing,
-                    SUM(sip.amount) as total
+                    SUM(CASE WHEN sip.channel IN (1, 2, 3) THEN sip.amount ELSE 0 END) as total
                 ")
                 ->groupBy(DB::raw('MONTH(si.sales_invoice_date)'))
                 ->orderBy(DB::raw('MONTH(si.sales_invoice_date)'))
