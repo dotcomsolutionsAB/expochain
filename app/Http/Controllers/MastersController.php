@@ -2123,9 +2123,9 @@ class MastersController extends Controller
                         'file_name' => $originalName,
                     ]);
 
-                    unset($upload['id'], $upload['created_at'], $upload['updated_at']);
-
                     $newUploadIds[] = $upload->id;
+                    
+                    unset($upload['id'], $upload['created_at'], $upload['updated_at']);
                 }
             }
 
