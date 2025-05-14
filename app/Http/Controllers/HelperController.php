@@ -1518,4 +1518,90 @@ class HelperController extends Controller
             'data' => $types
         ], 200);
     }
+
+    // report channel wise
+    public function getMonthlyBillingSummary(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+            $financialYearId = $request->input('financial_year_id');
+            $groupId = $request->input('group_id');
+
+            // 1. Get financial year range (fallback to last record)
+            $financialYear = $financialYearId
+                ? FinancialYearModel::where('company_id', $companyId)->find($financialYearId)
+                : FinancialYearModel::where('company_id', $companyId)->latest('id')->first();
+
+            if (!$financialYear) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'Financial year not found.'
+                ], 404);
+            }
+
+            $startDate = $financialYear->start_date;
+            $endDate = $financialYear->end_date;
+
+            // 2. Base query from sales_invoice_products with sales_invoice join
+            $query = DB::table('t_sales_invoice_products as sip')
+                ->join('t_sales_invoice as si', 'sip.sales_invoice_id', '=', 'si.id')
+                ->where('si.company_id', $companyId)
+                ->whereBetween('si.sales_invoice_date', [$startDate, $endDate]);
+
+            // 3. If group_id is passed, join products table and filter
+            if ($groupId) {
+                $query->join('t_products as p', 'p.id', '=', 'sip.product_id')
+                    ->where('p.group', $groupId);
+            }
+
+            // 4. Group and aggregate billing
+            $billing = $query->selectRaw("
+                    MONTH(si.sales_invoice_date) as month,
+                    SUM(CASE WHEN sip.channel = 1 THEN sip.amount ELSE 0 END) as standard_billing,
+                    SUM(CASE WHEN sip.channel = 2 THEN sip.amount ELSE 0 END) as non_standard_billing,
+                    SUM(CASE WHEN sip.channel = 3 THEN sip.amount ELSE 0 END) as customer_support_billing,
+                    SUM(sip.amount) as total
+                ")
+                ->groupBy(DB::raw('MONTH(si.sales_invoice_date)'))
+                ->orderBy(DB::raw('MONTH(si.sales_invoice_date)'))
+                ->get();
+
+            // 5. Format month and collect totals
+            $formatted = $billing->map(function ($row) {
+                return [
+                    'month' => \Carbon\Carbon::create()->month($row->month)->format('F'),
+                    'standard_billing' => round($row->standard_billing, 2),
+                    'non_standard_billing' => round($row->non_standard_billing, 2),
+                    'customer_support_billing' => round($row->customer_support_billing, 2),
+                    'total' => round($row->total, 2),
+                ];
+            });
+
+            // 6. Add final totals row
+            $final = $formatted->push([
+                'month' => 'Total',
+                'standard_billing' => round($formatted->sum('standard_billing'), 2),
+                'non_standard_billing' => round($formatted->sum('non_standard_billing'), 2),
+                'customer_support_billing' => round($formatted->sum('customer_support_billing'), 2),
+                'total' => round($formatted->sum('total'), 2),
+            ]);
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Monthly billing summary fetched successfully.',
+                'data' => $final
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Failed to fetch summary.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }

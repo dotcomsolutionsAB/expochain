@@ -309,39 +309,43 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/purchase_back', [PurchaseBackController::class, 'add_purchase_back']); // Create purchase-bcak
     Route::get('/purchase_back', [PurchaseBackController::class, 'fetch_purchase_back']); // View All purchase-back
 
-    Route::post('/dashboard', [HelperController::class, 'dashboard']);
+    Route::prefix('report')->group(function () {
+        Route::post('/dashboard', [HelperController::class, 'dashboard']);
 
-    Route::get('/statistic', [HelperController::class, 'getSummary']);
+        Route::get('/statistic', [HelperController::class, 'getSummary']);
 
-    Route::post('/fy_wise_totals', [HelperController::class, 'fyWisePurchaseTotals']);
+        Route::post('/fy_wise_totals', [HelperController::class, 'fyWisePurchaseTotals']);
 
-    Route::post('/monthly_summary', [HelperController::class, 'getMonthlyPurchaseSalesSummary']);
+        Route::post('/monthly_summary', [HelperController::class, 'getMonthlyPurchaseSalesSummary']);
 
-    Route::post('/sales_barchart', [HelperController::class, 'getMonthlySalesSummary']);
+        Route::post('/sales_barchart', [HelperController::class, 'getMonthlySalesSummary']);
 
-    Route::post('/sales_graph', [HelperController::class, 'getMonthlyCumulativeSalesSummary']);
+        Route::post('/sales_graph', [HelperController::class, 'getMonthlyCumulativeSalesSummary']);
 
-    Route::post('/profit_distribution', [HelperController::class, 'getDailyProfitDistribution']);
+        Route::post('/profit_distribution', [HelperController::class, 'getDailyProfitDistribution']);
 
-    Route::post('/quotaion_statistic', [HelperController::class, 'getMonthlyQuotationStatusReport']);
+        Route::post('/quotaion_statistic', [HelperController::class, 'getMonthlyQuotationStatusReport']);
 
-    Route::post('/product_quotation', [HelperController::class, 'getProductWiseQuotations']);
+        Route::post('/product_quotation', [HelperController::class, 'getProductWiseQuotations']);
 
-    Route::post('/export_product_quotation', [HelperController::class, 'exportProductWiseQuotations']);
+        Route::post('/export_product_quotation', [HelperController::class, 'exportProductWiseQuotations']);
 
-    Route::post('/client_quotation', [HelperController::class, 'getClientWiseQuotations']);
+        Route::post('/client_quotation', [HelperController::class, 'getClientWiseQuotations']);
 
-    Route::post('/export_client_quotation', [HelperController::class, 'exportClientWiseQuotations']);
+        Route::post('/export_client_quotation', [HelperController::class, 'exportClientWiseQuotations']);
 
-    Route::post('/product_profit', [HelperController::class, 'getProductWiseSalesSummary']);
+        Route::post('/product_profit', [HelperController::class, 'getProductWiseSalesSummary']);
 
-    Route::post('/client_profit', [HelperController::class, 'getClientWiseSalesSummary']);
+        Route::post('/client_profit', [HelperController::class, 'getClientWiseSalesSummary']);
 
-    Route::get('/product_profit_fy', [HelperController::class, 'getProductWiseYearlySalesSummary']);
+        Route::get('/product_profit_fy', [HelperController::class, 'getProductWiseYearlySalesSummary']);
 
-    Route::get('/client_profit_fy', [HelperController::class, 'getClientWiseYearlySalesSummary']);
+        Route::get('/client_profit_fy', [HelperController::class, 'getClientWiseYearlySalesSummary']);
 
-    Route::get('/get_types', [HelperController::class, 'types']);
+        Route::get('/get_types', [HelperController::class, 'types']);
+
+        Route::post('/monthly-billing-summary', [ReportController::class, 'getMonthlyBillingSummary']);
+    });
 
 
     Route::post('/add_lot', [LotController::class, 'add']); // Create Channel
