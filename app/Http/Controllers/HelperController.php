@@ -1675,11 +1675,11 @@ class HelperController extends Controller
                 $monthlyTotal = $standard + $nonStandard + $support;
 
                 $rows[] = [
-                    'month' => $monthName,
-                        'standard_billing' => $standard,
-                        'non_standard_billing' => $nonStandard,
-                        'customer_support_billing' => $support,
-                        'total' => round($monthlyTotal, 2),
+                     $monthName,
+    round($standard, 2),
+    round($nonStandard, 2),
+    round($support, 2),
+    round($monthlyTotal, 2),
                 ];
 
                 // Accumulate totals
