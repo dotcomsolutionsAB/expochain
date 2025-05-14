@@ -17,6 +17,9 @@ use App\Models\SalesOrderProductsModel;
 use App\Models\GodownModel;
 use App\Models\QuotationsModel;
 use App\Models\FinancialYearModel;
+use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use DB;
 use Auth;
 
