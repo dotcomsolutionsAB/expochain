@@ -347,6 +347,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/monthly_billing_summary', [HelperController::class, 'getMonthlyBillingSummary']);
 
         Route::post('/export_monthly_billing_summary', [HelperController::class, 'exportMonthlyBillingSummary']);
+
+        Route::post('/client_wise_summary', [HelperController::class, 'getClientYearlySalesSummary']);
+
+        Route::post('/export_client_wise_summary', [HelperController::class, 'exportClientWiseSummary']);
     });
 
 

@@ -1675,11 +1675,11 @@ class HelperController extends Controller
                 $monthlyTotal = $standard + $nonStandard + $support;
 
                 $rows[] = [
-                     $monthName,
-    round($standard, 2),
-    round($nonStandard, 2),
-    round($support, 2),
-    round($monthlyTotal, 2),
+                    'month' => $monthName,
+                    'standard_billing' => $standard,
+                    'non_standard_billing' => $nonStandard,
+                    'customer_support_billing' => $support,
+                    'total' => round($monthlyTotal, 2),
                 ];
 
                 // Accumulate totals
@@ -1735,4 +1735,159 @@ class HelperController extends Controller
             ], 500);
         }
     }
+
+    // stats compare
+    public function getClientYearlySalesSummary(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+            $search = $request->input('search');
+            $limit = $request->input('limit', 10);
+            $offset = $request->input('offset', 0);
+
+            $financialYearIds = $request->input('financial_year_ids');
+            $yearIds = $financialYearIds 
+                ? explode(',', $financialYearIds) 
+                : FinancialYearModel::where('company_id', $companyId)
+                    ->orderByDesc('id')
+                    ->take(3)
+                    ->pluck('id')
+                    ->toArray();
+
+            $years = FinancialYearModel::whereIn('id', $yearIds)
+                ->orderBy('start_date')
+                ->get(['id', 'name', 'start_date', 'end_date']);
+
+            if ($years->isEmpty()) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'No financial year data found.'
+                ], 404);
+            }
+
+            // Get clients
+            $clientsQuery = ClientsModel::where('company_id', $companyId);
+
+            if (!empty($search)) {
+                $clientsQuery->where('name', 'like', '%' . $search . '%');
+            }
+
+            $totalCount = $clientsQuery->count();
+
+            $clients = $clientsQuery
+                ->orderBy('name')
+                ->offset($offset)
+                ->limit($limit)
+                ->get(['id', 'name']);
+
+            $data = [];
+
+            foreach ($clients as $client) {
+                $row = ['name' => $client->name];
+                $totalAmount = 0;
+
+                foreach ($years as $year) {
+                    $sales = DB::table('t_sales_invoice_products as sip')
+                        ->join('t_sales_invoice as si', 'sip.sales_invoice_id', '=', 'si.id')
+                        ->where('si.client_id', $client->id)
+                        ->where('si.company_id', $companyId)
+                        ->whereBetween('si.sales_invoice_date', [$year->start_date, $year->end_date])
+                        ->select(
+                            DB::raw('SUM(sip.amount) as total_amount'),
+                            DB::raw('SUM(sip.profit) as total_profit')
+                        )
+                        ->first();
+
+                    $amount = $sales->total_amount ?? 0;
+                    $profit = $sales->total_profit ?? 0;
+
+                    $totalAmount += $amount;
+
+                    $fyLabel = substr($year->name, 2); // e.g., "21-22"
+                    $row["amount($fyLabel)"] = round($amount, 2);
+                    $row["profit($fyLabel)"] = round($profit, 2);
+                }
+
+                $row["percentage(amount)"] = 0; // Placeholder
+                $data[] = $row;
+            }
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Client yearly sales summary fetched successfully.',
+                'data' => $data,
+                'count' => count($data),
+                'total_count' => $totalCount
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Failed to fetch client summary.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // export stats compare
+    public function exportClientWiseSummary(Request $request)
+    {
+        $summaryData = $this->getClientWiseSummary($request)->getData(true)['data'];
+        $yearIds = collect(explode(',', $request->input('financial_year_ids', '')))
+                    ->filter()
+                    ->map(fn($id) => (int) trim($id))
+                    ->toArray();
+        $companyId = Auth::user()->company_id;
+
+        if (empty($yearIds)) {
+            $yearIds = FinancialYearModel::where('company_id', $companyId)
+                ->orderByDesc('id')->limit(3)->pluck('id')->toArray();
+        }
+
+        $yearLabels = FinancialYearModel::whereIn('id', $yearIds)->pluck('name')->toArray();
+
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Headers
+        $header = ['Client Name'];
+        foreach ($yearLabels as $y) {
+            $header[] = "Amount ($y)";
+            $header[] = "Profit ($y)";
+        }
+        $header[] = "Percentage";
+        $sheet->fromArray($header, null, 'A1');
+
+        // Data
+        $rowNum = 2;
+        foreach ($summaryData as $row) {
+            $line = [$row['name']];
+            foreach ($yearLabels as $y) {
+                $line[] = $row["amount_$y"] ?? 0;
+                $line[] = $row["profit_$y"] ?? 0;
+            }
+            $line[] = 0;
+            $sheet->fromArray($line, null, "A$rowNum");
+            $rowNum++;
+        }
+
+        $fileName = 'client_summary_' . now()->format('Ymd_His') . '.xlsx';
+        $filePath = 'uploads/client_summary/' . $fileName;
+
+        Storage::disk('public')->makeDirectory('uploads/client_summary');
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+        $writer->save(storage_path('app/public/' . $filePath));
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Excel exported successfully.',
+            'file_url' => asset('storage/' . $filePath),
+        ]);
+    }
+
 }
