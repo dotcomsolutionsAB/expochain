@@ -2100,7 +2100,7 @@ class MastersController extends Controller
             $validated = $validator->validated();
 
             // Find the existing record
-            $visit = CustomerVisitModel::find($validated['id']);
+            $visit = CustomerVisitModel::find($id);
             $existingUploadIds = array_filter(explode(',', $visit->upload));
 
             // Process new uploads if provided
