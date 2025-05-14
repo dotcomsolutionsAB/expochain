@@ -459,6 +459,7 @@ class CustomerVisitController extends Controller
             $logDate = $record['log_date'] ?? null;
 
             $importData[] = [
+                'id' => $record['SN'],
                 'company_id' => $companyId,
                 'date' => $record['date'],
                 'customer' => $record['customer'],

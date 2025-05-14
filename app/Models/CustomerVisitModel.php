@@ -10,6 +10,7 @@ class CustomerVisitModel extends Model
     protected $table = 't_customer_visits';
 
     protected $fillable = [
+        'id',
         'company_id',
         'date',
         'customer',
