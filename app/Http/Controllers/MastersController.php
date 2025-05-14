@@ -1279,6 +1279,49 @@ class MastersController extends Controller
         $successfulInserts = 0;
         $errors = [];
 
+        $footerUploadId = null;
+        $externalFooterImageUrl = 'https://expo.egsm.in/assets/media/pdf/quot_bottom.jpg';
+
+        try {
+            $imageContent = file_get_contents($externalFooterImageUrl);
+
+            if ($imageContent) {
+                $extension = pathinfo(parse_url($externalFooterImageUrl, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'jpg';
+                $filename = Str::random(20) . '.' . $extension;
+                $relativePath = 'uploads/pdf_template/' . $filename;
+                $storagePath = storage_path('app/public/' . $relativePath);
+
+                // Save the image to local storage
+                file_put_contents($storagePath, $imageContent);
+
+                // Store in UploadsModel
+                $upload = UploadsModel::create([
+                    'company_id' => Auth::user()->company_id,
+                    'file_ext' => $extension,
+                    'file_url' => $relativePath,
+                    'file_size' => strlen($imageContent),
+                    'file_name' => basename($externalFooterImageUrl),
+                ]);
+
+                $footerUploadId = $upload->id;
+
+                if (!$footerUploadId) 
+                {
+                    return response()->json([
+                        'code' => 500,
+                        'success' => false,
+                        'message' => 'Footer image upload failed. No templates imported.'
+                    ], 500);
+                }
+
+            }
+        } catch (\Exception $e) {
+            $errors[] = [
+                'footer_image_url' => $externalFooterImageUrl,
+                'download_error' => $e->getMessage()
+            ];
+        }
+
         foreach ($data['data'] as $pdf_record)
         {    
             // Decode nested JSON strings for address and bank details
@@ -1291,7 +1334,7 @@ class MastersController extends Controller
             $bank_details = array_map(function($value) {
                 return $value === '' ? null : $value;
             }, $bank_details);
-        
+
             // Prepare PDF template data
             $pdfTemplateData = [
                 'name' => $pdf_record['name'],
@@ -1310,8 +1353,8 @@ class MastersController extends Controller
                 'bank_account_name' => $bank_details['branch'] ?? 'No Branch Provided',
                 'bank_account_number' => $bank_details['ac_no'] ?? 'No Account Number Provided',
                 'bank_ifsc' => $bank_details['ifsc'] ?? 'No IFSC Provided',
-                'header' => 'No Header Provided',
-                'footer' => $pdf_record['footer']
+                'header' => null, //'No Header Provided' to null
+                'footer' => $footerUploadId,
             ];
 
             // Validate PDF template data
@@ -1331,7 +1374,7 @@ class MastersController extends Controller
                 'bank_account_name' => 'required|string',
                 'bank_account_number' => 'required|string',
                 'bank_ifsc' => 'required|string',
-                'footer' => 'required|string'
+                'footer' => 'required|integer'
             ]);
 
             if ($validator->fails()) {
