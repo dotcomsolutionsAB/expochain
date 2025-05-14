@@ -129,7 +129,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/update/{id}', [CustomerVisitController::class, 'edit']); // Update a specific user
         Route::post('/delete_specific_uploads/{id}', [CustomerVisitController::class, 'deleteUploads']); // Update a specific user
         Route::delete('/{id}', [CustomerVisitController::class, 'delete']); // Update a specific user
-        Route::get('/customer_visit_migrate', [CustomerVisitController::class, 'importCustomerVisitData']);
+        Route::get('/migrate', [CustomerVisitController::class, 'importCustomerVisitData']);
     });
 
     Route::post('/add_quotations', [QuotationsController::class, 'add_quotations']);
