@@ -1806,7 +1806,6 @@ class MastersController extends Controller
         : response()->json(['Failed to fetch data'], 404); 
     }
 
-    
     // create
     public function add_closing_stock(Request $request)
     {
@@ -1988,7 +1987,7 @@ class MastersController extends Controller
                     : null,
             ]);
 
-            unset($register_visit['id'], $register_visit['created_at'], $register_visit['updated_at']);
+            unset($register_visit['id'], $register_visit['company_id'], $register_visit['created_at'], $register_visit['updated_at']);
 
             return response()->json([
                 'code' => 201,
