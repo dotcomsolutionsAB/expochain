@@ -12,6 +12,7 @@ use App\Models\ProductsModel;
 use App\Models\CounterModel;
 use NumberFormatter;
 use Carbon\Carbon;
+use DB;
 use Auth;
 
 class CreditNoteController extends Controller
