@@ -189,6 +189,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/credit_note/{id?}', [CreditNoteController::class, 'view_credit_note']);
     Route::post('/update_credit_note/{id?}', [CreditNoteController::class, 'edit_credit_note']);
     Route::delete('/credit_note/{id?}', [CreditNoteController::class, 'delete_credit_note']);
+    Route::get('/credit-note/type-list', [CreditNoteController::class, 'getTypeList']);
 
     Route::get('/credit_note_migrate', [CreditNoteController::class, 'importCreditNotes']);
 
