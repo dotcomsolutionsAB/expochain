@@ -162,7 +162,24 @@ class CreditNoteController extends Controller
                 $creditNote = CreditNoteModel::with([
                     'products' => function ($query) {
                         $query->select(
-                            'credit_note_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst'
+                            'credit_note_id',
+                            'product_id',
+                            'product_name',
+                            'description',
+                            'quantity',
+                            'unit',
+                            'price',
+                            'discount',
+                            'discount_type',
+                            'hsn',
+                            'tax',
+                            'cgst',
+                            'sgst',
+                            'igst',
+                            DB::raw('(quantity * price) as amount'),
+                            DB::raw('(tax / 2) as cgst_rate'),
+                            DB::raw('(tax / 2) as sgst_rate'),
+                            DB::raw('tax as igst_rate')
                         );
                     },
                     'client' => function ($q) {
