@@ -1994,7 +1994,11 @@ class HelperController extends Controller
 
     private function fixZero($value) 
     {
-        return ($value === null || $value === '' || $value === false) ? 0 : $value;
+        if ($value === null || $value === '' || $value === false) {
+        return 0;
+    }
+        // Cast to float and round to 2 decimals explicitly
+        return round((float) $value, 2);
     }
 
 }
