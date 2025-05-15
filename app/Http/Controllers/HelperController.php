@@ -1900,10 +1900,10 @@ class HelperController extends Controller
                 foreach ($yearLabels as $label) {
                     $amountKey = "amount($label)";
                     $profitKey = "profit($label)";
-                    $line[] = $row[$amountKey] ?? 0;
-                    $line[] = $row[$profitKey] ?? 0;
+                    $line[] = fixZero($row[$amountKey] ?? 0);
+                    $line[] = fixZero($row[$profitKey] ?? 0);
                 }
-                $line[] = $row['percentage(amount)'] ?? 0;
+                $line[] = fixZero($row['percentage(amount)'] ?? 0);
                 $sheet->fromArray($line, null, "A$rowNum");
                 $rowNum++;
             }
@@ -1937,4 +1937,10 @@ class HelperController extends Controller
             ], 500);
         }
     }
+
+    function fixZero($value) 
+    {
+        return ($value === null || $value === '' || $value === false) ? 0 : $value;
+    }
+
 }
