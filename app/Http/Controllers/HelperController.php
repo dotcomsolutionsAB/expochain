@@ -1911,7 +1911,7 @@ class HelperController extends Controller
             $fileName = 'client_summary_' . now()->format('Ymd_His') . '.xlsx';
             $filePath = 'uploads/stats_compare/' . $fileName;
 
-            Storage::disk('public')->makeDirectory('uploads/client_summary');
+            Storage::disk('public')->makeDirectory('uploads/stats_compare');
 
             $writer = new Xlsx($spreadsheet);
             $writer->save(storage_path('app/public/' . $filePath));
