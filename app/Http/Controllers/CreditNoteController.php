@@ -317,7 +317,7 @@ class CreditNoteController extends Controller
             'name' => 'required|string',
             'credit_note_no' => 'required|string',
             'credit_note_date' => 'required|date',
-            'si_no' => 'required|integer|exists:t_sales_invoice,sales_invoice_no',
+            // 'si_no' => 'required|integer|exists:t_sales_invoice,sales_invoice_no',
             'effective_date' => 'required|date',
             'type' => 'required|string',
             'remarks' => 'nullable|string',
