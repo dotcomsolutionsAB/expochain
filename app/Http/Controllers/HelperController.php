@@ -1737,199 +1737,204 @@ class HelperController extends Controller
         }
     }
 
-    // stats compare
+    // Private reusable method to fetch data
+    private function fetchClientYearlySalesSummaryData(Request $request)
+    {
+        $companyId = Auth::user()->company_id;
+        $search = $request->input('search');
+        $limit = $request->input('limit', 10);
+        $offset = $request->input('offset', 0);
+
+        $financialYearIds = $request->input('financial_year_ids');
+        if ($financialYearIds) {
+            $yearIds = explode(',', $financialYearIds);
+            $yearIds = array_filter(array_map('trim', $yearIds));
+
+            if (count($yearIds) < 2) {
+                throw new \InvalidArgumentException('Minimum two financial year IDs are required.');
+            }
+        } else {
+            $yearIds = FinancialYearModel::where('company_id', $companyId)
+                ->orderByDesc('id')
+                ->take(3)
+                ->pluck('id')
+                ->toArray();
+        }
+
+        // Fetch years ordered descending by start_date
+        $years = FinancialYearModel::whereIn('id', $yearIds)
+            ->orderByDesc('start_date')
+            ->get(['id', 'name', 'start_date', 'end_date']);
+
+        if ($years->isEmpty()) {
+            throw new \Exception('No financial year data found.');
+        }
+
+        $yearLabels = $years->mapWithKeys(function ($year) {
+            return [$year->id => substr($year->name, 2)]; // e.g., "21-22"
+        });
+
+        $clientsQuery = ClientsModel::where('company_id', $companyId);
+        if (!empty($search)) {
+            $clientsQuery->where('name', 'like', '%' . $search . '%');
+        }
+        $totalCount = $clientsQuery->count();
+
+        $clients = $clientsQuery
+            ->orderBy('name')
+            ->offset($offset)
+            ->limit($limit)
+            ->get(['id', 'name']);
+
+        // Get last two years for percentage calculation (descending by start_date)
+        $lastTwoYears = $years->take(2);
+        $lastYearId = $lastTwoYears->first()->id ?? null;
+        $prevYearId = $lastTwoYears->skip(1)->first()->id ?? null;
+
+        $data = [];
+
+        foreach ($clients as $client) {
+            $row = ['name' => $client->name];
+            $amounts = [];
+
+            foreach ($years as $year) {
+                $sales = DB::table('t_sales_invoice_products as sip')
+                    ->join('t_sales_invoice as si', 'sip.sales_invoice_id', '=', 'si.id')
+                    ->where('si.client_id', $client->id)
+                    ->where('si.company_id', $companyId)
+                    ->whereBetween('si.sales_invoice_date', [$year->start_date, $year->end_date])
+                    ->select(
+                        DB::raw('SUM(sip.amount) as total_amount'),
+                        DB::raw('SUM(sip.profit) as total_profit')
+                    )
+                    ->first();
+
+                $amount = $sales->total_amount ?? 0;
+                $profit = $sales->total_profit ?? 0;
+
+                $amounts[$year->id] = $amount;
+
+                $label = $yearLabels[$year->id];
+
+                $row["amount($label)"] = round($amount, 2);
+                $row["profit($label)"] = round($profit, 2);
+            }
+
+            // Calculate percentage using last two years amount
+            if ($lastYearId && $prevYearId && isset($amounts[$lastYearId], $amounts[$prevYearId]) && $amounts[$prevYearId] > 0) {
+                $row['percentage(amount)'] = round(($amounts[$lastYearId] / $amounts[$prevYearId]) * 100, 2);
+            } else {
+                $row['percentage(amount)'] = 0;
+            }
+
+            $data[] = $row;
+        }
+
+        return [
+            'data' => $data,
+            'count' => count($data),
+            'total_count' => $totalCount,
+            'years' => $years,
+        ];
+    }
+
+    // API to get stats compare
     public function getClientYearlySalesSummary(Request $request)
     {
         try {
-            $companyId = Auth::user()->company_id;
-            $search = $request->input('search');
-            $limit = $request->input('limit', 10);
-            $offset = $request->input('offset', 0);
-
-            // Get financial_year_ids from request or default last 3 years
-            $financialYearIds = $request->input('financial_year_ids');
-            if ($financialYearIds) {
-                $yearIds = explode(',', $financialYearIds);
-                $yearIds = array_filter(array_map('trim', $yearIds));
-
-                // Validate minimum two financial years if passed
-                if (count($yearIds) < 2) {
-                    return response()->json([
-                        'code' => 422,
-                        'success' => false,
-                        'message' => 'Minimum two financial year IDs are required.'
-                    ], 422);
-                }
-            } else {
-                // Default last 3 financial years by id descending
-                $yearIds = FinancialYearModel::where('company_id', $companyId)
-                    ->orderByDesc('id')
-                    ->take(3)
-                    ->pluck('id')
-                    ->toArray();
-            }
-
-            // Fetch financial year models ordered descending by start_date
-            $years = FinancialYearModel::whereIn('id', $yearIds)
-                ->orderByDesc('start_date')
-                ->get(['id', 'name', 'start_date', 'end_date']);
-
-            if ($years->isEmpty()) {
-                return response()->json([
-                    'code' => 404,
-                    'success' => false,
-                    'message' => 'No financial year data found.'
-                ], 404);
-            }
-
-            // Map year id to label for output keys like amount(21-22)
-            $yearLabels = $years->mapWithKeys(function ($year) {
-                return [$year->id => substr($year->name, 2)]; // e.g., "21-22"
-            });
-
-            // Clients query
-            $clientsQuery = ClientsModel::where('company_id', $companyId);
-            if (!empty($search)) {
-                $clientsQuery->where('name', 'like', '%' . $search . '%');
-            }
-            $totalCount = $clientsQuery->count();
-
-            $clients = $clientsQuery
-                ->orderBy('name')
-                ->offset($offset)
-                ->limit($limit)
-                ->get(['id', 'name']);
-
-            $data = [];
-
-            // For profit percentage calc: last two years in descending order by start_date
-            $lastTwoYears = $years->take(2); // first two (most recent)
-            $lastYearId = $lastTwoYears->first()->id ?? null;
-            $prevYearId = $lastTwoYears->skip(1)->first()->id ?? null;
-
-            foreach ($clients as $client) {
-                $row = ['name' => $client->name];
-                $amounts = [];
-
-                // Fetch amounts and profits year-wise
-                foreach ($years as $year) {
-                    $sales = DB::table('t_sales_invoice_products as sip')
-                        ->join('t_sales_invoice as si', 'sip.sales_invoice_id', '=', 'si.id')
-                        ->where('si.client_id', $client->id)
-                        ->where('si.company_id', $companyId)
-                        ->whereBetween('si.sales_invoice_date', [$year->start_date, $year->end_date])
-                        ->select(
-                            DB::raw('SUM(sip.amount) as total_amount'),
-                            DB::raw('SUM(sip.profit) as total_profit')
-                        )
-                        ->first();
-
-                    $amount = $sales->total_amount ?? 0;
-                    $profit = $sales->total_profit ?? 0;
-
-                    $amounts[$year->id] = $amount;
-
-                    $label = $yearLabels[$year->id];
-
-                    $row["amount($label)"] = round($amount, 2);
-                    $row["profit($label)"] = round($profit, 2);
-                }
-
-                // Calculate percentage based on last two years amounts
-                if ($lastYearId && $prevYearId && isset($amounts[$lastYearId], $amounts[$prevYearId]) && $amounts[$prevYearId] > 0) {
-                    $row['percentage(amount)'] = round(($amounts[$lastYearId] / $amounts[$prevYearId]) * 100, 2);
-                } else {
-                    $row['percentage(amount)'] = 0;
-                }
-
-                $data[] = $row;
-            }
-
+            $result = $this->fetchClientYearlySalesSummaryData($request);
             return response()->json([
                 'code' => 200,
                 'success' => true,
                 'message' => 'Client yearly sales summary fetched successfully.',
-                'data' => $data,
-                'count' => count($data),
-                'total_count' => $totalCount
+                'data' => $result['data'],
+                'count' => $result['count'],
+                'total_count' => $result['total_count'],
             ]);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'code' => 422,
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
                 'success' => false,
                 'message' => 'Failed to fetch client summary.',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
 
-    // export stats compare
+    // API to export stats compare
     public function exportClientWiseSummary(Request $request)
     {
-        $summaryData = $this->getClientYearlySalesSummary($request)->getData(true)['data'];
-        $yearIds = collect(explode(',', $request->input('financial_year_ids', '')))
-                    ->filter()
-                    ->map(fn($id) => (int) trim($id))
-                    ->toArray();
-        $companyId = Auth::user()->company_id;
+        try {
+            $result = $this->fetchClientYearlySalesSummaryData($request);
+            $summaryData = $result['data'];
+            $years = $result['years'];
 
-        if (empty($yearIds)) {
-            $yearIds = FinancialYearModel::where('company_id', $companyId)
-                ->orderByDesc('id')->limit(3)->pluck('id')->toArray();
-        }
+            // Prepare year labels for headers
+            $yearLabels = $years->mapWithKeys(function ($year) {
+                $label = substr($year->name, 2);
+                return [$year->id => $label];
+            })->toArray();
 
-        // Fetch year models to generate short labels like "21-22"
-        $years = FinancialYearModel::whereIn('id', $yearIds)->get(['id', 'name']);
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
 
-        // Prepare short year labels (e.g., from "2021-2022" get "21-22")
-        $yearLabels = $years->mapWithKeys(function($year) {
-            $label = substr($year->name, 2); // e.g. "21-22"
-            return [$year->id => $label];
-        });
-
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-
-        // Headers
-        $header = ['Client Name'];
-        foreach ($yearLabels as $label) {
-            $header[] = "Amount ($label)";
-            $header[] = "Profit ($label)";
-        }
-        $header[] = "Percentage";
-        $sheet->fromArray($header, null, 'A1');
-
-        // Data rows
-        $rowNum = 2;
-        foreach ($summaryData as $row) {
-            $line = [$row['name']];
+            // Headers
+            $header = ['Client Name'];
             foreach ($yearLabels as $label) {
-                // keys like amount(21-22), profit(21-22)
-                $amountKey = "amount($label)";
-                $profitKey = "profit($label)";
-                $line[] = isset($row[$amountKey]) ? $row[$amountKey] : 0;
-                $line[] = isset($row[$profitKey]) ? $row[$profitKey] : 0;
+                $header[] = "Amount ($label)";
+                $header[] = "Profit ($label)";
             }
-            // Percentage column from original data
-            $line[] = $row['percentage(amount)'] ?? 0;
+            $header[] = "Percentage";
+            $sheet->fromArray($header, null, 'A1');
 
-            $sheet->fromArray($line, null, "A$rowNum");
-            $rowNum++;
+            // Data rows
+            $rowNum = 2;
+            foreach ($summaryData as $row) {
+                $line = [$row['name']];
+                foreach ($yearLabels as $label) {
+                    $amountKey = "amount($label)";
+                    $profitKey = "profit($label)";
+                    $line[] = $row[$amountKey] ?? 0;
+                    $line[] = $row[$profitKey] ?? 0;
+                }
+                $line[] = $row['percentage(amount)'] ?? 0;
+                $sheet->fromArray($line, null, "A$rowNum");
+                $rowNum++;
+            }
+
+            $fileName = 'client_summary_' . now()->format('Ymd_His') . '.xlsx';
+            $filePath = 'uploads/stats_compare/' . $fileName;
+
+            Storage::disk('public')->makeDirectory('uploads/client_summary');
+
+            $writer = new Xlsx($spreadsheet);
+            $writer->save(storage_path('app/public/' . $filePath));
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Excel exported successfully.',
+                'file_url' => asset('storage/' . $filePath),
+            ]);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'code' => 422,
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Failed to export client summary.',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        $fileName = 'client_summary_' . now()->format('Ymd_His') . '.xlsx';
-        $filePath = 'uploads/client_summary/' . $fileName;
-
-        Storage::disk('public')->makeDirectory('uploads/client_summary');
-
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-        $writer->save(storage_path('app/public/' . $filePath));
-
-        return response()->json([
-            'code' => 200,
-            'success' => true,
-            'message' => 'Excel exported successfully.',
-            'file_url' => asset('storage/' . $filePath),
-        ]);
     }
 }
