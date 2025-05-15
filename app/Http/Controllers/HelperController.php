@@ -1900,10 +1900,10 @@ class HelperController extends Controller
                 foreach ($yearLabels as $label) {
                     $amountKey = "amount($label)";
                     $profitKey = "profit($label)";
-                    $line[] = fixZero($row[$amountKey] ?? 0);
-                    $line[] = fixZero($row[$profitKey] ?? 0);
+                    $line[] = $this->fixZero($row[$amountKey] ?? 0);
+                    $line[] = $this->fixZero($row[$profitKey] ?? 0);
                 }
-                $line[] = fixZero($row['percentage(amount)'] ?? 0);
+                $line[] = $this->fixZero($row['percentage(amount)'] ?? 0);
                 // $sheet->fromArray($line, null, "A$rowNum");
 
                 $colIndex = 1; // Column A is 1
@@ -1953,7 +1953,7 @@ class HelperController extends Controller
         }
     }
 
-    function fixZero($value) 
+    private function fixZero($value) 
     {
         return ($value === null || $value === '' || $value === false) ? 0 : $value;
     }
