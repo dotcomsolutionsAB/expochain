@@ -334,7 +334,7 @@ class CreditNoteController extends Controller
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
             'products.*.quantity' => 'required|integer',
-            'products.*.unit' => 'required|integer',
+            'products.*.unit' => 'required|string',
             'products.*.price' => 'required|numeric',
             'products.*.discount' => 'nullable|numeric',
             'products.*.discount_type' => 'required|in:percentage,value',
