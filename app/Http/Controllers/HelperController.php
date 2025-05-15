@@ -1904,7 +1904,22 @@ class HelperController extends Controller
                     $line[] = fixZero($row[$profitKey] ?? 0);
                 }
                 $line[] = fixZero($row['percentage(amount)'] ?? 0);
-                $sheet->fromArray($line, null, "A$rowNum");
+                // $sheet->fromArray($line, null, "A$rowNum");
+
+                $colIndex = 1; // Column A is 1
+                foreach ($line as $cellValue) {
+                    if ($cellValue === '' || $cellValue === null) {
+                        $cellValue = 0;
+                    }
+                    // Set cell value explicitly as numeric if numeric, else as string
+                    if (is_numeric($cellValue)) {
+                        $sheet->setCellValueExplicitByColumnAndRow($colIndex, $rowNum, $cellValue, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+                    } else {
+                        $sheet->setCellValueExplicitByColumnAndRow($colIndex, $rowNum, $cellValue, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+                    }
+                    $colIndex++;
+                }
+
                 $rowNum++;
             }
 
