@@ -1863,7 +1863,6 @@ class HelperController extends Controller
         }
     }
 
-
     // export stats compare
     public function exportClientWiseSummary(Request $request)
     {
@@ -1879,29 +1878,41 @@ class HelperController extends Controller
                 ->orderByDesc('id')->limit(3)->pluck('id')->toArray();
         }
 
-        $yearLabels = FinancialYearModel::whereIn('id', $yearIds)->pluck('name')->toArray();
+        // Fetch year models to generate short labels like "21-22"
+        $years = FinancialYearModel::whereIn('id', $yearIds)->get(['id', 'name']);
+
+        // Prepare short year labels (e.g., from "2021-2022" get "21-22")
+        $yearLabels = $years->mapWithKeys(function($year) {
+            $label = substr($year->name, 2); // e.g. "21-22"
+            return [$year->id => $label];
+        });
 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
         // Headers
         $header = ['Client Name'];
-        foreach ($yearLabels as $y) {
-            $header[] = "Amount ($y)";
-            $header[] = "Profit ($y)";
+        foreach ($yearLabels as $label) {
+            $header[] = "Amount ($label)";
+            $header[] = "Profit ($label)";
         }
         $header[] = "Percentage";
         $sheet->fromArray($header, null, 'A1');
 
-        // Data
+        // Data rows
         $rowNum = 2;
         foreach ($summaryData as $row) {
             $line = [$row['name']];
-            foreach ($yearLabels as $y) {
-                $line[] = $row["amount_$y"] ?? 0;
-                $line[] = $row["profit_$y"] ?? 0;
+            foreach ($yearLabels as $label) {
+                // keys like amount(21-22), profit(21-22)
+                $amountKey = "amount($label)";
+                $profitKey = "profit($label)";
+                $line[] = isset($row[$amountKey]) ? $row[$amountKey] : 0;
+                $line[] = isset($row[$profitKey]) ? $row[$profitKey] : 0;
             }
-            $line[] = 0;
+            // Percentage column from original data
+            $line[] = $row['percentage(amount)'] ?? 0;
+
             $sheet->fromArray($line, null, "A$rowNum");
             $rowNum++;
         }
@@ -1921,5 +1932,4 @@ class HelperController extends Controller
             'file_url' => asset('storage/' . $filePath),
         ]);
     }
-
 }
