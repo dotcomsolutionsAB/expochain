@@ -1670,9 +1670,9 @@ class HelperController extends Controller
             foreach ($billing as $row) {
                 $monthName = Carbon::create()->month($row->month)->format('F') . " " . $yearSuffix;
 
-                $standard = is_numeric($row->standard_billing) ? $row->standard_billing : 0;
-                $nonStandard = is_numeric($row->non_standard_billing) ? $row->non_standard_billing : 0;
-                $support = is_numeric($row->customer_support_billing) ? $row->customer_support_billing : 0;
+                $standard = $this->fixZero($row->standard_billing);
+                $nonStandard = $this->fixZero($row->non_standard_billing);
+                $support = $this->fixZero($row->customer_support_billing);
                 $monthlyTotal = $standard + $nonStandard + $support;
 
                 $rows[] = [
@@ -1698,15 +1698,54 @@ class HelperController extends Controller
             $sheet->fromArray(['Month', 'Standard Billing', 'Non-standard Billing', 'Customer Support Billing', 'Total'], null, 'A1');
 
             // Data rows
-            $sheet->fromArray($rows, null, 'A2');
+            $rowIndex = 2; // Starting row for data
+            foreach ($rows as $dataRow) {
+                $colIndex = 1; // Column A
+                foreach ($dataRow as $cellValue) {
+                    if ($cellValue === '' || $cellValue === null) {
+                        $cellValue = 0;
+                    }
+                    if (is_numeric($cellValue)) {
+                        $sheet->setCellValueExplicitByColumnAndRow(
+                            $colIndex, 
+                            $rowIndex, 
+                            $cellValue, 
+                            \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC
+                        );
+                    } else {
+                        $sheet->setCellValueExplicitByColumnAndRow(
+                            $colIndex, 
+                            $rowIndex, 
+                            $cellValue, 
+                            \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING
+                        );
+                    }
+                    $colIndex++;
+                }
+                $rowIndex++;
+            }
 
             // Totals row
             $totalRowIndex = count($rows) + 2;
-            $sheet->setCellValue("A{$totalRowIndex}", 'Total');
-            $sheet->setCellValue("B{$totalRowIndex}", round($totals['standard_billing'], 2));
-            $sheet->setCellValue("C{$totalRowIndex}", round($totals['non_standard_billing'], 2));
-            $sheet->setCellValue("D{$totalRowIndex}", round($totals['customer_support_billing'], 2));
-            $sheet->setCellValue("E{$totalRowIndex}", round($totals['total'], 2));
+            $totalsRowValues = [
+                'Total',
+                $this->fixZero(round($totals['standard_billing'], 2)),
+                $this->fixZero(round($totals['non_standard_billing'], 2)),
+                $this->fixZero(round($totals['customer_support_billing'], 2)),
+                $this->fixZero(round($totals['total'], 2))
+            ];
+
+            $colIndex = 1;
+            foreach ($totalsRowValues as $value) {
+                $sheet->setCellValueExplicitByColumnAndRow(
+                    $colIndex,
+                    $totalRowIndex,
+                    $value,
+                    is_numeric($value) ? \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC : \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING
+                );
+                $colIndex++;
+            }
+
 
             // File generation
             $fileName = 'channel_wise_billing_report_' . now()->format('Ymd_His') . '.xlsx';
