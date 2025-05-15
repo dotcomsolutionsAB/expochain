@@ -1746,17 +1746,32 @@ class HelperController extends Controller
             $limit = $request->input('limit', 10);
             $offset = $request->input('offset', 0);
 
+            // Get financial_year_ids from request or default last 3 years
             $financialYearIds = $request->input('financial_year_ids');
-            $yearIds = $financialYearIds 
-                ? explode(',', $financialYearIds) 
-                : FinancialYearModel::where('company_id', $companyId)
+            if ($financialYearIds) {
+                $yearIds = explode(',', $financialYearIds);
+                $yearIds = array_filter(array_map('trim', $yearIds));
+
+                // Validate minimum two financial years if passed
+                if (count($yearIds) < 2) {
+                    return response()->json([
+                        'code' => 422,
+                        'success' => false,
+                        'message' => 'Minimum two financial year IDs are required.'
+                    ], 422);
+                }
+            } else {
+                // Default last 3 financial years by id descending
+                $yearIds = FinancialYearModel::where('company_id', $companyId)
                     ->orderByDesc('id')
                     ->take(3)
                     ->pluck('id')
                     ->toArray();
+            }
 
+            // Fetch financial year models ordered descending by start_date
             $years = FinancialYearModel::whereIn('id', $yearIds)
-                ->orderBy('start_date')
+                ->orderByDesc('start_date')
                 ->get(['id', 'name', 'start_date', 'end_date']);
 
             if ($years->isEmpty()) {
@@ -1767,13 +1782,16 @@ class HelperController extends Controller
                 ], 404);
             }
 
-            // Get clients
-            $clientsQuery = ClientsModel::where('company_id', $companyId);
+            // Map year id to label for output keys like amount(21-22)
+            $yearLabels = $years->mapWithKeys(function ($year) {
+                return [$year->id => substr($year->name, 2)]; // e.g., "21-22"
+            });
 
+            // Clients query
+            $clientsQuery = ClientsModel::where('company_id', $companyId);
             if (!empty($search)) {
                 $clientsQuery->where('name', 'like', '%' . $search . '%');
             }
-
             $totalCount = $clientsQuery->count();
 
             $clients = $clientsQuery
@@ -1784,10 +1802,16 @@ class HelperController extends Controller
 
             $data = [];
 
+            // For profit percentage calc: last two years in descending order by start_date
+            $lastTwoYears = $years->take(2); // first two (most recent)
+            $lastYearId = $lastTwoYears->first()->id ?? null;
+            $prevYearId = $lastTwoYears->skip(1)->first()->id ?? null;
+
             foreach ($clients as $client) {
                 $row = ['name' => $client->name];
-                $totalAmount = 0;
+                $amounts = [];
 
+                // Fetch amounts and profits year-wise
                 foreach ($years as $year) {
                     $sales = DB::table('t_sales_invoice_products as sip')
                         ->join('t_sales_invoice as si', 'sip.sales_invoice_id', '=', 'si.id')
@@ -1803,14 +1827,21 @@ class HelperController extends Controller
                     $amount = $sales->total_amount ?? 0;
                     $profit = $sales->total_profit ?? 0;
 
-                    $totalAmount += $amount;
+                    $amounts[$year->id] = $amount;
 
-                    $fyLabel = substr($year->name, 2); // e.g., "21-22"
-                    $row["amount($fyLabel)"] = round($amount, 2);
-                    $row["profit($fyLabel)"] = round($profit, 2);
+                    $label = $yearLabels[$year->id];
+
+                    $row["amount($label)"] = round($amount, 2);
+                    $row["profit($label)"] = round($profit, 2);
                 }
 
-                $row["percentage(amount)"] = 0; // Placeholder
+                // Calculate percentage based on last two years amounts
+                if ($lastYearId && $prevYearId && isset($amounts[$lastYearId], $amounts[$prevYearId]) && $amounts[$prevYearId] > 0) {
+                    $row['percentage(amount)'] = round(($amounts[$lastYearId] / $amounts[$prevYearId]) * 100, 2);
+                } else {
+                    $row['percentage(amount)'] = 0;
+                }
+
                 $data[] = $row;
             }
 
@@ -1822,7 +1853,6 @@ class HelperController extends Controller
                 'count' => count($data),
                 'total_count' => $totalCount
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'code' => 500,
@@ -1832,6 +1862,7 @@ class HelperController extends Controller
             ], 500);
         }
     }
+
 
     // export stats compare
     public function exportClientWiseSummary(Request $request)
