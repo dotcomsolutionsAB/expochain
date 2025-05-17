@@ -25,7 +25,6 @@ use Illuminate\Support\Facades\Log;
 class QuotationsController extends Controller
 {
     //
-
     // create
     public function add_quotations(Request $request)
     {
