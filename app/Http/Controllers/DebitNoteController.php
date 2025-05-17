@@ -47,7 +47,8 @@ class DebitNoteController extends Controller
             'products.*.tax' => 'required|numeric',
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
-            'products.*.igst' => 'required|numeric',    
+            'products.*.igst' => 'required|numeric',
+            'products.*.amount' => 'required|numeric|min:0',    
         ]);
     
         // Handle quotation number logic
@@ -129,6 +130,7 @@ class DebitNoteController extends Controller
                 'cgst' => $product['cgst'],
                 'sgst' => $product['sgst'],
                 'igst' => $product['igst'],
+                'amount' => $product['amount'],
             ]);
         }
 
@@ -303,6 +305,7 @@ class DebitNoteController extends Controller
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
+            'products.*.amount' => 'required|numeric|min:0',
         ]);
 
         // Get the debit note record by ID
@@ -355,6 +358,7 @@ class DebitNoteController extends Controller
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
+                    'amount' => $productData['amount'],
                 ]);
             } else {
                 // Create new product if it does not exist
@@ -374,6 +378,7 @@ class DebitNoteController extends Controller
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
+                    'amount' => $productData['amount'],
                 ]);
             }
         }
@@ -415,149 +420,6 @@ class DebitNoteController extends Controller
             return response()->json(['code' => 404,'success' => false, 'message' => 'Debit Note not found.'], 404);
         }
     }
-
-    // public function importDebitNotes()
-    // {
-    //     // Increase execution time for large data sets
-    //     set_time_limit(300);
-
-    //     // Clear existing records from related tables
-    //     DebitNoteModel::truncate();
-    //     DebitNoteProductsModel::truncate();
-
-    //     // Define the external URL to fetch the data
-    //     $url = 'https://expo.egsm.in/assets/custom/migrate/debit_note.php';
-
-    //     try {
-    //         // Fetch data from the URL
-    //         $response = Http::timeout(120)->get($url);
-    //     } catch (\Exception $e) {
-    //         return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data: ' . $e->getMessage()], 500);
-    //     }
-
-    //     if ($response->failed()) {
-    //         return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
-    //     }
-
-    //     $data = $response->json('data');
-
-    //     if (empty($data)) {
-    //         return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
-    //     }
-
-    //     $successfulInserts = 0;
-    //     $errors = [];
-
-    //     foreach ($data as $record) {
-    //         // Parse JSON data for items and tax
-    //         $itemsData = json_decode($record['items'], true);
-    //         $taxData = json_decode($record['tax'], true);
-    //         $addonsData = json_decode($record['addons'], true);
-
-    //         // Validate JSON structure
-    //         if (!is_array($itemsData) || !is_array($taxData) || !is_array($addonsData)) {
-    //             $errors[] = ['record' => $record, 'error' => 'Invalid JSON structure in one of the fields.'];
-    //             continue;
-    //         }
-
-    //         // Retrieve supplier based on the name
-    //         $supplier = SuppliersModel::where('name', $record['supplier'])->first();
-
-    //         if (!$supplier) {
-    //             $errors[] = ['record' => $record, 'error' => 'Supplier not found: ' . $record['supplier']];
-    //             continue;
-    //         }
-
-    //         // Prepare debit note data
-    //         $debitNoteData = [
-    //             'company_id' => Auth::user()->company_id,
-    //             'supplier_id' => $supplier->id,
-    //             'name' => $record['supplier'],
-    //             'debit_note_no' => !empty($record['dn_no']) ? $record['dn_no'] : 'Unknown',
-    //             'debit_note_date' => $record['dn_date'] ?? now(),
-    //             'si_no' => $record['si_no'] ?? '',
-    //             'effective_date' => $record['effective_date'] ?? '',
-    //             'type' => $record['type'] ?? '',
-    //             'remarks' => $record['remarks'] ?? '',
-    //             'cgst' => !empty($taxData['cgst']) ? (float) $taxData['cgst'] : 0,
-    //             'sgst' => !empty($taxData['sgst']) ? (float) $taxData['sgst'] : 0,
-    //             'igst' => !empty($taxData['igst']) ? (float) $taxData['igst'] : 0,
-    //             'total' => (float) $record['total'] ?? 0.0,
-    //             'currency' => 'INR',
-    //             'template' => 1, // Default template ID
-    //             'status' => (int) $record['status'] ?? 0,
-    //             'gross' => 0,
-    //             'round_off' => 0,
-    //         ];
-
-    //         // Validate debit note data
-    //         $validator = Validator::make($debitNoteData, [
-    //             'supplier_id' => 'required|integer',
-    //             'name' => 'required|string',
-    //             'debit_note_no' => 'required|string',
-    //             'debit_note_date' => 'required|date',
-    //             'remarks' => 'nullable|string',
-    //             'cgst' => 'required|numeric',
-    //             'sgst' => 'required|numeric',
-    //             'igst' => 'required|numeric',
-    //             'total' => 'required|numeric',
-    //             'currency' => 'required|string',
-    //             'template' => 'required|integer',
-    //             'status' => 'required|integer',
-    //         ]);
-
-    //         if ($validator->fails()) {
-    //             $errors[] = ['record' => $record, 'errors' => $validator->errors()];
-    //             continue;
-    //         }
-
-    //         try {
-    //             // Insert the debit note data
-    //             $debitNote = DebitNoteModel::create($debitNoteData);
-    //             $successfulInserts++;
-    //         } catch (\Exception $e) {
-    //             $errors[] = ['record' => $record, 'error' => 'Failed to insert debit note: ' . $e->getMessage()];
-    //             continue;
-    //         }
-
-    //         // Insert products related to the debit note
-    //         if (!empty($itemsData['product']) && is_array($itemsData['product'])) {
-    //             foreach ($itemsData['product'] as $index => $product) {
-    //                 if (empty($product)) continue; // Skip empty product entries
-
-    //                 try {
-    //                     DebitNoteProductsModel::create([
-    //                         'debit_note_number' => $debitNote->id,
-    //                         'company_id' => Auth::user()->company_id,
-    //                         'product_id' => $index + 1, // This might need to be adjusted to match your actual product ID logic
-    //                         'product_name' => $product,
-    //                         'description' => $itemsData['desc'][$index] ?? 'No Description',
-    //                         'brand' => 'Unknown', // Default as brand data is missing
-    //                         'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
-    //                         'unit' => $itemsData['unit'][$index] ?? '',
-    //                         'price' => (float) $itemsData['price'][$index] ?? 0.0,
-    //                         'discount' => (float) $itemsData['discount'][$index] ?? 0.0,
-    //                         'discount_type' => 'percentage',
-    //                         'hsn' => $itemsData['hsn'][$index] ?? '',
-    //                         'tax' => (float) $itemsData['tax'][$index] ?? 0.0,
-    //                         'cgst' => !empty($taxData['cgst']) ? (float) $taxData['cgst'] : 0,
-    //                         'sgst' => !empty($taxData['sgst']) ? (float) $taxData['sgst'] : 0,
-    //                         'igst' => isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
-    //                     ]);
-    //                 } catch (\Exception $e) {
-    //                     $errors[] = ['record' => $record, 'error' => 'Failed to insert product: ' . $e->getMessage()];
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     return response()->json([
-    //         'code' => 200,
-    //         'success' => true,
-    //         'message' => "Debit notes import completed with $successfulInserts successful inserts.",
-    //         'errors' => $errors,
-    //     ], 200);
-    // }
 
     public function importDebitNotes()
     {
@@ -688,6 +550,7 @@ class DebitNoteController extends Controller
                             'cgst' => !empty($taxData['cgst']) ? (float) $taxData['cgst'] : 0,
                             'sgst' => !empty($taxData['sgst']) ? (float) $taxData['sgst'] : 0,
                             'igst' => isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
+                            'amount' => isset($itemsData['amount'][$index]) ? (float) $itemsData['amount'][$index] : 0,
                         ]);
                     } catch (\Exception $e) {
                         $errors[] = ['record' => $record, 'error' => 'Product insert failed: ' . $e->getMessage()];

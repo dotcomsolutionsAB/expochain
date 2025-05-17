@@ -25,6 +25,7 @@ class DebitNoteProductsModel extends Model
         'cgst',
         'sgst',
         'igst',
+        'amount'
     ];
 
     // Defining the relationship with PurchaseReturnModel (Parent)

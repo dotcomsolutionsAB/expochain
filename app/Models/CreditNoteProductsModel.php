@@ -27,6 +27,7 @@ class CreditNoteProductsModel extends Model
         'sgst',
         'igst',
         'godown',
+        'amount',
     ];
 
     public function creditNote()

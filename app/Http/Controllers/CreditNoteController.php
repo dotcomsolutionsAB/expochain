@@ -51,7 +51,8 @@ class CreditNoteController extends Controller
             'products.*.tax' => 'required|numeric',
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
-            'products.*.igst' => 'required|numeric'
+            'products.*.igst' => 'required|numeric',
+            'products.*.amount' => 'required|numeric|min:0',
         ]);
     
         // Handle quotation number logic
@@ -133,6 +134,7 @@ class CreditNoteController extends Controller
                 'cgst' => $product['cgst'],
                 'sgst' => $product['sgst'],
                 'igst' => $product['igst'],
+                'amount' => $product['amount'],
             ]);
         }
 
@@ -341,6 +343,7 @@ class CreditNoteController extends Controller
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
+            'products.*.amount' => 'required|numeric|min:0',
         ]);
 
         $creditNote = CreditNoteModel::where('id', $id)->first();
@@ -388,6 +391,7 @@ class CreditNoteController extends Controller
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
+                    'amount' => $productData['amount'],
                 ]);
             } else {
                 // Create new product
@@ -407,6 +411,7 @@ class CreditNoteController extends Controller
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
+                    'amount' => $productData['amount'],
                 ]);
             }
         }
@@ -563,6 +568,7 @@ class CreditNoteController extends Controller
                             'cgst' => !empty($taxData['cgst']) ? (float) $taxData['cgst'] : 0,
                             'sgst' => !empty($taxData['sgst']) ? (float) $taxData['sgst'] : 0,
                             'igst' => isset($itemsData['igst'][$idx]) ? (float) $itemsData['igst'][$idx] : 0,
+                            'amount' => isset($itemsData['amount'][$idx]) ? (float) $itemsData['amount'][$idx] : 0,
                             'created_at' => now(),
                             'updated_at' => now()
                         ];
