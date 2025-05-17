@@ -180,32 +180,39 @@ class DebitNoteController extends Controller
 
              // If an id is provided, fetch a single debit note and return it
             if ($id) {
-                $debitNote = $query->where('id', $id)->first();
-                if (!$debitNote) {
-                    return response()->json([
-                        'code' => 404,
-                        'success' => false,
-                        'message' => 'Debit Note not found!',
-                    ], 404);
+                $debitNote = DebitNoteModel::with([
+                'products' => function ($query) {
+                    $query->select(
+                        'debit_note_id',
+                        'product_id',
+                        'product_name',
+                        'description',
+                        'quantity',
+                        'unit',
+                        'price',
+                        'discount',
+                        'discount_type',
+                        'hsn',
+                        'tax',
+                        'cgst',
+                        'sgst',
+                        'igst',
+                        DB::raw('(quantity * price) as amount'),
+                        DB::raw('(tax / 2) as cgst_rate'),
+                        DB::raw('(tax / 2) as sgst_rate'),
+                        DB::raw('tax as igst_rate')
+                    );
+                },
+                'supplier' => function ($q) {
+                    $q->select('id', 'supplier_id')
+                    ->with(['addresses' => function ($query) {
+                        $query->select('supplier_id', 'state');
+                    }]);
                 }
-
-                // Transform supplier: Only return state from addresses
-                if ($debitNote->supplier) {
-                    $state = optional($debitNote->supplier->addresses->first())->state;
-                    $debitNote->supplier = ['state' => $state];
-
-                    $debitNote->amount_in_words = $this->convertNumberToWords($debitNote->total);
-                    $debitNote->total = is_numeric($debitNote->total) ? number_format((float)$debitNote->total, 2) : $debitNote->total;
-                } else {
-                    $debitNote->supplier = null;
-                }
-
-                return response()->json([
-                    'code' => 200,
-                    'success' => true,
-                    'message' => 'Debit Note fetched successfully!',
-                    'data' => $debitNote,
-                ], 200);
+            ])
+            ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'si_no', 'effective_date', 'type', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off')
+            ->where('company_id', Auth::user()->company_id)
+            ->find($id);
             }
 
             // Apply filters
