@@ -178,7 +178,7 @@ class CreditNoteController extends Controller
                             'cgst',
                             'sgst',
                             'igst',
-                            DB::raw('(quantity * price) as amount'),
+                            'amount',
                             DB::raw('(tax / 2) as cgst_rate'),
                             DB::raw('(tax / 2) as sgst_rate'),
                             DB::raw('tax as igst_rate')
@@ -233,7 +233,7 @@ class CreditNoteController extends Controller
 
             // Build the query
             $query = CreditNoteModel::with(['products' => function ($query) {
-                $query->select('credit_note_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
+                $query->select('credit_note_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'amount');
             },
             'client' => function ($q) {
                     // Select key client columns and include addresses
