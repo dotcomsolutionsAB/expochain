@@ -155,35 +155,19 @@ class DebitNoteController extends Controller
     public function view_debit_note(Request $request, $id = null)
     {
         try {
-            // Get filter inputs
+            $companyId = Auth::user()->company_id;
             $supplierId = $request->input('supplier_id');
             $name = $request->input('name');
             $debitNoteNo = $request->input('debit_note_no');
             $debitNoteDate = $request->input('debit_note_date');
-            $limit = $request->input('limit', 10); // Default limit to 10
-            $offset = $request->input('offset', 0); // Default offset to 0
+            $limit = $request->input('limit', 10);
+            $offset = $request->input('offset', 0);
 
-            // Build the query
-            $query = DebitNoteModel::with(['products' => function ($query) {
-                $query->select('debit_note_number', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'amount');
-            },
-            'supplier' => function ($q) {
-                    // Select key supplier columns and include addresses
-                    $q->select('id', 'supplier_id')
-                    ->with(['addresses' => function ($query) {
-                        $query->select('supplier_id', 'state');
-                    }]);
-                }
-            ])
-            ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'si_no', 'effective_date', 'type', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off')
-            ->where('company_id', Auth::user()->company_id);
-
-             // If an id is provided, fetch a single debit note and return it
-            if ($id) {
-                $debitNote = DebitNoteModel::with([
+            // Base query with relationships
+            $query = DebitNoteModel::with([
                 'products' => function ($query) {
                     $query->select(
-                        'debit_note_id',
+                        'debit_note_number',
                         'product_id',
                         'product_name',
                         'description',
@@ -196,11 +180,7 @@ class DebitNoteController extends Controller
                         'tax',
                         'cgst',
                         'sgst',
-                        'igst',
-                        DB::raw('(quantity * price) as amount'),
-                        DB::raw('(tax / 2) as cgst_rate'),
-                        DB::raw('(tax / 2) as sgst_rate'),
-                        DB::raw('tax as igst_rate')
+                        'igst'
                     );
                 },
                 'supplier' => function ($q) {
@@ -210,12 +190,68 @@ class DebitNoteController extends Controller
                     }]);
                 }
             ])
-            ->select('id', 'supplier_id', 'name', 'debit_note_no', 'debit_note_date', 'si_no', 'effective_date', 'type', 'remarks', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off')
-            ->where('company_id', Auth::user()->company_id)
-            ->find($id);
+            ->select(
+                'id',
+                'supplier_id',
+                'name',
+                'debit_note_no',
+                'debit_note_date',
+                'si_no',
+                'effective_date',
+                'type',
+                'remarks',
+                'cgst',
+                'sgst',
+                'igst',
+                'total',
+                'currency',
+                'gross',
+                'round_off'
+            )
+            ->where('company_id', $companyId);
+
+            // 👉 Fetch single debit note by ID
+            if ($id) {
+                $debitNote = $query->where('id', $id)->first();
+
+                if (!$debitNote) {
+                    return response()->json([
+                        'code' => 404,
+                        'success' => false,
+                        'message' => 'Debit Note not found!',
+                    ], 404);
+                }
+
+                // Add derived fields to each product (amount, rates)
+                foreach ($debitNote->products as $product) {
+                    $product->amount = round($product->quantity * $product->price, 2);
+                    $product->cgst_rate = round($product->tax / 2, 2);
+                    $product->sgst_rate = round($product->tax / 2, 2);
+                    $product->igst_rate = round($product->tax, 2);
+                }
+
+                // Transform supplier info
+                if ($debitNote->supplier) {
+                    $state = optional($debitNote->supplier->addresses->first())->state;
+                    $debitNote->supplier = ['state' => $state];
+                } else {
+                    $debitNote->supplier = null;
+                }
+
+                $debitNote->amount_in_words = $this->convertNumberToWords($debitNote->total);
+                $debitNote->total = is_numeric($debitNote->total)
+                    ? number_format((float)$debitNote->total, 2)
+                    : $debitNote->total;
+
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'Debit Note fetched successfully!',
+                    'data' => $debitNote,
+                ], 200);
             }
 
-            // Apply filters
+            // 👉 Apply filters for list fetch
             if ($supplierId) {
                 $query->where('supplier_id', $supplierId);
             }
@@ -229,31 +265,28 @@ class DebitNoteController extends Controller
                 $query->whereDate('debit_note_date', $debitNoteDate);
             }
 
-            // Get total record count before applying limit
             $totalRecords = $query->count();
-            // Apply limit and offset
             $query->offset($offset)->limit($limit);
 
-            // Fetch data
             $get_debit_notes = $query->get();
 
-            // Transform data
+            // 👉 Transform supplier and totals for each entry
             $get_debit_notes->transform(function ($debitNote) {
-                // Transform supplier: Only return state from addresses
                 if ($debitNote->supplier) {
                     $state = optional($debitNote->supplier->addresses->first())->state;
                     $debitNote->supplier = ['state' => $state];
-
-                    $debitNote->amount_in_words = $this->convertNumberToWords($debitNote->total);
-                    $debitNote->total = is_numeric($debitNote->total) ? number_format((float)$debitNote->total, 2) : $debitNote->total;
                 } else {
                     $debitNote->supplier = null;
                 }
 
+                $debitNote->amount_in_words = $this->convertNumberToWords($debitNote->total);
+                $debitNote->total = is_numeric($debitNote->total)
+                    ? number_format((float)$debitNote->total, 2)
+                    : $debitNote->total;
+
                 return $debitNote;
             });
 
-            // Return response
             return $get_debit_notes->isNotEmpty()
                 ? response()->json([
                     'code' => 200,
@@ -269,13 +302,13 @@ class DebitNoteController extends Controller
                     'message' => 'No Debit Notes found!',
                 ], 404);
         } catch (\Exception $e) {
-                return response()->json([
-                    'code' => 500,
-                    'success' => false,
-                    'message' => 'Something went wrong!',
-                    'error' => $e->getMessage(),
-                ], 500);
-            }
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong!',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     // update
