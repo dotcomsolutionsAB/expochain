@@ -78,20 +78,6 @@ class TestCertificateController extends Controller
     }
 
     // view
-    // public function view_test_certificate()
-    // {
-    //     $get_test_certificates = TestCertificateModel::with(['products' => function ($query) {
-    //         $query->select('tc_id', 'product_id', 'product_name', 'quantity', 'sales_invoice_no');
-    //     }])
-    //     ->select('id', 'client_id', 'sales_invoice_no', 'reference_no', 'tc_date', 'seller', 'client_flag', 'log_user')
-    //     ->where('company_id',Auth::user()->company_id)
-    //     ->get();
-
-    //     return isset($get_test_certificates) && $get_test_certificates !== null
-    //         ? response()->json(['Test Certificates fetched successfully!', 'data' => $get_test_certificates], 200)
-    //         : response()->json(['Failed to fetch Test Certificate data'], 404);
-    // }
-
     public function view_test_certificate(Request $request)
     {
         // Get filter inputs
@@ -194,6 +180,7 @@ class TestCertificateController extends Controller
                 // Create new product
                 TestCertificateProductsModel::create([
                     'tc_id' => $productData['tc_id'],
+                    'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
                     'quantity' => $productData['quantity'],
@@ -287,6 +274,7 @@ class TestCertificateController extends Controller
     
             // Prepare test certificate data
             $testCertificateData = [
+                'company_id' => Auth::user()->company_id,
                 'client_id' => $client->id,
                 'sales_invoice_no' => !empty($record['si_no']) ? $record['si_no'] : 'Unknown', // Map to si_no
                 'reference_no' => $record['reference_no'] ?? 'Unknown',
@@ -326,6 +314,7 @@ class TestCertificateController extends Controller
                 try {
                     TestCertificateProductsModel::create([
                         'tc_id' => $testCertificate->id,
+                        'company_id' => Auth::user()->company_id,
                         'product_id' => $productId,
                         'product_name' => $itemsData['product_name'][$index] ?? 'Unknown Product',
                         'quantity' => (int) $itemsData['quantity'][$index] ?? 0,
