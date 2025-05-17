@@ -165,7 +165,7 @@ class DebitNoteController extends Controller
 
             // Build the query
             $query = DebitNoteModel::with(['products' => function ($query) {
-                $query->select('debit_note_number', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst');
+                $query->select('debit_note_number', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'amount');
             },
             'supplier' => function ($q) {
                     // Select key supplier columns and include addresses
