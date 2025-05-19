@@ -530,6 +530,25 @@ class AssemblyOperationsController extends Controller
             // Subtotal
             $subQty = array_sum(array_column($paginated, 'quantity'));
 
+            $subTotalRow = [
+                'order' => '',
+                'date' => '',
+                'quantity' => $subQty,
+                'operation' => 'SubTotal - ',
+                'user' => '',
+            ];
+
+            $totalRow = [
+                'order' => '',
+                'date' => '',
+                'quantity' => $totalQty,
+                'operation' => 'SubTotal - ',
+                'user' => '',
+            ];
+
+            $paginated[] = $subTotalRow;
+            $paginated[] = $totalRow;
+
             // Response
             return response()->json([
                 'code' => 200,
@@ -538,12 +557,12 @@ class AssemblyOperationsController extends Controller
                 'data' => $paginated,
                 'count' => count($paginated),
                 'total_records' => $totalRecords,
-                'sub_total' => [
-                    'quantity' => $subQty
-                ],
-                'total' => [
-                    'quantity' => $totalQty
-                ]
+                // 'sub_total' => [
+                //     'quantity' => $subQty
+                // ],
+                // 'total' => [
+                //     'quantity' => $totalQty
+                // ]
             ]);
 
         } catch (\Throwable $e) {
