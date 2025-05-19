@@ -38,21 +38,22 @@ class CreditNoteController extends Controller
             'gross' => 'required|numeric|min:0',
             'round_off' => 'required|numeric',
 
-            'products' => 'required|array', // Validating array of products
-            'products.*.product_id' => 'required|integer',
-            'products.*.product_name' => 'required|string',
+            'products' => 'nullable|array', // Validating array of products
+            // Apply these rules only if 'products' is present
+            'products.*.product_id' => 'required_with:products|integer',
+            'products.*.product_name' => 'required_with:products|string',
             'products.*.description' => 'nullable|string',
-            'products.*.quantity' => 'required|integer',
-            'products.*.unit' => 'required|string',
-            'products.*.price' => 'required|numeric',
+            'products.*.quantity' => 'required_with:products|integer',
+            'products.*.unit' => 'required_with:products|string',
+            'products.*.price' => 'required_with:products|numeric',
             'products.*.discount' => 'nullable|numeric',
-            'products.*.discount_type' => 'required|in:percentage,value',
-            'products.*.hsn' => 'required|string',
-            'products.*.tax' => 'required|numeric',
-            'products.*.cgst' => 'required|numeric',
-            'products.*.sgst' => 'required|numeric',
-            'products.*.igst' => 'required|numeric',
-            'products.*.amount' => 'required|numeric|min:0',
+            'products.*.discount_type' => 'required_with:products|in:percentage,value',
+            'products.*.hsn' => 'required_with:products|string',
+            'products.*.tax' => 'required_with:products|numeric',
+            'products.*.cgst' => 'required_with:products|numeric',
+            'products.*.sgst' => 'required_with:products|numeric',
+            'products.*.igst' => 'required_with:products|numeric',
+            'products.*.amount' => 'required_with:products|numeric|min:0',
         ]);
     
         // Handle quotation number logic
