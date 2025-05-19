@@ -1200,8 +1200,8 @@ class PurchaseInvoiceController extends Controller
                         'supplier'  => optional($item->purchaseInvoice->supplier)->name,
                         'qty'       => $item->quantity,
                         'in_stock'  => $item->stock,
-                        'price'     => $item->price,
-                        'amount'    => $item->amount,
+                        'price'     => number_format((float) $item->price, 2, '.', ''),
+                        'amount'    => number_format((float)$item->amount, 2, '.', ''),
                         'place'     => optional($item->godownRelation)->name ?? '-',
                     ];
                 })->toArray();
@@ -1239,6 +1239,33 @@ class PurchaseInvoiceController extends Controller
             $subPrice = array_sum(array_column($paginated, 'price'));
             $subAmount = array_sum(array_column($paginated, 'amount'));
 
+            $subTotalRow = [
+                'invoice' => '',
+                'oa' => '',
+                'date' => '',
+                'supplier' => 'SubTotal - ',
+                'qty' => $subQty,
+                'in_stock' => $subStock,
+                'price' => $subPrice,
+                'amount' => $subAmount,
+                'place' => '',
+            ];
+
+            $totalRow = [
+                'invoice' => '',
+                'oa' => '',
+                'date' => '',
+                'supplier' => 'Total -',
+                'qty' => $totalQty,
+                'in_stock' => $totalStock,
+                'price' => $totalPrice,
+                'amount' => $totalAmount,
+                'place' => '',
+            ];
+
+            $paginated[] = $subTotalRow;
+            $paginated[] = $totalRow;
+
             return response()->json([
                 'code' => 200,
                 'success' => true,
@@ -1246,18 +1273,18 @@ class PurchaseInvoiceController extends Controller
                 'data' => $paginated,
                 'count' => count($paginated),
                 'total_records' => $totalRecords,
-                'sub_total' => [
-                    'qty' => $subQty,
-                    'in_stock' => $subStock,
-                    'price' => $subPrice,
-                    'amount' => $subAmount,
-                ],
-                'total' => [
-                    'qty' => $totalQty,
-                    'in_stock' => $totalStock,
-                    'price' => $totalPrice,
-                    'amount' => $totalAmount,
-                ]
+                // 'sub_total' => [
+                //     'qty' => $subQty,
+                //     'in_stock' => $subStock,
+                //     'price' => $subPrice,
+                //     'amount' => $subAmount,
+                // ],
+                // 'total' => [
+                //     'qty' => $totalQty,
+                //     'in_stock' => $totalStock,
+                //     'price' => $totalPrice,
+                //     'amount' => $totalAmount,
+                // ]
             ]);
 
         } catch (\Throwable $e) {

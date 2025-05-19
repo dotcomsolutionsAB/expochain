@@ -1174,7 +1174,6 @@ class SalesOrderController extends Controller
             $subQty = array_sum(array_column($paginated, 'qty'));
             $subPrice = array_sum(array_column($paginated, 'price'));
 
-
             $subTotalRow = [
                 'order' => '',
                 'client_order' => '',
