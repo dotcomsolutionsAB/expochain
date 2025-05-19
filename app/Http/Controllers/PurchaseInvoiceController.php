@@ -1200,7 +1200,7 @@ class PurchaseInvoiceController extends Controller
                         'supplier'  => optional($item->purchaseInvoice->supplier)->name,
                         'qty'       => $item->quantity,
                         'in_stock'  => $item->stock,
-                        'price'     => number_format((float) $item->price, 2, '.', ''),
+                        'price'     => number_format((float)$item->price, 2, '.', ''),
                         'amount'    => number_format((float)$item->amount, 2, '.', ''),
                         'place'     => optional($item->godownRelation)->name ?? '-',
                     ];
