@@ -1246,8 +1246,8 @@ class PurchaseInvoiceController extends Controller
                 'supplier' => 'SubTotal - ',
                 'qty' => $subQty,
                 'in_stock' => $subStock,
-                'price' => $subPrice,
-                'amount' => $subAmount,
+                'price' => number_format($subPrice, 2, '.', ''),
+                'amount' => number_format($subAmount, 2, '.', ''),
                 'place' => '',
             ];
 
@@ -1258,8 +1258,8 @@ class PurchaseInvoiceController extends Controller
                 'supplier' => 'Total -',
                 'qty' => $totalQty,
                 'in_stock' => $totalStock,
-                'price' => $totalPrice,
-                'amount' => $totalAmount,
+                'price' => number_format($totalPrice, 2, '.', ''),
+                'amount' => number_format($totalAmount, 2, '.', ''),
                 'place' => '',
             ];
 
