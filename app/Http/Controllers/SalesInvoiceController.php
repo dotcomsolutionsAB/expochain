@@ -1047,7 +1047,7 @@ class SalesInvoiceController extends Controller
             $subTotalRow = [
                 'invoice' => '',
                 'date' => '',
-                'client' => '',
+                'client' => 'SubTotal - ',
                 'qty' => $subQty,
                 'price' => '',
                 'amount' => $subAmount,
@@ -1058,7 +1058,7 @@ class SalesInvoiceController extends Controller
             $totalRow = [
                 'invoice' => '',
                 'date' => '',
-                'client' => '',
+                'client' => 'Total -',
                 'qty' => $totalQty,
                 'price' => '',
                 'amount' => $totalAmount,
