@@ -115,28 +115,29 @@ class CreditNoteController extends Controller
         ]);
         
         $products = $request->input('products');
-
-        // Iterate over the products array and insert each contact
-        foreach ($products as $product) 
-        {
-            CreditNoteProductsModel::create([
-                'credit_note_id' => $register_credit_note['id'],
-                'company_id' => Auth::user()->company_id,
-                'product_id' => $product['product_id'],
-                'product_name' => $product['product_name'],
-                'description' => $product['description'],
-                'quantity' => $product['quantity'],
-                'unit' => $product['unit'],
-                'price' => $product['price'],
-                'discount' => $product['discount'],
-                'discount_type' => $product['discount_type'],
-                'hsn' => $product['hsn'],
-                'tax' => $product['tax'],
-                'cgst' => $product['cgst'],
-                'sgst' => $product['sgst'],
-                'igst' => $product['igst'],
-                'amount' => $product['amount'],
-            ]);
+        if (!empty($products) && is_array($products)) {
+            // Iterate over the products array and insert each contact
+            foreach ($products as $product) 
+            {
+                CreditNoteProductsModel::create([
+                    'credit_note_id' => $register_credit_note['id'],
+                    'company_id' => Auth::user()->company_id,
+                    'product_id' => $product['product_id'],
+                    'product_name' => $product['product_name'],
+                    'description' => $product['description'],
+                    'quantity' => $product['quantity'],
+                    'unit' => $product['unit'],
+                    'price' => $product['price'],
+                    'discount' => $product['discount'],
+                    'discount_type' => $product['discount_type'],
+                    'hsn' => $product['hsn'],
+                    'tax' => $product['tax'],
+                    'cgst' => $product['cgst'],
+                    'sgst' => $product['sgst'],
+                    'igst' => $product['igst'],
+                    'amount' => $product['amount'],
+                ]);
+            }
         }
 
         // increment the `next_number` by 1
