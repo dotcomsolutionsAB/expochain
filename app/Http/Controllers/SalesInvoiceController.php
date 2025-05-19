@@ -1044,6 +1044,31 @@ class SalesInvoiceController extends Controller
             $subAmount = array_sum(array_column($paginated, 'amount'));
             $subProfit = array_sum(array_column($paginated, 'profit'));
 
+            $subTotalRow = [
+                'invoice' => '',
+                'date' => '',
+                'client' => '',
+                'qty' => $subQty,
+                'price' => '',
+                'amount' => $subAmount,
+                'profit' => $subProfit,
+                'place' => ''
+            ];
+
+            $totalRow = [
+                'invoice' => '',
+                'date' => '',
+                'client' => '',
+                'qty' => $totalQty,
+                'price' => '',
+                'amount' => $totalAmount,
+                'profit' => $totalProfit,
+                'place' => ''
+            ];
+
+            $paginated[] = $subTotalRow;
+            $paginated[] = $totalRow;
+
             return response()->json([
                 'code' => 200,
                 'success' => true,
@@ -1051,16 +1076,16 @@ class SalesInvoiceController extends Controller
                 'data' => $paginated,
                 'count' => count($paginated),
                 'total_records' => count($records),
-                'sub_total' => [
-                    'qty' => $subQty,
-                    'amount' => $subAmount,
-                    'profit' => $subProfit,
-                ],
-                'total' => [
-                    'qty' => $totalQty,
-                    'amount' => $totalAmount,
-                    'profit' => $totalProfit,
-                ]
+                // 'sub_total' => [
+                //     'qty' => $subQty,
+                //     'amount' => $subAmount,
+                //     'profit' => $subProfit,
+                // ],
+                // 'total' => [
+                //     'qty' => $totalQty,
+                //     'amount' => $totalAmount,
+                //     'profit' => $totalProfit,
+                // ]
             ]);
 
         } catch (\Throwable $e) {
