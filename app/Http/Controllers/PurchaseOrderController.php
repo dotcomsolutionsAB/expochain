@@ -1190,6 +1190,31 @@ class PurchaseOrderController extends Controller
             $subReceived = array_sum(array_column($paginated, 'received'));
             $subAmount = array_sum(array_column($paginated, 'amount'));
 
+            $subTotalRow = [
+                'order_no' => '',
+                'oa_no' => '',
+                'date' => '',
+                'supplier' => 'SubTotal - ',
+                'qty' => $subQty,
+                'received' => $subReceived,
+                'price' => '',
+                'amount' => $subAmount
+            ];
+
+            $totalRow = [
+                'order_no' => '',
+                'oa_no' => '',
+                'date' => '',
+                'supplier' => 'Total -',
+                'qty' => $totalQty,
+                'received' => $totalReceived,
+                'price' => '',
+                'amount' => $totalAmount
+            ];
+
+            $paginated[] = $subTotalRow;
+            $paginated[] = $totalRow;
+
             // Final Response
             return response()->json([
                 'code' => 200,
@@ -1198,16 +1223,16 @@ class PurchaseOrderController extends Controller
                 'data' => $paginated,
                 'count' => count($paginated),
                 'total_records' => $totalRecords,
-                'sub_total' => [
-                    'qty' => $subQty,
-                    'received' => $subReceived,
-                    'amount' => $subAmount,
-                ],
-                'total' => [
-                    'qty' => $totalQty,
-                    'received' => $totalReceived,
-                    'amount' => $totalAmount,
-                ]
+                // 'sub_total' => [
+                //     'qty' => $subQty,
+                //     'received' => $subReceived,
+                //     'amount' => $subAmount,
+                // ],
+                // 'total' => [
+                //     'qty' => $totalQty,
+                //     'received' => $totalReceived,
+                //     'amount' => $totalAmount,
+                // ]
             ], 200);
 
         } catch (\Throwable $e) {
