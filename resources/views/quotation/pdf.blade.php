@@ -10,42 +10,75 @@
         margin: 5px;
         padding: 5px;
       }
+
       .page-border {
         border: 2px solid #000;
         padding: 15px;
         object-fit: contain;
-        background-image: url("{{ public_path("storage/uploads/images/background_image.jpg") }}");
+        background-image: url("{{ public_path('storage/uploads/images/background_image.jpg') }}");
         background-size: cover;
         background-position: center center;
         background-repeat: no-repeat;
       }
+
       /* Center alignment */
       .center {
         text-align: center;
       }
+      .left {
+        text-align: end;
+      }
+
       /* Dashed line separator */
       .dash-line {
         border-top: 1px dashed #000;
         margin: 10px 0;
       }
+
+      /* Header styling */
+      .header-container {
+        position: relative; /* Allow absolute positioning of image within this container */
+        margin-bottom: 20px;
+      }
+
+      .header {
+        text-align: center;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+      }
+
+      /* Image styling for top right corner */
+      .header-container img {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 140px;
+        height: auto;
+      }
+
       /* Two-column layout for info */
       .info-grid {
         display: flex;
         justify-content: space-between;
         page-break-inside: avoid;
       }
+
       .info-grid .left,
       .info-grid .right {
         width: 48%;
       }
+
       .info-grid .right {
         text-align: right;
       }
+
       table {
         width: 100%;
         border-collapse: collapse;
         margin-top: 5px;
       }
+
       th,
       td {
         border: 1px solid #000;
@@ -53,22 +86,32 @@
         text-align: center;
         font-size: 11px;
       }
+
       .no-border td {
         border: none;
       }
+
       .title {
         font-size: 18px;
         text-align: center;
         font-weight: bold;
         margin-bottom: 15px;
       }
+
       .right-align {
         text-align: right;
+        align-items: center;
+        display: flex;
       }
+      .left-align {
+        text-align: left;
+      }
+
       /* Avoid page-breaks within table rows */
       tr {
         page-break-inside: avoid;
       }
+
       /* Bank details in one line */
       .bank-details {
         text-align: center;
@@ -84,50 +127,38 @@
   </head>
   <body>
     <div class="page-border">
-      <div
-        class="header-container"
-        style="position: relative; margin-bottom: 20px"
-      >
-        <div
-          class="title"
-          style="
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            text-align: center;
-          "
-        >
-          QUOTATION
-        </div>
+      <div class="header-container">
+        <div class="title">QUOTATION</div>
 
         <!-- Company header (centered) -->
-        <div class="head">
-          <div class="header center">
+        <div class="header center">
+          <div class="text center">
             <strong>EXPO CHAIN & BEARING STORES</strong><br />
             71/D N.S. ROAD, GROUND FLOOR,ROOM NO A-162<br />
             KOLKATA - 700001, WEST BENGAL, India<br />
             GST : 19AAAFE7147G1ZF<br />
             +9133-40064388 | 22431939 , amit@expochain.com, 7059502488
           </div>
-          <!-- Image placed at upper right -->
-          <img
-            src="{{ public_path('storage/uploads/images/invoice_logo.png') }}"
-            alt="Logo"
-            style="
-              position: absolute;
-              top: 10px;
-              right: 10px;
-              width: 140px;
-              height: auto;
-            "
-          />
+          <div class="imgg right-align">
+            <img
+              src="{{ public_path('storage/uploads/images/invoice_logo.png') }}"
+              alt="Logo"
+              style="
+                position: absolute;
+                top: -10px;
+                right: -10px;
+                width: 100px;
+                height: auto;
+              "
+            />
+          </div>
         </div>
       </div>
 
       <!-- Dashed separator -->
       <div class="dash-line"></div>
 
-      <!-- Two-column layout for Customer and Quotation Info -->
+      <!-- Customer and Quotation Info -->
       <table class="no-border">
         <tr>
           <td
@@ -244,7 +275,6 @@
       <div class="terms" style="margin-top: 10px">
         <table class="no-border" style="width: 100%; border-collapse: collapse">
           <tr>
-            <!-- Left Column: Terms details (left aligned) -->
             <td
               style="
                 width: 50%;
@@ -262,7 +292,6 @@
               <strong>Payment</strong> : 30 days - msme<br />
               <strong>Validity</strong> : 30 DAYS<br />
             </td>
-            <!-- Right Column: Signature -->
             <td style="width: 50%; vertical-align: middle; padding-left: 10px">
               <table
                 class="no-border"
