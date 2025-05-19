@@ -34,21 +34,21 @@ class DebitNoteController extends Controller
             'gross' => 'required|numeric|min:0',
             'round_off' => 'required|numeric',
             
-            'products' => 'required|array', // Validating array of products
-            'products.*.product_id' => 'required|integer',
-            'products.*.product_name' => 'required|string',
+            'products' => 'nullable|array', // Validating array of products
+            'products.*.product_id' => 'required_with:products|integer',
+            'products.*.product_name' => 'required_with:products|string',
             'products.*.description' => 'nullable|string',
-            'products.*.quantity' => 'required|integer',
-            'products.*.unit' => 'required|string',
-            'products.*.price' => 'required|numeric|min:0',
+            'products.*.quantity' => 'required_with:products|integer',
+            'products.*.unit' => 'required_with:products|string',
+            'products.*.price' => 'required_with:products|numeric|min:0',
             'products.*.discount' => 'nullable|numeric|min:0',
-            'products.*.discount_type' => 'required|in:percentage,value',
-            'products.*.hsn' => 'required|string',
-            'products.*.tax' => 'required|numeric',
-            'products.*.cgst' => 'required|numeric',
-            'products.*.sgst' => 'required|numeric',
-            'products.*.igst' => 'required|numeric',
-            'products.*.amount' => 'required|numeric|min:0',    
+            'products.*.discount_type' => 'required_with:products|in:percentage,value',
+            'products.*.hsn' => 'required_with:products|string',
+            'products.*.tax' => 'required_with:products|numeric',
+            'products.*.cgst' => 'required_with:products|numeric',
+            'products.*.sgst' => 'required_with:products|numeric',
+            'products.*.igst' => 'required_with:products|numeric',
+            'products.*.amount' => 'required_with:products|numeric|min:0',    
         ]);
     
         // Handle quotation number logic
@@ -111,27 +111,30 @@ class DebitNoteController extends Controller
         
         $products = $request->input('products');
 
-        // Iterate over the products array and insert each contact
-        foreach ($products as $product) 
-        {
-            DebitNoteProductsModel::create([
-                'debit_note_number' => $register_debit_note['id'],
-                'company_id' => Auth::user()->company_id,
-                'product_id' => $product['product_id'],
-                'product_name' => $product['product_name'],
-                'description' => $product['description'],
-                'quantity' => $product['quantity'],
-                'unit' => $product['unit'],
-                'price' => $product['price'],
-                'discount' => $product['discount'],
-                'discount_type' => $product['discount_type'],
-                'hsn' => $product['hsn'],
-                'tax' => $product['tax'],
-                'cgst' => $product['cgst'],
-                'sgst' => $product['sgst'],
-                'igst' => $product['igst'],
-                'amount' => $product['amount'],
-            ]);
+        if (!empty($products) && is_array($products)) {
+
+            // Iterate over the products array and insert each contact
+            foreach ($products as $product) 
+            {
+                DebitNoteProductsModel::create([
+                    'debit_note_number' => $register_debit_note['id'],
+                    'company_id' => Auth::user()->company_id,
+                    'product_id' => $product['product_id'],
+                    'product_name' => $product['product_name'],
+                    'description' => $product['description'],
+                    'quantity' => $product['quantity'],
+                    'unit' => $product['unit'],
+                    'price' => $product['price'],
+                    'discount' => $product['discount'],
+                    'discount_type' => $product['discount_type'],
+                    'hsn' => $product['hsn'],
+                    'tax' => $product['tax'],
+                    'cgst' => $product['cgst'],
+                    'sgst' => $product['sgst'],
+                    'igst' => $product['igst'],
+                    'amount' => $product['amount'],
+                ]);
+            }
         }
 
         // increment the `next_number` by 1
@@ -332,21 +335,21 @@ class DebitNoteController extends Controller
             'gross' => 'required|numeric|min:0',
             'round_off' => 'required|numeric',
             
-            'products' => 'required|array', // Validating array of products
-            'products.*.product_id' => 'required|integer',
-            'products.*.product_name' => 'required|string',
+            'products' => 'nullable|array', // Validating array of products
+            'products.*.product_id' => 'required_with:products|integer',
+            'products.*.product_name' => 'required_with:products|string',
             'products.*.description' => 'nullable|string',
-            'products.*.quantity' => 'required|integer',
-            'products.*.unit' => 'required|string',
-            'products.*.price' => 'required|numeric|min:0',
+            'products.*.quantity' => 'required_with:products|integer',
+            'products.*.unit' => 'required_with:products|string',
+            'products.*.price' => 'required_with:products|numeric|min:0',
             'products.*.discount' => 'nullable|numeric|min:0',
-            'products.*.discount_type' => 'required|in:percentage,value',
-            'products.*.hsn' => 'required|string',
-            'products.*.tax' => 'required|numeric',
-            'products.*.cgst' => 'required|numeric',
-            'products.*.sgst' => 'required|numeric',
-            'products.*.igst' => 'required|numeric',
-            'products.*.amount' => 'required|numeric|min:0',
+            'products.*.discount_type' => 'required_with:products|in:percentage,value',
+            'products.*.hsn' => 'required_with:products|string',
+            'products.*.tax' => 'required_with:products|numeric',
+            'products.*.cgst' => 'required_with:products|numeric',
+            'products.*.sgst' => 'required_with:products|numeric',
+            'products.*.igst' => 'required_with:products|numeric',
+            'products.*.amount' => 'required_with:products|numeric|min:0',
         ]);
 
         // Get the debit note record by ID
@@ -376,51 +379,54 @@ class DebitNoteController extends Controller
         $products = $request->input('products');
         $requestProductIDs = [];
 
-        foreach ($products as $productData) {
-            $requestProductIDs[] = $productData['product_id'];
+        if (!empty($products) && is_array($products)) {
 
-            // Check if the product exists for this debit_note_number
-            $existingProduct = DebitNoteProductsModel::where('debit_note_number', $id)
-                                                    ->where('product_id', $productData['product_id'])
-                                                    ->first();
+            foreach ($products as $productData) {
+                $requestProductIDs[] = $productData['product_id'];
 
-            if ($existingProduct) {
-                // Update the existing product
-                $existingProduct->update([
-                    'product_name' => $productData['product_name'],
-                    'description' => $productData['description'],
-                    'quantity' => $productData['quantity'],
-                    'unit' => $productData['unit'],
-                    'price' => $productData['price'],
-                    'discount' => $productData['discount'],
-                    'discount_type' => $productData['discount_type'],
-                    'hsn' => $productData['hsn'],
-                    'tax' => $productData['tax'],
-                    'cgst' => $productData['cgst'],
-                    'sgst' => $productData['sgst'],
-                    'igst' => $productData['igst'],
-                    'amount' => $productData['amount'],
-                ]);
-            } else {
-                // Create new product if it does not exist
-                DebitNoteProductsModel::create([
-                    'debit_note_number' => $id,
-                    'company_id' => Auth::user()->company_id,
-                    'product_id' => $productData['product_id'],
-                    'product_name' => $productData['product_name'],
-                    'description' => $productData['description'],
-                    'quantity' => $productData['quantity'],
-                    'unit' => $productData['unit'],
-                    'price' => $productData['price'],
-                    'discount' => $productData['discount'],
-                    'discount_type' => $productData['discount_type'],
-                    'hsn' => $productData['hsn'],
-                    'tax' => $productData['tax'],
-                    'cgst' => $productData['cgst'],
-                    'sgst' => $productData['sgst'],
-                    'igst' => $productData['igst'],
-                    'amount' => $productData['amount'],
-                ]);
+                // Check if the product exists for this debit_note_number
+                $existingProduct = DebitNoteProductsModel::where('debit_note_number', $id)
+                                                        ->where('product_id', $productData['product_id'])
+                                                        ->first();
+
+                if ($existingProduct) {
+                    // Update the existing product
+                    $existingProduct->update([
+                        'product_name' => $productData['product_name'],
+                        'description' => $productData['description'],
+                        'quantity' => $productData['quantity'],
+                        'unit' => $productData['unit'],
+                        'price' => $productData['price'],
+                        'discount' => $productData['discount'],
+                        'discount_type' => $productData['discount_type'],
+                        'hsn' => $productData['hsn'],
+                        'tax' => $productData['tax'],
+                        'cgst' => $productData['cgst'],
+                        'sgst' => $productData['sgst'],
+                        'igst' => $productData['igst'],
+                        'amount' => $productData['amount'],
+                    ]);
+                } else {
+                    // Create new product if it does not exist
+                    DebitNoteProductsModel::create([
+                        'debit_note_number' => $id,
+                        'company_id' => Auth::user()->company_id,
+                        'product_id' => $productData['product_id'],
+                        'product_name' => $productData['product_name'],
+                        'description' => $productData['description'],
+                        'quantity' => $productData['quantity'],
+                        'unit' => $productData['unit'],
+                        'price' => $productData['price'],
+                        'discount' => $productData['discount'],
+                        'discount_type' => $productData['discount_type'],
+                        'hsn' => $productData['hsn'],
+                        'tax' => $productData['tax'],
+                        'cgst' => $productData['cgst'],
+                        'sgst' => $productData['sgst'],
+                        'igst' => $productData['igst'],
+                        'amount' => $productData['amount'],
+                    ]);
+                }
             }
         }
 

@@ -421,10 +421,16 @@ class CreditNoteController extends Controller
             }
         }
 
-        // Delete products not included in the request
-        $productsDeleted = CreditNoteProductsModel::where('credit_note_id', $id)
-                                                ->whereNotIn('product_id', $requestProductIDs)
-                                                ->delete();
+        // $productsDeleted = false;
+
+        // if (!empty($products) && is_array($products)) {
+
+            // Delete products not included in the request
+            $productsDeleted = CreditNoteProductsModel::where('credit_note_id', $id)
+                                                    ->whereNotIn('product_id', $requestProductIDs)
+                                                    ->delete();
+
+        // }
 
         unset($creditNote['created_at'], $creditNote['updated_at']);
 
