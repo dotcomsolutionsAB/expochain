@@ -222,7 +222,7 @@
                     <!-- New row for footer image spanning both columns -->
                     <tr>
                         <td colspan="2" style="text-align: center; padding-top: 10px;">
-                            <img src="{{ public_path('images/footer-logo.png') }}" alt="Footer Logo" style="width: 150px; height: auto;">
+                            <img src="{{ storage_path('app/public/images/footer-logo.png') }}" alt="Footer Logo" style="width: 150px; height: auto;">
                         </td>
                     </tr>
                 </table>
