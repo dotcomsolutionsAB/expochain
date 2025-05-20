@@ -43,9 +43,6 @@
 
       .header {
         text-align: center;
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
       }
 
       /* Image styling for top right corner */
@@ -127,32 +124,37 @@
   </head>
   <body>
     <div class="page-border">
-      <div class="header-container">
-        <div class="title">QUOTATION</div>
-
-        <!-- Company header (centered) -->
-        <div class="header center">
-          <div class="text center">
-            <strong>EXPO CHAIN & BEARING STORES</strong><br />
-            71/D N.S. ROAD, GROUND FLOOR,ROOM NO A-162<br />
-            KOLKATA - 700001, WEST BENGAL, India<br />
-            GST : 19AAAFE7147G1ZF<br />
-            +9133-40064388 | 22431939 , amit@expochain.com, 7059502488
-          </div>
-          <div class="imgg right-align">
-            <img
-              src="{{ public_path('storage/uploads/images/invoice_logo.png') }}"
-              alt="Logo"
+      <div class="header-container" style="margin-bottom: 20px">
+        <table style="width: 100%; border-collapse: collapse">
+          <tr>
+            <!-- Company Info: Use all but 120px -->
+            <td style="text-align: center; vertical-align: top; border: none">
+              <div style="font-size: 18px; font-weight: bold">QUOTATION</div>
+              <div>
+                <strong>EXPO CHAIN & BEARING STORES</strong><br />
+                71/D N.S. ROAD, GROUND FLOOR, ROOM NO A-162<br />
+                KOLKATA - 700001, WEST BENGAL, India<br />
+                GST : 19AAAFE7147G1ZF<br />
+                +9133-40064388 | 22431939 , amit@expochain.com, 7059502488
+              </div>
+            </td>
+            <!-- Logo on the Top Right -->
+            <td
               style="
-                position: absolute;
-                top: -10px;
-                right: -10px;
-                width: 100px;
-                height: auto;
+                width: 1%;
+                text-align: right;
+                vertical-align: top;
+                border: none;
               "
-            />
-          </div>
-        </div>
+            >
+              <img
+                src="{{ public_path('storage/uploads/images/invoice_logo.png') }}"
+                alt="Logo"
+                style="width: 100px; height: auto; display: block"
+              />
+            </td>
+          </tr>
+        </table>
       </div>
 
       <!-- Dashed separator -->
