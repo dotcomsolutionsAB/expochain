@@ -901,7 +901,7 @@ class HelperController extends Controller
             // Initialize empty arrays to store results
             $months = [];
             $salesTotals = [];
-            $invoiceCounts = [];
+            $previousSalesTotals = [];
 
             // Generate months between start and end dates
             $current = $startDate->copy();
@@ -909,7 +909,7 @@ class HelperController extends Controller
             while ($current <= $endDate) {
                 $monthStart = $current->copy()->startOfMonth();
                 $monthEnd = $current->copy()->endOfMonth();
-                $monthName = $current->format('F Y'); // e.g., "January 2022"
+                $monthName = $current->format('F'); // e.g., "January 2022"
 
                 // Query sales for this month
                 $salesStats = DB::table('t_sales_invoice as si')
@@ -921,12 +921,23 @@ class HelperController extends Controller
 
                 // If no data found for this month, default to 0
                 $salesTotal = $salesStats->total ?? 0;
-                $invoiceCount = $salesStats->invoice_count ?? 0;
+                
+                // Query previous year sales for this month
+                $previousMonthStart = $monthStart->copy()->subYear();
+                $previousMonthEnd = $monthEnd->copy()->subYear();
+                $previousSalesStats = DB::table('t_sales_invoice as si')
+                    ->join('t_sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
+                    ->where('si.company_id', $companyId)
+                    ->whereBetween('si.sales_invoice_date', [$previousMonthStart, $previousMonthEnd])
+                    ->selectRaw('SUM(sip.amount) as total')
+                    ->first();
+
+                $previousSalesTotal = $previousSalesStats->total ?? 0;
 
                 // Populate results for the current month
                 $months[] = $monthName;
                 $salesTotals[] = round($salesTotal); // If no sales, default to 0
-                $invoiceCounts[] = $invoiceCount;
+                $previousSalesTotals[] = round($previousSalesTotal);
 
                 // Move to the next month
                 $current->addMonth();
