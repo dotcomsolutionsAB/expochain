@@ -562,21 +562,23 @@ class HelperController extends Controller
         try {
             $companyId = auth()->user()->company_id;
 
-            // Step 1: Parse dates from request or default to full range
+            // Parse dates
             $startDate = $request->start_date ? Carbon::parse($request->start_date)->startOfDay() : Carbon::minValue();
             $endDate = $request->end_date ? Carbon::parse($request->end_date)->endOfDay() : Carbon::now()->endOfDay();
 
-            // Step 2: Get all sales invoices for company & date range, with products
-            $invoices = SalesInvoiceModel::with('products:id,sales_invoice_id,profit,amount', 
-                'client:id,name')
+            // Pagination
+            $limit = intval($request->input('limit', 10));
+            $offset = intval($request->input('offset', 0));
+
+            // Get all sales invoices (for this period/company)
+            $invoices = SalesInvoiceModel::with('products:id,sales_invoice_id,profit,amount', 'client:id,name')
                 ->select('id', 'client_id')
                 ->where('company_id', $companyId)
                 ->whereBetween('sales_invoice_date', [$startDate, $endDate])
                 ->get();
 
-            // Step 3: Aggregate totals by client_id
+            // Aggregate totals by client
             $result = [];
-
             foreach ($invoices as $invoice) {
                 $clientId = $invoice->client_id;
                 if (!$clientId) continue;
@@ -593,13 +595,12 @@ class HelperController extends Controller
                         'total_amount' => 0
                     ];
                 }
-
                 $result[$clientId]['total_profit'] += $profitSum;
                 $result[$clientId]['total_amount'] += $amountSum;
             }
 
-            // Round values to 2 decimal places
-            $finalResult = array_map(function ($item) {
+            // Convert to flat array, round, and sort by total_amount (optional: you can sort as needed)
+            $flatResult = array_map(function ($item) {
                 return [
                     'client_id' => $item['client_id'],
                     'client_name' => $item['client_name'],
@@ -608,16 +609,42 @@ class HelperController extends Controller
                 ];
             }, $result);
 
-            // Step 3: Return the result
+            // Calculate grand totals (for all results, before pagination)
+            $totalProfit = array_sum(array_column($flatResult, 'total_profit'));
+            $totalAmount = array_sum(array_column($flatResult, 'total_amount'));
+
+            // Paginate the results
+            $paginated = array_slice($flatResult, $offset, $limit);
+
+            // Calculate sub-totals for paginated results
+            $subTotalProfit = array_sum(array_column($paginated, 'total_profit'));
+            $subTotalAmount = array_sum(array_column($paginated, 'total_amount'));
+
+            // Append sub-total and total rows
+            $paginated[] = [
+                'client_id'   => '',
+                'client_name' => 'Sub-total - ',
+                'total_profit'=> round($subTotalProfit, 2),
+                'total_amount'=> round($subTotalAmount, 2),
+            ];
+            $paginated[] = [
+                'client_id'   => '',
+                'client_name' => 'Total - ',
+                'total_profit'=> round($totalProfit, 2),
+                'total_amount'=> round($totalAmount, 2),
+            ];
+
+            // Return response
             return response()->json([
                 'code' => 200,
                 'success' => true,
                 'message' => 'Client wise profit fetched successfully!',
-                'data' => array_values($finalResult)
+                'data' => $paginated,
+                'total_records' => count($flatResult), // before pagination
+                'limit' => $limit,
+                'offset' => $offset
             ]);
-
         } catch (\Exception $e) {
-            // Catch unexpected errors
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong while calculating client-wise sales summary.',
