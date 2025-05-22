@@ -542,7 +542,7 @@ class AssemblyOperationsController extends Controller
                 'order' => '',
                 'date' => '',
                 'quantity' => $totalQty,
-                'operation' => 'SubTotal - ',
+                'operation' => 'Total - ',
                 'user' => '',
             ];
 

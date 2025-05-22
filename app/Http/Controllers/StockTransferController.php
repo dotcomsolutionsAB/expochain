@@ -438,6 +438,25 @@ class StockTransferController extends Controller
             $paginated = array_slice($records, $offset, $limit);
             $subQty = array_sum(array_column($paginated, 'quantity'));
 
+            $subTotalRow = [
+                'transfer_id' => '',
+                'date' => '',
+                'quantity' => $subQty,
+                'from' => 'SubTotal - ',
+                'to' => '',
+            ];
+
+            $totalRow = [
+                'transfer_id' => '',
+                'date' => '',
+                'quantity' => $totalQty,
+                'from' => 'Total - ',
+                'to' => '',
+            ];
+
+            $paginated[] = $subTotalRow;
+            $paginated[] = $totalRow;
+
             // Response
             return response()->json([
                 'code' => 200,
@@ -446,12 +465,12 @@ class StockTransferController extends Controller
                 'data' => $paginated,
                 'count' => count($paginated),
                 'total_records' => $totalRecords,
-                'sub_total' => [
-                    'quantity' => $subQty,
-                ],
-                'total' => [
-                    'quantity' => $totalQty,
-                ]
+                // 'sub_total' => [
+                //     'quantity' => $subQty,
+                // ],
+                // 'total' => [
+                //     'quantity' => $totalQty,
+                // ]
             ], 200);
 
         } catch (\Throwable $e) {
