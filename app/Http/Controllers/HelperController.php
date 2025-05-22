@@ -965,7 +965,7 @@ class HelperController extends Controller
     }
 
     // sales vs sales graph
-   public function getMonthlyCumulativeSalesSummary(Request $request)
+    public function getMonthlyCumulativeSalesSummary(Request $request)
     {
         try {
             $companyId = Auth::user()->company_id;
@@ -988,29 +988,71 @@ class HelperController extends Controller
                 ->orderBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)')) // Order by year and month
                 ->get();
 
+            // Query for previous year sales (same months, previous year)
+            $prevStart = $startDate->copy()->subYear();
+            $prevEnd = $endDate->copy()->subYear();
+
+            $prevSales = SalesInvoiceModel::join('t_sales_invoice_products as sip', 'si.id', '=', 'sip.sales_invoice_id')
+                ->where('si.company_id', $companyId)
+                ->whereBetween('si.sales_invoice_date', [$prevStart, $prevEnd])
+                ->selectRaw('
+                    MONTH(si.sales_invoice_date) as month,
+                    YEAR(si.sales_invoice_date) as year,
+                    SUM(sip.amount) as monthly_sales_amount
+                ')
+                ->from('t_sales_invoice as si')
+                ->groupBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)'))
+                ->orderBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)'))
+                ->get();
+
+            // Map sales by month for both current and previous years
+            $salesByMonth = [];
+            foreach ($sales as $sale) {
+                $salesByMonth[$sale->month] = $sale->monthly_sales_amount;
+            }
+            $prevSalesByMonth = [];
+            foreach ($prevSales as $sale) {
+                $prevSalesByMonth[$sale->month] = $sale->monthly_sales_amount;
+            }
+
+            // Build the final arrays
+            $months = [];
+            $cumulativeSales = [];
+            $previousCumulativeSales = [];
+
             // Initialize variables to calculate cumulative sales
             $cumulativeSales = 0;
-            $salesWithCumulative = [];
+            $prevCumulative = 0;
 
-            // Iterate through sales data and calculate cumulative sales
-            foreach ($sales as $sale) {
-                // Add the current month's sales to the cumulative total
-                $cumulativeSales += $sale->monthly_sales_amount;
+            // Generate month numbers in range (to cover missing months as zero)
+            $period = Carbon::parse($startDate)->monthsUntil($endDate->copy()->endOfMonth());
 
-                // Store the month name and cumulative total
-                $monthName = Carbon::createFromFormat('m', $sale->month)->format('F Y');
-                $salesWithCumulative[] = [
-                    'month' => $monthName,
-                    'monthly_sales_amount' => round($sale->monthly_sales_amount),
-                    'cumulative_sales_amount' => round($cumulativeSales),
-                ];
+            foreach ($period as $dt) {
+                $monthNum = $dt->month;
+                $monthName = $dt->format('F'); // No year as you requested
+
+                // For current year
+                $monthSales = isset($salesByMonth[$monthNum]) ? $salesByMonth[$monthNum] : 0;
+                $cumulative += $monthSales;
+
+                // For previous year
+                $prevMonthSales = isset($prevSalesByMonth[$monthNum]) ? $prevSalesByMonth[$monthNum] : 0;
+                $prevCumulative += $prevMonthSales;
+
+                $months[] = $monthName;
+                $cumulativeSales[] = round($cumulative);
+                $previousCumulativeSales[] = round($prevCumulative);
             }
 
             return response()->json([
                 'code' => 200,
                 'success' => true,
                 'message' => 'Monthly cumulative sales fetched successfully.',
-                'data' => $salesWithCumulative
+                'data' => [
+                    'month' => $months,
+                    'cumulative_sales_amount' => $cumulativeSales,
+                    'previous_cumulative_sales_amount' => $previousCumulativeSales,
+                ]
             ]);
         } catch (\Exception $e) {
             return response()->json([
