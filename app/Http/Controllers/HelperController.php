@@ -1021,7 +1021,7 @@ class HelperController extends Controller
             $previousCumulativeSales = [];
 
             // Initialize variables to calculate cumulative sales
-            $cumulativeSales = 0;
+            $cumulative = 0;
             $prevCumulative = 0;
 
             // Generate month numbers in range (to cover missing months as zero)
