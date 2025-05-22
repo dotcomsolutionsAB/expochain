@@ -951,7 +951,7 @@ class HelperController extends Controller
                 'data' => [
                     'month' => $months,
                     'sales_total' => $salesTotals,
-                    'invoice_count' => $invoiceCounts,
+                    'previous_sales_total' => $previousSalesTotals,
                 ],
             ]);
 
