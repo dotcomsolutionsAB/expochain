@@ -20,6 +20,7 @@ class DebitNoteProductsModel extends Model
         'unit',
         'price',
         'discount',
+        'discount_type',
         'hsn',
         'tax',
         'cgst',
