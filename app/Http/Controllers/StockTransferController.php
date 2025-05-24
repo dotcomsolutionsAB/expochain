@@ -440,17 +440,17 @@ class StockTransferController extends Controller
 
             $subTotalRow = [
                 'transfer_id' => '',
-                'date' => '',
+                'date' => 'SubTotal - ',
                 'quantity' => $subQty,
-                'from' => 'SubTotal - ',
+                'from' => '',
                 'to' => '',
             ];
 
             $totalRow = [
                 'transfer_id' => '',
-                'date' => '',
+                'date' => 'Total - ',
                 'quantity' => $totalQty,
-                'from' => 'Total - ',
+                'from' => '',
                 'to' => '',
             ];
 

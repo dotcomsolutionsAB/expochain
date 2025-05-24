@@ -532,17 +532,17 @@ class AssemblyOperationsController extends Controller
 
             $subTotalRow = [
                 'order' => '',
-                'date' => '',
+                'date' => 'SubTotal - ',
                 'quantity' => $subQty,
-                'operation' => 'SubTotal - ',
+                'operation' => '',
                 'user' => '',
             ];
 
             $totalRow = [
                 'order' => '',
-                'date' => '',
+                'date' => 'Total - ',
                 'quantity' => $totalQty,
-                'operation' => 'Total - ',
+                'operation' => '',
                 'user' => '',
             ];
 
