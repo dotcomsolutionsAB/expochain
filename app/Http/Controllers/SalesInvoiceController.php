@@ -1132,7 +1132,7 @@ class SalesInvoiceController extends Controller
                     'salesInvoice:id,sales_invoice_no,sales_invoice_date,client_id',
                     'salesInvoice.client:id,name',
                     'godownRelation:id,name',
-                    'product:id,product_name'
+                    'product:id,name'
                 ])
                 ->where('company_id', $companyId);
 
@@ -1157,7 +1157,7 @@ class SalesInvoiceController extends Controller
                 ->get()
                 ->map(function ($item) {
                     return [
-                        'product_name' => optional($item->product)->product_name,
+                        'product_name' => optional($item->product)->name,
                         'invoice' => optional($item->salesInvoice)->sales_invoice_no,
                         'date'    => optional($item->salesInvoice)->sales_invoice_date,
                         'client'  => optional($item->salesInvoice->client)->name,
