@@ -1100,6 +1100,147 @@ class SalesInvoiceController extends Controller
         }
     }
 
+    public function fetchSalesAllProducts(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            // Inputs
+            $sortField = $request->input('sort_field', 'date');
+            $sortOrder = strtolower($request->input('sort_order', 'asc'));
+            $limit = (int) $request->input('limit', 10);
+            $offset = (int) $request->input('offset', 0);
+            $search = $request->input('search'); // General search field for both invoice and client
+            $startDate = $request->input('start_date'); // e.g. '2024-01-01'
+            $endDate = $request->input('end_date');     // e.g. '2024-05-31'
+
+            // Valid sort fields
+            $validSortFields = ['invoice', 'date', 'client', 'qty', 'price', 'amount', 'profit', 'place'];
+            if (!in_array($sortField, $validSortFields)) {
+                return response()->json([
+                    'code' => 422,
+                    'success' => false,
+                    'message' => 'Invalid sort field.',
+                    'data' => [],
+                    'count' => 0,
+                    'total_records' => 0
+                ], 422);
+            }
+
+            // Query with optional date filtering
+            $query = SalesInvoiceProductsModel::with([
+                    'salesInvoice:id,sales_invoice_no,sales_invoice_date,client_id',
+                    'salesInvoice.client:id,name',
+                    'godownRelation:id,name',
+                ])
+                ->where('company_id', $companyId);
+
+            // Date filter using related sales invoice
+            if ($startDate && $endDate) {
+                $query->whereHas('salesInvoice', function ($q) use ($startDate, $endDate) {
+                    $q->whereBetween('sales_invoice_date', [$startDate, $endDate]);
+                });
+            } elseif ($startDate) {
+                $query->whereHas('salesInvoice', function ($q) use ($startDate) {
+                    $q->where('sales_invoice_date', '>=', $startDate);
+                });
+            } elseif ($endDate) {
+                $query->whereHas('salesInvoice', function ($q) use ($endDate) {
+                    $q->where('sales_invoice_date', '<=', $endDate);
+                });
+            }
+
+            // Fetch all records
+            $records = $query
+                ->select('sales_invoice_id', 'product_id', 'quantity', 'price', 'amount', 'profit', 'godown')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'invoice' => optional($item->salesInvoice)->sales_invoice_no,
+                        'date'    => optional($item->salesInvoice)->sales_invoice_date,
+                        'client'  => optional($item->salesInvoice->client)->name,
+                        'qty'     => (float) $item->quantity,
+                        'price'   => (float) $item->price,
+                        'amount'  => (float) $item->amount,
+                        'profit'  => (float) $item->profit,
+                        'place'   => optional($item->godownRelation)->name ?? '-',
+                    ];
+                })->toArray();
+
+            // Apply search filter
+            if (!empty($search)) {
+                $records = array_filter($records, function ($item) use ($search) {
+                    return stripos($item['invoice'], $search) !== false ||
+                        stripos($item['client'], $search) !== false;
+                });
+            }
+
+            // Sort
+            usort($records, function ($a, $b) use ($sortField, $sortOrder) {
+                return $sortOrder === 'asc'
+                    ? $a[$sortField] <=> $b[$sortField]
+                    : $b[$sortField] <=> $a[$sortField];
+            });
+
+            // Totals before pagination
+            $totalQty = array_sum(array_column($records, 'qty'));
+            $totalAmount = array_sum(array_column($records, 'amount'));
+            $totalProfit = array_sum(array_column($records, 'profit'));
+
+            // Pagination
+            $paginated = array_slice($records, $offset, $limit);
+
+            // Subtotals
+            $subQty = array_sum(array_column($paginated, 'qty'));
+            $subAmount = array_sum(array_column($paginated, 'amount'));
+            $subProfit = array_sum(array_column($paginated, 'profit'));
+
+            $subTotalRow = [
+                'invoice' => '',
+                'date' => '',
+                'client' => 'SubTotal - ',
+                'qty' => $subQty,
+                'price' => '',
+                'amount' => $subAmount,
+                'profit' => $subProfit,
+                'place' => ''
+            ];
+
+            $totalRow = [
+                'invoice' => '',
+                'date' => '',
+                'client' => 'Total -',
+                'qty' => $totalQty,
+                'price' => '',
+                'amount' => $totalAmount,
+                'profit' => $totalProfit,
+                'place' => ''
+            ];
+
+            $paginated[] = $subTotalRow;
+            $paginated[] = $totalRow;
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Fetch data successfully!',
+                'data' => $paginated,
+                'count' => count($paginated),
+                'total_records' => count($records),
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Error fetching sales: ' . $e->getMessage(),
+                'data' => [],
+                'count' => 0,
+                'total_records' => 0
+            ], 500);
+        }
+    }
+
     // product wise profit
     public function product_wise_profit(Request $request)
     {

@@ -166,6 +166,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/sales_by_product/{id}', [SalesInvoiceController::class, 'fetchSalesByProduct']);
 
+    Route::post('/sales_by_product', [SalesInvoiceController::class, 'fetchSalesAllProducts']);
+
     Route::post('/product_wise', [SalesInvoiceController::class, 'product_wise_profit']);
     Route::post('/client_wise', [SalesInvoiceController::class, 'client_wise_profit']);
 
