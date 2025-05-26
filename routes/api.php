@@ -41,6 +41,8 @@ Route::post('/login/{otp?}', [AuthController::class, 'login']);
 
 Route::post('/get_otp', [AuthController::class, 'generate_otp']);
 
+Route::get('/client_migrate', [ClientsController::class, 'importClientsData']);
+
 Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/user', [UsersController::class, 'view']);
@@ -56,7 +58,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_client/{id}', [ClientsController::class, 'update_clients']);
     Route::delete('/client/{id}', [ClientsController::class, 'delete_clients']);
 
-    Route::get('/client_migrate', [ClientsController::class, 'importClientsData']);
+    // Route::get('/client_migrate', [ClientsController::class, 'importClientsData']);
 
     Route::post('/export_clients', [ClientsController::class, 'export_clients']);
     Route::post('/update_client_address/{id}', [ClientsController::class, 'update_client_address']);
