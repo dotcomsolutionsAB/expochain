@@ -550,6 +550,7 @@ class ClientsController extends Controller
     
         $successfulInserts = 0;
         $errors = [];
+        $recordsStatus = [];  // <-- NEW: track each record status
         $company_id = Auth::user()->company_id;
 
         // Prepare batch arrays
@@ -561,34 +562,37 @@ class ClientsController extends Controller
         $allSkipped = [];
 
         foreach ($data as $record) {
-            if (!isset($record['Name']) || trim($record['Name']) === '') {
-                $skippedRecords[] = [
-                    'record' => $record,
-                    'reason' => 'Missing or empty Name field'
-                ];
-                continue;
-            }
+            $processedRecord = [
+                'name' => $record['Name'] ?? '(no name)',
+                'status' => 'pending',
+                'reason' => '',
+                'record' => $record,
+            ];
             // Check if the client already exists by `name`, and skip if it does
             // $existingClient = ClientsModel::where('name', $record['Name'])->first();
             // if ($existingClient) {
             //     continue; // Skip processing if client already exists
             // }
-            $inserted = false;  // Flag to check if inserted
-
-            // Duplicate name check
-            $existingClient = ClientsModel::where('name', $record['Name'])->first();
-            if ($existingClient) {
-                $skippedRecords[] = [
-                    'record' => $record,
-                    'reason' => 'Client name already exists'
-                ];
-                $allSkipped[] = [
-                    'record' => $record,
-                    'reason' => 'Client name already exists'
-                ];
+            // Check if Name is present and not empty
+            if (!isset($record['Name']) || trim($record['Name']) === '') {
+                $processedRecord['status'] = 'skipped';
+                $processedRecord['reason'] = 'Missing or empty Name field';
+                $skippedRecords[] = $processedRecord;
+                $recordsStatus[] = $processedRecord;
                 continue;
             }
 
+            $clientNameTrimmed = trim($record['Name']);
+            // Case-insensitive, trimmed duplicate check
+            $existingClient = ClientsModel::whereRaw('LOWER(TRIM(name)) = ?', [strtolower($clientNameTrimmed)])->first();
+
+            if ($existingClient) {
+                $processedRecord['status'] = 'skipped';
+                $processedRecord['reason'] = 'Client name already exists';
+                $skippedRecords[] = $processedRecord;
+                $recordsStatus[] = $processedRecord;
+                continue;
+            }
 
     
             // Assign default values if fields are missing
@@ -660,10 +664,14 @@ class ClientsController extends Controller
             //     continue;
             // }
             if ($validator->fails()) {
+                $processedRecord['status'] = 'error';
+                $processedRecord['reason'] = 'Validation failed';
+                $processedRecord['validation_errors'] = $validator->errors()->all();
                 $errors[] = ['record' => $record, 'errors' => $validator->errors()];
-                $allSkipped[] = ['record' => $record, 'reason' => 'Validation failed', 'errors' => $validator->errors()];
+                $recordsStatus[] = $processedRecord;
                 continue;
             }
+
     
             // Generate unique customer ID
             $customer_id = rand(1111111111, 9999999999);
@@ -709,15 +717,30 @@ class ClientsController extends Controller
                     'email' => $validationData['email'], // Store email in ClientsModel
                 ]);
                 $successfulInserts++;
-                $inserted = true; //
+                $processedRecord['status'] = 'inserted';
+                $recordsStatus[] = $processedRecord;
             } catch (\Exception $e) {
+                $processedRecord['status'] = 'error';
+                $processedRecord['reason'] = 'Insert failed';
+                $processedRecord['exception_message'] = $e->getMessage();
                 $errors[] = ['record' => $record, 'error' => 'Failed to insert record: ' . $e->getMessage()];
-                $allSkipped[] = ['record' => $record, 'reason' => 'Insert exception', 'error' => $e->getMessage()];
+                $recordsStatus[] = $processedRecord;
             }
 
-            // If not inserted and not continued before, mark skipped:
-            if (!$inserted) {
-                $allSkipped[] = ['record' => $record, 'reason' => 'Unknown skip'];
+            // Count records status summary
+            $counts = [
+                'inserted' => 0,
+                'skipped' => 0,
+                'error' => 0,
+                'pending' => 0,
+            ];
+
+            foreach ($recordsStatus as $rec) {
+                if (isset($counts[$rec['status']])) {
+                    $counts[$rec['status']]++;
+                } else {
+                    $counts['pending']++;
+                }
             }
         }
     
@@ -727,7 +750,8 @@ class ClientsController extends Controller
             'message' => "Data import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
             'skipped' => $skippedRecords,
-            'all_skipped' => $allSkipped,
+            'records_status' => $recordsStatus,
+            'counts' => $counts,
         ], 200);
     }
     
