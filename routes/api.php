@@ -314,6 +314,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/edit-quotation-terms/{id}', [QuotationTermMasterController::class, 'update']);
     Route::delete('/quotation-terms/{id}', [QuotationTermMasterController::class, 'delete']);
 
+    Route::post('/quotation_by_product', [QuotationTermMasterController::class, 'fetchQuotationsAllProducts']);
+
     Route::post('/channel', [ChannelController::class, 'add']); // Create Channel
     Route::get('/channels', [ChannelController::class, 'retrieve']); // View All Channels
     Route::post('/update_channel/{id}', [ChannelController::class, 'update']); // Update Channel

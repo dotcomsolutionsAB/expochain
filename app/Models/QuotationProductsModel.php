@@ -15,4 +15,9 @@ class QuotationProductsModel extends Model
     {
         return $this->belongsTo(QuotationsModel::class, 'quotation_id','id');
     }
+
+    public function product()
+    {
+        return $this->belongsTo(ProductsModel::class, 'product_id');
+    }
 }

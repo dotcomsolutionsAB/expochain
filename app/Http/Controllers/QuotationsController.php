@@ -1028,4 +1028,135 @@ class QuotationsController extends Controller
         $pdf->WriteHTML($html);
         return $pdf->Output('quotation.pdf', 'I'); // "I" for inline display
     }
+
+    public function fetchQuotationsAllProducts(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            // Inputs
+            $limit = (int) $request->input('limit', 10);
+            $offset = (int) $request->input('offset', 0);
+            $sortField = $request->input('sort_field', 'quotation_date');
+            $sortOrder = strtolower($request->input('sort_order', 'asc'));
+            $search = $request->input('search');
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+
+            // Valid sortable fields - adjust as needed
+            $validFields = ['quotation_no', 'quotation_date', 'client', 'qty', 'price', 'amount'];
+
+            if (!in_array($sortField, $validFields)) {
+                return response()->json([
+                    'code' => 422,
+                    'success' => false,
+                    'message' => 'Invalid sort field.',
+                    'data' => [],
+                    'count' => 0,
+                    'total_records' => 0,
+                ], 422);
+            }
+
+            // Base query
+            $query = QuotationProductsModel::with([
+                'quotation:id,quotation_no,quotation_date,client_id',
+                'quotation.client:id,name',
+                'product:id,name',
+            ])->where('company_id', $companyId);
+
+            // Date filter on quotation_date in quotation
+            if ($startDate || $endDate) {
+                $query->whereHas('quotation', function ($q) use ($startDate, $endDate) {
+                    if ($startDate) {
+                        $q->where('quotation_date', '>=', $startDate);
+                    }
+                    if ($endDate) {
+                        $q->where('quotation_date', '<=', $endDate);
+                    }
+                });
+            }
+
+            // Get data and transform
+            $records = $query->select('quotation_id', 'product_id', 'quantity', 'price', 'amount')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'quotation_no' => optional($item->quotation)->quotation_no,
+                        'quotation_date' => optional($item->quotation)->quotation_date,
+                        'client' => optional($item->quotation->client)->name,
+                        'product_name' => optional($item->product)->name,
+                        'qty' => (float) $item->quantity,
+                        'price' => (float) $item->price,
+                        'amount' => (float) $item->amount,
+                    ];
+                })->toArray();
+
+            // Filter by search (quotation_no or client)
+            if (!empty($search)) {
+                $records = array_filter($records, function ($item) use ($search) {
+                    return stripos($item['quotation_no'], $search) !== false ||
+                        stripos($item['client'], $search) !== false;
+                });
+            }
+
+            // Sort results
+            usort($records, function ($a, $b) use ($sortField, $sortOrder) {
+                return $sortOrder === 'asc' ? $a[$sortField] <=> $b[$sortField] : $b[$sortField] <=> $a[$sortField];
+            });
+
+            $totalRecords = count($records);
+
+            // Pagination
+            $paginated = array_slice($records, $offset, $limit);
+
+            // Totals
+            $totalQty = array_sum(array_column($records, 'qty'));
+            $totalAmount = array_sum(array_column($records, 'amount'));
+            $subQty = array_sum(array_column($paginated, 'qty'));
+            $subAmount = array_sum(array_column($paginated, 'amount'));
+
+            $subTotalRow = [
+                'quotation_no' => '',
+                'quotation_date' => '',
+                'client' => 'SubTotal -',
+                'product_name' => '',
+                'qty' => $subQty,
+                'price' => '',
+                'amount' => $subAmount,
+            ];
+
+            $totalRow = [
+                'quotation_no' => '',
+                'quotation_date' => '',
+                'client' => 'Total -',
+                'product_name' => '',
+                'qty' => $totalQty,
+                'price' => '',
+                'amount' => $totalAmount,
+            ];
+
+            $paginated[] = $subTotalRow;
+            $paginated[] = $totalRow;
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Fetch data successfully!',
+                'data' => $paginated,
+                'count' => count($paginated),
+                'total_records' => $totalRecords,
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Error fetching quotations: ' . $e->getMessage(),
+                'data' => [],
+                'count' => 0,
+                'total_records' => 0,
+            ], 500);
+        }
+    }
+
 }
