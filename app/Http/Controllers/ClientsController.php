@@ -561,17 +561,20 @@ class ClientsController extends Controller
 
         foreach ($data as $record) {
             // Check if the client already exists by `name`, and skip if it does
-            $existingClient = ClientsModel::where('name', $record['Name'])->first();
+            // $existingClient = ClientsModel::where('name', $record['Name'])->first();
             // if ($existingClient) {
             //     continue; // Skip processing if client already exists
             // }
+            $clientNameTrimmed = trim($record['Name']);
+            $existingClient = ClientsModel::whereRaw('LOWER(TRIM(name)) = ?', [strtolower($clientNameTrimmed)])->first();
             if ($existingClient) {
                 $skippedRecords[] = [
                     'record' => $record,
-                    'reason' => 'Client name already exists'
+                    'reason' => 'Client name already exists (case/whitespace insensitive)'
                 ];
-                continue; // Skip processing
+                continue;
             }
+
 
     
             // Assign default values if fields are missing
