@@ -142,6 +142,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_quotation_status/{id}', [QuotationsController::class, 'updateQuotationStatus']);
     Route::get('/quotation_generate_pdf/{id}', [QuotationsController::class, 'generateQuotationPDF']);
 
+    Route::post('/quotation_by_product', [QuotationsController::class, 'fetchQuotationsAllProducts']);
+
     Route::post('/add_sales_order', [SalesOrderController::class, 'add_sales_order']);
     Route::post('/sales_order/{id?}', [SalesOrderController::class, 'view_sales_order']);
     Route::post('/update_sales_order/{id?}', [SalesOrderController::class, 'edit_sales_order']);
@@ -313,8 +315,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/quotation-terms', [QuotationTermMasterController::class, 'retrieve']);
     Route::post('/edit-quotation-terms/{id}', [QuotationTermMasterController::class, 'update']);
     Route::delete('/quotation-terms/{id}', [QuotationTermMasterController::class, 'delete']);
-
-    Route::post('/quotation_by_product', [QuotationTermMasterController::class, 'fetchQuotationsAllProducts']);
 
     Route::post('/channel', [ChannelController::class, 'add']); // Create Channel
     Route::get('/channels', [ChannelController::class, 'retrieve']); // View All Channels
