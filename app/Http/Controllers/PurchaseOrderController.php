@@ -1247,4 +1247,145 @@ class PurchaseOrderController extends Controller
         }
     }
    
+    public function fetchPurchaseOrdersAllProduct(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            // Input Parameters
+            $sortField = $request->input('sort_field', 'date');
+            $sortOrder = $request->input('sort_order', 'asc');
+            $limit = (int) $request->input('limit', 10);
+            $offset = (int) $request->input('offset', 0);
+            $search = $request->input('search');
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+
+            // Valid sort fields
+            $validSortFields = ['order_no', 'oa_no', 'date', 'supplier', 'product_name', 'qty', 'received', 'price', 'amount'];
+            if (!in_array($sortField, $validSortFields)) {
+                return response()->json([
+                    'code' => 422,
+                    'success' => false,
+                    'message' => 'Invalid sort field.',
+                    'data' => [],
+                    'count' => 0,
+                    'total_records' => 0
+                ], 422);
+            }
+
+            // Query with eager loading
+            $query = PurchaseOrderProductsModel::with([
+                    'purchaseOrder:id,purchase_order_no,oa_no,purchase_order_date,supplier_id',
+                    'purchaseOrder.supplier:id,name',
+                    'product:id,name'
+                ])
+                ->where('company_id', $companyId);
+
+            // Filter by date via purchaseOrder relation
+            if ($startDate || $endDate) {
+                $query->whereHas('purchaseOrder', function($q) use ($startDate, $endDate) {
+                    if ($startDate) $q->where('purchase_order_date', '>=', $startDate);
+                    if ($endDate)   $q->where('purchase_order_date', '<=', $endDate);
+                });
+            }
+
+            // Fetch records
+            $records = $query
+                ->select('purchase_order_id', 'product_id', 'quantity', 'received', 'price', 'amount')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'order_no'     => optional($item->purchaseOrder)->purchase_order_no,
+                        'oa_no'        => optional($item->purchaseOrder)->oa_no,
+                        'date'         => optional($item->purchaseOrder)->purchase_order_date,
+                        'supplier'     => optional($item->purchaseOrder->supplier)->name,
+                        'product_name' => optional($item->product)->name, // Include product name!
+                        'qty'          => (float) $item->quantity,
+                        'received'     => (float) $item->received,
+                        'price'        => (float) $item->price,
+                        'amount'       => (float) $item->amount,
+                    ];
+                })->toArray();
+
+            // Apply search filter
+            if (!empty($search)) {
+                $records = array_filter($records, function ($item) use ($search) {
+                    return stripos($item['order_no'], $search) !== false ||
+                        stripos($item['oa_no'], $search) !== false ||
+                        stripos($item['supplier'], $search) !== false ||
+                        stripos($item['product_name'], $search) !== false;
+                });
+            }
+
+            // Sort
+            usort($records, function ($a, $b) use ($sortField, $sortOrder) {
+                return $sortOrder === 'asc'
+                    ? $a[$sortField] <=> $b[$sortField]
+                    : $b[$sortField] <=> $a[$sortField];
+            });
+
+            $totalRecords = count($records);
+
+            // Totals (before pagination)
+            $totalQty = array_sum(array_column($records, 'qty'));
+            $totalReceived = array_sum(array_column($records, 'received'));
+            $totalAmount = array_sum(array_column($records, 'amount'));
+
+            // Pagination
+            $paginated = array_slice($records, $offset, $limit);
+
+            // Subtotals (current page)
+            $subQty = array_sum(array_column($paginated, 'qty'));
+            $subReceived = array_sum(array_column($paginated, 'received'));
+            $subAmount = array_sum(array_column($paginated, 'amount'));
+
+            $subTotalRow = [
+                'order_no' => '',
+                'oa_no' => '',
+                'date' => '',
+                'supplier' => 'SubTotal - ',
+                'product_name' => '',
+                'qty' => $subQty,
+                'received' => $subReceived,
+                'price' => '',
+                'amount' => $subAmount
+            ];
+
+            $totalRow = [
+                'order_no' => '',
+                'oa_no' => '',
+                'date' => '',
+                'supplier' => 'Total -',
+                'product_name' => '',
+                'qty' => $totalQty,
+                'received' => $totalReceived,
+                'price' => '',
+                'amount' => $totalAmount
+            ];
+
+            $paginated[] = $subTotalRow;
+            $paginated[] = $totalRow;
+
+            // Final Response
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Fetch data successfully!',
+                'data' => $paginated,
+                'count' => count($paginated),
+                'total_records' => $totalRecords,
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Error fetching purchase orders: ' . $e->getMessage(),
+                'data' => [],
+                'count' => 0,
+                'total_records' => 0
+            ], 500);
+        }
+    }
 }
