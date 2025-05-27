@@ -24,7 +24,7 @@ class UsersController extends Controller
                 'email',
                 function ($attribute, $value, $fail) use ($request) {
                     // Check if the combination of email and contact_id already exists
-                    $exists = \App\Models\User::where('email', $value)
+                    $exists = User::where('email', $value)
                                             ->where('company_id', $request->input('company_id'))
                                             ->exists();
                     if ($exists) {
