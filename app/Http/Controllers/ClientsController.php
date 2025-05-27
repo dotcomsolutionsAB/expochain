@@ -557,13 +557,22 @@ class ClientsController extends Controller
         $contactsBatch = [];
         $addressesBatch = [];
         $batchSize = 100; // Set batch size
-    
+        $skippedRecords = [];
+
         foreach ($data as $record) {
             // Check if the client already exists by `name`, and skip if it does
             $existingClient = ClientsModel::where('name', $record['Name'])->first();
+            // if ($existingClient) {
+            //     continue; // Skip processing if client already exists
+            // }
             if ($existingClient) {
-                continue; // Skip processing if client already exists
+                $skippedRecords[] = [
+                    'record' => $record,
+                    'reason' => 'Client name already exists'
+                ];
+                continue; // Skip processing
             }
+
     
             // Assign default values if fields are missing
             $record['Type'] = $record['Type'] ?? null;
@@ -688,6 +697,7 @@ class ClientsController extends Controller
             'success' => true,
             'message' => "Data import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
+            'skipped' => $skippedRecords,
         ], 200);
     }
     
