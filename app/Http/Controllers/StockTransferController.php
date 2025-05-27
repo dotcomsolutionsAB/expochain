@@ -484,4 +484,120 @@ class StockTransferController extends Controller
             ], 500);
         }
     }
+
+    public function fetchStockTransfersAllProduct(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            $sortField = $request->input('sort_field', 'date');
+            $sortOrder = strtolower($request->input('sort_order', 'asc'));
+            $limit = (int) $request->input('limit', 10);
+            $offset = (int) $request->input('offset', 0);
+            $searchTransferId = $request->input('transfer_id');
+            $startDate = $request->input('start_date');
+            $endDate = $request->input('end_date');
+
+            $validFields = ['transfer_id', 'date', 'quantity', 'from', 'to', 'product_name'];
+            if (!in_array($sortField, $validFields)) {
+                return response()->json([
+                    'code' => 422,
+                    'success' => false,
+                    'message' => 'Invalid sort field.',
+                    'data' => [],
+                    'count' => 0,
+                    'total_records' => 0
+                ], 422);
+            }
+
+            $query = StockTransferProductsModel::with([
+                'stockTransfer:id,transfer_id,transfer_date,godown_from,godown_to',
+                'stockTransfer.godownFrom:id,name',
+                'stockTransfer.godownTo:id,name',
+                'product:id,name',
+            ])->where('company_id', $companyId);
+
+            // Date filter on transfer_date
+            if ($startDate || $endDate) {
+                $query->whereHas('stockTransfer', function ($q) use ($startDate, $endDate) {
+                    if ($startDate) $q->where('transfer_date', '>=', $startDate);
+                    if ($endDate) $q->where('transfer_date', '<=', $endDate);
+                });
+            }
+
+            // Fetch all (no specific product filter)
+            $records = $query->select('stock_transfer_id', 'product_id', 'quantity')->get()->map(function ($item) {
+                return [
+                    'transfer_id'  => optional($item->stockTransfer)->transfer_id,
+                    'date'         => optional($item->stockTransfer)->transfer_date,
+                    'quantity'     => (float) $item->quantity,
+                    'from'         => optional($item->stockTransfer->godownFrom)->name,
+                    'to'           => optional($item->stockTransfer->godownTo)->name,
+                    'product_name' => optional($item->product)->name,
+                ];
+            })->toArray();
+
+            // Filter by transfer_id if provided
+            if (!empty($searchTransferId)) {
+                $records = array_filter($records, fn($r) =>
+                    stripos((string)$r['transfer_id'], $searchTransferId) !== false
+                );
+            }
+
+            // Sort
+            usort($records, function ($a, $b) use ($sortField, $sortOrder) {
+                return $sortOrder === 'asc'
+                    ? $a[$sortField] <=> $b[$sortField]
+                    : $b[$sortField] <=> $a[$sortField];
+            });
+
+            $totalQty = array_sum(array_column($records, 'quantity'));
+            $totalRecords = count($records);
+
+            // Pagination
+            $paginated = array_slice($records, $offset, $limit);
+            $subQty = array_sum(array_column($paginated, 'quantity'));
+
+            $subTotalRow = [
+                'transfer_id' => '',
+                'date' => 'SubTotal - ',
+                'quantity' => $subQty,
+                'from' => '',
+                'to' => '',
+                'product_name' => '',
+            ];
+
+            $totalRow = [
+                'transfer_id' => '',
+                'date' => 'Total - ',
+                'quantity' => $totalQty,
+                'from' => '',
+                'to' => '',
+                'product_name' => '',
+            ];
+
+            $paginated[] = $subTotalRow;
+            $paginated[] = $totalRow;
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Fetch data successfully!',
+                'data' => $paginated,
+                'count' => count($paginated),
+                'total_records' => $totalRecords,
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Error fetching stock transfers: ' . $e->getMessage(),
+                'data' => [],
+                'count' => 0,
+                'total_records' => 0
+            ], 500);
+        }
+    }
+
 }

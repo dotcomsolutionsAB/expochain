@@ -254,6 +254,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/stock_transfers_by_product/{productId}', [StockTransferController::class, 'fetchStockTransfersByProduct']);
 
+    Route::post('/stock_transfers_by_product', [StockTransferController::class, 'fetchStockTransfersAllProduct']);
+
     Route::post('/add_assembly', [AssemblyController::class, 'add_assembly']);
     Route::post('/assembly/{id?}', [AssemblyController::class, 'view_assembly']);
     Route::post('/product_assembly/{id?}', [AssemblyController::class, 'view_product_assembly']);
