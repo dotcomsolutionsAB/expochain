@@ -27,6 +27,6 @@ class StockTransferProductsModel extends Model
 
     public function product()
     {
-        return $this->belongsTo(ProductModel::class, 'product_id');
+        return $this->belongsTo(ProductsModel::class, 'product_id');
     }
 }
