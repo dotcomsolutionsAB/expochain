@@ -561,6 +561,13 @@ class ClientsController extends Controller
         $allSkipped = [];
 
         foreach ($data as $record) {
+            if (!isset($record['Name']) || trim($record['Name']) === '') {
+                $skippedRecords[] = [
+                    'record' => $record,
+                    'reason' => 'Missing or empty Name field'
+                ];
+                continue;
+            }
             // Check if the client already exists by `name`, and skip if it does
             // $existingClient = ClientsModel::where('name', $record['Name'])->first();
             // if ($existingClient) {
