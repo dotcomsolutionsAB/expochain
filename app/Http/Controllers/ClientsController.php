@@ -558,6 +558,7 @@ class ClientsController extends Controller
         $addressesBatch = [];
         $batchSize = 100; // Set batch size
         $skippedRecords = [];
+        $allSkipped = [];
 
         foreach ($data as $record) {
             // Check if the client already exists by `name`, and skip if it does
@@ -565,12 +566,18 @@ class ClientsController extends Controller
             // if ($existingClient) {
             //     continue; // Skip processing if client already exists
             // }
-            $clientNameTrimmed = trim($record['Name']);
-            $existingClient = ClientsModel::whereRaw('LOWER(TRIM(name)) = ?', [strtolower($clientNameTrimmed)])->first();
+            $inserted = false;  // Flag to check if inserted
+
+            // Duplicate name check
+            $existingClient = ClientsModel::where('name', $record['Name'])->first();
             if ($existingClient) {
                 $skippedRecords[] = [
                     'record' => $record,
-                    'reason' => 'Client name already exists (case/whitespace insensitive)'
+                    'reason' => 'Client name already exists'
+                ];
+                $allSkipped[] = [
+                    'record' => $record,
+                    'reason' => 'Client name already exists'
                 ];
                 continue;
             }
@@ -641,8 +648,13 @@ class ClientsController extends Controller
                 'contacts' => 'required|array',
             ]);
     
+            // if ($validator->fails()) {
+            //     $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+            //     continue;
+            // }
             if ($validator->fails()) {
                 $errors[] = ['record' => $record, 'errors' => $validator->errors()];
+                $allSkipped[] = ['record' => $record, 'reason' => 'Validation failed', 'errors' => $validator->errors()];
                 continue;
             }
     
@@ -690,8 +702,15 @@ class ClientsController extends Controller
                     'email' => $validationData['email'], // Store email in ClientsModel
                 ]);
                 $successfulInserts++;
+                $inserted = true; //
             } catch (\Exception $e) {
                 $errors[] = ['record' => $record, 'error' => 'Failed to insert record: ' . $e->getMessage()];
+                $allSkipped[] = ['record' => $record, 'reason' => 'Insert exception', 'error' => $e->getMessage()];
+            }
+
+            // If not inserted and not continued before, mark skipped:
+            if (!$inserted) {
+                $allSkipped[] = ['record' => $record, 'reason' => 'Unknown skip'];
             }
         }
     
@@ -701,6 +720,7 @@ class ClientsController extends Controller
             'message' => "Data import completed with $successfulInserts successful inserts.",
             'errors' => $errors,
             'skipped' => $skippedRecords,
+            'all_skipped' => $allSkipped,
         ], 200);
     }
     
