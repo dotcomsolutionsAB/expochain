@@ -728,6 +728,7 @@ class QuotationsController extends Controller
         $addonsBatch = [];
         $termsBatch = [];
 
+        $missedRecords = [];
         // **1️⃣ Collect Quotation Data**
         foreach ($data as $record) {
             // Decode JSON fields
@@ -739,6 +740,10 @@ class QuotationsController extends Controller
 
             if (!$client) {
                 Log::error("Client not found: " . ($record['Client'] ?? 'Unknown Client'));
+                $missedRecords[] = [
+                    'reason' => 'Client not found',
+                    'record' => $record
+                ];
                 continue; // Skip this record and continue processing
             }
 
@@ -909,7 +914,12 @@ class QuotationsController extends Controller
         // QuotationAddonsModel::insert($addonsBatch);
         // QuotationTermsModel::insert($termsBatch);
 
-        return response()->json(['code' => 200, 'success' => true, 'message' => 'Import successful'], 200);
+        return response()->json([
+            'code' => 200, 
+            'success' => true, 
+            'message' => 'Import successful',
+            'missed_records' => $missedRecords,
+        ], 200);
     }
 
     // update quotation status
