@@ -2180,13 +2180,13 @@ class HelperController extends Controller
 
         // --- STOCK TRANSFER ---
         $stockTransferRows = StockTransferProductsModel::with([
-            'stockTransfer:id,company_id,receiving_date,godown_to,transfer_id',
+            'stockTransfer:id,company_id,transfer_date,godown_to,transfer_id',
         ])
         ->where('product_id', $productId)
         ->whereHas('stockTransfer', function ($q) use ($companyId, $startDate, $endDate) {
             $q->where('company_id', $companyId);
-            if ($startDate) $q->where('receiving_date', '>=', $startDate);
-            if ($endDate) $q->where('receiving_date', '<=', $endDate);
+            if ($startDate) $q->where('transfer_date', '>=', $startDate);
+            if ($endDate) $q->where('transfer_date', '<=', $endDate);
         })
         ->get();
 
