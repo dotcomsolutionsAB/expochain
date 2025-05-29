@@ -79,8 +79,8 @@ class ResetController extends Controller
         ->update([
             'profit' => 0,
             'returned' => 0,
-            'purchase_invoice_id' => null,
-            'purchase_rate' => null,
+            'purchase_invoice_id' => 0,
+            'purchase_rate' => 0,
         ]);
 
     }
