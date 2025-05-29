@@ -116,23 +116,28 @@ class ResetController extends Controller
 
                     foreach ($openingStocks as $opening) {
                         if ($remainingQty <= 0) break;
-
-                        $availableQty = $opening->quantity - $opening->sold;
-                        $usedQty = min($availableQty, $remainingQty);
-
-                        $opening->sold += $usedQty;
+                    
+                        $availableQty = round($opening->quantity - $opening->sold, 2); // Ensure 2 decimal precision
+                        $remainingQty = round($remainingQty, 2); // Ensure 2 decimal precision
+                    
+                        $usedQty = round(min($availableQty, $remainingQty), 2); // Calculate with precision
+                    
+                        if ($usedQty <= 0) continue; // Skip if nothing to allocate
+                    
+                        $opening->sold = round($opening->sold + $usedQty, 2); // Update with precision
                         $opening->save();
-
+                    
                         // 🔹 Add detailed entry for opening stock
                         $purchaseDetails[] = [
                             'id' => $opening->id,
                             'type' => 'opening_stock',
                             'quantity' => $usedQty,
                         ];
-
-                        $totalPurchaseCost += $usedQty * $opening->value;
-                        $remainingQty -= $usedQty;
+                    
+                        $totalPurchaseCost += round($usedQty * $opening->value, 2); // Use value and precision
+                        $remainingQty = round($remainingQty - $usedQty, 2); // Subtract with precision
                     }
+                        
 
                     // 🔹 Step 4B: Then use Purchase Invoices with matching godown
                     if ($remainingQty > 0) {
@@ -147,22 +152,28 @@ class ResetController extends Controller
 
                         foreach ($purchaseEntries as $purchase) {
                             if ($remainingQty <= 0) break;
-
-                            $availableQty = $purchase->quantity - $purchase->sold;
-                            $usedQty = min($availableQty, $remainingQty);
-
-                            $purchase->sold += $usedQty;
+                        
+                            $availableQty = round($purchase->quantity - $purchase->sold, 2); // Ensure precision
+                            $remainingQty = round($remainingQty, 2);
+                        
+                            $usedQty = round(min($availableQty, $remainingQty), 2);
+                        
+                            if ($usedQty <= 0) continue; // Skip if no allocation
+                        
+                            $purchase->sold = round($purchase->sold + $usedQty, 2);
                             $purchase->save();
-
+                        
                             // 🔹 Add detailed entry for purchase
                             $purchaseDetails[] = [
                                 'id' => $purchase->id,
-                                'type' => 'purchase',
+                                'type' => 'purchase_invoice',
                                 'quantity' => $usedQty,
                             ];
-                            $totalPurchaseCost += $usedQty * $purchase->price;
-                            $remainingQty -= $usedQty;
+                        
+                            $totalPurchaseCost += round($usedQty * $purchase->price, 2);
+                            $remainingQty = round($remainingQty - $usedQty, 2);
                         }
+                            
                     }
 
                     // 🔹 Step 4C: Update SalesInvoiceProduct with calculations
