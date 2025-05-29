@@ -1962,8 +1962,8 @@ class HelperController extends Controller
     {
         $companyId = auth()->user()->company_id;
 
-        $startDate = $request->query('start_date');
-        $endDate = $request->query('end_date');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
 
         $result = [];
 
