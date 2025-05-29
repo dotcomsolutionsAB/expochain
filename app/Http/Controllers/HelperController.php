@@ -1969,7 +1969,7 @@ class HelperController extends Controller
 
         // --- SALES INVOICE ---
         $salesInvoiceRows = SalesInvoiceProductsModel::with([
-                'salesInvoice:id,client_id,sales_invoice_no,sales_invoice_date',
+                'salesInvoice:id,company_id,client_id,sales_invoice_no,sales_invoice_date',
             ])
             ->where('product_id', $productId)
            ->whereHas('salesInvoice', function ($q) use ($companyId, $startDate, $endDate) {
@@ -2007,7 +2007,7 @@ class HelperController extends Controller
 
         // --- PURCHASE INVOICE ---
         $purchaseInvoiceRows = PurchaseInvoiceProductsModel::with([
-                'purchaseInvoice:id,supplier_id,purchase_invoice_no,purchase_invoice_date',
+                'purchaseInvoice:id,company_id,supplier_id,purchase_invoice_no,purchase_invoice_date',
             ])
             ->where('product_id', $productId)
             ->whereHas('purchaseInvoice', function ($q) use ($companyId, $startDate, $endDate) {
@@ -2080,7 +2080,7 @@ class HelperController extends Controller
 
         // --- PURCHASE ORDER ---
         $purchaseOrderRows = PurchaseOrderProductsModel::with([
-                'purchaseOrder:id,supplier_id,purchase_order_no,purchase_order_date',
+                'purchaseOrder:id,company_id,supplier_id,purchase_order_no,purchase_order_date',
             ])
             ->where('product_id', $productId)
             ->whereHas('purchaseOrder', function ($q) use ($companyId, $startDate, $endDate) {
@@ -2115,7 +2115,7 @@ class HelperController extends Controller
 
         // --- PURCHASE RETURN ---
         $purchaseReturnRows = PurchaseReturnProductsModel::with([
-                'purchaseReturn:id,supplier_id,purchase_return_no,purchase_return_date',
+                'purchaseReturn:id,company_id,supplier_id,purchase_return_no,purchase_return_date',
             ])
             ->where('product_id', $productId)
             ->whereHas('purchaseReturn', function ($q) use ($companyId, $startDate, $endDate) {
@@ -2180,23 +2180,23 @@ class HelperController extends Controller
 
         // --- STOCK TRANSFER ---
         $stockTransferRows = StockTransferProductsModel::with([
-            'salesreturn:id,receiving_date,godown_to',
+            'stockTransfer:id,company_id,receiving_date,godown_to,transfer_id',
         ])
-            ->where('product_id', $productId)
-            ->whereHas('salesreturn', function ($q) use ($companyId, $startDate, $endDate) {
-                $q->where('company_id', $companyId);
-                if ($startDate) $q->where('receiving_date', '>=', $startDate);
-                if ($endDate) $q->where('receiving_date', '<=', $endDate);
-            })
-            ->get();
+        ->where('product_id', $productId)
+        ->whereHas('stockTransfer', function ($q) use ($companyId, $startDate, $endDate) {
+            $q->where('company_id', $companyId);
+            if ($startDate) $q->where('receiving_date', '>=', $startDate);
+            if ($endDate) $q->where('receiving_date', '<=', $endDate);
+        })
+        ->get();
 
         foreach ($stockTransferRows as $row) {
             $godownName = $row->godown ? (GodownModel::find($row->godown)->name ?? null) : null;
             $result[] = [
                 'type' => 'stock_transfer',
                 'voucher_id' => $row->stock_transfer_id,
-                'voucher_no' => $row->transfer_id,
-                'date' => $row->salesreturn->receiving_date ?? null,
+                'voucher_no' => $row->stockTransfer->transfer_id ?? null,    // <-- now correct!
+                'date' => $row->stockTransfer->receiving_date ?? null,
                 'masters' => null,
                 'qty' => $row->quantity,
                 'in_stock' => null,
@@ -2204,9 +2204,10 @@ class HelperController extends Controller
                 'discount' => null,
                 'amount' => null,
                 'profit' => null,
-                'place' => $godownName,
+                'place' => $godownName,   // Consider using $row->stockTransfer->godown_to if you want the destination godown!
             ];
         }
+
 
         // Sort by date asc, nulls last
         usort($result, function ($a, $b) {
