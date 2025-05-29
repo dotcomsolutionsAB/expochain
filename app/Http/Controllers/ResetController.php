@@ -70,27 +70,6 @@ class ResetController extends Controller
         })
         ->where('product_id', $id)
         ->update(['sold' => 0]);
-
-        // update records to `opening_stock` at `sold`
-        OpeningStockModel::where('product_id', $id)
-                            ->where('company_id', Auth::user()->company_id)
-                            ->update(['sold' => min($total_sold, $opening_stock_quantity)]);
-
-        // update records to `purchase_invoice_stock` at `sold`
-        PurchaseInvoiceProductsModel::where('product_id', $id)
-                                    ->where('company_id', Auth::user()->company_id)
-                                    ->update(['sold' => $total_sold]);
-
-        // Check and update `closing_stock`
-        if ($sales->total_sold > $opening_stock_quantity) {
-
-            $left_sell_amount = ($total_sold) - ($opening_stock_quantity);
-
-            ClosingStockModel::where('year', $get_year)
-                        ->where('company_id', Auth::user()->company_id)
-                        ->where('product_id', $id)
-                        ->update(['sold' => $left_sell_amount]);
-        }
     }
 
     public function reset_product(Request $request)
