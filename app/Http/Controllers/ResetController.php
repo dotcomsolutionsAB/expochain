@@ -52,12 +52,10 @@ class ResetController extends Controller
 
     public function stock_calculation($id)
     {
-        $currentDate = Carbon::now(); // Current date
-        $year = $currentDate->year;
-        $next_year = $year + 1;
+        $start_date = "2024-04-01";
+        $end_date = Carbon::now()->format('Y-m-d');
 
-        $get_year = $year . '-' . $next_year;
-        die('Year: ' . $get_year);
+        die('start_date: ' . $start_date . 'end_date: ' . $end_date);
 
         // opening stock quantity
         $opening_stock = OpeningStockModel::select('quantity')
