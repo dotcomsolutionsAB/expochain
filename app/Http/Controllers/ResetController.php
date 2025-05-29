@@ -99,7 +99,7 @@ class ResetController extends Controller
                     if($productId != $id) {
                         continue; // Skip if product ID does not match
                     }
-                    
+
                     $godownId = $saleProduct->godown;
                     $remainingQty = $saleProduct->quantity;
                     $purchaseDetails = [];
@@ -130,7 +130,7 @@ class ResetController extends Controller
                             'quantity' => $usedQty,
                         ];
 
-                        $totalPurchaseCost += $usedQty * $opening->cost_price;
+                        $totalPurchaseCost += $usedQty * $opening->value;
                         $remainingQty -= $usedQty;
                     }
 
