@@ -203,7 +203,7 @@ class ResetController extends Controller
                 $totalSold = 0;
 
                 // From Opening Stock
-                if ($openingStocks->has($godownId)) {
+                if ($openingStocks->has($godownId) && is_iterable($openingStocks[$godownId])) {
                     foreach ($openingStocks[$godownId] as $opening) {
                         $availableQty = round($opening->quantity - $opening->sold, 2);
                         if ($availableQty > 0) {
@@ -213,9 +213,10 @@ class ResetController extends Controller
                         }
                     }
                 }
+                
 
                 // From Purchase Invoices
-                if ($purchaseStocks->has($godownId)) {
+                if ($purchaseStocks->has($godownId) && is_iterable($purchaseStocks[$godownId])) {
                     foreach ($purchaseStocks[$godownId] as $purchase) {
                         $availableQty = round($purchase->quantity - $purchase->sold, 2);
                         if ($availableQty > 0) {
@@ -225,6 +226,7 @@ class ResetController extends Controller
                         }
                     }
                 }
+                
 
                 // 🔹 STEP 8 : Insert new closing stock if totalQty > 0
                 if ($totalQty > 0) {
