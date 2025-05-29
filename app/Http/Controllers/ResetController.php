@@ -168,7 +168,7 @@ class ResetController extends Controller
                     // 🔹 Step 4C: Update SalesInvoiceProduct with calculations
                     $saleProduct->purchase_invoice_id = $purchaseDetails ? json_encode($purchaseDetails) : null;
                     $saleProduct->purchase_rate = $totalPurchaseCost ?: null;
-                    $saleProduct->profit = ($saleProduct->amount ?? 0) - ($totalPurchaseCost ?: 0);
+                    $saleProduct->profit = ($saleProduct->amount ?? 0) - ($saleProduct->cgst ?: 0) - ($saleProduct->sgst ?: 0) - ($saleProduct->igst ?: 0) - ($totalPurchaseCost ?: 0);
                     $saleProduct->save();
                 }
             }
