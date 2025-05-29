@@ -15,8 +15,7 @@ class ClosingStockModel extends Model
         'godown_id',
         'product_id',
         'quantity',
-        'value',
-        'sold'
+        'value'
     ];
 
     public function godown()

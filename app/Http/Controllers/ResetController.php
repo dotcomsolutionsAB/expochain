@@ -172,6 +172,73 @@ class ResetController extends Controller
                     $saleProduct->save();
                 }
             }
+
+            // Collect godown-wise stock from OpeningStock
+            $openingStocks = OpeningStockModel::where('year', $get_year)
+                ->where('company_id', $companyId)
+                ->where('product_id', $id)
+                ->get();
+
+            // Collect godown-wise stock from PurchaseInvoiceProducts
+            $purchaseStocks = PurchaseInvoiceProductsModel::whereHas('purchaseInvoice', function ($query) use ($start_date, $end_date) {
+                    $query->whereDate('purchase_invoice_date', '>=', $start_date)
+                        ->whereDate('purchase_invoice_date', '<=', $end_date);
+                })
+                ->where('product_id', $id)
+                ->get()
+                ->groupBy('godown');
+
+            // 🔹 STEP 6 : Delete existing closing stock for this product and year
+            ClosingStockModel::where('year', $get_year)
+                ->where('company_id', $companyId)
+                ->where('product_id', $id)
+                ->delete();
+
+            // 🔹 STEP 7 : Loop through godowns and calculate remaining stock
+            $godownIds = $openingStocks->keys()->merge($purchaseStocks->keys())->unique();
+
+            foreach ($godownIds as $godownId) {
+                $totalQty = 0;
+                $totalValue = 0;
+                $totalSold = 0;
+
+                // From Opening Stock
+                if ($openingStocks->has($godownId)) {
+                    foreach ($openingStocks[$godownId] as $opening) {
+                        $availableQty = round($opening->quantity - $opening->sold, 2);
+                        if ($availableQty > 0) {
+                            $totalQty += $availableQty;
+                            $totalValue += round($availableQty * $opening->value, 2);
+                            $totalSold += $opening->sold;
+                        }
+                    }
+                }
+
+                // From Purchase Invoices
+                if ($purchaseStocks->has($godownId)) {
+                    foreach ($purchaseStocks[$godownId] as $purchase) {
+                        $availableQty = round($purchase->quantity - $purchase->sold, 2);
+                        if ($availableQty > 0) {
+                            $totalQty += $availableQty;
+                            $totalValue += round($availableQty * $purchase->price, 2);
+                            $totalSold += $purchase->sold;
+                        }
+                    }
+                }
+
+                // 🔹 STEP 8 : Insert new closing stock if totalQty > 0
+                if ($totalQty > 0) {
+                    ClosingStockModel::create([
+                        'company_id' => $companyId,
+                        'year' => $get_year,
+                        'godown_id' => $godownId,
+                        'product_id' => $id,
+                        'quantity' => round($totalQty, 2),
+                        'value' => round($totalValue, 2),
+                    ]);
+                }
+
+            }
         });
     }
 
