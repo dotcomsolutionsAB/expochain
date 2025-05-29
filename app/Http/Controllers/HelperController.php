@@ -12,12 +12,16 @@ use App\Models\SalesInvoiceProductsModel;
 use App\Models\ClosingStockModel;
 use App\Models\PurchaseOrderModel;
 use App\Models\PurchaseOrderProductsModel;
+use App\Models\PurchaseReturnProductsModel;
 use App\Models\SalesOrderModel;
 use App\Models\SalesOrderProductsModel;
+use App\Models\AssemblyOperationProductsModel;
+use App\Models\StockTransferProductsModel;
 use App\Models\GodownModel;
 use App\Models\QuotationsModel;
 use App\Models\FinancialYearModel;
 use App\Models\ClientsModel;
+use App\Models\SuppliersModel;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -1952,6 +1956,270 @@ class HelperController extends Controller
     }
         // Cast to float and round to 2 decimals explicitly
         return round((float) $value, 2);
+    }
+
+    public function product_timeline(Request $request, $productId)
+    {
+        $companyId = auth()->user()->company_id;
+
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+
+        $result = [];
+
+        // --- SALES INVOICE ---
+        $salesInvoiceRows = SalesInvoiceProductsModel::with([
+                'salesInvoice:id,client_id,sales_invoice_no,sales_invoice_date',
+            ])
+            ->where('product_id', $productId)
+           ->whereHas('salesInvoice', function ($q) use ($companyId, $startDate, $endDate) {
+                $q->where('company_id', $companyId);
+                if ($startDate) $q->where('sales_invoice_date', '>=', $startDate);
+                if ($endDate) $q->where('sales_invoice_date', '<=', $endDate);
+            })
+            ->get();
+
+        // Collect all client_ids for single lookup
+        $clientIds = $salesInvoiceRows->pluck('salesInvoice.client_id')->filter()->unique()->toArray();
+        $clients = $clientIds ? ClientsModel::whereIn('id', $clientIds)->pluck('name', 'id') : [];
+
+        foreach ($salesInvoiceRows as $row) {
+            $clientName = $row->salesInvoice && $row->salesInvoice->client_id
+                ? ($clients[$row->salesInvoice->client_id] ?? null)
+                : null;
+            $godownName = $row->godown ? (GodownModel::find($row->godown)->name ?? null) : null;
+
+            $result[] = [
+                'type' => 'sales_invoice',
+                'voucher_id' => $row->sales_invoice_id,
+                'voucher_no' => $row->salesInvoice->sales_invoice_no ?? null,
+                'date' => $row->salesInvoice->sales_invoice_date ?? null,
+                'masters' => $clientName,
+                'qty' => $row->quantity,
+                'in_stock' => null,
+                'price' => $row->price,
+                'discount' => $row->discount,
+                'amount' => $row->amount,
+                'profit' => $row->profit,
+                'place' => $godownName,
+            ];
+        }
+
+        // --- PURCHASE INVOICE ---
+        $purchaseInvoiceRows = PurchaseInvoiceProductsModel::with([
+                'purchaseInvoice:id,supplier_id,purchase_invoice_no,purchase_invoice_date',
+            ])
+            ->where('product_id', $productId)
+            ->whereHas('purchaseInvoice', function ($q) use ($companyId, $startDate, $endDate) {
+                $q->where('company_id', $companyId);
+                if ($startDate) $q->where('purchase_invoice_date', '>=', $startDate);
+                if ($endDate) $q->where('purchase_invoice_date', '<=', $endDate);
+            })
+            ->get();
+
+        // Collect all supplier_ids for single lookup
+        $supplierIds = $purchaseInvoiceRows->pluck('purchaseInvoice.supplier_id')->filter()->unique()->toArray();
+        $suppliers = $supplierIds ? SuppliersModel::whereIn('id', $supplierIds)->pluck('name', 'id') : [];
+
+        foreach ($purchaseInvoiceRows as $row) {
+            $supplierName = $row->purchaseInvoice && $row->purchaseInvoice->supplier_id
+                ? ($suppliers[$row->purchaseInvoice->supplier_id] ?? null)
+                : null;
+            $godownName = $row->godown ? (GodownModel::find($row->godown)->name ?? null) : null;
+
+            $result[] = [
+                'type' => 'purchase_invoice',
+                'voucher_id' => $row->purchase_invoice_id,
+                'voucher_no' => $row->purchaseInvoice->purchase_invoice_no ?? null,
+                'date' => $row->purchaseInvoice->purchase_invoice_date ?? null,
+                'masters' => $supplierName,
+                'qty' => $row->quantity,
+                'in_stock' => $row->quantity,
+                'price' => $row->price,
+                'discount' => $row->discount,
+                'amount' => $row->amount,
+                'profit' => null,
+                'place' => $godownName,
+            ];
+        }
+
+        // --- SALES ORDER ---
+        $salesOrderRows = SalesOrderProductsModel::with([
+                'salesOrder:id,client_id,sales_order_no,sales_order_date',
+            ])
+            ->where('product_id', $productId)
+            ->whereHas('salesOrder', function ($q) use ($companyId, $startDate, $endDate) {
+                $q->where('company_id', $companyId);
+                if ($startDate) $q->where('sales_order_date', '>=', $startDate);
+                if ($endDate) $q->where('sales_order_date', '<=', $endDate);
+            })
+            ->get();
+
+        $soClientIds = $salesOrderRows->pluck('salesOrder.client_id')->filter()->unique()->toArray();
+        $soClients = $soClientIds ? ClientsModel::whereIn('id', $soClientIds)->pluck('name', 'id') : [];
+
+        foreach ($salesOrderRows as $row) {
+            $clientName = $row->salesOrder && $row->salesOrder->client_id
+                ? ($soClients[$row->salesOrder->client_id] ?? null)
+                : null;
+            $result[] = [
+                'type' => 'sales_order',
+                'voucher_id' => $row->sales_order_id,
+                'voucher_no' => $row->salesOrder->sales_order_no ?? null,
+                'date' => $row->salesOrder->sales_order_date ?? null,
+                'masters' => $clientName,
+                'qty' => $row->quantity,
+                'in_stock' => null,
+                'price' => $row->price,
+                'discount' => $row->discount,
+                'amount' => $row->amount,
+                'profit' => null,
+                'place' => null,
+            ];
+        }
+
+        // --- PURCHASE ORDER ---
+        $purchaseOrderRows = PurchaseOrderProductsModel::with([
+                'purchaseOrder:id,supplier_id,purchase_order_no,purchase_order_date',
+            ])
+            ->where('product_id', $productId)
+            ->whereHas('purchaseOrder', function ($q) use ($companyId, $startDate, $endDate) {
+                $q->where('company_id', $companyId);
+                if ($startDate) $q->where('purchase_order_date', '>=', $startDate);
+                if ($endDate) $q->where('purchase_order_date', '<=', $endDate);
+            })
+            ->get();
+
+        $poSupplierIds = $purchaseOrderRows->pluck('purchaseOrder.supplier_id')->filter()->unique()->toArray();
+        $poSuppliers = $poSupplierIds ? SuppliersModel::whereIn('id', $poSupplierIds)->pluck('name', 'id') : [];
+
+        foreach ($purchaseOrderRows as $row) {
+            $supplierName = $row->purchaseOrder && $row->purchaseOrder->supplier_id
+                ? ($poSuppliers[$row->purchaseOrder->supplier_id] ?? null)
+                : null;
+            $result[] = [
+                'type' => 'purchase_order',
+                'voucher_id' => $row->purchase_order_id,
+                'voucher_no' => $row->purchaseOrder->purchase_order_no ?? null,
+                'date' => $row->purchaseOrder->purchase_order_date ?? null,
+                'masters' => $supplierName,
+                'qty' => $row->quantity,
+                'in_stock' => $row->quantity,
+                'price' => $row->price,
+                'discount' => $row->discount,
+                'amount' => $row->amount,
+                'profit' => null,
+                'place' => null,
+            ];
+        }
+
+        // --- PURCHASE RETURN ---
+        $purchaseReturnRows = PurchaseReturnProductsModel::with([
+                'purchaseReturn:id,supplier_id,purchase_return_no,purchase_return_date',
+            ])
+            ->where('product_id', $productId)
+            ->whereHas('purchaseReturn', function ($q) use ($companyId, $startDate, $endDate) {
+                $q->where('company_id', $companyId);
+                if ($startDate) $q->where('purchase_return_date', '>=', $startDate);
+                if ($endDate) $q->where('purchase_return_date', '<=', $endDate);
+            })
+            ->get();
+
+        $prSupplierIds = $purchaseReturnRows->pluck('purchaseReturn.supplier_id')->filter()->unique()->toArray();
+        $prSuppliers = $prSupplierIds ? \App\Models\SuppliersModel::whereIn('id', $prSupplierIds)->pluck('name', 'id') : [];
+
+        foreach ($purchaseReturnRows as $row) {
+            $supplierName = $row->purchaseReturn && $row->purchaseReturn->supplier_id
+                ? ($prSuppliers[$row->purchaseReturn->supplier_id] ?? null)
+                : null;
+            $result[] = [
+                'type' => 'purchase_return',
+                'voucher_id' => $row->purchase_return_id,
+                'voucher_no' => $row->purchaseReturn->purchase_return_no ?? null,
+                'date' => $row->purchaseReturn->purchase_return_date ?? null,
+                'masters' => $supplierName,
+                'qty' => $row->quantity,
+                'in_stock' => null,
+                'price' => $row->price,
+                'discount' => $row->discount,
+                'amount' => null,
+                'profit' => null,
+                'place' => null,
+            ];
+        }
+
+        // --- ASSEMBLY OPERATION ---
+        $assemblyRows = AssemblyOperationProductsModel::with([
+            'assemblyOperation:id,assembly_operations_date,godown',
+        ])
+            ->where('product_id', $productId)
+            ->whereHas('assemblyOperation', function ($q) use ($companyId, $startDate, $endDate) {
+                $q->where('company_id', $companyId);
+                if ($startDate) $q->where('assembly_operations_date', '>=', $startDate);
+                if ($endDate) $q->where('assembly_operations_date', '<=', $endDate);
+            })
+            ->get();
+
+        foreach ($assemblyRows as $row) {
+            $godownName = $row->godown ? (GodownModel::find($row->godown)->name ?? null) : null;
+            $result[] = [
+                'type' => 'assembly_operation',
+                'voucher_id' => $row->assembly_operations_id, // FK to parent (PK of t_assembly_operations)
+                'voucher_no' => $row->assemblyOperation->assembly_operations_id ?? null, // The voucher/document no from parent
+                'date' => $row->assemblyOperation->assembly_operations_date ?? null,
+                'masters' => null, // As per your latest note
+                'qty' => $row->quantity,
+                'in_stock' => null,
+                'price' => $row->rate,
+                'discount' => null,
+                'amount' => $row->amount,
+                'profit' => null,
+                'place' => $godownName,
+            ];
+        }
+
+        // --- STOCK TRANSFER ---
+        $stockTransferRows = StockTransferProductsModel::with([
+            'salesreturn:id,receiving_date,godown_to',
+        ])
+            ->where('product_id', $productId)
+            ->whereHas('salesreturn', function ($q) use ($companyId, $startDate, $endDate) {
+                $q->where('company_id', $companyId);
+                if ($startDate) $q->where('receiving_date', '>=', $startDate);
+                if ($endDate) $q->where('receiving_date', '<=', $endDate);
+            })
+            ->get();
+
+        foreach ($stockTransferRows as $row) {
+            $godownName = $row->godown ? (GodownModel::find($row->godown)->name ?? null) : null;
+            $result[] = [
+                'type' => 'stock_transfer',
+                'voucher_id' => $row->stock_transfer_id,
+                'voucher_no' => $row->transfer_id,
+                'date' => $row->salesreturn->receiving_date ?? null,
+                'masters' => null,
+                'qty' => $row->quantity,
+                'in_stock' => null,
+                'price' => null,
+                'discount' => null,
+                'amount' => null,
+                'profit' => null,
+                'place' => $godownName,
+            ];
+        }
+
+        // Sort by date asc, nulls last
+        usort($result, function ($a, $b) {
+            if ($a['date'] === $b['date']) return 0;
+            if ($a['date'] === null) return 1;
+            if ($b['date'] === null) return -1;
+            return strcmp($a['date'], $b['date']);
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $result,
+        ]);
     }
 
 }
