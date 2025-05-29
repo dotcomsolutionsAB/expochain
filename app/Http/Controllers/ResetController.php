@@ -70,6 +70,19 @@ class ResetController extends Controller
         })
         ->where('product_id', $id)
         ->update(['sold' => 0]);
+
+        // STEP 3 : Reset sold items for all products in sales invoices within the date range
+        SalesInvoiceProductsModel::whereHas('salesInvoice', function ($query) use ($start_date, $end_date) {
+            $query->whereDate('sales_invoice_date', '>=', $start_date)
+                  ->whereDate('sales_invoice_date', '<=', $end_date);
+        })
+        ->update([
+            'profit' => 0,
+            'returned' => 0,
+            'purchase_invoice_id' => 0,
+            'purchase_rate' => 0,
+        ]);
+
     }
 
     public function reset_product(Request $request)
