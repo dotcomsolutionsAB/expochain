@@ -42,10 +42,12 @@ Route::post('/login/{otp?}', [AuthController::class, 'login']);
 Route::post('/get_otp', [AuthController::class, 'generate_otp']);
 
 // Route::get('/client_migrate', [ClientsController::class, 'importClientsData']);
-Route::get('/reset_calculation/{id}', [ResetController::class, 'stock_calculation']);
 
 
 Route::middleware(['auth:sanctum'])->group(function () {
+
+    Route::get('/reset_calculation/{id}', [ResetController::class, 'stock_calculation']);
+
 
     Route::get('/user', [UsersController::class, 'view']);
     Route::post('/fetch', [UsersController::class, 'view_user']);

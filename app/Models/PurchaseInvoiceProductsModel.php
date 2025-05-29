@@ -29,7 +29,7 @@ class PurchaseInvoiceProductsModel extends Model
         'channel', // Set default(0)
         'godown',  // Nullable
         'returned', // Set default(0)
-        'stock', // Set default(0)
+        'sold', // Set default(0)
     ];
 
     public function purchaseInvoice()

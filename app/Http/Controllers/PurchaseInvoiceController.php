@@ -182,7 +182,7 @@ class PurchaseInvoiceController extends Controller
 
     //     // Build the query
     //     $query = PurchaseInvoiceModel::with(['products' => function ($query) {
-    //         $query->select('purchase_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'godown', 'returned', 'stock');
+    //         $query->select('purchase_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'amount', 'channel', 'godown', 'returned', 'sold');
     //     }, 'addons' => function ($query) {
     //         $query->select('purchase_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
     //     }])
@@ -281,7 +281,7 @@ class PurchaseInvoiceController extends Controller
                     DB::raw('(tax / 2) as cgst_rate'),
                     DB::raw('(tax / 2) as sgst_rate'),
                     DB::raw('(tax) as igst_rate'),
-                    'amount', 'channel', 'godown', 'returned', 'stock');
+                    'amount', 'channel', 'godown', 'returned', 'sold');
             },
             'addons' => function ($query) {
                 $query->select('purchase_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
@@ -934,7 +934,7 @@ class PurchaseInvoiceController extends Controller
                             (strtoupper(trim($itemsData['place'][$index])) === 'ANKURHATI' ? 3 : null))
                         )
                         : null,
-                        'stock' => (float)($itemsData['instock'][$index] ?? 0),
+                        'sold' => (float)($itemsData['instock'][$index] ?? 0),
                         'created_at' => now(),
                         'updated_at' => now(),
                     ];
@@ -1190,7 +1190,7 @@ class PurchaseInvoiceController extends Controller
                 ])
                 ->where('company_id', $companyId)
                 ->where('product_id', $productId)
-                ->select('purchase_invoice_id', 'product_id', 'quantity', 'stock', 'price', 'amount', 'godown')
+                ->select('purchase_invoice_id', 'product_id', 'quantity', 'sold', 'price', 'amount', 'godown')
                 ->get()
                 ->map(function ($item) {
                     return [
@@ -1199,7 +1199,7 @@ class PurchaseInvoiceController extends Controller
                         'date'      => optional($item->purchaseInvoice)->purchase_invoice_date,
                         'supplier'  => optional($item->purchaseInvoice->supplier)->name,
                         'qty'       => $item->quantity,
-                        'in_stock'  => $item->stock,
+                        'in_stock'  => $item->sold,
                         'price'     => number_format((float)$item->price, 2, '.', ''),
                         'amount'    => number_format((float)$item->amount, 2, '.', ''),
                         'place'     => optional($item->godownRelation)->name ?? '-',
@@ -1344,7 +1344,7 @@ class PurchaseInvoiceController extends Controller
 
             // Get all records (no product_id filtering)
             $rawRecords = $query
-                ->select('purchase_invoice_id', 'product_id', 'quantity', 'stock', 'price', 'amount', 'godown')
+                ->select('purchase_invoice_id', 'product_id', 'quantity', 'sold', 'price', 'amount', 'godown')
                 ->get()
                 ->map(function ($item) {
                     return [
@@ -1354,7 +1354,7 @@ class PurchaseInvoiceController extends Controller
                         'supplier'     => optional($item->purchaseInvoice->supplier)->name,
                         'product_name' => optional($item->product)->name,
                         'qty'          => $item->quantity,
-                        'in_stock'     => $item->stock,
+                        'in_stock'     => $item->sold,
                         'price'        => number_format((float)$item->price, 2, '.', ''),
                         'amount'       => number_format((float)$item->amount, 2, '.', ''),
                         'place'        => optional($item->godownRelation)->name ?? '-',

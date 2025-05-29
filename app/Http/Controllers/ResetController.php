@@ -55,33 +55,21 @@ class ResetController extends Controller
         $start_date = "2024-04-01";
         $end_date = Carbon::now()->format('Y-m-d');
 
-        die('start_date: ' . $start_date . 'end_date: ' . $end_date);
+        $get_year = 6;
 
-        // opening stock quantity
-        $opening_stock = OpeningStockModel::select('quantity')
-                          ->where('company_id', Auth::user()->company_id)
-                          ->where('product_id', $id)
-                          ->first();
-        
-        $opening_stock_quantity = $opening_stock ? $opening_stock->quantity : 0; // Safely handle null
-
-        // reset `opening stock`
+        // STEP 1 : reset `opening stock`
         OpeningStockModel::where('year', $get_year)
                         ->where('company_id', Auth::user()->company_id)
                         ->where('product_id', $id)
                         ->update(['sold' => 0]);
         
-        // reset sold items
-        PurchaseInvoiceProductsModel::where('product_id', $id)->update(['sold' => 0]);
-        
-        // Fetch sold items
-        $sales = SalesInvoiceProductsModel::select(DB::raw('SUM(quantity) as total_sold'))
-                                    ->where('company_id', Auth::user()->company_id)
-                                    ->where('product_id', $productId)
-                                    ->groupBy('product_id')
-                                    ->first();
-
-        $total_sold = $sales ? $sales->total_sold : 0; // Safely handle null
+        // STEP 2 : Reset sold items for all products in invoices within the date range
+        PurchaseInvoiceProductsModel::whereHas('purchaseInvoice', function ($query) use ($start_date, $end_date) {
+            $query->whereDate('purchase_invoice_date', '>=', $start_date)
+                ->whereDate('purchase_invoice_date', '<=', $end_date);
+        })
+        ->where('product_id', $id)
+        ->update(['sold' => 0]);
 
         // update records to `opening_stock` at `sold`
         OpeningStockModel::where('product_id', $id)
