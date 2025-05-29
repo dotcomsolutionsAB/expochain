@@ -19,4 +19,9 @@ class AssemblyOperationProductsModel extends Model
         'godown',
         'amount'
     ];
+
+    public function assemblyOperation()
+    {
+        return $this->belongsTo(AssemblyOperationModel::class, 'assembly_operations_id', 'id');
+    }
 }

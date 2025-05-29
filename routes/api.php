@@ -369,6 +369,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/client_wise_summary', [HelperController::class, 'getClientYearlySalesSummary']);
 
         Route::post('/export_client_wise_summary', [HelperController::class, 'exportClientWiseSummary']);
+
+        Route::post('/get_product_timeline/{productId}', [HelperController::class, 'product_timeline']);
     });
 
 
