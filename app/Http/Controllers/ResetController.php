@@ -64,15 +64,25 @@ class ResetController extends Controller
                         ->update(['sold' => 0]);
         
         // STEP 2 : Reset sold items for all products in invoices within the date range
-        $updatedRows = PurchaseInvoiceProductsModel::whereHas('purchaseInvoice', function ($query) use ($start_date, $end_date) {
+        PurchaseInvoiceProductsModel::whereHas('purchaseInvoice', function ($query) use ($start_date, $end_date) {
             $query->whereDate('purchase_invoice_date', '>=', $start_date)
                 ->whereDate('purchase_invoice_date', '<=', $end_date);
         })
         ->where('product_id', $id)
         ->update(['sold' => 0]);
 
-        // Die and show how many rows were updated
-        die(var_dump($updatedRows));
+        // STEP 3 : Reset sold items for all products in sales invoices within the date range
+        SalesInvoiceProductsModel::whereHas('salesInvoice', function ($query) use ($start_date, $end_date) {
+            $query->whereDate('sales_invoice_date', '>=', $start_date)
+                  ->whereDate('sales_invoice_date', '<=', $end_date);
+        })
+        ->update([
+            'profit' => 0,
+            'returned' => 0,
+            'purchase_invoice_id' => null,
+            'purchase_rate' => null,
+        ]);
+
     }
 
     public function reset_product(Request $request)
