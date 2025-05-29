@@ -2208,7 +2208,6 @@ class HelperController extends Controller
             ];
         }
 
-
         // Sort by date asc, nulls last
         usort($result, function ($a, $b) {
             if ($a['date'] === $b['date']) return 0;
