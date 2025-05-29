@@ -70,6 +70,9 @@ class ResetController extends Controller
         })
         ->where('product_id', $id)
         ->update(['sold' => 0]);
+
+        // Die and show how many rows were updated
+        dd($updatedRows); // or die(var_dump($updatedRows));
     }
 
     public function reset_product(Request $request)
