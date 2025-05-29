@@ -175,7 +175,7 @@ class ResetController extends Controller
 
             // Collect godown-wise stock from OpeningStock
             $openingStocks = OpeningStockModel::where('year', $get_year)
-                ->where('company_id', $companyId)
+                ->where('company_id', Auth::user()->company_id)
                 ->where('product_id', $id)
                 ->get();
 
@@ -190,7 +190,7 @@ class ResetController extends Controller
 
             // 🔹 STEP 6 : Delete existing closing stock for this product and year
             ClosingStockModel::where('year', $get_year)
-                ->where('company_id', $companyId)
+                ->where('company_id', Auth::user()->company_id)
                 ->where('product_id', $id)
                 ->delete();
 
@@ -229,7 +229,7 @@ class ResetController extends Controller
                 // 🔹 STEP 8 : Insert new closing stock if totalQty > 0
                 if ($totalQty > 0) {
                     ClosingStockModel::create([
-                        'company_id' => $companyId,
+                        'company_id' => Auth::user()->company_id,
                         'year' => $get_year,
                         'godown_id' => $godownId,
                         'product_id' => $id,
