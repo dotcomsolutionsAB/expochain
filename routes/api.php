@@ -42,6 +42,8 @@ Route::post('/login/{otp?}', [AuthController::class, 'login']);
 Route::post('/get_otp', [AuthController::class, 'generate_otp']);
 
 // Route::get('/client_migrate', [ClientsController::class, 'importClientsData']);
+Route::get('/reset_calculation', [ResetController::class, 'stock_calculation']);
+
 
 Route::middleware(['auth:sanctum'])->group(function () {
 
@@ -291,7 +293,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/closing_stock', [MastersController::class, 'add_closing_stock']);
     Route::get('/closing_stock', [MastersController::class, 'view_closing_stock']);
 
-    Route::get('/reset_calculation', [ResetController::class, 'stock_calculation']);
 
     Route::post('/reset_product', [ResetController::class, 'reset_product']);
 

@@ -57,6 +57,7 @@ class ResetController extends Controller
         $next_year = $year + 1;
 
         $get_year = $year . '-' . $next_year;
+        die('Year: ' . $get_year);
 
         // opening stock quantity
         $opening_stock = OpeningStockModel::select('quantity')
