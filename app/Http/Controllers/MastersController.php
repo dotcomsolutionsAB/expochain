@@ -184,9 +184,9 @@ class MastersController extends Controller
         $stockDetails = "Opening Stock as on 01-04-2024 : Office - 30 SETS | Kushtia - 10 SETS | ANK - 25 SETS";
         $get_products->transform(function ($product) use ($stockDetails) {
             $product->stock_details = $stockDetails;
-            $product->group_name = $product->group_relation->name ?? null;
-            $product->category_name = $product->category_relation->name ?? null;
-            $product->sub_category_name = $product->sub_category_relation->name ?? null;
+            $product->group_name = $product->groupRelation->name ?? null;
+            $product->category_name = $product->categoryRelation->name ?? null;
+            $product->sub_category_name = $product->subCategoryRelation->name ?? null;
             unset($product->group, $product->category, $product->subCategory);
             return $product;
         });
