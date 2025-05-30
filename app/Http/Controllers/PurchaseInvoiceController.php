@@ -295,8 +295,8 @@ class PurchaseInvoiceController extends Controller
                   }]);
             }
         ])
-        ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 
-            DB::raw('DATE_FORMAT(purchase_invoice_date, "%d-%m-%Y") as purchase_invoice_date'),
+        ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 'purchase_invoice_date',
+            DB::raw('DATE_FORMAT(purchase_invoice_date, "%d-%m-%Y") as purchase_invoice_date_formatted'),
             'oa_no', 'ref_no', 'template', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
         )
         ->where('company_id', Auth::user()->company_id);
@@ -352,6 +352,10 @@ class PurchaseInvoiceController extends Controller
 
         // Get total record count before applying limit
         $totalRecords = $query->count();
+
+        // Order by latest purchase_invoice_date
+        $query->orderBy('purchase_invoice_date', 'desc');
+
         $query->offset($offset)->limit($limit);
 
         // Fetch paginated results
@@ -367,6 +371,8 @@ class PurchaseInvoiceController extends Controller
 
         // Transform Data
         $get_purchase_invoices->transform(function ($invoice) {
+            $invoice->purchase_order_date = $invoice->purchase_invoice_date_formatted;
+            unset($invoice->purchase_invoice_date_formatted);
             $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
             $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
             $invoice->contact_person = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
