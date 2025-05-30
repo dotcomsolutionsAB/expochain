@@ -22,7 +22,7 @@ class PurchaseReturnController extends Controller
     {
         $request->validate([
             'supplier_id' => 'required|integer|exists:t_suppliers,id', // Ensure supplier exists
-            'name' => 'required|string|max:255',
+            'name' => 'required|integer|exists:t_suppliers,name',
             'purchase_return_no' => 'required|string',
             'purchase_return_date' => 'required|date',
             'purchase_invoice_id' => 'required|integer|exists:t_purchase_invoice,id', // Ensure invoice exists
@@ -96,7 +96,7 @@ class PurchaseReturnController extends Controller
         $register_purchase_return = PurchaseReturnModel::create([
             'supplier_id' => $request->input('supplier_id'),
             'company_id' => Auth::user()->company_id,
-            'name' =>  $supplier->name,
+            'name' => $request->input('name'),
             'purchase_return_no' => $purchase_return_no,
             'purchase_return_date' => $currentDate,
             'purchase_invoice_id' => $request->input('purchase_invoice_id'),
