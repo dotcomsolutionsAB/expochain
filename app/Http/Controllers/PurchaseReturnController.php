@@ -119,7 +119,7 @@ class PurchaseReturnController extends Controller
         foreach ($products as $product) 
         {
             PurchaseReturnProductsModel::create([
-                'purchase_return_number' => $register_purchase_return['id'],
+                'purchase_return_id' => $register_purchase_return['id'],
                 'product_id' => $product['product_id'],
                 'company_id' => Auth::user()->company_id,
                 'product_name' => $product['product_name'],
