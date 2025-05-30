@@ -11,6 +11,9 @@ use App\Models\ResetQueueModel;
 use App\Models\GodownModel;
 use App\Models\SalesInvoiceModel;
 use App\Models\SalesReturnProductsModel;
+use App\Models\AssemblyOperationModel;
+use App\Models\AssemblyOperationProductsModel;
+use App\Models\StockTransferProductsModel;
 use Carbon\Carbon;
 use Auth;
 use DB;
@@ -325,11 +328,12 @@ class ResetController extends Controller
             }
 
             // 4️⃣ Assembly
+            // Assemblies (already filtered)
             $assemblies = AssemblyOperationModel::where('company_id', $company_id)
                 ->whereBetween('assembly_operations_date', [$start_date, $end_date])
                 ->with('products')->get();
-            foreach ($assemblies as $a) {
-                $type = strtolower($a->type);  // assemble / de-assemble
+                foreach ($assemblies as $a) {
+                $type = strtolower($a->type);
                 foreach ($a->products as $c) {
                     if ($c->product_id == $id) {
                         $qty = $c->quantity * $a->quantity;
@@ -349,23 +353,27 @@ class ResetController extends Controller
                 }
             }
 
-            // 5️⃣ Stock Transfers
-            $transfers = StockTransferProductsModel::where('product_id', $id)->with('stockTransfer')->get();
-            foreach ($transfers as $t) {
+            // Transfers (filtered by date)
+            $transfers = StockTransferProductsModel::where('product_id', $id)
+                ->whereHas('stockTransfer', fn($q) => $q->whereBetween('transfer_date', [$start_date, $end_date]))
+                ->with('stockTransfer')->get();
+                foreach ($transfers as $t) {
+                $transferDate = $t->stockTransfer->transfer_date;
                 $events[] = [
                     'type' => 'transfer_out', 'product_id' => $id, 'godown_id' => $t->stockTransfer->godown_from,
-                    'quantity' => $t->quantity, 'date' => $t->stockTransfer->transfer_date, 'source_id' => $t->id
+                    'quantity' => $t->quantity, 'date' => $transferDate, 'source_id' => $t->id
                 ];
                 $events[] = [
-                    'type' => 'transfer_in', 'product_id' => $id, 'godown_id' => $t->stockTransfer->transfer_date,
-                    'quantity' => $t->quantity, 'date' => $t->stockTransfer->transfer_date, 'source_id' => $t->id
+                    'type' => 'transfer_in', 'product_id' => $id, 'godown_id' => $t->stockTransfer->godown_to,
+                    'quantity' => $t->quantity, 'date' => $transferDate, 'source_id' => $t->id
                 ];
             }
+
 
             // 6️⃣ Sort Events
             usort($events, fn($a, $b) => strtotime($a['date']) <=> strtotime($b['date']));
 
-            die('Events: ' . json_encode($events));
+            die(json_encode($events));
 
             $fifo = [];  // [{qty, rate, source_id, source_type}]
             $godownStock = [];
