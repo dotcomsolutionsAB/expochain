@@ -151,8 +151,8 @@ class SalesReturnController extends Controller
         unset($register_sales_return['id'], $register_sales_return['created_at'], $register_sales_return['updated_at']);
     
         return isset($register_sales_return) && $register_sales_return !== null
-        ? response()->json(['Sales Retrun registered successfully!', 'data' => $register_sales_return], 201)
-        : response()->json(['Failed to register Sales Return record'], 400);
+        ? response()->json(['code' => 201, 'success' => true, 'message' =>'Sales Retrun registered successfully!', 'data' => $register_sales_return], 201)
+        : response()->json(['code' => 400, 'success' => false, 'message' =>'Failed to register Sales Return record'], 400);
     }
 
     public function view_sales_return(Request $request, $id = null)
