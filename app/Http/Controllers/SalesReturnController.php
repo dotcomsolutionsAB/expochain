@@ -77,7 +77,7 @@ class SalesReturnController extends Controller
         }
 
         // \DB::enableQueryLog();
-        $exists = DebitNoteModel::where('company_id', Auth::user()->company_id)
+        $exists = SalesReturnModel::where('company_id', Auth::user()->company_id)
             ->where('sales_return_no', $sales_return_no)
             ->exists();
             // dd(\DB::getQueryLog());
