@@ -76,7 +76,7 @@ class PurchaseReturnController extends Controller
        }
 
        // \DB::enableQueryLog();
-       $exists = DebitNoteModel::where('company_id', Auth::user()->company_id)
+       $exists = PurchaseReturnModel::where('company_id', Auth::user()->company_id)
            ->where('purchase_return_no', $purchase_return_no)
            ->exists();
            // dd(\DB::getQueryLog());
