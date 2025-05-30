@@ -267,7 +267,7 @@ class SalesInvoiceController extends Controller
             }
         ])
         ->select('id', 'client_id', 'name', 'sales_invoice_no', 'sales_invoice_date',
-            DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date'), 
+            DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date_formatted'), 
             'user', 'sales_order_id', 
             DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 
             'template', 'sales_person', 'commission', 'cash', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
@@ -371,6 +371,8 @@ class SalesInvoiceController extends Controller
 
         // Transform Data
         $get_sales_invoices->transform(function ($invoice) {
+            $invoice->sales_invoice_date = $invoice->sales_invoice_date_formatted;
+            unset($invoice->sales_invoice_date_formatted);
             $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
             $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
             $invoice->sales_person = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
