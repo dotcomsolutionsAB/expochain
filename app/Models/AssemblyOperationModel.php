@@ -21,7 +21,8 @@ class AssemblyOperationModel extends Model
         'rate',
         'amount',
         'godown',
-        'log_user'
+        'log_user',
+        'sold'
     ];
 
     public function products()
