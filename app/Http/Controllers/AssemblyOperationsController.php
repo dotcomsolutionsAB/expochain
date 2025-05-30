@@ -355,7 +355,9 @@ class AssemblyOperationsController extends Controller
                 $generated_code = rand(1111111111, 9999999999);
             } while (isset($randomCodeMap[$generated_code]));
 
-            $assembly_operations_date = '2021-05-13';
+            // $assembly_operations_date = '2021-05-13';
+            $assembly_operations_date = $record['log_date'];
+
             $type = ($record['operation'] === 'Disassembled') ? 'de-assemble' : 'assemble';
 
             $compositeProduct = ProductsModel::where('name', $record['composite'])->first();
