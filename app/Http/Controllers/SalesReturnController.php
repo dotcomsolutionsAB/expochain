@@ -223,6 +223,9 @@ class SalesReturnController extends Controller
 
             // Get total record count before applying limit
             $totalRecords = $query->count();
+
+            // Order by latest sales_return_date
+            $query->orderBy('sales_return_date', 'desc');
             // Apply limit and offset
             $query->offset($offset)->limit($limit);
 
