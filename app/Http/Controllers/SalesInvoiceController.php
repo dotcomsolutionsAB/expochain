@@ -352,6 +352,10 @@ class SalesInvoiceController extends Controller
 
         // Get total record count before applying limit
         $totalRecords = $query->count();
+
+        // Order by latest sales_invoice_date
+        $query->orderBy('sales_invoice_date', 'desc');
+        
         $query->offset($offset)->limit($limit);
 
         // Fetch paginated results
