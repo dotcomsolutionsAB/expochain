@@ -1619,13 +1619,13 @@ class MastersController extends Controller
                         ->whereIn('group', $groupIdsArray);
                 })
                 ->select('id', 'name')
-                ->orderBy('serial_number', 'asc')
+                ->orderBy('name', 'asc')
                 ->get();
         } else {
             // Fetch subcategories filtered only by category_id
             $get_sub_category = SubCategoryModel::where('category_id', $categoryId)
                 ->select('id', 'name')
-                ->orderBy('serial_number', 'asc')
+                ->orderBy('name', 'asc')
                 ->get();
         }
 
