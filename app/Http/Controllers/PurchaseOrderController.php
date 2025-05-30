@@ -209,145 +209,6 @@ class PurchaseOrderController extends Controller
         $formatter = new NumberFormatter("en", NumberFormatter::SPELLOUT);
         return ucfirst($formatter->format($num)) . ' Only';
     }
-    // public function view_purchase_order(Request $request, $id = null)
-    // {
-    //     // Get filter inputs
-    //     $supplierId = $request->input('supplier_id');
-    //     $name = $request->input('name');
-    //     $purchaseOrderNo = $request->input('purchase_order_no');
-    //     $purchaseOrderDate = $request->input('purchase_order_date');
-    //     $dateFrom = $request->input('date_from');
-    //     $dateTo = $request->input('date_to');
-    //     $user = $request->input('user');
-    //     $status = $request->input('status');
-    //     $productIds = $request->input('product_ids');
-    //     $limit = $request->input('limit', 10); // Default limit to 10
-    //     $offset = $request->input('offset', 0); // Default offset to 0
-
-    //     // Get total count of records in `t_purchase_order`
-    //     $get_purchase_order = PurchaseOrderModel::count(); 
-
-    //     // Build the query
-    //     $query = PurchaseOrderModel::with(['products' => function ($query) {
-    //         $query->select('purchase_order_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount',  'discount_type', 'hsn', 'tax', DB::raw('(tax / 2) as cgst_rate'), DB::raw('(tax / 2) as sgst_rate'), DB::raw('(tax) as igst_rate'), 'cgst', 'sgst', 'igst', 'amount', 'channel', 'received', 'short_closed');
-    //         },'addons' => function ($query) {
-    //             $query->select('purchase_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
-    //         }, 'terms' => function ($query) {
-    //             $query->select('purchase_order_id', 'name', 'value');
-    //         },
-    //             'get_user' => function ($query) { // Fetch only user name
-    //                 $query->select('id', 'name');
-    //         },
-    //             'get_template' => function ($query) { // Fetch template id and name
-    //             $query->select('id', 'name');
-    //         }])
-    //     ->select('id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', 'oa_no', DB::raw('DATE_FORMAT(oa_date, "%d-%m-%Y") as oa_date'), 'template', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off')
-    //     ->where('company_id', Auth::user()->company_id);
-        
-
-    //     // Apply filters
-    //     if ($supplierId) {
-    //         $query->where('supplier_id', $supplierId);
-    //     }
-    //     if ($name) {
-    //         $query->where('name', 'LIKE', '%' . $name . '%');
-    //     }
-    //     if ($purchaseOrderNo) {
-    //         $query->where('purchase_order_no', 'LIKE', '%' . $purchaseOrderNo . '%');
-    //     }
-    //     if ($purchaseOrderDate) {
-    //         $query->whereDate('purchase_order_date', $purchaseOrderDate);
-    //     }
-
-    //     if ($dateFrom && $dateTo) {
-    //         $query->whereBetween('purchase_order_date', [$dateFrom, $dateTo]);
-    //     } elseif ($dateFrom) {
-    //         $query->whereDate('purchase_order_date', '>=', $dateFrom);
-    //     } elseif ($dateTo) {
-    //         $query->whereDate('purchase_order_date', '<=', $dateTo);
-    //     }
-
-    //     if ($user) {
-    //         $query->whereDate('user', $user);
-    //     }
-
-    //     $purchase_order_count = $query->count();
-    //     // Apply limit and offset
-    //     $query->offset($offset)->limit($limit);
-
-    //     // Fetch data
-    //     $get_purchase_orders = $query->get();
-
-    //     // Transform Data
-    //     $get_purchase_orders->transform(function ($purchase_orders) {
-
-    //         // Convert total to words
-    //         $purchase_orders->amount_in_words = $this->convertNumberToWords($purchase_orders->total);
-
-    //         // ✅ Format total with comma-separated values
-    //         $purchase_orders->total = is_numeric($purchase_orders->total) ? number_format((float) $purchase_orders->total, 2) : $purchase_orders->total;
-
-    //         // Capitalize the first letter of status
-    //         $purchase_orders->status = ucfirst($purchase_orders->status);
-
-    //         // Replace user ID with user object
-    //         $purchase_orders->user = isset($purchase_orders->get_user) ? [
-    //             'id' => $purchase_orders->get_user->id,
-    //             'name' => $purchase_orders->get_user->name
-    //         ] : ['id' => null, 'name' => 'Unknown'];
-    //         unset($purchase_orders->get_user);
-
-    //         // ✅ New Fix for sales_person
-    //         $purchase_orders->sales_person = isset($purchase_orders->salesPerson) ? [
-    //             'id' => $purchase_orders->salesPerson->id,
-    //             'name' => $purchase_orders->salesPerson->name
-    //         ] : ['id' => null, 'name' => 'Unknown'];
-    //         unset($purchase_orders->salesPerson);
-
-    //         // Replace template ID with template object
-    //         $purchase_orders->template = isset($purchase_orders->get_template) ? [
-    //             'id' => $purchase_orders->get_template->id,
-    //             'name' => $purchase_orders->get_template->name
-    //         ] : ['id' => null, 'name' => 'Unknown'];
-    //         unset($purchase_orders->get_template); // Remove user object after fetching the name
-
-    //         // **Remove `purchase_orders_id` from products**
-    //         $purchase_orders->products->transform(function ($product) {
-    //             unset($product->purchase_orders_id);
-    //             return $product;
-    //         });
-
-    //         // **Remove `purchase_orders_id` from addons**
-    //         $purchase_orders->addons->transform(function ($addon) {
-    //             unset($addon->purchase_orders_id);
-    //             return $addon;
-    //         });
-
-    //         // **Remove `purchase_orders_id` from terms**
-    //         $purchase_orders->terms->transform(function ($term) {
-    //             unset($term->purchase_orders_id);
-    //             return $term;
-    //         });
-
-    //         return $purchase_orders;
-    //     });
-
-    //     // Return response
-    //     return $get_purchase_orders->isNotEmpty()
-    //         ? response()->json([
-    //             'code' => 200,
-    //             'success' => true,
-    //             'message' => 'Purchase Orders fetched successfully!',
-    //             'data' => $get_purchase_orders,
-    //             'count' => $get_purchase_orders->count(),
-    //             'total_records' => $purchase_order_count,
-    //         ], 200)
-    //         : response()->json([
-    //             'code' => 404,
-    //             'success' => false,
-    //             'message' => 'No Purchase Orders found!',
-    //         ], 404);
-    // }
 
     public function view_purchase_order(Request $request, $id = null)
     {
@@ -389,7 +250,7 @@ class PurchaseOrderController extends Controller
             }
         ])
         ->select(
-            'id', 'supplier_id', 'name', 'purchase_order_no', DB::raw('DATE_FORMAT(purchase_order_date, "%d-%m-%Y") as purchase_order_date'), 'oa_no', 
+            'id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', DB::raw('DATE_FORMAT(purchase_order_date, "%d-%m-%Y") as purchase_order_date_formatted'), 'oa_no', 
             DB::raw('DATE_FORMAT(oa_date, "%d-%m-%Y") as oa_date'), 'template', 'status', 
             'user', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off'
         )
@@ -460,6 +321,10 @@ class PurchaseOrderController extends Controller
 
         // Get total record count before applying limit
         $totalRecords = $query->count();
+
+        // Order by latest purchase_order_date
+        $query->orderBy('purchase_order_date', 'desc');
+
         $query->offset($offset)->limit($limit);
 
         // Fetch paginated results
@@ -475,6 +340,8 @@ class PurchaseOrderController extends Controller
 
         // Transform Data
         $get_purchase_orders->transform(function ($purchase_orders) {
+            $purchase_orders->purchase_order_date = $purchase_orders->purchase_order_date_formatted;
+            unset($purchase_orders->purchase_order_date_formatted);
             $purchase_orders->amount_in_words = $this->convertNumberToWords($purchase_orders->total);
             $purchase_orders->total = is_numeric($purchase_orders->total) ? number_format((float) $purchase_orders->total, 2) : $purchase_orders->total;
             $purchase_orders->status = ucfirst($purchase_orders->status);
