@@ -266,7 +266,7 @@ class SalesInvoiceController extends Controller
                     }]);
             }
         ])
-        ->select('id', 'client_id', 'name', 'sales_invoice_no', 
+        ->select('id', 'client_id', 'name', 'sales_invoice_no', 'sales_invoice_date',
             DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date'), 
             'user', 'sales_order_id', 
             DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 
