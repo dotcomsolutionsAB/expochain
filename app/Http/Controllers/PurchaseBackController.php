@@ -53,6 +53,7 @@ class PurchaseBackController extends Controller
             // Fetch purchase-back records filtered by company_id
             $records = PurchaseBackModel::select('id', 'product', 'quantity', 'date', 'log_user')
                 ->where('company_id', Auth::user()->company_id)
+                ->orderBy('date', 'desc') // Sort by date (latest first)
                 ->get();
 
             return response()->json([
