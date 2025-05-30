@@ -35,7 +35,7 @@ class PurchaseReturnController extends Controller
             'round_off' => 'nullable|numeric',
 
             'products' => 'required|array', // Validating array of products
-            'products.*.purchase_return_id' => 'required|integer|exists:t_purchase_returns,id', // Ensure purchase return exists
+            'products.*.purchase_return_id' => 'required|integer|exists:t_purchase_return,id', // Ensure purchase return exists
             'products.*.product_id' => 'required|integer|exists:t_products,id', // Ensure product exists
             'products.*.product_name' => 'required|string|max:255',
             'products.*.description' => 'nullable|string',
