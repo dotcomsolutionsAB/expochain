@@ -105,7 +105,7 @@ class LotController extends Controller
                 // For list view
                 $totalRecords = $query->count();
 
-                $lots = $query->orderBy('id', 'desc')
+                $lots = $query->orderBy('date', 'desc')
                     ->offset($offset)
                     ->limit($limit)
                     ->get();
