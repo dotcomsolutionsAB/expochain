@@ -22,7 +22,7 @@ class PurchaseReturnController extends Controller
     {
         $request->validate([
             'supplier_id' => 'required|integer|exists:t_suppliers,id', // Ensure supplier exists
-            'name' => 'required|integer|exists:t_suppliers,name',
+            'name' => 'required|string|exists:t_suppliers,name',
             'purchase_return_no' => 'required|string',
             'purchase_return_date' => 'required|date',
             'purchase_invoice_id' => 'required|integer|exists:t_purchase_invoice,id', // Ensure invoice exists
