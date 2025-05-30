@@ -11,6 +11,7 @@ use App\Models\ClientsModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
 use App\Models\GodownModel;
+use App\Models\ResetController;
 use Carbon\Carbon;
 use Auth;
 
@@ -140,6 +141,8 @@ class SalesReturnController extends Controller
         CounterModel::where('name', 'sales_return')
         ->where('company_id', Auth::user()->company_id)
         ->increment('next_number');
+
+        ResetController::updateReturnedQuantitiesForSalesInvoice($salesInvoiceId);
 
         unset($register_sales_return['id'], $register_sales_return['created_at'], $register_sales_return['updated_at']);
     
@@ -370,6 +373,9 @@ class SalesReturnController extends Controller
                                                 ->delete();
 
         unset($salesReturn['created_at'], $salesReturn['updated_at']);
+
+        $salesInvoiceId = $request->input('sales_invoice_id');
+        ResetController::updateReturnedQuantitiesForSalesInvoice($salesInvoiceId);
         
         return ($salesReturnUpdated || $productsDeleted)
             ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Return and products updated successfully!', 'data' => $salesReturn], 200)
@@ -379,6 +385,11 @@ class SalesReturnController extends Controller
     // delete
     public function delete_sales_return($id)
     {
+        $salesreturn = SalesReturnModel::where('id', $id)
+                                                ->where('company_id', $company_id)
+                                                ->get();
+        $salesInvoiceId = $salesreturn->first()->sales_invoice_id ?? null;
+        
         $delete_sales_return = SalesReturnModel::where('id', $id)
                                                 ->where('company_id', $company_id)
                                                 ->delete();
@@ -386,6 +397,8 @@ class SalesReturnController extends Controller
         $delete_sales_return_products = SalesReturnProductsModel::where('sales_return_id', $id)
                                                                 ->where('company_id', $company_id)
                                                                 ->delete();
+
+        ResetController::updateReturnedQuantitiesForSalesInvoice($salesInvoiceId);
 
         return $delete_sales_return && $delete_sales_return_products
             ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Return and associated products deleted successfully!'], 200)

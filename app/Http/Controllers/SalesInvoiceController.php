@@ -570,6 +570,8 @@ class SalesInvoiceController extends Controller
 
         unset($salesInvoice['created_at'], $salesInvoice['updated_at']);
 
+        ResetController::updateReturnedQuantitiesForSalesInvoice($id);
+
         return ($salesInvoiceUpdated || $productsDeleted || $addonsDeleted)
             ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Invoice, products, and addons updated successfully!', 'data' => $salesInvoice], 200)
             : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
