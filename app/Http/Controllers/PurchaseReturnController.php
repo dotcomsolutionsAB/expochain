@@ -232,6 +232,9 @@ class PurchaseReturnController extends Controller
             // Apply limit and offset
             $query->offset($offset)->limit($limit);
 
+            // Order by latest purchase_return_date
+            $query->orderBy('purchase_return_date', 'desc');
+
             // Fetch data
             $get_purchase_returns = $query->get();
 
