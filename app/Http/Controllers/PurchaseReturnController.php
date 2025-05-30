@@ -31,6 +31,8 @@ class PurchaseReturnController extends Controller
             'sgst' => 'required|numeric|min:0',
             'igst' => 'required|numeric|min:0',
             'total' => 'required|numeric|min:0',
+            'currency' => 'required|string',
+            'template' => 'required|integer|exists:t_pdf_template,id',
             'gross' => 'nullable|numeric|min:0',
             'round_off' => 'nullable|numeric',
 
@@ -100,13 +102,15 @@ class PurchaseReturnController extends Controller
             'purchase_return_no' => $request->input('purchase_return_no'),
             'purchase_return_date' => $request->input('purchase_return_date'),
             'purchase_invoice_id' => $request->input('purchase_invoice_id'),
+            'remarks' => $request->input('remarks'),
             'cgst' => $request->input('cgst'),
             'sgst' => $request->input('sgst'),
             'igst' => $request->input('igst'),
             'total' => $request->input('total'),
             'currency' => $request->input('currency'),
             'template' => $template,
-            'status' => $request->input('status'),
+            'gross' => $request->input('gross'),
+            'round_off' => $request->input('round_off'),
         ]);
         
         $products = $request->input('products');
