@@ -528,7 +528,7 @@ class SalesReturnController extends Controller
                     'company_id' => Auth::user()->company_id,
                     'product_id' => $product->id,
                     'product_name' => $productName,
-                    'description' => !empty($itemsData['desc'][$i]) ? $itemsData['desc'][$i] : 'No Desc',
+                    'description' => !empty($itemsData['desc'][$i]) ? $itemsData['desc'][$i] : null,
                     'quantity' => (int)$itemsData['quantity'][$i] ?? 0,
                     'unit' => $itemsData['unit'][$i] ?? '',
                     'price' => (float)$itemsData['price'][$i] ?? 0,
