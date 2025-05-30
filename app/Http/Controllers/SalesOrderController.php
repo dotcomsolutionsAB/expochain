@@ -212,32 +212,6 @@ class SalesOrderController extends Controller
         $offset = $request->input('offset', 0);
 
         // Query Sales Orders
-        // $query = SalesOrderModel::with([
-        //     'client:id, customer_id, name,mobile,email,gstin', // Fetch client details
-        //     'clientAddress:customer_id as customer,country,address_line_1,address_line_2,city,state,pincode', // Fetch client address
-        //     'products' => function ($query) {
-        //         $query->select(
-        //             'sales_order_id', 'product_id', 'product_name', 'description',
-        //             'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 
-        //             DB::raw('(tax / 2) as cgst_rate'), 
-        //             DB::raw('(tax / 2) as sgst_rate'), 
-        //             DB::raw('(tax) as igst_rate'), 
-        //             'amount', 'channel', 'sent', 'short_closed'
-        //         )->with(['channel' => function ($channelQuery) {
-        //             $channelQuery->select('id', 'name');
-        //         }]);
-        //     },
-        //     'addons' => function ($query) {
-        //         $query->select('sales_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
-        //     },
-        //     'get_user:id,name'
-        // ])
-        // ->select('id', 'client_id', 'name', 'sales_order_no', 
-        //     DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 
-        //     'ref_no', 'template', 'contact_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
-        // )
-        // ->where('company_id', Auth::user()->company_id);
-
         $query = SalesOrderModel::with([
             'client:id,customer_id,name,mobile,email,gstin', // fetch client details
             'clientAddress', // let the relationship define its columns (with aliasing)
@@ -258,8 +232,8 @@ class SalesOrderController extends Controller
             },
             'get_user:id,name'
         ])
-        ->select('id', 'client_id', 'name', 'sales_order_no', 
-            DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 
+        ->select('id', 'client_id', 'name', 'sales_order_no', 'sales_order_date',
+            DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date_formatted'), 
             'ref_no', 'template', 'sales_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
         )
         ->where('company_id', Auth::user()->company_id);
@@ -345,6 +319,10 @@ class SalesOrderController extends Controller
 
         // Get total record count before applying limit
         $totalRecords = $query->count();
+
+        // Order by latest sales_order_date
+        $query->orderBy('sales_order_date', 'desc');
+
         $query->offset($offset)->limit($limit);
 
         // Fetch paginated results
@@ -360,6 +338,8 @@ class SalesOrderController extends Controller
 
         // Transform Data
         $get_sales_orders->transform(function ($order) {
+            $order->sales_order_date = $order->sales_order_date_formatted;
+            unset($order->sales_order_date_formatted);
             $order->amount_in_words = $this->convertNumberToWords($order->total);
             $order->total = is_numeric($order->total) ? number_format((float) $order->total, 2) : $order->total;
             $order->sales_person = $order->get_user ? ['id' => $order->get_user->id, 'name' => $order->get_user->name] : ['id' => null, 'name' => 'Unknown'];
