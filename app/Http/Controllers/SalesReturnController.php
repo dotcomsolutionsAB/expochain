@@ -11,7 +11,7 @@ use App\Models\ClientsModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
 use App\Models\GodownModel;
-use App\Models\ResetController;
+use App\Http\Controllers\ResetController;
 use App\Models\CounterModel;
 use Carbon\Carbon;
 use Auth;
