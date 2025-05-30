@@ -1502,13 +1502,45 @@ class MastersController extends Controller
     }
 
     //view
+    // public function view_category(Request $request)
+    // {
+    //     $groupIds = $request->input('group_id'); // Accept group_id parameter
+
+    //     if ($groupIds) {
+    //         // Convert group_id to an array if it is a comma-separated string
+    //         $groupIdsArray = explode(',', $groupIds);
+
+    //         // Fetch categories associated with products in the given group(s)
+    //         $get_category = CategoryModel::select('id', 'name')
+    //             ->whereIn('id', function ($query) use ($groupIdsArray) {
+    //                 $query->select('category')
+    //                     ->from('t_products')
+    //                     ->whereIn('group', $groupIdsArray);
+    //             })
+    //             ->orderBy('serial_number', 'asc') // Sort by serial_number
+    //             ->get();
+    //     } else {
+    //         // Fetch all categories if no group_id is passed
+    //         $get_category = CategoryModel::select('id', 'name')
+    //             ->orderBy('serial_number', 'asc') // Sort by serial_number
+    //             ->get();
+    //     }
+
+    //     // Return the response
+    //     return isset($get_category) && !$get_category->isEmpty()
+    //         ? response()->json(['code' => 200, 'success' => true, 'message' => 'Fetch data successfully!', 'data' => $get_category, 'count' => $get_category->count()], 200)
+    //         : response()->json(['code' => 200, 'success' => false, 'message' => 'Failed to fetch data'], 200);
+    // }
     public function view_category(Request $request)
     {
         $groupIds = $request->input('group_id'); // Accept group_id parameter
 
         if ($groupIds) {
-            // Convert group_id to an array if it is a comma-separated string
-            $groupIdsArray = explode(',', $groupIds);
+            // Convert group_id to an array and sanitize to only numeric IDs
+            $groupIdsArray = array_filter(
+                array_map('trim', explode(',', $groupIds)),
+                fn($id) => is_numeric($id)
+            );
 
             // Fetch categories associated with products in the given group(s)
             $get_category = CategoryModel::select('id', 'name')
@@ -1517,12 +1549,12 @@ class MastersController extends Controller
                         ->from('t_products')
                         ->whereIn('group', $groupIdsArray);
                 })
-                ->orderBy('serial_number', 'asc') // Sort by serial_number
+                ->orderBy('serial_number', 'asc') // Or 'name', if no serial_number
                 ->get();
         } else {
             // Fetch all categories if no group_id is passed
             $get_category = CategoryModel::select('id', 'name')
-                ->orderBy('serial_number', 'asc') // Sort by serial_number
+                ->orderBy('serial_number', 'asc') // Or 'name', if no serial_number
                 ->get();
         }
 
