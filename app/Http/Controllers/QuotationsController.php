@@ -253,8 +253,8 @@ class QuotationsController extends Controller
 
             ])
             ->select(
-                'id', 'client_id', 'name', 'quotation_no', 
-                DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date'), 
+                'id', 'client_id', 'name', 'quotation_no', 'quotation_date',
+                DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date_formatted'), 
                 'enquiry_no', 
                 DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date'), 
                 'template', 'contact_person', 'sales_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off'
@@ -377,6 +377,10 @@ class QuotationsController extends Controller
 
             // Get total record count before applying limit
             $totalRecords = $query->count();
+
+            // Order by latest quotation_date
+            $query->orderBy('quotation_date', 'desc');
+
             $query->offset($offset)->limit($limit);
 
             // Fetch paginated results
@@ -392,6 +396,8 @@ class QuotationsController extends Controller
 
             // Transform Data for each quotation
             $get_quotations->transform(function ($quotation) {
+                $quotation->quotation_date = $quotation->quotation_date_formatted;
+                unset($quotation->quotation_date_formatted);
                 $quotation->amount_in_words = $this->convertNumberToWords($quotation->total);
                 $quotation->total = is_numeric($quotation->total)
                                     ? number_format((float)$quotation->total, 2)
