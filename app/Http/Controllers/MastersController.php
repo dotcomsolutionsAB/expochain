@@ -1532,7 +1532,6 @@ class MastersController extends Controller
             : response()->json(['code' => 200, 'success' => false, 'message' => 'Failed to fetch data'], 200);
     }
 
-
     // update
     public function edit_category(Request $request, $id)
     {
@@ -1706,7 +1705,7 @@ class MastersController extends Controller
     //view
     public function view_group()
     {        
-        $get_group = GroupModel::select('id','name')->get();
+        $get_group = GroupModel::select('id','name')->orderBy('name', 'asc')->get();
 
         return isset($get_group) && $get_group!== null
         ? response()->json(['code' => 200, 'success' => true, 'message' => 'Fetch data successfully!', 'data' => $get_group, 'count' => count($get_group)], 200)
