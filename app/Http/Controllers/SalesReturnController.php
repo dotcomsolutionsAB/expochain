@@ -143,7 +143,10 @@ class SalesReturnController extends Controller
         ->where('company_id', Auth::user()->company_id)
         ->increment('next_number');
 
-        ResetController::updateReturnedQuantitiesForSalesInvoice($salesInvoiceId);
+        // ResetController::updateReturnedQuantitiesForSalesInvoice($salesInvoiceId);
+        $resetController = new ResetController();
+        $resetController->updateReturnedQuantitiesForSalesInvoice($salesInvoiceId);
+
 
         unset($register_sales_return['id'], $register_sales_return['created_at'], $register_sales_return['updated_at']);
     
