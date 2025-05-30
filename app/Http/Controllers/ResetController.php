@@ -10,6 +10,7 @@ use App\Models\SalesInvoiceProductsModel;
 use App\Models\ResetQueueModel;
 use App\Models\GodownModel;
 use App\Models\SalesInvoiceModel;
+use App\Models\SalesReturnProductsModel;
 use Carbon\Carbon;
 use Auth;
 use DB;
@@ -244,88 +245,134 @@ class ResetController extends Controller
         });
     }
 
-
-
-    public function reset_product(Request $request)
+    function updateReturnedQuantitiesForSalesInvoice($salesInvoiceId)
     {
-        $request->validate([
-            'product_id' => 'required|integer|exists:t_products,id'
-        ]);
+        // Reset all returned quantities to 0 for the given sales_invoice_id
+        SalesInvoiceProductsModel::where('sales_invoice_id', $salesInvoiceId)
+            ->update(['returned' => 0]);
 
-        $companyId = auth()->user()->company_id;
-        $productId = $request->product_id;
+        // Fetch sales return products linked to the given sales_invoice_id
+        $salesReturnProducts = SalesReturnProductsModel::whereHas('salesreturn', function($query) use ($salesInvoiceId) {
+            $query->where('sales_invoice_id', $salesInvoiceId);
+        })->get();
 
-        // Step 1: Fetch all godowns for the company
-        $godowns = GodownModel::where('company_id', $companyId)->get(['id', 'name']);
-
-        // Step 2: Fetch godown-wise stock and value
-        $stockSummary = OpeningStockModel::where('company_id', $companyId)
-            ->where('product_id', $productId)
-            ->selectRaw('godown_id, SUM(quantity) as total_quantity, SUM(quantity * value) as stock_value')
-            ->groupBy('godown_id')
-            ->get()
-            ->keyBy('godown_id');
-
-        $godownData = $godowns->map(function ($godown) use ($stockSummary) {
-            $entry = $stockSummary->get($godown->id);
-            return [
-                'godown_id' => $godown->id,
-                'godown_name' => $godown->name,
-                'quantity' => $entry->total_quantity ?? 0,
-                'stock_value' => $entry->stock_value ?? 0,
-            ];
-        });
-
-        // Step 3: Update PurchaseInvoiceProductsModel stock = quantity
-        $purchaseItems = PurchaseInvoiceProductsModel::where('company_id', $companyId)
-        ->where('product_id', $productId)
-        ->whereHas('purchaseInvoice', function ($query) {
-            $query->whereDate('purchase_invoice_date', '>=', '2024-04-01');
-        })
-        ->with(['purchaseInvoice:id,purchase_invoice_date']) // Eager load invoice date
-        ->get();
-
-        // Initialize counters and details
-
-        $updatedCount = 0;
-        $purchaseUpdateDetails = [];
-
-        foreach ($purchaseItems as $item) {
-            $item->stock = $item->quantity;
-            $item->save();
-            $updatedCount++;
-
-            $purchaseUpdateDetails[] = [
-                'purchase_invoice_date' => $item->purchaseInvoice->purchase_invoice_date,
-                'godown' => $item->godown,
-                'quantity' => $item->quantity,
-            ];
+        if ($salesReturnProducts->isEmpty()) {
+            return; // No sales returns found, exit
         }
 
-        // Step 4: Fetch Sales data
-        $salesItems = SalesInvoiceProductsModel::where('company_id', $companyId)
-            ->where('product_id', $productId)
-            ->whereHas('salesInvoice', function ($query) {
-                $query->whereDate('sales_invoice_date', '>=', '2024-04-01');
-            })
-            ->with(['salesInvoice:id,sales_invoice_date']) // Eager load invoice date
-            ->get();
-
-        $salesData = $salesItems->map(function ($item) {
-            return [
-                'sales_invoice_date' => $item->salesInvoice->sales_invoice_date,
-                'godown' => $item->godown,
-                'quantity' => $item->quantity,
-            ];
+        // Group sales return products by product_id with total returned quantity
+        $returnProductGroups = $salesReturnProducts->groupBy('product_id')->map(function($items) {
+            return $items->sum('quantity');
         });
 
-        return response()->json([
-            'message' => 'Reset completed successfully.',
-            'godown_stock' => $godownData,
-            'purchase_stock_updated' => $updatedCount,
-            'purchase_update_details' => $purchaseUpdateDetails,
-            'sales_invoice_data' => $salesData,
-        ]);    
+        foreach ($returnProductGroups as $productId => $totalReturnedQty) {
+            if ($totalReturnedQty <= 0) continue;
+
+            // Fetch all matching sales invoice product lines (same sales_invoice_id & product_id), ordered by id (FIFO)
+            $invoiceProductLines = SalesInvoiceProductsModel::where('sales_invoice_id', $salesInvoiceId)
+                ->where('product_id', $productId)
+                ->orderBy('id')
+                ->get();
+
+            foreach ($invoiceProductLines as $productLine) {
+                if ($totalReturnedQty <= 0) break; // No more qty to distribute
+
+                $lineQty = $productLine->quantity;
+                $currentReturned = $productLine->returned;
+
+                // Calculate how much can be allocated to this line
+                $allocatable = min($totalReturnedQty, $lineQty - $currentReturned);
+                if ($allocatable > 0) {
+                    $productLine->returned += $allocatable;
+                    $productLine->save();
+
+                    $totalReturnedQty -= $allocatable;
+                }
+            }
+        }
     }
+
+
+    // public function reset_product(Request $request)
+    // {
+    //     $request->validate([
+    //         'product_id' => 'required|integer|exists:t_products,id'
+    //     ]);
+
+    //     $companyId = auth()->user()->company_id;
+    //     $productId = $request->product_id;
+
+    //     // Step 1: Fetch all godowns for the company
+    //     $godowns = GodownModel::where('company_id', $companyId)->get(['id', 'name']);
+
+    //     // Step 2: Fetch godown-wise stock and value
+    //     $stockSummary = OpeningStockModel::where('company_id', $companyId)
+    //         ->where('product_id', $productId)
+    //         ->selectRaw('godown_id, SUM(quantity) as total_quantity, SUM(quantity * value) as stock_value')
+    //         ->groupBy('godown_id')
+    //         ->get()
+    //         ->keyBy('godown_id');
+
+    //     $godownData = $godowns->map(function ($godown) use ($stockSummary) {
+    //         $entry = $stockSummary->get($godown->id);
+    //         return [
+    //             'godown_id' => $godown->id,
+    //             'godown_name' => $godown->name,
+    //             'quantity' => $entry->total_quantity ?? 0,
+    //             'stock_value' => $entry->stock_value ?? 0,
+    //         ];
+    //     });
+
+    //     // Step 3: Update PurchaseInvoiceProductsModel stock = quantity
+    //     $purchaseItems = PurchaseInvoiceProductsModel::where('company_id', $companyId)
+    //     ->where('product_id', $productId)
+    //     ->whereHas('purchaseInvoice', function ($query) {
+    //         $query->whereDate('purchase_invoice_date', '>=', '2024-04-01');
+    //     })
+    //     ->with(['purchaseInvoice:id,purchase_invoice_date']) // Eager load invoice date
+    //     ->get();
+
+    //     // Initialize counters and details
+
+    //     $updatedCount = 0;
+    //     $purchaseUpdateDetails = [];
+
+    //     foreach ($purchaseItems as $item) {
+    //         $item->stock = $item->quantity;
+    //         $item->save();
+    //         $updatedCount++;
+
+    //         $purchaseUpdateDetails[] = [
+    //             'purchase_invoice_date' => $item->purchaseInvoice->purchase_invoice_date,
+    //             'godown' => $item->godown,
+    //             'quantity' => $item->quantity,
+    //         ];
+    //     }
+
+    //     // Step 4: Fetch Sales data
+    //     $salesItems = SalesInvoiceProductsModel::where('company_id', $companyId)
+    //         ->where('product_id', $productId)
+    //         ->whereHas('salesInvoice', function ($query) {
+    //             $query->whereDate('sales_invoice_date', '>=', '2024-04-01');
+    //         })
+    //         ->with(['salesInvoice:id,sales_invoice_date']) // Eager load invoice date
+    //         ->get();
+
+    //     $salesData = $salesItems->map(function ($item) {
+    //         return [
+    //             'sales_invoice_date' => $item->salesInvoice->sales_invoice_date,
+    //             'godown' => $item->godown,
+    //             'quantity' => $item->quantity,
+    //         ];
+    //     });
+
+    //     return response()->json([
+    //         'message' => 'Reset completed successfully.',
+    //         'godown_stock' => $godownData,
+    //         'purchase_stock_updated' => $updatedCount,
+    //         'purchase_update_details' => $purchaseUpdateDetails,
+    //         'sales_invoice_data' => $salesData,
+    //     ]);    
+    // }
 
 }
