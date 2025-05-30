@@ -146,9 +146,12 @@ class PurchaseReturnController extends Controller
 
         unset($register_purchase_return['id'], $register_purchase_return['created_at'], $register_purchase_return['updated_at']);
     
+        // return isset($register_purchase_return) && $register_purchase_return !== null
+        // ? response()->json(['Purchase Return registered successfully!', 'data' => $register_purchase_return, 'total_cgst' => $total_cgst, 'total_sgst' => $total_sgst, 'total_igst' => $total_igst, 'total_discount' => $total_discount, 'total_amount' => $total_amount], 201)
+        // : response()->json(['Failed to register Purchase Return record'], 400);
         return isset($register_purchase_return) && $register_purchase_return !== null
-        ? response()->json(['Purchase Return registered successfully!', 'data' => $register_purchase_return, 'total_cgst' => $total_cgst, 'total_sgst' => $total_sgst, 'total_igst' => $total_igst, 'total_discount' => $total_discount, 'total_amount' => $total_amount], 201)
-        : response()->json(['Failed to register Purchase Return record'], 400);
+        ? response()->json(['code' => 201, 'success' => true, 'message' => 'Purchase Return registered successfully!', 'data' => $register_purchase_return], 201)
+        : response()->json(['code' => 400, 'success' => false, 'message' =>'Failed to register Purchase Return record'], 400);
     }
 
     // view
