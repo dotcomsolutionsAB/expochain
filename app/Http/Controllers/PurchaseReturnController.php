@@ -25,7 +25,7 @@ class PurchaseReturnController extends Controller
             'name' => 'required|string|max:255',
             'purchase_return_no' => 'required|string',
             'purchase_return_date' => 'required|date',
-            'purchase_invoice_id' => 'required|string|exists:t_purchase_invoice,id', // Ensure invoice exists
+            'purchase_invoice_id' => 'required|integer|exists:t_purchase_invoice,id', // Ensure invoice exists
             'remarks' => 'nullable|string',
             'cgst' => 'required|numeric|min:0',
             'sgst' => 'required|numeric|min:0',
