@@ -50,6 +50,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Route::get('/reset_calculation/{id}', [ResetController::class, 'stock_calculation']);
     Route::get('/reset_calculation', [ResetController::class, 'stock_calculation']);
+    Route::get('/reset_queue_status', [ResetController::class, 'reset_queue_status']);
 
 
     Route::get('/user', [UsersController::class, 'view']);
