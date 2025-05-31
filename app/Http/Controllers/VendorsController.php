@@ -14,7 +14,7 @@ class VendorsController extends Controller
         try {
             // Get company_id from authenticated user
             $company_id = Auth::user()->company_id;
-            
+
             // Validate incoming request
             $validated = $request->validate([
                 'name'   => 'required|string|max:255',
@@ -228,7 +228,7 @@ class VendorsController extends Controller
                 'code'    => 200,
                 'success' => true,
                 'message' => 'Vendor updated successfully!',
-                'data'    => $vendor
+                'data'    => $vendor->makeHidden(['created_at', 'updated_at'])
             ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
