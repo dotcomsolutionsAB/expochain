@@ -782,6 +782,20 @@ class ResetController extends Controller
         }
     }
 
+    public function reset_queue_status()
+    {
+        // Optional: Increase timeout for large datasets
+        set_time_limit(0);
+
+        // 🔹 Update all records in t_reset_queue to set status = '0'
+        DB::table('t_reset_queue')->update(['status' => '0', 'updated_at' => now()]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'All queue statuses have been reset to 0.'
+        ]);
+    }
+
 
     // public function reset_product(Request $request)
     // {
