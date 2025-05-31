@@ -32,7 +32,7 @@ class AdjustmentController extends Controller
                 'code'    => 200,
                 'success' => true,
                 'message' => 'Adjustment record created successfully!',
-                'data'    => $adjustment
+                'data'    => $adjustment->makeHidden(['created_at', 'updated_at'])
             ], 200);
 
         } catch (\Exception $e) {
@@ -143,7 +143,7 @@ class AdjustmentController extends Controller
                 'code'    => 200,
                 'success' => true,
                 'message' => 'Adjustment record updated successfully!',
-                'data'    => $adjustment
+                'data'    => $adjustment->makeHidden(['created_at', 'updated_at'])
             ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
