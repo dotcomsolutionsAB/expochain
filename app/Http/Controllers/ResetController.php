@@ -248,7 +248,7 @@ class ResetController extends Controller
         });
     }
 
-    public function stock_calculation($id)
+    public function stock_calculation()
     {
         $start_date = "2024-04-01";
         $end_date = Carbon::now()->format('Y-m-d');
