@@ -255,6 +255,7 @@ class ResetController extends Controller
         $get_year = 6;
         $company_id = Auth::user()->company_id;
 
+        
         DB::transaction(function() use ($id, $start_date, $end_date, $get_year, $company_id) {
 
             // 🔹 STEP 1 : Reset 'sold' in opening stock for this product and year
@@ -373,8 +374,8 @@ class ResetController extends Controller
             // 6️⃣ Sort Events
             usort($events, fn($a, $b) => strtotime($a['date']) <=> strtotime($b['date']));
 
-            header('Content-Type: application/json');
-            die(json_encode($events));
+            // header('Content-Type: application/json');
+            // die(json_encode($events));
 
             $fifo = [];  // [{qty, rate, source_id, source_type}]
             $godownStock = [];
@@ -469,8 +470,6 @@ class ResetController extends Controller
             }
         });
     }
-
-
 
     function updateReturnedQuantitiesForSalesInvoice($salesInvoiceId)
     {
