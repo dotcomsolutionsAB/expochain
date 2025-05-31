@@ -384,7 +384,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/add', [VendorsController::class, 'create']);
         Route::post('/retrieve/{id?}', [VendorsController::class, 'fetch']);
         Route::post('/edit/{id}', [VendorsController::class, 'update']);
-        Route::post('/delete/{id}', [VendorsController::class, 'delete']);
+        Route::delete('/delete/{id}', [VendorsController::class, 'delete']);
     });
 
     Route::post('/add_lot', [LotController::class, 'add']); // Create Channel
