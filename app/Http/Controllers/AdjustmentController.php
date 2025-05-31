@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 
 class AdjustmentController extends Controller
 {
-    //
+    //create
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -41,6 +41,158 @@ class AdjustmentController extends Controller
                 'success' => false,
                 'message' => 'Failed to create adjustment record.',
                 'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // fetch
+    public function fetch(Request $request, $id = null)
+    {
+        try {
+            $company_id = Auth::user()->company_id;
+            $limit = $request->input('limit', 10);
+            $offset = $request->input('offset', 0);
+            $productName = $request->input('product_name');
+
+            // Eager load product details
+            $query = AdjustmentModel::with(['productRelation' => function($q) {
+                $q->select('id', 'name', 'hsn', 'unit');
+            }])->where('company_id', $company_id);
+
+            // Single fetch by id
+            if ($id) {
+                $adjustment = $query->where('id', $id)->first();
+
+                if (!$adjustment) {
+                    return response()->json([
+                        'code' => 404,
+                        'success' => false,
+                        'message' => 'Adjustment record not found.'
+                    ], 404);
+                }
+
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'Adjustment record fetched successfully.',
+                    'data' => $adjustment
+                ], 200);
+            }
+
+            // Filter by product name if provided
+            if ($productName) {
+                $query->whereHas('productRelation', function($q) use ($productName) {
+                    $q->where('name', 'like', '%' . $productName . '%');
+                });
+            }
+
+            // Paginate
+            $total = $query->count();
+            $adjustments = $query->offset($offset)->limit($limit)->orderBy('adjustment_date', 'desc')->get();
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Adjustment records fetched successfully.',
+                'data' => $adjustments,
+                'count' => $adjustments->count(),
+                'total_records' => $total
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Failed to fetch adjustment records.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // update
+    public function update(Request $request, $id)
+    {
+        try {
+            $company_id = Auth::user()->company_id;
+
+            // Find the adjustment record for this company and id
+            $adjustment = AdjustmentModel::where('company_id', $company_id)->where('id', $id)->first();
+
+            if (!$adjustment) {
+                return response()->json([
+                    'code'    => 404,
+                    'success' => false,
+                    'message' => 'Adjustment record not found.'
+                ], 404);
+            }
+
+            // Validate incoming data (all fields optional for PATCH-like update)
+            $validated = $request->validate([
+                'adjustment_date'  => 'required|date',
+                'product_id'       => 'required|integer|exists:t_products,id',
+                'quantity'         => 'required|integer',
+                'godown_id'        => 'required|integer|exists:t_godown,id',
+                'type'             => 'required|in:loss,extra',
+            ]);
+
+            // Only fill provided fields (column-based update)
+            $adjustment->fill($validated);
+            $adjustment->save();
+
+            return response()->json([
+                'code'    => 200,
+                'success' => true,
+                'message' => 'Adjustment record updated successfully!',
+                'data'    => $adjustment
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'code'    => 422,
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code'    => 500,
+                'success' => false,
+                'message' => 'Failed to update adjustment record.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // delete
+    public function delete(Request $request, $id)
+    {
+        try {
+            $company_id = Auth::user()->company_id;
+
+            $adjustment = AdjustmentModel::where('company_id', $company_id)->where('id', $id)->first();
+
+            if (!$adjustment) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'Adjustment record not found.'
+                ], 404);
+            }
+
+            $adjustment->delete();
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Adjustment record deleted successfully.'
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Failed to delete adjustment record.',
+                'error' => $e->getMessage()
             ], 500);
         }
     }

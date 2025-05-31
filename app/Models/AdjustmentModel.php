@@ -17,4 +17,10 @@ class AdjustmentModel extends Model
         'godown_id',
         'type',
     ];
+
+    public function productRelation()
+    {
+        return $this->belongsTo(ProductsModel::class, 'product_id');
+    }
+
 }

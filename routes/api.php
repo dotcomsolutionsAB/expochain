@@ -48,8 +48,8 @@ Route::post('/get_otp', [AuthController::class, 'generate_otp']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
 
-    // Route::get('/reset_calculation/{id}', [ResetController::class, 'stock_calculation']);
-    Route::get('/reset_calculation', [ResetController::class, 'stock_calculation']);
+    Route::get('/reset_calculation/{id}', [ResetController::class, 'stock_calculation']);
+    // Route::get('/reset_calculation', [ResetController::class, 'stock_calculation']);
 
 
     Route::get('/user', [UsersController::class, 'view']);
@@ -378,6 +378,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::prefix('adjustment')->group(function () {
         Route::post('/add', [AdjustmentController::class, 'store']);
+         Route::post('/retrieve/{id?}', [VendorsController::class, 'fetch']);
+        Route::post('/edit/{id}', [VendorsController::class, 'update']);
+        Route::delete('/delete/{id}', [VendorsController::class, 'delete']);
     });
 
     Route::prefix('vendor')->group(function () {
