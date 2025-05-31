@@ -21,7 +21,6 @@ class AdjustmentController extends Controller
         try {
             $adjustment = AdjustmentModel::create([
                 'company_id'      => Auth::user()->company_id,
-                'company_id'      => $validated['company_id'],
                 'adjustment_date' => $validated['adjustment_date'],
                 'product_id'      => $validated['product_id'],
                 'quantity'        => $validated['quantity'],
