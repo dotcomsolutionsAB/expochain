@@ -49,7 +49,7 @@ Route::post('/get_otp', [AuthController::class, 'generate_otp']);
 Route::middleware(['auth:sanctum'])->group(function () {
 
     // Route::get('/reset_calculation/{id}', [ResetController::class, 'stock_calculation']);
-    // Route::get('/reset_calculation', [ResetController::class, 'stock_calculation']);
+    Route::get('/reset_calculation', [ResetController::class, 'stock_calculation']);
 
 
     Route::get('/user', [UsersController::class, 'view']);
