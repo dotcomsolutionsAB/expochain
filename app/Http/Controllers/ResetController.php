@@ -255,8 +255,10 @@ class ResetController extends Controller
         $get_year = 6;
         $company_id = Auth::user()->company_id;
 
-        // 🔹 Fetch all product IDs from t_products
-        $product_ids = DB::table('t_products')->pluck('id');
+        // 🔹 Fetch product IDs from t_reset_queue where status = '0'
+        $product_ids = DB::table('t_reset_queue')
+            ->where('status', '0')
+            ->pluck('product_id');
 
         // 🔹 Loop through each product ID
         foreach ($product_ids as $id) {
