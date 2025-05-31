@@ -54,12 +54,13 @@ class AdjustmentController extends Controller
             $offset = $request->input('offset', 0);
             $productName = $request->input('product_name');
 
-            // Eager load product details
-            $query = AdjustmentModel::with(['productRelation' => function($q) {
-                $q->select('id', 'name', 'hsn', 'unit');
-            }])->where('company_id', $company_id);
+            // Eager load product and godown
+            $query = AdjustmentModel::with([
+                'productRelation:id,name,hsn,unit',
+                'godownRelation:id,name'
+            ])->where('company_id', $company_id);
 
-            // Single fetch by id
+            // Fetch single by id
             if ($id) {
                 $adjustment = $query->where('id', $id)->first();
 
@@ -70,6 +71,10 @@ class AdjustmentController extends Controller
                         'message' => 'Adjustment record not found.'
                     ], 404);
                 }
+
+                // Replace godown_id with godown_name
+                $adjustment->godown_name = $adjustment->godownRelation->name ?? null;
+                unset($adjustment->godown_id, $adjustment->godownRelation);
 
                 return response()->json([
                     'code' => 200,
@@ -89,6 +94,18 @@ class AdjustmentController extends Controller
             // Paginate
             $total = $query->count();
             $adjustments = $query->offset($offset)->limit($limit)->orderBy('adjustment_date', 'desc')->get();
+
+            // Map result to replace godown_id with godown_name
+            $adjustments->transform(function($adj) {
+                $adj->godown_name = $adj->godownRelation->name ?? null;
+                unset(
+                    $adj->godown_id,
+                    $adj->godownRelation,
+                    $adj->created_at,   // Remove timestamps
+                    $adj->updated_at
+                );
+                return $adj;
+            });
 
             return response()->json([
                 'code' => 200,

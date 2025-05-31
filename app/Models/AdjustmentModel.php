@@ -23,4 +23,8 @@ class AdjustmentModel extends Model
         return $this->belongsTo(ProductsModel::class, 'product_id');
     }
 
+    public function godownRelation()
+    {
+        return $this->belongsTo(GodownModel::class, 'godown_id');
+    }
 }
