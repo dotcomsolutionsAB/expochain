@@ -378,9 +378,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::prefix('adjustment')->group(function () {
         Route::post('/add', [AdjustmentController::class, 'store']);
-         Route::post('/retrieve/{id?}', [VendorsController::class, 'fetch']);
-        Route::post('/edit/{id}', [VendorsController::class, 'update']);
-        Route::delete('/delete/{id}', [VendorsController::class, 'delete']);
+         Route::post('/retrieve/{id?}', [AdjustmentController::class, 'fetch']);
+        Route::post('/edit/{id}', [AdjustmentController::class, 'update']);
+        Route::delete('/delete/{id}', [AdjustmentController::class, 'delete']);
     });
 
     Route::prefix('vendor')->group(function () {
