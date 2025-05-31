@@ -30,6 +30,8 @@ use App\Http\Controllers\QuotationTermMasterController;
 use App\Http\Controllers\PurchaseBackController;
 use App\Http\Controllers\HelperController;
 use App\Http\Controllers\LotController;
+use App\Http\Controllers\AdjustmentController;
+use App\Http\Controllers\VendorsController;
 use App\Http\Controllers\CustomerVisitController;
 
 // Route::get('/user', function (Request $request) {
@@ -374,7 +376,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/get_product_timeline/{productId}', [HelperController::class, 'product_timeline']);
     });
 
-    Route::prefix('report')->group(function () {
+    Route::prefix('adjustment')->group(function () {
         Route::post('/add', [AdjustmentController::class, 'store']);
     });
 
