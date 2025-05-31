@@ -12,6 +12,9 @@ class VendorsController extends Controller
     public function create(Request $request)
     {
         try {
+            // Get company_id from authenticated user
+            $company_id = Auth::user()->company_id;
+            
             // Validate incoming request
             $validated = $request->validate([
                 'name'   => 'required|string|max:255',
@@ -32,9 +35,6 @@ class VendorsController extends Controller
                 $vendor_id = rand(11111111, 99999999);
                 $exists = VendorsModel::where('vendor_id', $vendor_id)->exists();
             } while ($exists);
-
-            // Get company_id from authenticated user
-            $company_id = Auth::user()->company_id;
 
             $name = $request->input('name');
             $gstin = $request->input('gstin');
