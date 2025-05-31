@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Auth;
 use App\Models\VendorsModel;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class VendorsController extends Controller
 {
@@ -14,7 +15,14 @@ class VendorsController extends Controller
             // Validate incoming request
             $validated = $request->validate([
                 'name'   => 'required|string|max:255',
-                'gstin'  => 'nullable|string|max:255',
+                'gstin'  => [
+                    'nullable',
+                    'string',
+                    'max:32',
+                    Rule::unique('t_vendors')->where(function ($query) use ($company_id) {
+                        return $query->where('company_id', $company_id);
+                    }),
+                ],
                 'mobile' => 'nullable|string|max:255',
                 'email'  => 'nullable|email|max:255',
             ]);
@@ -177,7 +185,16 @@ class VendorsController extends Controller
             // Validate request data
             $validated = $request->validate([
                 'name'   => 'required|string|max:255',
-                'gstin'  => 'nullable|string|max:32',
+                'gstin'  => [
+                    'nullable',
+                    'string',
+                    'max:32',
+                    Rule::unique('t_vendors')
+                        ->where(function ($query) use ($company_id) {
+                            return $query->where('company_id', $company_id);
+                        })
+                        ->ignore($id), // Exclude the current record
+                ],
                 'mobile' => 'nullable|string|max:15',
                 'email'  => 'nullable|email|max:255',
             ]);
