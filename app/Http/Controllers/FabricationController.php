@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\FabricationModel;
+use App\Models\FabricationProductsModel;
 use Auth;
 
 class FabricationController extends Controller
@@ -13,37 +14,68 @@ class FabricationController extends Controller
     public function add_fabrication(Request $request)
     {
         $request->validate([
-            'fabrication_date' => 'required|date',
-            'product_id' => 'required|integer|exists:t_products,id',
-            'product_name' => 'required|string|exists:t_products,name',
-            'type' => 'required|in:wastage,sample',
-            'quantity' => 'required|integer',
-            'godown' => 'required|integer',
-            'rate' => 'required|numeric',
-            'amount' => 'required|numeric',
-            'description' => 'nullable|string',
-            'log_user' => 'required|string'
+            'fb_date'                  => 'required|date',
+            'vandor_id'                => 'nullable|integer|exists:t_vendors,id', // Can be null
+            'invoice_no'               => 'nullable|string|max:255',
+            'remarks'                  => 'nullable|string',
+            'fb_amount'                => 'nullable|numeric',
+            // Products validation
+            'products'                 => 'required|array|min:1',
+            'products.*.product_id'    => 'required|integer|exists:t_products,id',
+            'products.*.quantity'      => 'required|numeric|min:0',
+            'products.*.rate'          => 'required|numeric|min:0',
+            'products.*.amount'        => 'required|numeric|min:0',
+            'products.*.godown_id'     => 'required|integer|exists:t_godown,id',
+            'products.*.remarks'       => 'nullable|string',
+            'products.*.type'          => 'required|in:raw,finished',
+            'products.*.wastage'       => 'nullable|numeric|min:0',
         ]);
 
-        $register_fabrication = FabricationModel::create([
-            'fabrication_date' => $request->input('fabrication_date'),
-            'company_id' => Auth::user()->company_id,
-            'product_id' => $request->input('product_id'),
-            'product_name' => $request->input('product_name'),
-            'type' => $request->input('type'),
-            'quantity' => $request->input('quantity'),
-            'godown' => $request->input('godown'),
-            'rate' => $request->input('rate'),
-            'amount' => $request->input('amount'),
-            'description' => $request->input('description'),
-            'log_user' => $request->input('log_user')
-        ]);
-        
-        unset($register_fabrication['id'], $register_fabrication['created_at'], $register_fabrication['updated_at']);
+        try {
+            \DB::beginTransaction();
 
-        return isset($register_fabrication) && $register_fabrication !== null
-        ? response()->json(['code' => 201,'success' => true, 'message' => 'Fabrication registered successfully!', 'data' => $register_fabrication], 201)
-        : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to register Fabrication record'], 400);
+            $fabrication = FabricationModel::create([
+                'company_id'   => Auth::user()->company_id,
+                'vandor_id'    => $request->input('vandor_id'),
+                'fb_date'      => $request->input('fb_date'),
+                'invoice_no'   => $request->input('invoice_no'),
+                'remarks'      => $request->input('remarks'),
+                'fb_amount'    => $request->input('fb_amount')
+            ]);
+
+            foreach ($request->input('products') as $product) {
+                FabricationProductsModel::create([
+                    'company_id'  => Auth::user()->company_id,
+                    'fb_id'       => $fabrication->id,
+                    'product_id'  => $product['product_id'],
+                    'quantity'    => $product['quantity'],
+                    'rate'        => $product['rate'],
+                    'amount'      => $product['amount'],
+                    'godown_id'   => $product['godown_id'],
+                    'remarks'     => $product['remarks'] ?? null,
+                    'type'        => $product['type'],
+                    'wastage'     => $product['wastage'] ?? null
+                ]);
+            }
+
+            \DB::commit();
+
+            return response()->json([
+                'code'    => 201,
+                'success' => true,
+                'message' => 'Fabrication registered successfully!',
+                'data'    => $fabrication
+            ], 201);
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return response()->json([
+                'code'    => 500,
+                'success' => false,
+                'message' => 'Failed to register Fabrication record',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function view_fabrication(Request $request)
