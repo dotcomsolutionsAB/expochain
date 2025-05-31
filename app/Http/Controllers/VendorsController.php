@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 
 class VendorsController extends Controller
 {
-    //
+    //create
     public function create(Request $request)
     {
         try {
@@ -28,12 +28,29 @@ class VendorsController extends Controller
             // Get company_id from authenticated user
             $company_id = Auth::user()->company_id;
 
+            $name = $request->input('name');
+            $gstin = $request->input('gstin');
+
+            // Check uniqueness
+            $exists = VendorsModel::where('company_id', $company_id)
+                ->where('name', $name)
+                ->where('gstin', $gstin)
+                ->exists();
+
+            if ($exists) {
+                return response()->json([
+                    'code' => 409,
+                    'success' => false,
+                    'message' => 'A vendor with this name and GSTIN already exists in your company.',
+                ], 409);
+            }
+
             // Create new Vendor
             $vendor = VendorsModel::create([
                 'vendor_id'  => $vendor_id,
                 'company_id' => $company_id,
-                'name'       => $validated['name'],
-                'gstin'      => $validated['gstin'] ?? null,
+                'name'       => $name,
+                'gstin'      => $gstin ?? null,
                 'mobile'     => $validated['mobile'] ?? null,
                 'email'      => $validated['email'] ?? null,
             ]);
@@ -64,6 +81,7 @@ class VendorsController extends Controller
         }
     }
 
+    // fetch
     public function fetch(Request $request, $id = null)
     {
         try {
@@ -137,6 +155,7 @@ class VendorsController extends Controller
         }
     }
 
+    // update
     public function update(Request $request, $id)
     {
         try {
@@ -162,6 +181,24 @@ class VendorsController extends Controller
                 'mobile' => 'nullable|string|max:15',
                 'email'  => 'nullable|email|max:255',
             ]);
+
+            $name = $request->input('name');
+            $gstin = $request->input('gstin');
+
+            // Check uniqueness excluding current vendor
+            $exists = VendorsModel::where('company_id', $company_id)
+                ->where('name', $name)
+                ->where('gstin', $gstin)
+                ->where('id', '!=', $id)
+                ->exists();
+
+            if ($exists) {
+                return response()->json([
+                    'code' => 409,
+                    'success' => false,
+                    'message' => 'Another vendor with this name and GSTIN already exists in your company.',
+                ], 409);
+            }
 
             // Column-based update
             $vendor->name   = $validated['name'];
