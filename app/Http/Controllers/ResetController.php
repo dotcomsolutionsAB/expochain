@@ -373,8 +373,8 @@ class ResetController extends Controller
             // 6️⃣ Sort Events
             usort($events, fn($a, $b) => strtotime($a['date']) <=> strtotime($b['date']));
 
-            // header('Content-Type: application/json');
-            // die(json_encode($events));
+            header('Content-Type: application/json');
+            die(json_encode($events));
 
             $fifo = [];  // [{qty, rate, source_id, source_type}]
             $godownStock = [];
