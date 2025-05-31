@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('t_fabrications', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('company_id');
-            $table->unsignedBigInteger('vandor_id')->nullable();
+            $table->unsignedBigInteger('vendor_id')->nullable();
             $table->date('fb_date');
             $table->string('invoice_no')->nullable();
             $table->text('remarks')->nullable();

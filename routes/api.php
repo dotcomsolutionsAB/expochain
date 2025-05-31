@@ -282,10 +282,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/assembly_operations_by_product/{productId}', [AssemblyOperationsController::class, 'fetchAssemblyByProduct']);
 
-    Route::post('/add_fabrication', [FabricationController::class, 'add_fabrication']);
-    Route::post('/fabrication', [FabricationController::class, 'view_fabrication']);
-    Route::post('/update_fabrication/{id?}', [FabricationController::class, 'edit_fabrication']);
-    Route::delete('/fabrication/{id?}', [FabricationController::class, 'delete_fabrication']);
+    Route::prefix('fabrication')->group(function () {
+        Route::post('/add', [FabricationController::class, 'add_fabrication']);
+        Route::post('/fetch', [FabricationController::class, 'view_fabrication']);
+        Route::post('/edit/{id?}', [FabricationController::class, 'edit_fabrication']);
+        Route::delete('/delete/{id?}', [FabricationController::class, 'delete_fabrication']);
+    });
 
     Route::post('/add_counter', [CounterController::class, 'add_counter']);
     Route::post('/counter/{id?}', [CounterController::class, 'view_counter']);

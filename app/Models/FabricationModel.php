@@ -10,16 +10,11 @@ class FabricationModel extends Model
     protected $table = 't_fabrication';
 
     protected $fillable = [
-        'fabrication_date',
         'company_id',
-        'product_id',
-        'product_name',
-        'type',
-        'quantity',
-        'godown',
-        'rate',
-        'amount',
-        'description',
-        'log_user'
+        'vendor_id',    // Correct spelling is vendor_id (but keep as per your migration)
+        'fb_date',
+        'invoice_no',
+        'remarks',
+        'fb_amount'
     ];
 }
