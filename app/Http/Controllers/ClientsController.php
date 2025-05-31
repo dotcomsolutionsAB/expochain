@@ -863,6 +863,4 @@ class ClientsController extends Controller
             ],
         ], 200);
     }
-
-
 }

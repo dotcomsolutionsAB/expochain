@@ -373,6 +373,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/get_product_timeline/{productId}', [HelperController::class, 'product_timeline']);
     });
 
+    Route::prefix('report')->group(function () {
+        Route::post('/add', [AdjustmentController::class, 'store']);
+    });
+
+    Route::prefix('vendor')->group(function () {
+        Route::post('/add', [VendorsController::class, 'create']);
+        Route::post('/retrieve/{id?}', [VendorsController::class, 'fetch']);
+        Route::post('/edit/{id}', [VendorsController::class, 'update']);
+        Route::post('/delete/{id}', [VendorsController::class, 'delete']);
+    });
 
     Route::post('/add_lot', [LotController::class, 'add']); // Create Channel
     Route::post('/fetch_lot/{id?}', [LotController::class, 'retrieve']); // View All Channels
