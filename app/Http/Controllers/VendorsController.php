@@ -42,7 +42,7 @@ class VendorsController extends Controller
                 'code'    => 200,
                 'success' => true,
                 'message' => 'Vendor created successfully!',
-                'data'    => $vendor
+                'data'    => $vendor->makeHidden(['created_at', 'updated_at'])
             ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $ex) {
