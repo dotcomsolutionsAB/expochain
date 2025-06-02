@@ -143,7 +143,7 @@ class FabricationController extends Controller
 
             // 🔹 Fetch by ID
             if ($id) {
-                $fabrication = $query->with(['products'])->find($id);
+                $fabrication = $query->with(['products', 'vendor'])->find($id);
                 if (!$fabrication) {
                     return response()->json([
                         'code'    => 404,
@@ -158,6 +158,13 @@ class FabricationController extends Controller
                 // Hide timestamps from products relation if loaded
                 if ($fabrication->relationLoaded('products')) {
                     $fabrication->products->makeHidden(['created_at', 'updated_at']);
+                }
+
+                 // NEW: Add vendor_name and hide vendor_id
+                if ($fabrication->relationLoaded('vendor') && $fabrication->vendor) {
+                    $fabrication->vendor_name = $fabrication->vendor->name;
+                    unset($fabrication->vendor_id);
+                    $fabrication->vendor->makeHidden(['created_at', 'updated_at']);
                 }
 
                 return response()->json([
@@ -190,22 +197,31 @@ class FabricationController extends Controller
             $total = $query->count();
 
             $fabrications = $query
-                ->with(['products' => function($q) {
-                    $q->select('id', 'fb_id', 'product_id', 'quantity', 'rate', 'amount', 'godown_id', 'remarks', 'type', 'wastage');
-                    // Optionally eager load product details here as well
-                }])
+                ->with([
+                    'products' => function($q) {
+                        $q->select('id', 'fb_id', 'product_id', 'quantity', 'rate', 'amount', 'godown_id', 'remarks', 'type', 'wastage');
+                    },
+                    'vendor'
+                ])
                 ->select('id', 'company_id', 'vendor_id', 'fb_date', 'invoice_no', 'remarks', 'fb_amount')
                 ->orderBy('fb_date', 'desc')
                 ->offset($offset)
                 ->limit($limit)
                 ->get();
 
-            // Hide timestamps
+            // Hide timestamps for fabrication and products
             $fabrications->makeHidden(['created_at', 'updated_at']);
             foreach ($fabrications as $fab) {
                 $fab->makeHidden(['created_at', 'updated_at']);
                 if ($fab->relationLoaded('products')) {
                     $fab->products->makeHidden(['created_at', 'updated_at']);
+                }
+
+                // NEW: Add vendor_name and hide vendor_id per fabrication
+                if ($fab->relationLoaded('vendor') && $fab->vendor) {
+                    $fab->vendor_name = $fab->vendor->name;
+                    unset($fab->vendor_id);
+                    $fab->vendor->makeHidden(['created_at', 'updated_at']);
                 }
             }
 

@@ -22,4 +22,9 @@ class FabricationModel extends Model
     {
         return $this->hasMany(FabricationProductsModel::class, 'fb_id', 'id');
     }
+
+    public function vendor()
+    {
+        return $this->belongsTo(VendorsModel::class, 'vendor_id');
+    }
 }
