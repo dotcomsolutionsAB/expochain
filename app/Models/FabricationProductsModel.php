@@ -21,4 +21,9 @@ class FabricationProductsModel extends Model
         'type',
         'wastage'
     ];
+
+    public function product() 
+    {
+        return $this->belongsTo(ProductsModel::class, 'product_id');
+    }
 }

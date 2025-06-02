@@ -17,4 +17,9 @@ class FabricationModel extends Model
         'remarks',
         'fb_amount'
     ];
+
+    public function products() 
+    {
+        return $this->hasMany(FabricationProductsModel::class, 'fb_id', 'id');
+    }
 }

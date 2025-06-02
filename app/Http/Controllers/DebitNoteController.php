@@ -54,12 +54,12 @@ class DebitNoteController extends Controller
     
         // Handle quotation number logic
         $counterController = new CounterController();
-        $sendRequest = Request::create('/counter', 'GET', [
+        $sendRequest = Request::create('/counter/fetch', 'GET', [
             'name' => 'debit_note',
             // 'company_id' => Auth::user()->company_id,
         ]);
 
-        $response = $counterController->view_counter($sendRequest);
+        $response = $counterController->view($sendRequest);
         $decodedResponse = json_decode($response->getContent(), true);
 
         if ($decodedResponse['code'] === 200) {

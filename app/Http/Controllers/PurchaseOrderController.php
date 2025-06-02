@@ -80,7 +80,7 @@ class PurchaseOrderController extends Controller
         
         // Handle quotation number logic
         $counterController = new CounterController();
-        $sendRequest = Request::create('/counter', 'GET', [
+        $sendRequest = Request::create('/counter/fetch', 'GET', [
             'name' => 'purchase_order',
             'company_id' => Auth::user()->company_id,
         ]);
