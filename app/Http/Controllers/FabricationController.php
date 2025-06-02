@@ -64,7 +64,7 @@ class FabricationController extends Controller
                 'code'    => 201,
                 'success' => true,
                 'message' => 'Fabrication registered successfully!',
-                'data'    => $fabrication
+                'data'    => $fabrication->makeHidden(['created_at', 'updated_at'])
             ], 201);
 
         } catch (\Exception $e) {
@@ -359,7 +359,7 @@ class FabricationController extends Controller
                 'code'    => 200,
                 'success' => true,
                 'message' => 'Fabrication and associated products updated successfully!',
-                'data'    => $fabrication
+                'data'    => $fabrication->makeHidden(['created_at', 'updated_at'])
             ], 200);
 
         } catch (\Illuminate\Validation\ValidationException $e) {
