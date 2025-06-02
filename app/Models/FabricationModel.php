@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class FabricationModel extends Model
 {
     //
-    protected $table = 't_fabrication';
+    protected $table = 't_fabrications';
 
     protected $fillable = [
         'company_id',
