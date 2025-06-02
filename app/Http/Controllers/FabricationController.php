@@ -290,7 +290,7 @@ class FabricationController extends Controller
     {
         $request->validate([
             // Fabrication header fields
-            'vandor_id'   => 'nullable|integer|exists:t_vendors,id',
+            'vendor_id'   => 'nullable|integer|exists:t_vendors,id',
             'fb_date'     => 'required|date',
             'invoice_no'  => 'nullable|string|max:255',
             'remarks'     => 'nullable|string',
@@ -321,7 +321,7 @@ class FabricationController extends Controller
             }
 
             // Update parent table (t_fabrications)
-            $fabrication->vandor_id   = $request->input('vandor_id');
+            $fabrication->vendor_id   = $request->input('vendor_id');
             $fabrication->fb_date     = $request->input('fb_date');
             $fabrication->invoice_no  = $request->input('invoice_no');
             $fabrication->remarks     = $request->input('remarks');
