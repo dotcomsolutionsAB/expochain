@@ -85,7 +85,7 @@ class PurchaseOrderController extends Controller
             'company_id' => Auth::user()->company_id,
         ]);
 
-        $response = $counterController->view_counter($sendRequest);
+        $response = $counterController->view($sendRequest);
         $decodedResponse = json_decode($response->getContent(), true);
 
         if ($decodedResponse['code'] === 200) {
