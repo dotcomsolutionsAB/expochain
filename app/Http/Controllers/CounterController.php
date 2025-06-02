@@ -12,7 +12,7 @@ class CounterController extends Controller
      /**
      * Create a new counter.
      */
-    public function add_counter(Request $request)
+    public function add(Request $request)
     {
         $request->validate([
             'name' => 'required|string|unique:t_counters,name',
@@ -42,7 +42,7 @@ class CounterController extends Controller
     /**
      * Read a specific counter or all counters.
      */
-    public function view_counter(Request $request, $id = null)
+    public function view(Request $request, $id = null)
     {
         if ($id) {
             $counter = CounterModel::find($id);
@@ -101,7 +101,7 @@ class CounterController extends Controller
     /**
      * Update a counter.
      */
-    public function edit_counter(Request $request, $id)
+    public function edit(Request $request, $id)
     {
         $request->validate([
             // 'name' => 'nullable|string|unique:t_counters,name,' . $id,
@@ -131,7 +131,7 @@ class CounterController extends Controller
     /**
      * Delete a counter.
      */
-    public function delete_counter($id)
+    public function delete($id)
     {
         $counter = CounterModel::find($id);
 
