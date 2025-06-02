@@ -379,7 +379,6 @@ class FabricationController extends Controller
         }
     }
 
-
     // delete
     // public function delete_fabrication($id)
     // {
@@ -433,5 +432,4 @@ class FabricationController extends Controller
             ], 500);
         }
     }
-
 }

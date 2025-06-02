@@ -96,8 +96,6 @@ class CounterController extends Controller
         ], 200);
     }
 
-
-
     /**
      * Update a counter.
      */
