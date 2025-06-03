@@ -292,7 +292,7 @@ class StatsController extends Controller
             }
 
             // Find product_id by product name (case insensitive)
-            $product = ProductModel::where('name', 'LIKE', trim($item['product']))->first();
+            $product = ProductsModel::where('name', 'LIKE', trim($item['product']))->first();
             if (!$product) {
                 $skipped++;
                 $skippedDetails[] = [
