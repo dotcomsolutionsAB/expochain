@@ -4,7 +4,15 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 
-// Import all models you gave
+// Initial 6 models
+use App\Models\AdjustmentModel;
+use App\Models\AssemblyModel;
+use App\Models\AssemblyOperationModel;
+use App\Models\AssemblyOperationProductsModel;
+use App\Models\AssemblyProductsModel;
+use App\Models\ClientsModel;
+
+// Additional models you provided
 use App\Models\CategoryModel;
 use App\Models\ChannelModel;
 use App\Models\ClientAddressModel;
@@ -18,13 +26,22 @@ use App\Models\CreditNoteProductsModel;
 use App\Models\CustomerVisitModel;
 use App\Models\DebitNoteModel;
 use App\Models\DebitNoteProductsModel;
-use App\Models\ClientsModel;
 
 class StatsController extends Controller
 {
     public function index()
     {
+        // Collect counts for all models here
         $counts = [
+            // Initial 6 models
+            'Adjustments' => AdjustmentModel::count(),
+            'Assembly' => AssemblyModel::count(),
+            'Assembly Operation' => AssemblyOperationModel::count(),
+            'Assembly Operation Products' => AssemblyOperationProductsModel::count(),
+            'Assembly Products' => AssemblyProductsModel::count(),
+            'Clients' => ClientsModel::count(),
+
+            // Additional models
             'Category' => CategoryModel::count(),
             'Channel' => ChannelModel::count(),
             'Client Address' => ClientAddressModel::count(),
@@ -38,10 +55,9 @@ class StatsController extends Controller
             'Customer Visit' => CustomerVisitModel::count(),
             'Debit Note' => DebitNoteModel::count(),
             'Debit Note Products' => DebitNoteProductsModel::count(),
-            'Clients' => ClientsModel::count(),
         ];
 
-        // Build HTML directly in controller
+        // Build HTML directly
         $html = '<!DOCTYPE html>
 <html lang="en">
 <head>
