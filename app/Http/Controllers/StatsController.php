@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\Http; // For HTTP client
 use Illuminate\Http\Request;
 
 use App\Models\AdjustmentModel;
@@ -222,7 +222,7 @@ class StatsController extends Controller
             }
 
             // Find product_id by product name (case insensitive)
-            $product = ProductModel::where('name', 'LIKE', trim($item['product']))->first();
+            $product = ProductsModel::where('name', 'LIKE', trim($item['product']))->first();
             if (!$product) {
                 // Skip or handle missing product
                 $skipped++;
