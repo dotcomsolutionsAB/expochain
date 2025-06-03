@@ -48,6 +48,7 @@ Route::post('/get_otp', [AuthController::class, 'generate_otp']);
 
 Route::get('/stats', [StatsController::class, 'index']);
 Route::get('/import-adjustment', [StatsController::class, 'importAdjustment']);
+Route::get('/import-fabrication', [StatsController::class, 'importFabrication']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
 

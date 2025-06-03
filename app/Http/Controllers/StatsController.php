@@ -361,8 +361,146 @@ class StatsController extends Controller
         ]);
     }
 
+    public function importFabrication()
+    {
+        $response = Http::get('https://expo.egsm.in/assets/custom/migrate/fabrication.php');
 
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch API data'], 500);
+        }
 
+        $data = $response->json();
+
+        if (!isset($data['data']) || !is_array($data['data'])) {
+            return response()->json(['error' => 'Invalid API response format'], 422);
+        }
+
+        $insertedMain = 0;
+        $updatedMain = 0;
+        $insertedProducts = 0;
+        $updatedProducts = 0;
+        $skipped = 0;
+        $skippedDetails = [];
+
+        // Placeholder values - change as needed
+        $companyId = 1;
+        $vendorId = 1;
+
+        foreach ($data['data'] as $index => $item) {
+            // Basic required fields validation
+            if (empty($item['date']) || empty($item['product']) || !isset($item['quantity']) || empty($item['place'])) {
+                $skipped++;
+                $skippedDetails[] = [
+                    'index' => $index,
+                    'reason' => 'Missing required fields',
+                    'data' => $item,
+                ];
+                continue;
+            }
+
+            // Find product_id by product name
+            $product = ProductModel::where('name', 'LIKE', trim($item['product']))->first();
+            if (!$product) {
+                $skipped++;
+                $skippedDetails[] = [
+                    'index' => $index,
+                    'reason' => "Product not found: '{$item['product']}'",
+                    'data' => $item,
+                ];
+                continue;
+            }
+
+            // Find godown_id by place
+            $godown = GodownModel::where('name', 'LIKE', trim($item['place']))->first();
+            if (!$godown) {
+                $skipped++;
+                $skippedDetails[] = [
+                    'index' => $index,
+                    'reason' => "Godown/place not found: '{$item['place']}'",
+                    'data' => $item,
+                ];
+                continue;
+            }
+
+            // Determine Fabrication (main record) uniqueness criteria:
+            // Let's assume uniqueness by fb_date + remarks (since invoice_no missing in API)
+            $fbDate = $item['date'];
+            $remarks = $item['comments'] ?? '';
+
+            $fabrication = FabricationModel::where('fb_date', $fbDate)
+                ->where('remarks', $remarks)
+                ->where('company_id', $companyId)
+                ->first();
+
+            if (!$fabrication) {
+                // Create new fabrication
+                $fabrication = FabricationModel::create([
+                    'company_id' => $companyId,
+                    'vendor_id' => $vendorId,
+                    'fb_date' => $fbDate,
+                    'invoice_no' => null, // Not in API, set null or add logic
+                    'remarks' => $remarks,
+                    'fb_amount' => null, // Not in API, set null or add logic
+                ]);
+                $insertedMain++;
+            } else {
+                $updatedMain++;
+                // Optional: update fabrication if you want here (e.g. remarks changed)
+                // $fabrication->update([...]);
+            }
+
+            // Now handle FabricationProducts linked to this fabrication
+            // Assuming uniqueness by fb_id + product_id + type + wastage (wastage is missing in API, so set null)
+            $fabProdQuery = FabricationProductsModel::where('fb_id', $fabrication->id)
+                ->where('product_id', $product->id)
+                ->where('type', $item['type'])
+                ->whereNull('wastage');
+
+            $fabricationProduct = $fabProdQuery->first();
+
+            $prodData = [
+                'company_id' => $companyId,
+                'fb_id' => $fabrication->id,
+                'product_id' => $product->id,
+                'quantity' => (float)$item['quantity'],
+                'rate' => null,      // Not in API
+                'amount' => null,    // Not in API
+                'godown_id' => $godown->id,
+                'remarks' => $remarks,
+                'type' => $item['type'],
+                'wastage' => null,   // Not in API
+            ];
+
+            if (!$fabricationProduct) {
+                FabricationProductsModel::create($prodData);
+                $insertedProducts++;
+            } else {
+                // Compare fields and update if changed (optional)
+                $needsUpdate = false;
+                foreach ($prodData as $key => $value) {
+                    if ($fabricationProduct->$key != $value) {
+                        $needsUpdate = true;
+                        break;
+                    }
+                }
+                if ($needsUpdate) {
+                    $fabricationProduct->update($prodData);
+                    $updatedProducts++;
+                }
+            }
+        }
+
+        return response()->json([
+            'message' => 'Import completed',
+            'fabrications_inserted' => $insertedMain,
+            'fabrications_updated' => $updatedMain,
+            'fabrication_products_inserted' => $insertedProducts,
+            'fabrication_products_updated' => $updatedProducts,
+            'skipped' => $skipped,
+            'skipped_details' => $skippedDetails,
+            'total' => count($data['data']),
+        ]);
+    }
 
 
 }
