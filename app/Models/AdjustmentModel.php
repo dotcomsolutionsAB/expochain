@@ -10,6 +10,7 @@ class AdjustmentModel extends Model
     protected $table = 't_adjustments';
 
     protected $fillable = [
+        'id',
         'company_id',
         'adjustment_date',
         'product_id',

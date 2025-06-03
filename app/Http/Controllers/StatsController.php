@@ -260,103 +260,107 @@ class StatsController extends Controller
     //     ]);
     // }
 
-public function importAdjustment()
-{
-    $response = Http::get('https://expo.egsm.in/assets/custom/migrate/adjustment.php');
+    public function importAdjustment()
+    {
+        $response = Http::get('https://expo.egsm.in/assets/custom/migrate/adjustment.php');
 
-    if ($response->failed()) {
-        return response()->json(['error' => 'Failed to fetch API data'], 500);
-    }
-
-    $data = $response->json();
-
-    if (!isset($data['data']) || !is_array($data['data'])) {
-        return response()->json(['error' => 'Invalid API response format'], 422);
-    }
-
-    $inserted = 0;
-    $updated = 0;
-    $skipped = 0;
-    $skippedDetails = [];
-
-    foreach ($data['data'] as $index => $item) {
-        if (empty($item['id']) || empty($item['date']) || empty($item['product']) || !isset($item['quantity']) || !isset($item['type'])) {
-            $skipped++;
-            $skippedDetails[] = [
-                'index' => $index,
-                'reason' => 'Missing required fields',
-                'data' => $item,
-            ];
-            continue;
+        if ($response->failed()) {
+            return response()->json(['error' => 'Failed to fetch API data'], 500);
         }
 
-        $product = ProductsModel::where('name', 'LIKE', trim($item['product']))->first();
-        if (!$product) {
-            $skipped++;
-            $skippedDetails[] = [
-                'index' => $index,
-                'reason' => "Product not found: '{$item['product']}'",
-                'data' => $item,
-            ];
-            continue;
+        $data = $response->json();
+
+        if (!isset($data['data']) || !is_array($data['data'])) {
+            return response()->json(['error' => 'Invalid API response format'], 422);
         }
 
-        $godown = GodownModel::where('name', 'LIKE', trim($item['place']))->first();
-        if (!$godown) {
-            $skipped++;
-            $skippedDetails[] = [
-                'index' => $index,
-                'reason' => "Godown/place not found: '{$item['place']}'",
-                'data' => $item,
+        $inserted = 0;
+        $updated = 0;
+        $skipped = 0;
+        $skippedDetails = [];
+        $processedRecords = [];
+
+        foreach ($data['data'] as $index => $item) {
+            // Validate required fields including 'id'
+            if (empty($item['id']) || empty($item['date']) || empty($item['product']) || !isset($item['quantity']) || !isset($item['type'])) {
+                $skipped++;
+                $skippedDetails[] = [
+                    'index' => $index,
+                    'reason' => 'Missing required fields',
+                    'data' => $item,
+                ];
+                continue;
+            }
+
+            $product = ProductModel::where('name', 'LIKE', trim($item['product']))->first();
+            if (!$product) {
+                $skipped++;
+                $skippedDetails[] = [
+                    'index' => $index,
+                    'reason' => "Product not found: '{$item['product']}'",
+                    'data' => $item,
+                ];
+                continue;
+            }
+
+            $godown = GodownModel::where('name', 'LIKE', trim($item['place']))->first();
+            if (!$godown) {
+                $skipped++;
+                $skippedDetails[] = [
+                    'index' => $index,
+                    'reason' => "Godown/place not found: '{$item['place']}'",
+                    'data' => $item,
+                ];
+                continue;
+            }
+
+            $typeValue = $item['type'] == "1" ? 'loss' : 'extra';
+
+            $adjustmentData = [
+                'id' => $item['id'], // manual assignment of PK
+                'company_id' => 1,   // set as needed
+                'adjustment_date' => $item['date'],
+                'product_id' => $product->id,
+                'quantity' => (float) $item['quantity'],
+                'godown_id' => $godown->id,
+                'type' => $typeValue,
             ];
-            continue;
-        }
 
-        // Convert type as requested
-        $typeValue = $item['type'] == "1" ? 'loss' : 'extra';
+            $adjustment = AdjustmentModel::find($item['id']);
 
-        $adjustmentData = [
-            'company_id' => 1,
-            'adjustment_date' => $item['date'],
-            'product_id' => $product->id,
-            'quantity' => (float) $item['quantity'],
-            'godown_id' => $godown->id,
-            'type' => $typeValue,
-        ];
-
-        $adjustment = AdjustmentModel::find($item['id']);
-
-        if ($adjustment) {
-            // Check if any data differs before update
-            $needsUpdate = false;
-            foreach ($adjustmentData as $key => $value) {
-                if ($adjustment->$key != $value) {
-                    $needsUpdate = true;
-                    break;
+            if ($adjustment) {
+                // Compare fields to update only if changed
+                $needsUpdate = false;
+                foreach ($adjustmentData as $key => $value) {
+                    if ($adjustment->$key != $value) {
+                        $needsUpdate = true;
+                        break;
+                    }
                 }
-            }
 
-            if ($needsUpdate) {
-                $adjustment->update($adjustmentData);
-                $updated++;
+                if ($needsUpdate) {
+                    $adjustment->update($adjustmentData);
+                    $updated++;
+                }
+                $processedRecords[] = ['local_id' => $adjustment->id, 'api_id' => $item['id']];
+            } else {
+                AdjustmentModel::create($adjustmentData);
+                $inserted++;
+                $processedRecords[] = ['local_id' => $item['id'], 'api_id' => $item['id']];
             }
-        } else {
-            // Insert new record
-            $adjustmentData['id'] = $item['id'];
-            AdjustmentModel::create($adjustmentData);
-            $inserted++;
         }
+
+        return response()->json([
+            'message' => "Import completed",
+            'inserted' => $inserted,
+            'updated' => $updated,
+            'skipped' => $skipped,
+            'total' => count($data['data']),
+            'skipped_details' => $skippedDetails,
+            'processed_records' => $processedRecords,
+        ]);
     }
 
-    return response()->json([
-        'message' => "Import completed",
-        'inserted' => $inserted,
-        'updated' => $updated,
-        'skipped' => $skipped,
-        'total' => count($data['data']),
-        'skipped_details' => $skippedDetails,
-    ]);
-}
 
 
 
