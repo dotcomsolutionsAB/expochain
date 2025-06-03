@@ -196,68 +196,143 @@ class StatsController extends Controller
         return response($html, 200)->header('Content-Type', 'text/html');
     }
 
+    // public function importAdjustment()
+    // {
+    //     // Fetch API data
+    //     $response = Http::get('https://expo.egsm.in/assets/custom/migrate/adjustment.php');
+
+    //     if ($response->failed()) {
+    //         return response()->json(['error' => 'Failed to fetch API data'], 500);
+    //     }
+
+    //     $data = $response->json();
+
+    //     if (!isset($data['data']) || !is_array($data['data'])) {
+    //         return response()->json(['error' => 'Invalid API response format'], 422);
+    //     }
+
+    //     $inserted = 0;
+    //     $skipped = 0;
+
+    //     foreach ($data['data'] as $item) {
+    //         // Basic validation
+    //         if (empty($item['date']) || empty($item['product']) || !isset($item['quantity']) || !isset($item['type'])) {
+    //             $skipped++;
+    //             continue;
+    //         }
+
+    //         // Find product_id by product name (case insensitive)
+    //         $product = ProductsModel::where('name', 'LIKE', trim($item['product']))->first();
+    //         if (!$product) {
+    //             // Skip or handle missing product
+    //             $skipped++;
+    //             continue;
+    //         }
+
+    //         // Find godown_id by place (case insensitive)
+    //         $godown = GodownModel::where('name', 'LIKE', trim($item['place']))->first();
+    //         if (!$godown) {
+    //             // Optional: skip or set null or default godown
+    //             $skipped++;
+    //             continue;
+    //         }
+
+    //         // Prepare data for insertion
+    //         $adjustmentData = [
+    //             'company_id' => 1, // Change this as needed
+    //             'adjustment_date' => $item['date'],
+    //             'product_id' => $product->id,
+    //             'quantity' => (float) $item['quantity'],
+    //             'godown_id' => $godown->id,
+    //             'type' => $item['type'],
+    //         ];
+
+    //         // Insert record
+    //         AdjustmentModel::create($adjustmentData);
+    //         $inserted++;
+    //     }
+
+    //     return response()->json([
+    //         'message' => "Import completed",
+    //         'inserted' => $inserted,
+    //         'skipped' => $skipped,
+    //         'total' => count($data['data']),
+    //     ]);
+    // }
+
     public function importAdjustment()
-    {
-        // Fetch API data
-        $response = Http::get('https://expo.egsm.in/assets/custom/migrate/adjustment.php');
+{
+    $response = Http::get('https://expo.egsm.in/assets/custom/migrate/adjustment.php');
 
-        if ($response->failed()) {
-            return response()->json(['error' => 'Failed to fetch API data'], 500);
-        }
-
-        $data = $response->json();
-
-        if (!isset($data['data']) || !is_array($data['data'])) {
-            return response()->json(['error' => 'Invalid API response format'], 422);
-        }
-
-        $inserted = 0;
-        $skipped = 0;
-
-        foreach ($data['data'] as $item) {
-            // Basic validation
-            if (empty($item['date']) || empty($item['product']) || !isset($item['quantity']) || !isset($item['type'])) {
-                $skipped++;
-                continue;
-            }
-
-            // Find product_id by product name (case insensitive)
-            $product = ProductsModel::where('name', 'LIKE', trim($item['product']))->first();
-            if (!$product) {
-                // Skip or handle missing product
-                $skipped++;
-                continue;
-            }
-
-            // Find godown_id by place (case insensitive)
-            $godown = GodownModel::where('name', 'LIKE', trim($item['place']))->first();
-            if (!$godown) {
-                // Optional: skip or set null or default godown
-                $skipped++;
-                continue;
-            }
-
-            // Prepare data for insertion
-            $adjustmentData = [
-                'company_id' => 1, // Change this as needed
-                'adjustment_date' => $item['date'],
-                'product_id' => $product->id,
-                'quantity' => (float) $item['quantity'],
-                'godown_id' => $godown->id,
-                'type' => $item['type'],
-            ];
-
-            // Insert record
-            AdjustmentModel::create($adjustmentData);
-            $inserted++;
-        }
-
-        return response()->json([
-            'message' => "Import completed",
-            'inserted' => $inserted,
-            'skipped' => $skipped,
-            'total' => count($data['data']),
-        ]);
+    if ($response->failed()) {
+        return response()->json(['error' => 'Failed to fetch API data'], 500);
     }
+
+    $data = $response->json();
+
+    if (!isset($data['data']) || !is_array($data['data'])) {
+        return response()->json(['error' => 'Invalid API response format'], 422);
+    }
+
+    $inserted = 0;
+    $skipped = 0;
+    $skippedDetails = [];
+
+    foreach ($data['data'] as $index => $item) {
+        // Validate required fields
+        if (empty($item['date']) || empty($item['product']) || !isset($item['quantity']) || !isset($item['type'])) {
+            $skipped++;
+            $skippedDetails[] = [
+                'index' => $index,
+                'reason' => 'Missing required fields',
+                'data' => $item,
+            ];
+            continue;
+        }
+
+        $product = ProductsModel::where('name', 'LIKE', trim($item['product']))->first();
+        if (!$product) {
+            $skipped++;
+            $skippedDetails[] = [
+                'index' => $index,
+                'reason' => "Product not found: '{$item['product']}'",
+                'data' => $item,
+            ];
+            continue;
+        }
+
+        $godown = GodownModel::where('name', 'LIKE', trim($item['place']))->first();
+        if (!$godown) {
+            $skipped++;
+            $skippedDetails[] = [
+                'index' => $index,
+                'reason' => "Godown/place not found: '{$item['place']}'",
+                'data' => $item,
+            ];
+            continue;
+        }
+
+        $adjustmentData = [
+            'company_id' => 1, // Adjust as needed
+            'adjustment_date' => $item['date'],
+            'product_id' => $product->id,
+            'quantity' => (float) $item['quantity'],
+            'godown_id' => $godown->id,
+            'type' => $item['type'],
+        ];
+
+        AdjustmentModel::create($adjustmentData);
+        $inserted++;
+    }
+
+    return response()->json([
+        'message' => "Import completed",
+        'inserted' => $inserted,
+        'skipped' => $skipped,
+        'total' => count($data['data']),
+        'skipped_details' => $skippedDetails,
+    ]);
+}
+
 
 }
