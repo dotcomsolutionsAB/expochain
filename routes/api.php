@@ -33,6 +33,7 @@ use App\Http\Controllers\LotController;
 use App\Http\Controllers\AdjustmentController;
 use App\Http\Controllers\VendorsController;
 use App\Http\Controllers\CustomerVisitController;
+use App\Http\Controllers\StatsController;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -45,6 +46,7 @@ Route::post('/get_otp', [AuthController::class, 'generate_otp']);
 
 // Route::get('/client_migrate', [ClientsController::class, 'importClientsData']);
 
+Route::get('/stats', [StatsController::class, 'index']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
 
