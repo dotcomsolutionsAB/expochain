@@ -47,6 +47,38 @@ use App\Models\PurchaseInvoiceProductsModel;
 use App\Models\PurchaseOrderAddonsModel;
 use App\Models\PurchaseOrderModel;
 use App\Models\PurchaseOrderProductsModel;
+use App\Models\PurchaseOrderTermsModel;
+use App\Models\PurchaseReturnModel;
+use App\Models\PurchaseReturnProductsModel;
+use App\Models\QuotationAddonsModel;
+use App\Models\QuotationProductsModel;
+use App\Models\QuotationsModel;
+use App\Models\QuotationTermMasterModel;
+use App\Models\QuotationTermsModel;
+use App\Models\ResetQueueModel;
+use App\Models\SalesInvoiceAddonsModel;
+use App\Models\SalesInvoiceModel;
+use App\Models\SalesInvoiceProductsModel;
+use App\Models\SalesOrderAddonsModel;
+use App\Models\SalesOrderModel;
+use App\Models\SalesOrderProductsModel;
+use App\Models\SalesReturnModel;
+use App\Models\SalesReturnProductsModel;
+use App\Models\StateModel;
+use App\Models\StockTransferModel;
+use App\Models\StockTransferProductsModel;
+
+use App\Models\SubCategoryModel;
+use App\Models\SupplierAddressModel;
+use App\Models\SuppliersContactsModel;
+use App\Models\SuppliersModel;
+
+use App\Models\TestCertificateModel;
+use App\Models\TestCertificateProductsModel;
+use App\Models\UploadsModel;
+use App\Models\User;
+use App\Models\VendorsModel;
+use App\Models\WhatsappQueueModel;
 
 class StatsController extends Controller
 {
@@ -54,14 +86,6 @@ class StatsController extends Controller
     {
         // Collect counts for all models here
         $counts = [
-            'products' => ProductsModel::count(),
-            'Purchase Back' => PurchaseBackModel::count(),
-            'Purchase Invoice Addons' => PurchaseInvoiceAddonsModel::count(),
-            'Purchase Invoice' => PurchaseInvoiceModel::count(),
-            'Purchase Invoice Products' => PurchaseInvoiceProductsModel::count(),
-            'Purchase Order Addons' => PurchaseOrderAddonsModel::count(),
-            'Purchase Order' => PurchaseOrderModel::count(),
-            'Purchase Order Products' => PurchaseOrderProductsModel::count(),
 
             // Initial 6 models
             'Adjustments' => AdjustmentModel::count(),
@@ -70,7 +94,6 @@ class StatsController extends Controller
             'Assembly Operation Products' => AssemblyOperationProductsModel::count(),
             'Assembly Products' => AssemblyProductsModel::count(),
             'Clients' => ClientsModel::count(),
-
             // Additional models
             'Category' => CategoryModel::count(),
             'Channel' => ChannelModel::count(),
@@ -85,7 +108,6 @@ class StatsController extends Controller
             'Customer Visit' => CustomerVisitModel::count(),
             'Debit Note' => DebitNoteModel::count(),
             'Debit Note Products' => DebitNoteProductsModel::count(),
-
             // New models
             'Discount' => DiscountModel::count(),
             'Email Queue' => EmailQueueModel::count(),
@@ -97,8 +119,45 @@ class StatsController extends Controller
             'Lot' => LotModel::count(),
             'Opening Stock' => OpeningStockModel::count(),
             'PDF Template' => PdfTemplateModel::count(),
-
+            'products' => ProductsModel::count(),
+            'Purchase Back' => PurchaseBackModel::count(),
+            'Purchase Invoice Addons' => PurchaseInvoiceAddonsModel::count(),
+            'Purchase Invoice' => PurchaseInvoiceModel::count(),
+            'Purchase Invoice Products' => PurchaseInvoiceProductsModel::count(),
+            'Purchase Order Addons' => PurchaseOrderAddonsModel::count(),
+            'Purchase Order' => PurchaseOrderModel::count(),
+            'Purchase Order Products' => PurchaseOrderProductsModel::count(),
+            'Purchase Order Terms' => PurchaseOrderTermsModel::count(),
+            'Purchase Return' => PurchaseReturnModel::count(),
+            'Purchase Return Products' => PurchaseReturnProductsModel::count(),
+            'Quotation Addons' => QuotationAddonsModel::count(),
+            'Quotation Products' => QuotationProductsModel::count(),
+            'Quotation' => QuotationsModel::count(),
+            'Quotation Term Master' => QuotationTermMasterModel::count(),
+            'Quotation Terms' => QuotationTermsModel::count(),
+            'Reset Queue' => ResetQueueModel::count(),
+            'Sales Invoice Addons' => SalesInvoiceAddonsModel::count(),
+            'Sales Invoice' => SalesInvoiceModel::count(),
+            'Sales Invoice Products' => SalesInvoiceProductsModel::count(),
+            'Sales Order Addons' => SalesOrderAddonsModel::count(),
+            'Sales Order' => SalesOrderModel::count(),
+            'Sales Order Products' => SalesOrderProductsModel::count(),
+            'Sales Return' => SalesReturnModel::count(),
+            'Sales Return Products' => SalesReturnProductsModel::count(),
+            'State' => StateModel::count(),
+            'Stock Transfer' => StockTransferModel::count(),
+            'Stock Transfer Products' => StockTransferProductsModel::count(),
             // ----------------------------------//
+            'Sub Category' => SubCategoryModel::count(),
+            'Supplier Address' => SupplierAddressModel::count(),
+            'Suppliers Contacts' => SuppliersContactsModel::count(),
+            'Suppliers' => SuppliersModel::count(),
+            'Test Certificate' => TestCertificateModel::count(),
+            'Test Certificate Products' => TestCertificateProductsModel::count(),
+            'Uploads' => UploadsModel::count(),
+            'User' => User::count(),
+            'Vendors' => VendorsModel::count(),
+            'Whatsapp Queue' => WhatsappQueueModel::count(),
 
 
         ];
