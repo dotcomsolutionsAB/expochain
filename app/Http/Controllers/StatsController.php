@@ -27,12 +27,42 @@ use App\Models\CustomerVisitModel;
 use App\Models\DebitNoteModel;
 use App\Models\DebitNoteProductsModel;
 
+// Newly added models
+use App\Models\DiscountModel;
+use App\Models\EmailQueueModel;
+use App\Models\FabricationModel;
+use App\Models\FabricationProductsModel;
+use App\Models\FinancialYearModel;
+use App\Models\GodownModel;
+use App\Models\GroupModel;
+use App\Models\LotModel;
+use App\Models\OpeningStockModel;
+use App\Models\PdfTemplateModel;
+
+use App\Models\ProductsModel;
+use App\Models\PurchaseBackModel;
+use App\Models\PurchaseInvoiceAddonsModel;
+use App\Models\PurchaseInvoiceModel;
+use App\Models\PurchaseInvoiceProductsModel;
+use App\Models\PurchaseOrderAddonsModel;
+use App\Models\PurchaseOrderModel;
+use App\Models\PurchaseOrderProductsModel;
+
 class StatsController extends Controller
 {
     public function index()
     {
         // Collect counts for all models here
         $counts = [
+            'products' => ProductsModel::count(),
+            'Purchase Back' => PurchaseBackModel::count(),
+            'Purchase Invoice Addons' => PurchaseInvoiceAddonsModel::count(),
+            'Purchase Invoice' => PurchaseInvoiceModel::count(),
+            'Purchase Invoice Products' => PurchaseInvoiceProductsModel::count(),
+            'Purchase Order Addons' => PurchaseOrderAddonsModel::count(),
+            'Purchase Order' => PurchaseOrderModel::count(),
+            'Purchase Order Products' => PurchaseOrderProductsModel::count(),
+
             // Initial 6 models
             'Adjustments' => AdjustmentModel::count(),
             'Assembly' => AssemblyModel::count(),
@@ -55,6 +85,22 @@ class StatsController extends Controller
             'Customer Visit' => CustomerVisitModel::count(),
             'Debit Note' => DebitNoteModel::count(),
             'Debit Note Products' => DebitNoteProductsModel::count(),
+
+            // New models
+            'Discount' => DiscountModel::count(),
+            'Email Queue' => EmailQueueModel::count(),
+            'Fabrication' => FabricationModel::count(),
+            'Fabrication Products' => FabricationProductsModel::count(),
+            'Financial Year' => FinancialYearModel::count(),
+            'Godown' => GodownModel::count(),
+            'Group' => GroupModel::count(),
+            'Lot' => LotModel::count(),
+            'Opening Stock' => OpeningStockModel::count(),
+            'PDF Template' => PdfTemplateModel::count(),
+
+            // ----------------------------------//
+
+
         ];
 
         // Build HTML directly
