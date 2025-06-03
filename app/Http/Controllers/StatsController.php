@@ -292,7 +292,7 @@ class StatsController extends Controller
                 continue;
             }
 
-            $product = ProductModel::where('name', 'LIKE', trim($item['product']))->first();
+            $product = ProductsModel::where('name', 'LIKE', trim($item['product']))->first();
             if (!$product) {
                 $skipped++;
                 $skippedDetails[] = [
