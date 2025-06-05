@@ -102,27 +102,25 @@ class StatsController extends Controller
                 'products' => PurchaseReturnProductsModel::count()
             ],
 
-            
             'Debit Note' => DebitNoteModel::count(),
             'Lot' => LotModel::count(),
             // Purchase bag
             'Purchase Back' => PurchaseBackModel::count(),
-            // 'Purchase Order' => PurchaseOrderModel::count(),
             // Purchase Return & Purchase Return Products
             'Purchase Order' => [
                 'count' => PurchaseOrderModel::count(),
                 'products' => PurchaseOrderProductsModel::count()
             ],
-            
             // Purchase Invoice & Purchase Invoice Products
             'Purchase Invoice' => [
                 'count' => PurchaseInvoiceModel::count(),
                 'products' => PurchaseInvoiceProductsModel::count()
             ],
-            'Sales Return' => SalesReturnModel::count(),
-            'Sales Return Products' => SalesReturnProductsModel::count(),
+            'Sales Return' => [
+                'count' => SalesReturnModel::count(),
+                'products' => SalesReturnProductsModel::count()
+            ],
             // Additional models
-
             'Credit Note' => CreditNoteModel::count(),
             'Assembly' => AssemblyModel::count(),
             // Assembly Operation & Assembly Operation Products
@@ -130,9 +128,10 @@ class StatsController extends Controller
                 'count' => AssemblyOperationModel::count(),
                 'products' => AssemblyOperationProductsModel::count()
             ],
-
+            'Fabrication' => FabricationModel::count(),
             'Adjustments' => AdjustmentModel::count(),
             'Stock Transfer' => StockTransferModel::count(),
+            // transfer back
             'Test Certificate' => TestCertificateModel::count(),
         ];
 
