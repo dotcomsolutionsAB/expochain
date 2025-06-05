@@ -79,31 +79,41 @@ class StatsController extends Controller
     {
         // Collect counts for all models here
         $counts = [
-            // Models with associated product counts
-            'Quotation' => [
-                'total' => QuotationsModel::count(),
-                'product_count' => QuotationProductsModel::count()
-            ],
-            'Sales Order' => [
-                'total' => SalesOrderModel::count(),
-                'product_count' => SalesOrderProductsModel::count()
-            ],
-            'Sales Invoice' => [
-                'total' => SalesInvoiceModel::count(),
-                'product_count' => SalesInvoiceProductsModel::count()
-            ],
-            'Assembly Operation' => [
-                'total' => AssemblyOperationModel::count(),
-                'product_count' => AssemblyOperationProductsModel::count()
-            ],
-            'Purchase Invoice' => [
-                'total' => PurchaseInvoiceModel::count(),
-                'product_count' => PurchaseInvoiceProductsModel::count()
-            ],
-            'Purchase Return' => [
-                'total' => PurchaseReturnModel::count(),
-                'product_count' => PurchaseReturnProductsModel::count()
-            ],
+            'products' => ProductsModel::count(),
+            'Clients' => ClientsModel::count(),
+            'Suppliers' => SuppliersModel::count(),
+            'Quotation' => QuotationsModel::count(),
+            'Quotation Products' => QuotationProductsModel::count(),
+            'Sales Order' => SalesOrderModel::count(),
+            'Sales Invoice' => SalesInvoiceModel::count(),
+            'Sales Return' => SalesReturnModel::count(),
+            'Sales Return Products' => SalesReturnProductsModel::count(),
+            'Debit Note' => DebitNoteModel::count(),
+            'Lot' => LotModel::count(),
+            // Purchase bag
+            'Purchase Back' => PurchaseBackModel::count(),
+            'Purchase Order' => PurchaseOrderModel::count(),
+            'Purchase Invoice' => PurchaseInvoiceModel::count(),
+            'Purchase Invoice Products' => PurchaseInvoiceProductsModel::count(),
+            'Purchase Return' => PurchaseReturnModel::count(),
+            'Purchase Return Products' => PurchaseReturnProductsModel::count(),
+            // Initial 6 models
+            'Credit Note' => CreditNoteModel::count(),
+            'Assembly' => AssemblyModel::count(),
+            'Assembly Operation' => AssemblyOperationModel::count(),
+            'Assembly Operation Products' => AssemblyOperationProductsModel::count(),
+            // New models
+            'Fabrication' => FabricationModel::count(),
+            'Fabrication Products' => FabricationProductsModel::count(),
+            'Adjustments' => AdjustmentModel::count(),
+            'Stock Transfer' => StockTransferModel::count(),
+            
+            'Test Certificate' => TestCertificateModel::count(),
+            // Additional models
+            
+            'Sales Invoice Products' => SalesInvoiceProductsModel::count(),
+            
+            'Sales Order Products' => SalesOrderProductsModel::count(),
         ];
 
         // Build HTML directly
@@ -131,19 +141,13 @@ class StatsController extends Controller
                                     <th>Sl No</th>
                                     <th>Model Name</th>
                                     <th>Total Records</th>
-                                    <th>Product Count</th>
                                 </tr>
                             </thead>
                             <tbody>';
 
                                 $slNo = 1;
-                                foreach ($counts as $model => $data) {
-                                    $html .= '<tr>
-                                                  <td>' . $slNo++ . '</td>
-                                                  <td>' . htmlspecialchars($model) . '</td>
-                                                  <td>' . htmlspecialchars($data['total']) . '</td>
-                                                  <td>' . htmlspecialchars($data['product_count']) . '</td>
-                                                </tr>';
+                                foreach ($counts as $model => $count) {
+                                    $html .= '<tr><td>' . $slNo++ . '</td><td>' . htmlspecialchars($model) . '</td><td>' . htmlspecialchars($count) . '</td></tr>';
                                 }
 
                                 $html .= '
@@ -155,8 +159,6 @@ class StatsController extends Controller
 
         return response($html, 200)->header('Content-Type', 'text/html');
     }
-
-
 
     // public function importAdjustment()
     // {
