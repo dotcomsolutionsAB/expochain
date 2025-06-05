@@ -9,7 +9,6 @@ use App\Models\AdjustmentModel;
 use App\Models\AssemblyModel;
 use App\Models\AssemblyOperationModel;
 use App\Models\AssemblyOperationProductsModel;
-use App\Models\AssemblyProductsModel;
 use App\Models\ClientsModel;
 use App\Models\CategoryModel;
 use App\Models\ChannelModel;
@@ -82,10 +81,22 @@ class StatsController extends Controller
             'products' => ProductsModel::count(),
             'Clients' => ClientsModel::count(),
             'Suppliers' => SuppliersModel::count(),
-            'Quotation' => QuotationsModel::count(),
-            'Quotation Products' => QuotationProductsModel::count(),
-            'Sales Order' => SalesOrderModel::count(),
-            'Sales Invoice' => SalesInvoiceModel::count(),
+            // Quotation & Quotation Products
+            'Quotation' => [
+                'count' => QuotationsModel::count(),
+                'products' => QuotationProductsModel::count()
+            ],
+            // Sales Order & Sales Order Products
+            'Sales Order' => [
+                'count' => SalesOrderModel::count(),
+                'products' => SalesOrderProductsModel::count()
+            ],
+            // Sales Invoice & Sales Invoice Products
+            'Sales Invoice' => [
+                'count' => SalesInvoiceModel::count(),
+                'products' => SalesInvoiceProductsModel::count()
+            ],
+
             'Sales Return' => SalesReturnModel::count(),
             'Sales Return Products' => SalesReturnProductsModel::count(),
             'Debit Note' => DebitNoteModel::count(),
@@ -93,27 +104,30 @@ class StatsController extends Controller
             // Purchase bag
             'Purchase Back' => PurchaseBackModel::count(),
             'Purchase Order' => PurchaseOrderModel::count(),
-            'Purchase Invoice' => PurchaseInvoiceModel::count(),
-            'Purchase Invoice Products' => PurchaseInvoiceProductsModel::count(),
-            'Purchase Return' => PurchaseReturnModel::count(),
-            'Purchase Return Products' => PurchaseReturnProductsModel::count(),
-            // Initial 6 models
+            
+            // Purchase Invoice & Purchase Invoice Products
+            'Purchase Invoice' => [
+                'count' => PurchaseInvoiceModel::count(),
+                'products' => PurchaseInvoiceProductsModel::count()
+            ],
+            // Purchase Return & Purchase Return Products
+            'Purchase Return' => [
+                'count' => PurchaseReturnModel::count(),
+                'products' => PurchaseReturnProductsModel::count()
+            ],
+            // Additional models
+
             'Credit Note' => CreditNoteModel::count(),
             'Assembly' => AssemblyModel::count(),
-            'Assembly Operation' => AssemblyOperationModel::count(),
-            'Assembly Operation Products' => AssemblyOperationProductsModel::count(),
-            // New models
-            'Fabrication' => FabricationModel::count(),
-            'Fabrication Products' => FabricationProductsModel::count(),
+            // Assembly Operation & Assembly Operation Products
+            'Assembly Operation' => [
+                'count' => AssemblyOperationModel::count(),
+                'products' => AssemblyOperationProductsModel::count()
+            ],
+            
             'Adjustments' => AdjustmentModel::count(),
             'Stock Transfer' => StockTransferModel::count(),
-            
             'Test Certificate' => TestCertificateModel::count(),
-            // Additional models
-            
-            'Sales Invoice Products' => SalesInvoiceProductsModel::count(),
-            
-            'Sales Order Products' => SalesOrderProductsModel::count(),
         ];
 
         // Build HTML directly
@@ -141,13 +155,18 @@ class StatsController extends Controller
                                     <th>Sl No</th>
                                     <th>Model Name</th>
                                     <th>Total Records</th>
+                                    <th>Product Count</th>
                                 </tr>
                             </thead>
                             <tbody>';
 
                                 $slNo = 1;
-                                foreach ($counts as $model => $count) {
-                                    $html .= '<tr><td>' . $slNo++ . '</td><td>' . htmlspecialchars($model) . '</td><td>' . htmlspecialchars($count) . '</td></tr>';
+                                foreach ($counts as $model => $data) {
+                                    if (is_array($data)) {
+                                        $html .= '<tr><td>' . $slNo++ . '</td><td>' . htmlspecialchars($model) . '</td><td>' . htmlspecialchars($data['count']) . '</td><td>' . htmlspecialchars($data['products']) . '</td></tr>';
+                                    } else {
+                                        $html .= '<tr><td>' . $slNo++ . '</td><td>' . htmlspecialchars($model) . '</td><td>' . htmlspecialchars($data) . '</td><td>-</td></tr>';
+                                    }
                                 }
 
                                 $html .= '
@@ -159,6 +178,7 @@ class StatsController extends Controller
 
         return response($html, 200)->header('Content-Type', 'text/html');
     }
+
 
     // public function importAdjustment()
     // {
