@@ -78,7 +78,7 @@ class StatsController extends Controller
     {
         // Collect counts for all models here
         $counts = [
-            'products' => ProductsModel::count(),
+            'Products' => ProductsModel::count(),
             'Clients' => ClientsModel::count(),
             'Suppliers' => SuppliersModel::count(),
             // Quotation & Quotation Products
@@ -102,10 +102,9 @@ class StatsController extends Controller
             ],
             
             'Debit Note' => DebitNoteModel::count(),
-            'Lot' => LotModel::count(),
+            'Lot Info' => LotModel::count(),
             // Purchase bag
-            'Purchase Back' => PurchaseBackModel::count(),
-            // Purchase Return & Purchase Return Products
+            'Purchase Back' => PurchaseBackModel::count(), // need to check purchase bag
 
             'Purchase Order' => [
                 'count' => PurchaseOrderModel::count(),
@@ -124,7 +123,7 @@ class StatsController extends Controller
 
             // Additional models
             'Credit Note' => CreditNoteModel::count(),
-            'Assembly' => AssemblyModel::count(),
+            'Assembly Combinations' => AssemblyModel::count(),
             // Assembly Operation & Assembly Operation Products
             'Assembly Operation' => [
                 'count' => AssemblyOperationModel::count(),
@@ -160,9 +159,9 @@ class StatsController extends Controller
                             <thead>
                                 <tr>
                                     <th>Sl No</th>
-                                    <th>Model Name</th>
-                                    <th>Total Records</th>
-                                    <th>Product Count</th>
+                                    <th>Voucher</th>
+                                    <th>Count</th>
+                                    <th>Products</th>
                                 </tr>
                             </thead>
                             <tbody>';
