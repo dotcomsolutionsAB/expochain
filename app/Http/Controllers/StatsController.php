@@ -96,25 +96,31 @@ class StatsController extends Controller
                 'count' => SalesInvoiceModel::count(),
                 'products' => SalesInvoiceProductsModel::count()
             ],
+            // Purchase Return & Purchase Return Products
+            'Purchase Return' => [
+                'count' => PurchaseReturnModel::count(),
+                'products' => PurchaseReturnProductsModel::count()
+            ],
 
-            'Sales Return' => SalesReturnModel::count(),
-            'Sales Return Products' => SalesReturnProductsModel::count(),
+            
             'Debit Note' => DebitNoteModel::count(),
             'Lot' => LotModel::count(),
             // Purchase bag
             'Purchase Back' => PurchaseBackModel::count(),
-            'Purchase Order' => PurchaseOrderModel::count(),
+            // 'Purchase Order' => PurchaseOrderModel::count(),
+            // Purchase Return & Purchase Return Products
+            'Purchase Order' => [
+                'count' => PurchaseOrderModel::count(),
+                'products' => PurchaseOrderProductsModel::count()
+            ],
             
             // Purchase Invoice & Purchase Invoice Products
             'Purchase Invoice' => [
                 'count' => PurchaseInvoiceModel::count(),
                 'products' => PurchaseInvoiceProductsModel::count()
             ],
-            // Purchase Return & Purchase Return Products
-            'Purchase Return' => [
-                'count' => PurchaseReturnModel::count(),
-                'products' => PurchaseReturnProductsModel::count()
-            ],
+            'Sales Return' => SalesReturnModel::count(),
+            'Sales Return Products' => SalesReturnProductsModel::count(),
             // Additional models
 
             'Credit Note' => CreditNoteModel::count(),
@@ -124,7 +130,7 @@ class StatsController extends Controller
                 'count' => AssemblyOperationModel::count(),
                 'products' => AssemblyOperationProductsModel::count()
             ],
-            
+
             'Adjustments' => AdjustmentModel::count(),
             'Stock Transfer' => StockTransferModel::count(),
             'Test Certificate' => TestCertificateModel::count(),
