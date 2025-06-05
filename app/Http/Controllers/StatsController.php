@@ -138,14 +138,16 @@ class StatsController extends Controller
                             <caption>Database Table Counts</caption>
                             <thead>
                                 <tr>
+                                    <th>Sl No</th>
                                     <th>Model Name</th>
                                     <th>Total Records</th>
                                 </tr>
                             </thead>
                             <tbody>';
 
+                                $slNo = 1;
                                 foreach ($counts as $model => $count) {
-                                    $html .= '<tr><td>' . htmlspecialchars($model) . '</td><td>' . htmlspecialchars($count) . '</td></tr>';
+                                    $html .= '<tr><td>' . $slNo++ . '</td><td>' . htmlspecialchars($model) . '</td><td>' . htmlspecialchars($count) . '</td></tr>';
                                 }
 
                                 $html .= '
