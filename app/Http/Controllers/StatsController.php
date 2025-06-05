@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use Illuminate\Support\Facades\Http; // For HTTP client
 use Illuminate\Http\Request;
 
@@ -78,80 +79,41 @@ class StatsController extends Controller
     {
         // Collect counts for all models here
         $counts = [
-
+            'products' => ProductsModel::count(),
+            'Clients' => ClientsModel::count(),
+            'Suppliers' => SuppliersModel::count(),
+            'Quotation' => QuotationsModel::count(),
+            'Quotation Products' => QuotationProductsModel::count(),
+            'Sales Order' => SalesOrderModel::count(),
+            'Sales Invoice' => SalesInvoiceModel::count(),
+            'Sales Return' => SalesReturnModel::count(),
+            'Sales Return Products' => SalesReturnProductsModel::count(),
+            'Debit Note' => DebitNoteModel::count(),
+            'Lot' => LotModel::count(),
+            // Purchase bag
+            'Purchase Back' => PurchaseBackModel::count(),
+            'Purchase Order' => PurchaseOrderModel::count(),
+            'Purchase Invoice' => PurchaseInvoiceModel::count(),
+            'Purchase Invoice Products' => PurchaseInvoiceProductsModel::count(),
+            'Purchase Return' => PurchaseReturnModel::count(),
+            'Purchase Return Products' => PurchaseReturnProductsModel::count(),
             // Initial 6 models
-            'Adjustments' => AdjustmentModel::count(),
+            'Credit Note' => CreditNoteModel::count(),
             'Assembly' => AssemblyModel::count(),
             'Assembly Operation' => AssemblyOperationModel::count(),
             'Assembly Operation Products' => AssemblyOperationProductsModel::count(),
-            'Assembly Products' => AssemblyProductsModel::count(),
-            'Clients' => ClientsModel::count(),
-            // Additional models
-            'Category' => CategoryModel::count(),
-            'Channel' => ChannelModel::count(),
-            'Client Address' => ClientAddressModel::count(),
-            'Client Contacts' => ClientContactsModel::count(),
-            'Closing Stock' => ClosingStockModel::count(),
-            'Company' => CompanyModel::count(),
-            'Counter' => CounterModel::count(),
-            'Country' => CountryModel::count(),
-            'Credit Note' => CreditNoteModel::count(),
-            'Credit Note Products' => CreditNoteProductsModel::count(),
-            'Customer Visit' => CustomerVisitModel::count(),
-            'Debit Note' => DebitNoteModel::count(),
-            'Debit Note Products' => DebitNoteProductsModel::count(),
             // New models
-            'Discount' => DiscountModel::count(),
-            'Email Queue' => EmailQueueModel::count(),
             'Fabrication' => FabricationModel::count(),
             'Fabrication Products' => FabricationProductsModel::count(),
-            'Financial Year' => FinancialYearModel::count(),
-            'Godown' => GodownModel::count(),
-            'Group' => GroupModel::count(),
-            'Lot' => LotModel::count(),
-            'Opening Stock' => OpeningStockModel::count(),
-            'PDF Template' => PdfTemplateModel::count(),
-            'products' => ProductsModel::count(),
-            'Purchase Back' => PurchaseBackModel::count(),
-            'Purchase Invoice Addons' => PurchaseInvoiceAddonsModel::count(),
-            'Purchase Invoice' => PurchaseInvoiceModel::count(),
-            'Purchase Invoice Products' => PurchaseInvoiceProductsModel::count(),
-            'Purchase Order Addons' => PurchaseOrderAddonsModel::count(),
-            'Purchase Order' => PurchaseOrderModel::count(),
-            'Purchase Order Products' => PurchaseOrderProductsModel::count(),
-            'Purchase Order Terms' => PurchaseOrderTermsModel::count(),
-            'Purchase Return' => PurchaseReturnModel::count(),
-            'Purchase Return Products' => PurchaseReturnProductsModel::count(),
-            'Quotation Addons' => QuotationAddonsModel::count(),
-            'Quotation Products' => QuotationProductsModel::count(),
-            'Quotation' => QuotationsModel::count(),
-            'Quotation Term Master' => QuotationTermMasterModel::count(),
-            'Quotation Terms' => QuotationTermsModel::count(),
-            'Reset Queue' => ResetQueueModel::count(),
-            'Sales Invoice Addons' => SalesInvoiceAddonsModel::count(),
-            'Sales Invoice' => SalesInvoiceModel::count(),
-            'Sales Invoice Products' => SalesInvoiceProductsModel::count(),
-            'Sales Order Addons' => SalesOrderAddonsModel::count(),
-            'Sales Order' => SalesOrderModel::count(),
-            'Sales Order Products' => SalesOrderProductsModel::count(),
-            'Sales Return' => SalesReturnModel::count(),
-            'Sales Return Products' => SalesReturnProductsModel::count(),
-            'State' => StateModel::count(),
+            'Adjustments' => AdjustmentModel::count(),
             'Stock Transfer' => StockTransferModel::count(),
-            'Stock Transfer Products' => StockTransferProductsModel::count(),
-            // ----------------------------------//
-            'Sub Category' => SubCategoryModel::count(),
-            'Supplier Address' => SupplierAddressModel::count(),
-            'Suppliers Contacts' => SuppliersContactsModel::count(),
-            'Suppliers' => SuppliersModel::count(),
+            
             'Test Certificate' => TestCertificateModel::count(),
-            'Test Certificate Products' => TestCertificateProductsModel::count(),
-            'Uploads' => UploadsModel::count(),
-            'User' => User::count(),
-            'Vendors' => VendorsModel::count(),
-            'Whatsapp Queue' => WhatsappQueueModel::count(),
-
-
+            // Additional models
+            
+            'Sales Invoice Products' => SalesInvoiceProductsModel::count(),
+            
+            'Sales Order Products' => SalesOrderProductsModel::count(),
         ];
 
         // Build HTML directly
@@ -463,8 +425,8 @@ class StatsController extends Controller
                 'fb_id' => $fabrication->id,
                 'product_id' => $product->id,
                 'quantity' => (float)$item['quantity'],
-                'rate' => null,      // Not in API
-                'amount' => null,    // Not in API
+                'rate' => 0,      // Not in API
+                'amount' => 0,    // Not in API
                 'godown_id' => $godown->id,
                 'remarks' => $remarks,
                 'type' => $item['type'],
