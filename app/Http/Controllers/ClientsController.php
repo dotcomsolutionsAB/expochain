@@ -608,10 +608,22 @@ class ClientsController extends Controller
             $record['GSTIN'] = $record['GSTIN'] ?? null;
             $record['Country'] = $record['Country'] ?? null;
 
-            // process GSTIN
-            while (ClientsModel::where('gstin', $record['GSTIN'])->exists()) {
-                $record['GSTIN'] = '-' . $record['GSTIN']; // Prepend `-` if GSTIN already exists
+            // Sanitize GSTIN
+            $record['GSTIN'] = trim($record['GSTIN']);
+            if ($record['GSTIN'] === '' || strlen($record['GSTIN']) > 15 || !preg_match('/^[0-9A-Z]{1,15}$/', $record['GSTIN'])) {
+                $record['GSTIN'] = null;
             }
+
+            // Make unique if GSTIN exists
+            if ($record['GSTIN']) {
+                while (ClientsModel::where('gstin', $record['GSTIN'])->exists()) {
+                    $record['GSTIN'] = '-' . $record['GSTIN'];
+                }
+            }
+            // process GSTIN
+            // while (ClientsModel::where('gstin', $record['GSTIN'])->exists()) {
+            //     $record['GSTIN'] = '-' . $record['GSTIN']; // Prepend `-` if GSTIN already exists
+            // }
     
             // Process mobile and email
             $mobileList = array_filter(explode(',', $record['Mobile'] ?? '')); // Filter out empty values
