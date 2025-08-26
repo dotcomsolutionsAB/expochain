@@ -19,11 +19,12 @@ return new class extends Migration
             $table->string('gstin')->nullable();
             $table->string('mobile')->nullable();
             $table->string('email')->nullable();
+
             $table->timestamps();
 
             // Add a composite unique index for name, gstin, and company_id
             $table->unique(['name', 'gstin', 'company_id'], 'unique_vendor_name_gstin_company_id');
-            $table->timestamps();
+            // $table->timestamps();
         });
     }
 
