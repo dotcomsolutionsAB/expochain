@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('division')->nullable();
             $table->string('plant')->nullable();
             $table->string('gstin')->nullable();
-            $table->unsignedBigInteger('default_contact');
+            $table->unsignedBigInteger('default_contact')->nullable();
             $table->timestamps();
 
             // Add a composite unique index for name, gstin, and contact_id

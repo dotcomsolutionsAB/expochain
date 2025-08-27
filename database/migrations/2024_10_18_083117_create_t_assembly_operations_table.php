@@ -20,8 +20,11 @@ return new class extends Migration
             $table->integer('product_id');
             $table->string('product_name');
             $table->integer('godown');
+            $table->integer('quantity');
+            $table->integer('rate');
             $table->float('amount');
             $table->string('log_user');
+            $table->integer('sold')->nullable();
             $table->timestamps();
         });
     }

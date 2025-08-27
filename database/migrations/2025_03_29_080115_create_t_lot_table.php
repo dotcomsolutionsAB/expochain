@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('t_lot', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('company_id');
-            $table->string('name');
+            $table->string('name')->nullable();
             $table->string('lr_no')->nullable();
             $table->date('date')->nullable();
             $table->string('shipping_by')->nullable();

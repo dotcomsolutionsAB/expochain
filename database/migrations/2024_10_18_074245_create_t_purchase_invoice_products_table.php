@@ -30,10 +30,10 @@ return new class extends Migration
             $table->float('sgst');
             $table->float('igst');
             $table->float('amount')->default('0');
-            $table->integer('channel')->default('0');
+            $table->integer('channel')->default('0')->nullable();
             $table->integer('godown')->nullable();
             $table->integer('returned')->default('0');//
-            $table->integer('stock')->default('0');
+            $table->integer('sold')->default('0');
             $table->timestamps();
         });
     }

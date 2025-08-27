@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('gstin')->nullable();
             $table->string('mobile')->nullable();
             $table->string('email')->nullable();
-            $table->unsignedBigInteger('default_contact');
+            $table->unsignedBigInteger('default_contact')->nullable();
             $table->timestamps();
 
             // Add a composite unique index for name, gstin, and contact_id

@@ -18,9 +18,9 @@ return new class extends Migration
             $table->integer('product_id');
             $table->string('product_name');
             $table->integer('quantity');
-            $table->integer('rate');
-            $table->integer('godown');
-            $table->string('log_user');
+            $table->integer('rate')->nullable();
+            $table->integer('godown')->nullable();
+            $table->string('log_user')->nullable();
             $table->timestamps();
         });
     }

@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('transfer_id')->unique();
             $table->integer('company_id');
-            $table->integer('godown_from');
-            $table->integer('godown_to');
+            $table->integer('godown_from')->nullable();
+            $table->integer('godown_to')->nullable();
             $table->date('transfer_date');
             $table->text('remarks')->nullable();
             $table->timestamps();

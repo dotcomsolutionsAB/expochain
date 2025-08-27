@@ -13,12 +13,13 @@ return new class extends Migration
     {
         Schema::create('t_customer_visits', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('company_id');
             $table->date('date');
             $table->string('customer');
             $table->string('location')->nullable();
             $table->string('contact_person_name')->nullable();
             $table->string('designation')->nullable();
-            $table->string('mobile', 20)->nullable();
+            $table->string('mobile', 256)->nullable();
             $table->string('email')->nullable();
             $table->float('champion')->default(0);
             $table->float('fenner')->default(0);

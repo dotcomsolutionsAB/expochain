@@ -20,7 +20,7 @@ class AssemblyOperationModel extends Model
         'quantity',
         'rate',
         'amount',
-        'godown',
+        // 'godown',
         'log_user',
         'sold'
     ];
