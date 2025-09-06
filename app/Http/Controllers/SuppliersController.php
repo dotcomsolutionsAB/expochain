@@ -13,6 +13,10 @@ use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Style\Border;
+use Maatwebsite\Excel\Style\Alignment;
 
 class SuppliersController extends Controller
 {
@@ -725,6 +729,109 @@ class SuppliersController extends Controller
         return array_unique(array_map('trim', $mobileList));
     }
 
+    // public function export_suppliers(Request $request)
+    // {
+    //     // Check for comma-separated IDs
+    //     $ids = $request->input('id') ? explode(',', $request->input('id')) : null;
+    //     $search = $request->input('search'); // Optional search input
+
+    //     $suppliersQuery = SuppliersModel::with([
+    //         'contacts' => function ($query) {
+    //             $query->select('supplier_id', 'name', 'designation', 'mobile', 'email');
+    //         },
+    //         'addresses' => function ($query) {
+    //             $query->select('supplier_id', 'type', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode', 'country');
+    //         },
+    //     ])
+    //     ->select('supplier_id', 'name', 'gstin', 'company_id')
+    //     ->where('company_id', Auth::user()->company_id);
+
+    //     // If IDs are provided, prioritize them
+    //     if ($ids) {
+    //         $suppliersQuery->whereIn('id', $ids);
+    //     } elseif ($search) {
+    //         // Apply search filter if IDs are not provided
+    //         $suppliersQuery->where(function ($query) use ($search) {
+    //             $query->where('name', 'LIKE', '%' . $search . '%')
+    //                 ->orWhere('gstin', 'LIKE', '%' . $search . '%')
+    //                 ->orWhereHas('contacts', function ($q) use ($search) {
+    //                     $q->where('mobile', 'LIKE', '%' . $search . '%');
+    //                 });
+    //         });
+    //     }
+
+    //     $suppliers = $suppliersQuery->get();
+
+    //     if ($suppliers->isEmpty()) {
+    //         return response()->json([
+    //             'code' => 404,
+    //             'success' => false,
+    //             'message' => 'No suppliers found to export!',
+    //         ], 404);
+    //     }
+
+    //     // Format data for Excel
+    //     $exportData = $suppliers->map(function ($supplier) {
+    //         return [
+    //             'Supplier ID' => $supplier->supplier_id,
+    //             'Name' => $supplier->name,
+    //             'GSTIN' => $supplier->gstin,
+    //             // 'Contacts' => $supplier->contacts->map(fn($contact) => "{$contact->name} ({$contact->mobile})")->join(', '),
+    //             'Address' => $supplier->addresses->map(fn($address) => "{$address->address_line_1}, {$address->city}, {$address->state}, {$address->pincode}, {$address->country}")->join('; '),
+    //         ];
+    //     })->toArray();
+
+    //     // Generate the file path
+    //     $fileName = 'suppliers_export_' . now()->format('Ymd_His') . '.xlsx';
+    //     $filePath = 'uploads/suppliers_excel/' . $fileName;
+
+    //     // Save Excel to storage
+    //     Excel::store(new class($exportData) implements FromCollection, WithHeadings {
+    //         private $data;
+
+    //         public function __construct(array $data)
+    //         {
+    //             $this->data = collect($data);
+    //         }
+
+    //         public function collection()
+    //         {
+    //             return $this->data;
+    //         }
+
+    //         public function headings(): array
+    //         {
+    //             return [
+    //                 'Supplier ID',
+    //                 'Name',
+    //                 'GSTIN',
+    //                 // 'Contacts',
+    //                 'Address',
+    //             ];
+    //         }
+    //     }, $filePath, 'public');
+
+    //     // Get file details
+    //     $fileUrl = asset('storage/' . $filePath);
+    //     $fileSize = Storage::disk('public')->size($filePath);
+    //     // $contentType = Storage::disk('public')->mimeType($filePath);
+
+    //     // Return response with file details
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => 'File available for download',
+    //         'data' => [
+    //             'file_url' => $fileUrl,
+    //             'file_name' => $fileName,
+    //             'file_size' => $fileSize,
+    //             // 'content_type' => $contentType,
+    //             'content_type' => "Excel",
+    //         ],
+    //     ], 200);
+    // }
+
+    // export
     public function export_suppliers(Request $request)
     {
         // Check for comma-separated IDs
@@ -766,14 +873,19 @@ class SuppliersController extends Controller
             ], 404);
         }
 
-        // Format data for Excel
-        $exportData = $suppliers->map(function ($supplier) {
+        // Format data for Excel with serial number and bold columns
+        $exportData = $suppliers->map(function ($supplier, $index) {
+            // Get the first address's state
+            $address = $supplier->addresses->first();
+            $addressText = $address ? "{$address->address_line_1}, {$address->city}, {$address->state}, {$address->pincode}, {$address->country}" : '';
+
             return [
-                'Supplier ID' => $supplier->supplier_id,
+                'Sl. No.' => $index + 1,  // Serial Number
                 'Name' => $supplier->name,
+                'Mobile' => $supplier->contacts->first()->mobile ?? '', // Mobile from first contact
+                'Email' => $supplier->contacts->first()->email ?? '',  // Email from first contact
                 'GSTIN' => $supplier->gstin,
-                // 'Contacts' => $supplier->contacts->map(fn($contact) => "{$contact->name} ({$contact->mobile})")->join(', '),
-                'Address' => $supplier->addresses->map(fn($address) => "{$address->address_line_1}, {$address->city}, {$address->state}, {$address->pincode}, {$address->country}")->join('; '),
+                'Address' => $addressText,
             ];
         })->toArray();
 
@@ -781,8 +893,8 @@ class SuppliersController extends Controller
         $fileName = 'suppliers_export_' . now()->format('Ymd_His') . '.xlsx';
         $filePath = 'uploads/suppliers_excel/' . $fileName;
 
-        // Save Excel to storage
-        Excel::store(new class($exportData) implements FromCollection, WithHeadings {
+        // Save Excel to storage with bold headers and borders
+        Excel::store(new class($exportData) implements FromCollection, WithHeadings, WithStyles {
             private $data;
 
             public function __construct(array $data)
@@ -798,19 +910,33 @@ class SuppliersController extends Controller
             public function headings(): array
             {
                 return [
-                    'Supplier ID',
-                    'Name',
-                    'GSTIN',
-                    // 'Contacts',
-                    'Address',
+                    'Sl. No.', 'Name', 'Mobile', 'Email', 'GSTIN', 'Address',
                 ];
+            }
+
+            public function styles(Worksheet $sheet)
+            {
+                // Apply bold style to headings
+                $sheet->getStyle('A1:F1')->getFont()->setBold(true);
+
+                // Center align the headers and data
+                $sheet->getStyle('A1:F1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle('A2:F' . (count($this->data) + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+                // Apply borders to all the cells
+                $sheet->getStyle('A1:F' . (count($this->data) + 1))
+                    ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+
+                // Set column width to adjust content
+                foreach (range('A', 'F') as $columnID) {
+                    $sheet->getColumnDimension($columnID)->setAutoSize(true);
+                }
             }
         }, $filePath, 'public');
 
         // Get file details
         $fileUrl = asset('storage/' . $filePath);
         $fileSize = Storage::disk('public')->size($filePath);
-        // $contentType = Storage::disk('public')->mimeType($filePath);
 
         // Return response with file details
         return response()->json([
@@ -821,7 +947,6 @@ class SuppliersController extends Controller
                 'file_url' => $fileUrl,
                 'file_name' => $fileName,
                 'file_size' => $fileSize,
-                // 'content_type' => $contentType,
                 'content_type' => "Excel",
             ],
         ], 200);
