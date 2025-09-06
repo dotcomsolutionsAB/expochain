@@ -26,6 +26,8 @@ use DB;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;  // Correct import for Alignment
+use PhpOffice\PhpSpreadsheet\Style\Border;     // Correct import for Border
 
 class MastersController extends Controller
 {
