@@ -22,18 +22,11 @@ class ClientsController extends Controller
     public function add_clients(Request $request)
     {
         $request->validate([
-            // 'name' => 'required|string|unique:t_clients,name',
-            // 'email' => 'email',
-            // 'type' => 'required|string',
-            // 'category' => 'required|string',
-            // 'division' => 'string',
-            // 'plant' => 'nullable|string',
-            // 'gstin' => 'nullable|string|unique:t_clients,gstin'
             'name' => 'required|string|unique:t_clients,name',
             'mobile' => 'nullable|string',
             'email' => 'nullable|email',
             'type' => 'required|string',
-            'category' => 'required|string',
+            'category' => 'nullable|string',
             'division' => 'nullable|string',
             'plant' => 'nullable|string',
             'gstin' => 'nullable|string|unique:t_clients,gstin',
@@ -41,17 +34,17 @@ class ClientsController extends Controller
             'contacts' => 'nullable|array|min:1', // ✅ Contacts must be an array with at least 1 contact
             'contacts.*.name' => 'required_with:contacts|string',
             'contacts.*.designation' => 'nullable|string',
-            'contacts.*.mobile' => 'required_with:contacts|string|min:10|max:15|unique:t_client_contacts,mobile',
+            'contacts.*.mobile' => 'nullable:contacts|string|min:10|max:15|unique:t_client_contacts,mobile',
             'contacts.*.email' => 'nullable|email',
 
             'addresses' => 'nullable|array|min:1', // ✅ Addresses must be an array with at least 1 address
-            'addresses.*.type' => 'required_with:addresses|string|in:billing,shipping', // ✅ Must be "Billing" or "Shipping"
-            'addresses.*.country' => 'required_with:addresses|string',
-            'addresses.*.z' => 'required_with:addresses|string',
+            'addresses.*.type' => 'nullable|string|in:billing,shipping', // ✅ Must be "Billing" or "Shipping"
+            'addresses.*.country' => 'nullable|string',
+            'addresses.*.z' => 'nullable|string',
             'addresses.*.address_line_2' => 'nullable|string',
-            'addresses.*.city' => 'required_with:addresses|string',
-            'addresses.*.state' => 'required_with:addresses|string',
-            'addresses.*.pincode' => 'required_with:addresses|string|min:4|max:10',
+            'addresses.*.city' => 'nullable|string',
+            'addresses.*.state' => 'nullable|string',
+            'addresses.*.pincode' => 'nullable|string|min:4|max:10',
         ]);
 
         $company_id = Auth::user()->company_id;

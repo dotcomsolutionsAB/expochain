@@ -19,9 +19,9 @@ return new class extends Migration
             $table->string('country')->nullable();
             $table->string('address_line_1');
             $table->string('address_line_2')->nullable();
-            $table->string('city');
-            $table->string('state');
-            $table->string('pincode');
+            $table->string('city')->nullable();
+            $table->string('state')->nullable();
+            $table->string('pincode')->nullable();
             $table->timestamps();
         });
     }
