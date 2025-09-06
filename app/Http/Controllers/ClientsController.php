@@ -973,6 +973,10 @@ class ClientsController extends Controller
                 // Center align the headers
                 $sheet->getStyle('A1:J1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
+                // Center align the "Sl. No." column (Column A) and "Mobile" column (Column C)
+                $sheet->getStyle('A2:A' . (count($this->data) + 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle('C2:C' . (count($this->data) + 1))->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
                 // Apply borders to all the cells
                 $sheet->getStyle('A1:J' . (count($this->data) + 1))
                     ->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
