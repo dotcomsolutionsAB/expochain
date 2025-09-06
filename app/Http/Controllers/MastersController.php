@@ -1014,18 +1014,21 @@ class MastersController extends Controller
                 $sheet->getStyle('B2:B' . (count($this->data) + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
                 $sheet->getStyle('C2:C' . (count($this->data) + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
-                // Enable wrap text for the "Description" column (Column D)
+                // Enable wrap text for the "Product Name", "Alias", and "Description" columns (Columns B, C, D)
+                $sheet->getStyle('B2:B' . (count($this->data) + 1))->getAlignment()->setWrapText(true);
+                $sheet->getStyle('C2:C' . (count($this->data) + 1))->getAlignment()->setWrapText(true);
                 $sheet->getStyle('D2:D' . (count($this->data) + 1))->getAlignment()->setWrapText(true);
 
                 // Apply borders to all the cells
                 $sheet->getStyle('A1:L' . (count($this->data) + 1))
                     ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
 
-                // Set all columns to the same width (e.g., 15)
+                // Set all columns to the same width
                 foreach (range('A', 'L') as $columnID) {
-                    $sheet->getColumnDimension($columnID)->setWidth(15); // Set all columns to width 15
+                    $sheet->getColumnDimension($columnID)->setWidth(15);  // Set the same width for all columns
                 }
             }
+
         }, $filePath, 'public');
 
         // Get file details
