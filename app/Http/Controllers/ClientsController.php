@@ -231,29 +231,29 @@ class ClientsController extends Controller
     {
         // Validate the request input
         $request->validate([
-            'name' => 'required|string',
-            'mobile' => 'required|string|size:13',
-            'email' => 'required|email',
-            'mobile' => $request->input('mobile'),
-            'email' => $request->input('email'),
+            'name' => 'required|string|unique:t_clients,name',
+            'mobile' => 'nullable|string',
+            'email' => 'nullable|email',
             'type' => 'required|string',
-            'category' => 'required|string',
-            'division' => 'required|string',
-            'plant' => 'required|string',
-            'gstin' => 'required|string',
-            'contacts' => 'required|array',
-            'contacts.*.name' => 'required|string',
-            'contacts.*.designation' => 'required|string',
-            'contacts.*.mobile' => 'required|string',
-            'contacts.*.email' => 'required|email',
-            'addresses' => 'required|array',
-            'addresses.*.type' => 'required|in:billing,shipping',
-            'addresses.*.address_line_1' => 'required|string',
+            'category' => 'nullable|string',
+            'division' => 'nullable|string',
+            'plant' => 'nullable|string',
+            'gstin' => 'nullable|string|unique:t_clients,gstin',
+
+            'contacts' => 'nullable|array|min:1', // ✅ Contacts must be an array with at least 1 contact
+            'contacts.*.name' => 'required_with:contacts|string',
+            'contacts.*.designation' => 'nullable|string',
+            'contacts.*.mobile' => 'nullable:contacts|string|min:10|max:15|unique:t_client_contacts,mobile',
+            'contacts.*.email' => 'nullable|email',
+
+            'addresses' => 'nullable|array|min:1', // ✅ Addresses must be an array with at least 1 address
+            'addresses.*.type' => 'nullable|string|in:billing,shipping', // ✅ Must be "Billing" or "Shipping"
+            'addresses.*.country' => 'nullable|string',
+            'addresses.*.z' => 'nullable|string',
             'addresses.*.address_line_2' => 'nullable|string',
-            'addresses.*.city' => 'required|string',
-            'addresses.*.state' => 'required|string',
-            'addresses.*.pincode' => 'required|string',
-            'addresses.*.country' => 'required|string',
+            'addresses.*.city' => 'nullable|string',
+            'addresses.*.state' => 'nullable|string',
+            'addresses.*.pincode' => 'nullable|string|min:4|max:10',
         ]);
 
         // Validate and fetch the client by ID
