@@ -119,7 +119,6 @@ class StateController extends Controller
 
             // Retrieve all states belonging to the country
             $states = StateModel::where('country_id', $country->id)
-                                ->with('country:name,id')  // Ensure country details are included
                                 ->get()
                                 ->makeHidden(['created_at', 'updated_at', 'country_id']);
             
