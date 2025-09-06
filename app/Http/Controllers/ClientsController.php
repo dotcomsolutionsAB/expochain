@@ -760,6 +760,115 @@ class ClientsController extends Controller
         ], 200);
     }
     
+    // public function export_clients(Request $request)
+    // {
+    //     // Check for comma-separated IDs
+    //     $ids = $request->input('id') ? explode(',', $request->input('id')) : null;
+    //     $search = $request->input('search'); // Optional search input
+    //     $type = $request->input('type') ? explode(',', $request->input('type')) : null;
+    //     $category = $request->input('category') ? explode(',', $request->input('category')) : null;
+
+    //     $clientsQuery = ClientsModel::query()
+    //         ->select('customer_id', 'name', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
+    //         ->where('company_id', Auth::user()->company_id);
+
+    //     // If IDs are provided, prioritize them
+    //     if ($ids) {
+    //         $clientsQuery->whereIn('id', $ids);
+    //     } else {
+    //         // Apply search filter if IDs are not provided
+    //         if ($search) {
+    //             $clientsQuery->where(function ($query) use ($search) {
+    //                 $query->where('name', 'LIKE', '%' . $search . '%')
+    //                     ->orWhere('gstin', 'LIKE', '%' . $search . '%');
+    //             });
+    //         }
+
+    //         // Apply type filter
+    //         if ($type) {
+    //             $clientsQuery->whereIn('type', $type);
+    //         }
+
+    //         // Apply category filter
+    //         if ($category) {
+    //             $clientsQuery->whereIn('category', $category);
+    //         }
+    //     }
+
+    //     $clients = $clientsQuery->get();
+
+    //     if ($clients->isEmpty()) {
+    //         return response()->json([
+    //             'code' => 404,
+    //             'success' => false,
+    //             'message' => 'No clients found to export!',
+    //         ], 404);
+    //     }
+
+    //     // Format data for Excel
+    //     $exportData = $clients->map(function ($client) {
+    //         return [
+    //             'Client ID' => $client->customer_id,
+    //             'Name' => $client->name,
+    //             'Type' => $client->type,
+    //             'Category' => $client->category,
+    //             'Division' => $client->division,
+    //             'Plant' => $client->plant,
+    //             'GSTIN' => $client->gstin,
+    //         ];
+    //     })->toArray();
+
+    //     // Generate the file path
+    //     $fileName = 'clients_export_' . now()->format('Ymd_His') . '.xlsx';
+    //     $filePath = 'uploads/clients_excel/' . $fileName;
+
+    //     // Save Excel to storage
+    //     Excel::store(new class($exportData) implements FromCollection, WithHeadings {
+    //         private $data;
+
+    //         public function __construct(array $data)
+    //         {
+    //             $this->data = collect($data);
+    //         }
+
+    //         public function collection()
+    //         {
+    //             return $this->data;
+    //         }
+
+    //         public function headings(): array
+    //         {
+    //             return [
+    //                 'Client ID',
+    //                 'Name',
+    //                 'Type',
+    //                 'Category',
+    //                 'Division',
+    //                 'Plant',
+    //                 'GSTIN',
+    //             ];
+    //         }
+    //     }, $filePath, 'public');
+
+    //     // Get file details
+    //     $fileUrl = asset('storage/' . $filePath);
+    //     $fileSize = Storage::disk('public')->size($filePath);
+
+    //     // Return response with file details
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => 'File available for download',
+    //         'data' => [
+    //             'file_url' => $fileUrl,
+    //             'file_name' => $fileName,
+    //             'file_size' => $fileSize,
+    //             // 'content_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    //             'content_type' => 'Excel',
+    //         ],
+    //     ], 200);
+    // }
+
     public function export_clients(Request $request)
     {
         // Check for comma-separated IDs
@@ -768,30 +877,34 @@ class ClientsController extends Controller
         $type = $request->input('type') ? explode(',', $request->input('type')) : null;
         $category = $request->input('category') ? explode(',', $request->input('category')) : null;
 
+        // Query Clients and eager load addresses to get the state
         $clientsQuery = ClientsModel::query()
-            ->select('customer_id', 'name', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
-            ->where('company_id', Auth::user()->company_id);
+            ->select('t_clients.customer_id', 't_clients.name', 't_clients.mobile', 't_clients.email', 
+                    't_clients.type', 't_clients.category', 't_clients.division', 't_clients.plant', 
+                    't_clients.gstin')
+            ->with('addresses')  // Eager load the addresses relationship
+            ->where('t_clients.company_id', Auth::user()->company_id);
 
         // If IDs are provided, prioritize them
         if ($ids) {
-            $clientsQuery->whereIn('id', $ids);
+            $clientsQuery->whereIn('t_clients.id', $ids);
         } else {
             // Apply search filter if IDs are not provided
             if ($search) {
                 $clientsQuery->where(function ($query) use ($search) {
-                    $query->where('name', 'LIKE', '%' . $search . '%')
-                        ->orWhere('gstin', 'LIKE', '%' . $search . '%');
+                    $query->where('t_clients.name', 'LIKE', '%' . $search . '%')
+                        ->orWhere('t_clients.gstin', 'LIKE', '%' . $search . '%');
                 });
             }
 
             // Apply type filter
             if ($type) {
-                $clientsQuery->whereIn('type', $type);
+                $clientsQuery->whereIn('t_clients.type', $type);
             }
 
             // Apply category filter
             if ($category) {
-                $clientsQuery->whereIn('category', $category);
+                $clientsQuery->whereIn('t_clients.category', $category);
             }
         }
 
@@ -805,15 +918,21 @@ class ClientsController extends Controller
             ], 404);
         }
 
-        // Format data for Excel
-        $exportData = $clients->map(function ($client) {
+        // Format data for Excel and add serial number
+        $exportData = $clients->map(function ($client, $index) {
+            // Get the state from the first address (assuming one address per client)
+            $state = $client->addresses->first() ? $client->addresses->first()->state : 'N/A';
+
             return [
-                'Client ID' => $client->customer_id,
+                'Sl. No.' => $index + 1,  // Serial Number
                 'Name' => $client->name,
+                'Mobile' => $client->mobile,
+                'Email' => $client->email,
                 'Type' => $client->type,
                 'Category' => $client->category,
                 'Division' => $client->division,
                 'Plant' => $client->plant,
+                'State' => $state, // Added state from ClientAddressModel
                 'GSTIN' => $client->gstin,
             ];
         })->toArray();
@@ -822,8 +941,8 @@ class ClientsController extends Controller
         $fileName = 'clients_export_' . now()->format('Ymd_His') . '.xlsx';
         $filePath = 'uploads/clients_excel/' . $fileName;
 
-        // Save Excel to storage
-        Excel::store(new class($exportData) implements FromCollection, WithHeadings {
+        // Save Excel to storage with bold headers and borders
+        Excel::store(new class($exportData) implements FromCollection, WithHeadings, WithStyles {
             private $data;
 
             public function __construct(array $data)
@@ -839,14 +958,23 @@ class ClientsController extends Controller
             public function headings(): array
             {
                 return [
-                    'Client ID',
-                    'Name',
-                    'Type',
-                    'Category',
-                    'Division',
-                    'Plant',
-                    'GSTIN',
+                    'Sl. No.', 'Name', 'Mobile', 'Email', 'Type', 'Category', 'Division', 'Plant', 'State', 'GSTIN',
                 ];
+            }
+
+            public function styles(Worksheet $sheet)
+            {
+                // Apply bold style to headings
+                $sheet->getStyle('A1:J1')->getFont()->setBold(true);
+
+                // Apply borders to all the cells
+                $sheet->getStyle('A1:J' . (count($this->data) + 1))
+                    ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+
+                // Set column width to adjust content
+                foreach (range('A', 'J') as $columnID) {
+                    $sheet->getColumnDimension($columnID)->setAutoSize(true);
+                }
             }
         }, $filePath, 'public');
 
@@ -863,9 +991,9 @@ class ClientsController extends Controller
                 'file_url' => $fileUrl,
                 'file_name' => $fileName,
                 'file_size' => $fileSize,
-                // 'content_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'content_type' => 'Excel',
             ],
         ], 200);
-    }
+    }   
+
 }
