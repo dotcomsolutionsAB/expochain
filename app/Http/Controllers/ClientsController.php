@@ -970,6 +970,9 @@ class ClientsController extends Controller
                 // Apply bold style to headings
                 $sheet->getStyle('A1:J1')->getFont()->setBold(true);
 
+                // Center align the headers
+                $sheet->getStyle('A1:J1')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
                 // Apply borders to all the cells
                 $sheet->getStyle('A1:J' . (count($this->data) + 1))
                     ->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
