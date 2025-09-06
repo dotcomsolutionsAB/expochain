@@ -34,9 +34,9 @@ class SuppliersController extends Controller
 
             // Addresses Validation
             'addresses' => 'nullable|array|min:1', // Must be an array if provided
-            'addresses.*.type' => 'required_with:addresses|string|in:billing,shipping', // Must be either "billing" or "shipping"
+            'addresses.*.type' => 'nullable|string|in:billing,shipping', // Must be either "billing" or "shipping"
             'addresses.*.country' => 'nullable|string',
-            'addresses.*.address_line_1' => 'required_with:addresses|string',
+            'addresses.*.address_line_1' => 'nullable|string',
             'addresses.*.address_line_2' => 'nullable|string',
             'addresses.*.city' => 'nullable|string',
             'addresses.*.state' => 'nullable|string',
@@ -115,7 +115,6 @@ class SuppliersController extends Controller
             ], 201)
             : response()->json(['code' => 400, 'success' => false, 'message' => 'Failed to register supplier record.'], 400);
     }
-
 
     // view
     // public function view_suppliers(Request $request)
@@ -280,23 +279,27 @@ class SuppliersController extends Controller
     public function update_suppliers(Request $request, $id)
     {
         $request->validate([
-            'name' => 'required|string',
-            'gstin' => 'required|string',
-            'mobile' => 'required|string|size:13',
-            'email' => 'required|email',
-            'contacts' => 'required|array|min:1',
-            'contacts.*.name' => 'required|string',
-            'contacts.*.designation' => 'required|string',
-            'contacts.*.mobile' => 'required|string',
-            'contacts.*.email' => 'required|email',
-            'addresses' => 'required|array|min:1',
-            'addresses.*.type' => 'required|in:billing,shipping',
-            'addresses.*.address_line_1' => 'required|string',
+            'name' => 'required|string|unique:t_suppliers,name',
+            'gstin' => 'nullable|string|unique:t_suppliers,gstin',
+            'mobile' => 'nullable|string|min:10|max:15',
+            'email' => 'nullable|email',
+
+            // Contacts Validation
+            'contacts' => 'nullable|array|min:1', // Must be an array if provided
+            'contacts.*.name' => 'required_with:contacts|string',
+            'contacts.*.designation' => 'nullable|string',
+            'contacts.*.mobile' => 'nullable|string|min:10|max:15|unique:t_suppliers_contacts,mobile',
+            'contacts.*.email' => 'nullable|email',
+
+            // Addresses Validation
+            'addresses' => 'nullable|array|min:1', // Must be an array if provided
+            'addresses.*.type' => 'nullable|string|in:billing,shipping', // Must be either "billing" or "shipping"
+            'addresses.*.country' => 'nullable|string',
+            'addresses.*.address_line_1' => 'nullable|string',
             'addresses.*.address_line_2' => 'nullable|string',
-            'addresses.*.city' => 'required|string',
-            'addresses.*.state' => 'required|string',
-            'addresses.*.pincode' => 'required|string',
-            'addresses.*.country' => 'required|string',
+            'addresses.*.city' => 'nullable|string',
+            'addresses.*.state' => 'nullable|string',
+            'addresses.*.pincode' => 'nullable|string|min:4|max:10',
         ]);
 
         // Fetch the supplier by ID
