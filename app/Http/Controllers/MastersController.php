@@ -870,174 +870,180 @@ class MastersController extends Controller
     // }
 
     public function export_products(Request $request)
-{
-    // Check for comma-separated IDs first
-    $ids = $request->input('id') ? explode(',', $request->input('id')) : null;
-    $group = $request->input('group_id') ? explode(',', $request->input('group_id')) : null;
-    $category = $request->input('category_id') ? explode(',', $request->input('category_id')) : null;
-    $subCategory = $request->input('sub_category_id') ? explode(',', $request->input('sub_category_id')) : null;
-    $productName = $request->input('product_name');
+    {
+        // Check for comma-separated IDs first
+        $ids = $request->input('id') ? explode(',', $request->input('id')) : null;
+        $group = $request->input('group_id') ? explode(',', $request->input('group_id')) : null;
+        $category = $request->input('category_id') ? explode(',', $request->input('category_id')) : null;
+        $subCategory = $request->input('sub_category_id') ? explode(',', $request->input('sub_category_id')) : null;
+        $productName = $request->input('product_name');
 
-    // Base Query with eager loading of relations
-    $query = ProductsModel::with([
-        'groupRelation:id,name',
-        'categoryRelation:id,name',
-        'subCategoryRelation:id,name',
-    ])
-    ->select(
-        'serial_number',
-        'name',
-        'alias',
-        'description',
-        'type',
-        'group',
-        'category',
-        'sub_category',
-        'cost_price',
-        'sale_price',
-        'unit',
-        'hsn',
-        'tax'
-    );
+        // Base Query with eager loading of relations
+        $query = ProductsModel::with([
+            'groupRelation:id,name',
+            'categoryRelation:id,name',
+            'subCategoryRelation:id,name',
+        ])
+        ->select(
+            'serial_number',
+            'name',
+            'alias',
+            'description',
+            'type',
+            'group',
+            'category',
+            'sub_category',
+            'cost_price',
+            'sale_price',
+            'unit',
+            'hsn',
+            'tax'
+        );
 
-    // 🔹 If IDs are provided, prioritize them
-    if ($ids) {
-        $query->whereIn('id', $ids);
-    } else {
-        // Apply filters only if IDs are not provided
-        if ($productName) {
-            $normalizedInput = strtolower(preg_replace('/[^a-zA-Z0-9]/', ' ', $productName));
-            $tokens = preg_split('/\s+/', $normalizedInput);
+        // 🔹 If IDs are provided, prioritize them
+        if ($ids) {
+            $query->whereIn('id', $ids);
+        } else {
+            // Apply filters only if IDs are not provided
+            if ($productName) {
+                $normalizedInput = strtolower(preg_replace('/[^a-zA-Z0-9]/', ' ', $productName));
+                $tokens = preg_split('/\s+/', $normalizedInput);
 
-            $query->where(function ($q) use ($tokens) {
-                foreach ($tokens as $token) {
-                    $q->where(function ($subQuery) use ($token) {
-                        $subQuery->whereRaw(
-                            "LOWER(REPLACE(REPLACE(REPLACE(name, ' ', ''), '-', ''), 'x', '')) LIKE ?",
-                            ['%' . $token . '%']
-                        )
-                        ->orWhereRaw(
-                            "LOWER(REPLACE(REPLACE(REPLACE(alias, ' ', ''), '-', ''), 'x', '')) LIKE ?",
-                            ['%' . $token . '%']
-                        );
-                    });
-                }
-            });
-        }
+                $query->where(function ($q) use ($tokens) {
+                    foreach ($tokens as $token) {
+                        $q->where(function ($subQuery) use ($token) {
+                            $subQuery->whereRaw(
+                                "LOWER(REPLACE(REPLACE(REPLACE(name, ' ', ''), '-', ''), 'x', '')) LIKE ?",
+                                ['%' . $token . '%']
+                            )
+                            ->orWhereRaw(
+                                "LOWER(REPLACE(REPLACE(REPLACE(alias, ' ', ''), '-', ''), 'x', '')) LIKE ?",
+                                ['%' . $token . '%']
+                            );
+                        });
+                    }
+                });
+            }
 
-        if ($group) {
-            $query->whereIn('group', $group);
-        }
-        if ($category) {
-            $query->whereIn('category', $category);
-        }
-        if ($subCategory) {
-            $query->whereIn('sub_category', $subCategory);
-        }
-    }
-
-    // Fetch Data
-    $products = $query->get();
-
-    if ($products->isEmpty()) {
-        return response()->json([
-            'code' => 404,
-            'success' => false,
-            'message' => 'Sorry! no products found to export!',
-        ], 404);
-    }
-
-    // Format data for export
-    $exportData = $products->map(function ($product, $index) {
-        return [
-            'SN' => $index + 1,  // Serial Number (1, 2, 3, ...)
-            'Product Name' => $product->name,
-            'Alias' => $product->alias,
-            'Description' => $product->description,
-            'Group' => optional($product->groupRelation)->name,
-            'Category' => optional($product->categoryRelation)->name,
-            'Sub Category' => optional($product->subCategoryRelation)->name,
-            'Cost Price' => $product->cost_price,
-            'Sale Price' => $product->sale_price,
-            'Unit' => $product->unit,
-            'HSN' => $product->hsn,
-            'Tax' => $product->tax,
-        ];
-    })->toArray();
-
-    // File path
-    $fileName = 'products_export_' . now()->format('Ymd_His') . '.xlsx';
-    $filePath = 'uploads/products_excel/' . $fileName;
-
-    // Store Excel file in storage
-    Excel::store(new class($exportData) implements FromCollection, WithHeadings, WithStyles {
-        private $data;
-
-        public function __construct(array $data)
-        {
-            $this->data = collect($data);
-        }
-
-        public function collection()
-        {
-            return $this->data;
-        }
-
-        public function headings(): array
-        {
-            return [
-                'SN',
-                'Product Name',
-                'Alias',
-                'Description',
-                'Group',
-                'Category',
-                'Sub Category',
-                'Cost Price',
-                'Sale Price',
-                'Unit',
-                'HSN',
-                'Tax',
-            ];
-        }
-
-        public function styles(Worksheet $sheet)
-        {
-            // Apply bold style to headings
-            $sheet->getStyle('A1:L1')->getFont()->setBold(true);
-
-            // Center align the headers and data
-            $sheet->getStyle('A1:L1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle('A2:L' . (count($this->data) + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-            // Apply borders to all the cells
-            $sheet->getStyle('A1:L' . (count($this->data) + 1))
-                ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
-
-            // Set column width to adjust content
-            foreach (range('A', 'L') as $columnID) {
-                $sheet->getColumnDimension($columnID)->setAutoSize(true);
+            if ($group) {
+                $query->whereIn('group', $group);
+            }
+            if ($category) {
+                $query->whereIn('category', $category);
+            }
+            if ($subCategory) {
+                $query->whereIn('sub_category', $subCategory);
             }
         }
-    }, $filePath, 'public');
 
-    // Get file details
-    $fileUrl = asset('storage/' . $filePath);
-    $fileSize = Storage::disk('public')->size($filePath);
+        // Fetch Data
+        $products = $query->get();
 
-    return response()->json([
-        'code' => 200,
-        'success' => true,
-        'message' => 'File available for download',
-        'data' => [
-            'file_url' => $fileUrl,
-            'file_name' => $fileName,
-            'file_size' => $fileSize,
-            'content_type' => "Excel",
-        ],
-    ], 200);
-}
+        if ($products->isEmpty()) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'Sorry! no products found to export!',
+            ], 404);
+        }
 
+        // Format data for export
+        $exportData = $products->map(function ($product, $index) {
+            return [
+                'SN' => $index + 1,  // Serial Number (1, 2, 3, ...)
+                'Product Name' => $product->name,
+                'Alias' => $product->alias,
+                'Description' => $product->description,
+                'Group' => optional($product->groupRelation)->name,
+                'Category' => optional($product->categoryRelation)->name,
+                'Sub Category' => optional($product->subCategoryRelation)->name,
+                'Cost Price' => $product->cost_price,
+                'Sale Price' => $product->sale_price,
+                'Unit' => $product->unit,
+                'HSN' => $product->hsn,
+                'Tax' => $product->tax,
+            ];
+        })->toArray();
+
+        // File path
+        $fileName = 'products_export_' . now()->format('Ymd_His') . '.xlsx';
+        $filePath = 'uploads/products_excel/' . $fileName;
+
+        // Store Excel file in storage
+        Excel::store(new class($exportData) implements FromCollection, WithHeadings, WithStyles {
+            private $data;
+
+            public function __construct(array $data)
+            {
+                $this->data = collect($data);
+            }
+
+            public function collection()
+            {
+                return $this->data;
+            }
+
+            public function headings(): array
+            {
+                return [
+                    'SN',
+                    'Product Name',
+                    'Alias',
+                    'Description',
+                    'Group',
+                    'Category',
+                    'Sub Category',
+                    'Cost Price',
+                    'Sale Price',
+                    'Unit',
+                    'HSN',
+                    'Tax',
+                ];
+            }
+
+            public function styles(Worksheet $sheet)
+            {
+                // Apply bold style to headings
+                $sheet->getStyle('A1:L1')->getFont()->setBold(true);
+
+                // Center align the headers and data for all columns except Name and Alias
+                $sheet->getStyle('A1:L1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                $sheet->getStyle('A2:L' . (count($this->data) + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+                // Left align the "Product Name" column (Column B) and "Alias" column (Column C)
+                $sheet->getStyle('B2:B' . (count($this->data) + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+                $sheet->getStyle('C2:C' . (count($this->data) + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+                // Enable wrap text for the "Description" column (Column D)
+                $sheet->getStyle('D2:D' . (count($this->data) + 1))->getAlignment()->setWrapText(true);
+
+                // Apply borders to all the cells
+                $sheet->getStyle('A1:L' . (count($this->data) + 1))
+                    ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+
+                // Set all columns to the same width (e.g., 15)
+                foreach (range('A', 'L') as $columnID) {
+                    $sheet->getColumnDimension($columnID)->setWidth(15); // Set all columns to width 15
+                }
+            }
+        }, $filePath, 'public');
+
+        // Get file details
+        $fileUrl = asset('storage/' . $filePath);
+        $fileSize = Storage::disk('public')->size($filePath);
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'File available for download',
+            'data' => [
+                'file_url' => $fileUrl,
+                'file_name' => $fileName,
+                'file_size' => $fileSize,
+                'content_type' => "Excel",
+            ],
+        ], 200);
+    }
 
     public function get_product()
     {
