@@ -105,20 +105,8 @@ class StateController extends Controller
     public function viewStatesByCountry($country_name)
     {
         try {
-            // Fetch the country using the provided country name
-            $country = CountryModel::where('name', $country_name)->first();
-
-            // Check if the country exists
-            if (!$country) {
-                return response()->json([
-                    'code' => 404,
-                    'success' => false,
-                    'message' => 'Country not found',
-                ]);
-            }
-
             // Retrieve all states belonging to the country
-            $states = StateModel::where('country_id', $country->id)
+            $states = StateModel::where('country_name', $country_name)
                                 ->get()
                                 ->makeHidden(['created_at', 'updated_at', 'country_id']);
             
@@ -127,7 +115,7 @@ class StateController extends Controller
                 return [
                     'id' => $state->id,
                     'name' => $state->name,
-                    'country' => $state->country->name ?? null, // Include country name
+                    'country' => $state->country_name ?? null, // Include country name
                 ];
             });
 
