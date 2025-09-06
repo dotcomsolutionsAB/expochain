@@ -15,6 +15,7 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Sheet;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class ClientsController extends Controller
 {
@@ -971,7 +972,7 @@ class ClientsController extends Controller
 
                 // Apply borders to all the cells
                 $sheet->getStyle('A1:J' . (count($this->data) + 1))
-                    ->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+                    ->getBorders()->getAllBorders()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
 
                 // Set column width to adjust content
                 foreach (range('A', 'J') as $columnID) {
@@ -996,6 +997,5 @@ class ClientsController extends Controller
                 'content_type' => 'Excel',
             ],
         ], 200);
-    }   
-
+    }
 }
