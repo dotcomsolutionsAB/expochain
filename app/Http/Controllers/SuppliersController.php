@@ -15,8 +15,9 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Maatwebsite\Excel\Concerns\WithStyles;
-use Maatwebsite\Excel\Style\Border;
-use Maatwebsite\Excel\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;  // Correct import for Alignment class
+use Maatwebsite\Excel\Style\Border;  // Border class import is fine
+
 
 class SuppliersController extends Controller
 {
