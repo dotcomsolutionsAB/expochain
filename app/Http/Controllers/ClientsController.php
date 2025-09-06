@@ -177,7 +177,7 @@ class ClientsController extends Controller
                     $query->select('customer_id', 'type', 'country', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode');
                 },
             ])
-            ->select('id', 'name', 'customer_id', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
+            ->select('id', 'name', 'customer_id', 'mobile', 'email', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
             ->where('company_id', Auth::user()->company_id);
 
             // Apply search filter
