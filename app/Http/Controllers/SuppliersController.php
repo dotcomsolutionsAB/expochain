@@ -920,9 +920,12 @@ class SuppliersController extends Controller
                 // Apply bold style to headings
                 $sheet->getStyle('A1:F1')->getFont()->setBold(true);
 
-                // Center align the headers and data
+                // Center align the headers and data (except for Address column)
                 $sheet->getStyle('A1:F1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $sheet->getStyle('A2:F' . (count($this->data) + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+                // Left align the "Address" column (Column F) specifically
+                $sheet->getStyle('F2:F' . (count($this->data) + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
                 // Apply borders to all the cells
                 $sheet->getStyle('A1:F' . (count($this->data) + 1))
