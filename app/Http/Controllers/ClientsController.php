@@ -133,7 +133,7 @@ class ClientsController extends Controller
                     $query->select('customer_id', 'type', 'country', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode');
                 },
             ])
-            ->select('id','name','customer_id', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
+            ->select('id','name','customer_id', 'mobile', 'email', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
             ->where('company_id', Auth::user()->company_id)
             ->where('id', $id)
             ->first();
@@ -763,115 +763,7 @@ class ClientsController extends Controller
         ], 200);
     }
     
-    // public function export_clients(Request $request)
-    // {
-    //     // Check for comma-separated IDs
-    //     $ids = $request->input('id') ? explode(',', $request->input('id')) : null;
-    //     $search = $request->input('search'); // Optional search input
-    //     $type = $request->input('type') ? explode(',', $request->input('type')) : null;
-    //     $category = $request->input('category') ? explode(',', $request->input('category')) : null;
-
-    //     $clientsQuery = ClientsModel::query()
-    //         ->select('customer_id', 'name', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
-    //         ->where('company_id', Auth::user()->company_id);
-
-    //     // If IDs are provided, prioritize them
-    //     if ($ids) {
-    //         $clientsQuery->whereIn('id', $ids);
-    //     } else {
-    //         // Apply search filter if IDs are not provided
-    //         if ($search) {
-    //             $clientsQuery->where(function ($query) use ($search) {
-    //                 $query->where('name', 'LIKE', '%' . $search . '%')
-    //                     ->orWhere('gstin', 'LIKE', '%' . $search . '%');
-    //             });
-    //         }
-
-    //         // Apply type filter
-    //         if ($type) {
-    //             $clientsQuery->whereIn('type', $type);
-    //         }
-
-    //         // Apply category filter
-    //         if ($category) {
-    //             $clientsQuery->whereIn('category', $category);
-    //         }
-    //     }
-
-    //     $clients = $clientsQuery->get();
-
-    //     if ($clients->isEmpty()) {
-    //         return response()->json([
-    //             'code' => 404,
-    //             'success' => false,
-    //             'message' => 'No clients found to export!',
-    //         ], 404);
-    //     }
-
-    //     // Format data for Excel
-    //     $exportData = $clients->map(function ($client) {
-    //         return [
-    //             'Client ID' => $client->customer_id,
-    //             'Name' => $client->name,
-    //             'Type' => $client->type,
-    //             'Category' => $client->category,
-    //             'Division' => $client->division,
-    //             'Plant' => $client->plant,
-    //             'GSTIN' => $client->gstin,
-    //         ];
-    //     })->toArray();
-
-    //     // Generate the file path
-    //     $fileName = 'clients_export_' . now()->format('Ymd_His') . '.xlsx';
-    //     $filePath = 'uploads/clients_excel/' . $fileName;
-
-    //     // Save Excel to storage
-    //     Excel::store(new class($exportData) implements FromCollection, WithHeadings {
-    //         private $data;
-
-    //         public function __construct(array $data)
-    //         {
-    //             $this->data = collect($data);
-    //         }
-
-    //         public function collection()
-    //         {
-    //             return $this->data;
-    //         }
-
-    //         public function headings(): array
-    //         {
-    //             return [
-    //                 'Client ID',
-    //                 'Name',
-    //                 'Type',
-    //                 'Category',
-    //                 'Division',
-    //                 'Plant',
-    //                 'GSTIN',
-    //             ];
-    //         }
-    //     }, $filePath, 'public');
-
-    //     // Get file details
-    //     $fileUrl = asset('storage/' . $filePath);
-    //     $fileSize = Storage::disk('public')->size($filePath);
-
-    //     // Return response with file details
-    //     return response()->json([
-    //         'code' => 200,
-    //         'success' => true,
-    //         'message' => 'File available for download',
-    //         'data' => [
-    //             'file_url' => $fileUrl,
-    //             'file_name' => $fileName,
-    //             'file_size' => $fileSize,
-    //             // 'content_type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    //             'content_type' => 'Excel',
-    //         ],
-    //     ], 200);
-    // }
-
+    // export
     public function export_clients(Request $request)
     {
         // Check for comma-separated IDs
