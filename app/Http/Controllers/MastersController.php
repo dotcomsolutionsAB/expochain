@@ -24,6 +24,8 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Auth;
 use DB;
 use Illuminate\Validation\Rule;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class MastersController extends Controller
 {
