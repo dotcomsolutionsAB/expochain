@@ -924,6 +924,9 @@ class SuppliersController extends Controller
                 $sheet->getStyle('A1:F1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
                 $sheet->getStyle('A2:F' . (count($this->data) + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
+                // Left align the "Name" column (Column B)
+                $sheet->getStyle('B2:B' . (count($this->data) + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
                 // Left align the "Address" column (Column F) specifically
                 $sheet->getStyle('F2:F' . (count($this->data) + 1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
