@@ -325,6 +325,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/state', [StateController::class, 'viewStates']);
     Route::post('/edit_state/{id}', [StateController::class, 'updateState']);
     Route::delete('/state/{id}', [StateController::class, 'deleteState']);
+    Route::get('/states/{country_name}', [StateController::class, 'viewStatesByCountry']);
 
     Route::post('/quotation-terms', [QuotationTermMasterController::class, 'add']);
     Route::get('/quotation-terms', [QuotationTermMasterController::class, 'retrieve']);

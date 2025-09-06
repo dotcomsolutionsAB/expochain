@@ -9,7 +9,7 @@ class StateModel extends Model
     //
     protected $table = 't_states';
 
-    protected $fillable = ['name', 'country_id'];
+    protected $fillable = ['name', 'country_name'];
 
     // Define relationship with CountryModel
     public function country()

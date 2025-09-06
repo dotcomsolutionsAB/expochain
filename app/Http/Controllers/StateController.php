@@ -100,4 +100,54 @@ class StateController extends Controller
         $state->delete();
         return response()->json(['code' => 204, 'success' => true, 'message' => 'State deleted successfully!']);
     }
+
+    // View all states by country name
+    public function viewStatesByCountry($country_name)
+    {
+        try {
+            // Fetch the country using the provided country name
+            $country = CountryModel::where('name', $country_name)->first();
+
+            // Check if the country exists
+            if (!$country) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'Country not found',
+                ]);
+            }
+
+            // Retrieve all states belonging to the country
+            $states = StateModel::where('country_id', $country->id)
+                                ->with('country:name,id')  // Ensure country details are included
+                                ->get()
+                                ->makeHidden(['created_at', 'updated_at', 'country_id']);
+            
+            // Format the states for response
+            $formattedStates = $states->map(function ($state) {
+                return [
+                    'id' => $state->id,
+                    'name' => $state->name,
+                    'country' => $state->country->name ?? null, // Include country name
+                ];
+            });
+
+            // Return the formatted states
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'data' => $formattedStates,
+                'count' => count($formattedStates),
+            ]);
+
+        } catch (\Exception $e) {
+            // Return error response in case of any exception
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'An error occurred while fetching states',
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
 }
