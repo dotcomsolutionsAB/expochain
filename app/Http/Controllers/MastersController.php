@@ -32,19 +32,19 @@ class MastersController extends Controller
     public function add_products(Request $request)
     {
         $request->validate([
-            'serial_number' => 'required|integer',
+            'serial_number' => 'nullable|integer',
             'name' => 'required|string|unique:t_products,name',
             'alias' => 'nullable|string',
             'description' => 'nullable|string',
             'type' => 'required|string',
             'group' => 'required|integer|exists:t_group,id',
-            'category' => 'required|integer|exists:t_category,id',
+            'category' => 'nullable|integer|exists:t_category,id',
             'sub_category' => 'nullable|integer|exists:t_sub_category,id',
             'cost_price' => 'required|numeric|min:0',
             'sale_price' => 'required|numeric|min:0',
-            'unit' => 'required|string',
-            'hsn' => 'required|string',
-            'tax' => 'required|numeric|min:0|max:100',
+            'unit' => 'nullable|string',
+            'hsn' => 'nullable|string',
+            'tax' => 'nullable|numeric|min:0|max:100',
         ]);
 
         $register_products = ProductsModel::create([
@@ -232,7 +232,7 @@ class MastersController extends Controller
     public function edit_products(Request $request, $id)
     {
         $request->validate([
-            'serial_number' => 'required|integer',
+            'serial_number' => 'nullable|integer',
             'name' => [
             'required',
             'string',
@@ -242,13 +242,13 @@ class MastersController extends Controller
             'description' => 'nullable|string',
             'type' => 'required|string',
             'group' => 'required|integer|exists:t_group,id',
-            'category' => 'required|integer|exists:t_category,id',
+            'category' => 'nullable|integer|exists:t_category,id',
             'sub_category' => 'nullable|integer|exists:t_sub_category,id',
             'cost_price' => 'required|numeric|min:0',
             'sale_price' => 'required|numeric|min:0',
-            'unit' => 'required|string',
-            'hsn' => 'required|string',
-            'tax' => 'required|numeric|min:0|max:100',
+            'unit' => 'nullable|string',
+            'hsn' => 'nullable|string',
+            'tax' => 'nullable|numeric|min:0|max:100',
         ]);
 
         $update_products = ProductsModel::where('id', $id)

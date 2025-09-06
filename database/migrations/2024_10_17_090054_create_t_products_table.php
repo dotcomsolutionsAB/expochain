@@ -25,9 +25,9 @@ return new class extends Migration
             $table->integer('sub_category')->nullable();
             $table->float('cost_price');
             $table->float('sale_price');
-            $table->string('unit');
-            $table->string('hsn');
-            $table->float('tax');
+            $table->string('unit')->nullable();
+            $table->string('hsn')->nullable();
+            $table->float('tax')->nullable();
             $table->timestamps();
         });
     }
