@@ -63,10 +63,10 @@ class SuppliersController extends Controller
         // Generate unique supplier_id
         $supplier_id = rand(11111111, 99999999);
 
-        // Save contacts
-        $contacts = $request->input('contacts');
         $defaultContactId = null;
 
+        // Only create contacts if provided
+        $contacts = $request->input('contacts', []);
         foreach ($contacts as $index => $contact) {
             $newContact = SuppliersContactsModel::create([
                 'supplier_id' => $supplier_id,
@@ -94,7 +94,8 @@ class SuppliersController extends Controller
             'default_contact' => $defaultContactId,
         ]);
 
-        // Save addresses
+        // Only create addresses if provided
+        $addresses = $request->input('addresses', []);
         foreach ($request->input('addresses') as $address) {
             SupplierAddressModel::create([
                 'company_id' => $company_id,
