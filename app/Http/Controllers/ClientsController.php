@@ -64,27 +64,29 @@ class ClientsController extends Controller
 
         $customer_id = rand(1111111111, 9999999999);
 
-        // Save contacts
-        $contacts = $request->input('contacts');
+         // ===== Save contacts if provided =====
+        $contacts = $request->input('contacts', []); // default empty array
         $defaultContactId = null;
 
-        foreach ($contacts as $index => $contact) {
-            $newContact = ClientContactsModel::create([
-                'customer_id' => $customer_id,
-                'company_id' => $company_id,
-                'name' => $contact['name'],
-                'designation' => $contact['designation'],
-                'mobile' => $contact['mobile'],
-                'email' => $contact['email'],
-            ]);
+        if (is_array($contacts) && count($contacts) > 0) {
+            foreach ($contacts as $index => $contact) {
+                $newContact = ClientContactsModel::create([
+                    'customer_id' => $customer_id,
+                    'company_id' => $company_id,
+                    'name' => $contact['name'],
+                    'designation' => $contact['designation'],
+                    'mobile' => $contact['mobile'],
+                    'email' => $contact['email'],
+                ]);
 
-            // Set the first contact as the default if no default is specified
-            if ($index === 0) {
-                $defaultContactId = $newContact->id;
+                // Set the first contact as the default if no default is specified
+                if ($index === 0) {
+                    $defaultContactId = $newContact->id;
+                }
             }
-        }
+         }
 
-        // Save client details
+        // ===== Save client =====
         $register_clients = ClientsModel::create([
             'name' => $request->input('name'),
             'company_id' => $company_id,
@@ -99,19 +101,22 @@ class ClientsController extends Controller
             'default_contact' => $defaultContactId,
         ]);
 
-        // Save addresses
-        foreach ($request->input('addresses') as $address) {
-            ClientAddressModel::create([
-                'company_id' => $company_id,
-                'type' => $address['type'], // Billing or Shipping
-                'customer_id' => $customer_id, // Mapping client ID
-                'country' => $address['country'],
-                'address_line_1' => $address['address_line_1'],
-                'address_line_2' => $address['address_line_2'],
-                'city' => $address['city'],
-                'state' => $address['state'],
-                'pincode' => $address['pincode'],
-            ]);
+        // ===== Save addresses if provided =====
+        $addresses = $request->input('addresses', []);
+        if (is_array($addresses) && count($addresses) > 0) {
+            foreach ($request->input('addresses') as $address) {
+                ClientAddressModel::create([
+                    'company_id' => $company_id,
+                    'type' => $address['type'], // Billing or Shipping
+                    'customer_id' => $customer_id, // Mapping client ID
+                    'country' => $address['country'],
+                    'address_line_1' => $address['address_line_1'],
+                    'address_line_2' => $address['address_line_2'],
+                    'city' => $address['city'],
+                    'state' => $address['state'],
+                    'pincode' => $address['pincode'],
+                ]);
+            }
         }
 
         unset($register_clients['id'], $register_clients['created_at'], $register_clients['updated_at']);
