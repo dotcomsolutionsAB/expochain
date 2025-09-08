@@ -67,19 +67,22 @@ class SuppliersController extends Controller
 
         // Only create contacts if provided
         $contacts = $request->input('contacts', []);
-        foreach ($contacts as $index => $contact) {
-            $newContact = SuppliersContactsModel::create([
-                'supplier_id' => $supplier_id,
-                'company_id' => $company_id,
-                'name' => $contact['name'],
-                'designation' => $contact['designation'],
-                'mobile' => $contact['mobile'],
-                'email' => $contact['email'],
-            ]);
 
-            // Set the first contact as the default if no default is specified
-            if ($index === 0) {
-                $defaultContactId = $newContact->id;
+        if (is_array($contacts) && count($contacts) > 0) {
+            foreach ($contacts as $index => $contact) {
+                $newContact = SuppliersContactsModel::create([
+                    'supplier_id' => $supplier_id,
+                    'company_id' => $company_id,
+                    'name' => $contact['name'],
+                    'designation' => $contact['designation'],
+                    'mobile' => $contact['mobile'],
+                    'email' => $contact['email'],
+                ]);
+
+                // Set the first contact as the default if no default is specified
+                if ($index === 0) {
+                    $defaultContactId = $newContact->id;
+                }
             }
         }
 
@@ -96,18 +99,21 @@ class SuppliersController extends Controller
 
         // Only create addresses if provided
         $addresses = $request->input('addresses', []);
-        foreach ($request->input('addresses') as $address) {
-            SupplierAddressModel::create([
-                'company_id' => $company_id,
-                'supplier_id' => $supplier_id,
-                'type' => $address['type'], // Billing or Shipping
-                'address_line_1' => $address['address_line_1'],
-                'address_line_2' => $address['address_line_2'],
-                'city' => $address['city'],
-                'state' => $address['state'],
-                'pincode' => $address['pincode'],
-                'country' => $address['country'],
-            ]);
+
+        if (is_array($addresses) && count($addresses) > 0) {
+            foreach ($request->input('addresses') as $address) {
+                SupplierAddressModel::create([
+                    'company_id' => $company_id,
+                    'supplier_id' => $supplier_id,
+                    'type' => $address['type'], // Billing or Shipping
+                    'address_line_1' => $address['address_line_1'],
+                    'address_line_2' => $address['address_line_2'],
+                    'city' => $address['city'],
+                    'state' => $address['state'],
+                    'pincode' => $address['pincode'],
+                    'country' => $address['country'],
+                ]);
+            }
         }
 
         unset($register_suppliers['created_at'], $register_suppliers['updated_at']);
