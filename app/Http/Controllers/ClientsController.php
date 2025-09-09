@@ -16,6 +16,7 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Sheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use Illuminate\Validation\Rule;
 
 class ClientsController extends Controller
 {
@@ -236,14 +237,26 @@ class ClientsController extends Controller
     {
         // Validate the request input
         $request->validate([
-            'name' => 'required|string|unique:t_clients,name',
+            'name' => [
+                'required',
+                'string',
+                Rule::unique('t_clients', 'name')
+                    ->ignore($id) // ignore this client row
+                    ->where(fn ($q) => $q->where('company_id', Auth::user()->company_id)),
+            ],
             'mobile' => 'nullable|string',
             'email' => 'nullable|email',
             'type' => 'required|string',
             'category' => 'nullable|string',
             'division' => 'nullable|string',
             'plant' => 'nullable|string',
-            'gstin' => 'nullable|string|unique:t_clients,gstin',
+            'gstin' => [
+                'nullable',
+                'string',
+                Rule::unique('t_clients', 'gstin')
+                    ->ignore($id) // ignore this client row
+                    ->where(fn ($q) => $q->where('company_id', Auth::user()->company_id)),
+            ],
 
             'contacts' => 'nullable|array|min:1', // ✅ Contacts must be an array with at least 1 contact
             'contacts.*.name' => 'required_with:contacts|string',

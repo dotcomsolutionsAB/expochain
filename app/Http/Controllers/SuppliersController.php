@@ -17,7 +17,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Maatwebsite\Excel\Concerns\WithStyles;
 use PhpOffice\PhpSpreadsheet\Style\Alignment; // Correct import for Alignment
 use PhpOffice\PhpSpreadsheet\Style\Border; // Correct import for Border
-
+use Illuminate\Validation\Rule;
 
 class SuppliersController extends Controller
 {
@@ -291,7 +291,13 @@ class SuppliersController extends Controller
     public function update_suppliers(Request $request, $id)
     {
         $request->validate([
-            'name' => 'required|string|unique:t_suppliers,name',
+            'name' => [
+                'required',
+                'string',
+                Rule::unique('t_suppliers', 'name')
+                    ->ignore($id) // ignore this supplier row
+                    ->where(fn ($q) => $q->where('company_id', Auth::user()->company_id)),
+            ],
             'gstin' => 'nullable|string|unique:t_suppliers,gstin',
             'mobile' => 'nullable|string|min:10|max:15',
             'email' => 'nullable|email',
