@@ -476,7 +476,7 @@ class SuppliersController extends Controller
 
             DB::transaction(function () use ($get_supplier_id) {
                 // Delete the supplier
-                $delete_supplier = SuppliersModel::where('id', $get_supplier_id->id)->delete();
+                $delete_supplier = SuppliersModel::where('id', $id)->delete();
 
                 // Delete associated contacts if they exist
                 $delete_contact_records = SupplierContactsModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
