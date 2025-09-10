@@ -474,11 +474,9 @@ class SuppliersController extends Controller
         // Check if the supplier exists
         if ($get_supplier_id && $get_supplier_id->company_id === Auth::user()->company_id) {
 
-            dd($get_supplier_id->id);
-
             DB::transaction(function () use ($get_supplier_id) {
                 // Delete the supplier
-                $delete_supplier = SuppliersModel::where('id', $id)->delete();
+                $delete_supplier = SuppliersModel::where('id', $get_supplier_id->id)->delete();
 
                 // Delete associated contacts if they exist
                 $delete_contact_records = SupplierContactsModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
