@@ -19,6 +19,7 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment; // Correct import for Alignment
 use PhpOffice\PhpSpreadsheet\Style\Border; // Correct import for Border
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Log;
 
 class SuppliersController extends Controller
 {
