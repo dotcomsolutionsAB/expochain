@@ -17,6 +17,7 @@ use Maatwebsite\Excel\Concerns\WithStyles;
 use Maatwebsite\Excel\Sheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
 class ClientsController extends Controller
 {
