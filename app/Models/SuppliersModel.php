@@ -22,7 +22,7 @@ class SuppliersModel extends Model
     // Relationship with contacts
     public function contacts()
     {
-        return $this->hasMany(SuppliersContactsModel::class, 'supplier_id', 'supplier_id');
+        return $this->hasMany(SupplierContactsModel::class, 'supplier_id', 'supplier_id');
     }
 
     // Relationship with addresses

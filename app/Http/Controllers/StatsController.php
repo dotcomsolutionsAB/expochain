@@ -63,7 +63,7 @@ use App\Models\StockTransferModel;
 use App\Models\StockTransferProductsModel;
 use App\Models\SubCategoryModel;
 use App\Models\SupplierAddressModel;
-use App\Models\SuppliersContactsModel;
+use App\Models\SupplierContactsModel;
 use App\Models\SuppliersModel;
 use App\Models\TestCertificateModel;
 use App\Models\TestCertificateProductsModel;

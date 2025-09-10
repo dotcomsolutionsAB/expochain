@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
 use App\Models\SuppliersModel;
-use App\Models\SuppliersContactsModel;
+use App\Models\SupplierContactsModel;
 use App\Models\SupplierAddressModel;
 use Illuminate\Support\Str;
 use Auth;
@@ -71,7 +71,7 @@ class SuppliersController extends Controller
 
         if (is_array($contacts) && count($contacts) > 0) {
             foreach ($contacts as $index => $contact) {
-                $newContact = SuppliersContactsModel::create([
+                $newContact = SupplierContactsModel::create([
                     'supplier_id' => $supplier_id,
                     'company_id' => $company_id,
                     'name' => $contact['name'],
@@ -346,7 +346,7 @@ class SuppliersController extends Controller
         foreach ($contacts as $contactData) {
             $contactNames[] = $contactData['name'];
 
-            $contact = SuppliersContactsModel::where('supplier_id', $supplier->supplier_id)
+            $contact = SupplierContactsModel::where('supplier_id', $supplier->supplier_id)
                 ->where('name', $contactData['name'])
                 ->first();
 
@@ -359,7 +359,7 @@ class SuppliersController extends Controller
                 ]);
             } else {
                 // Create a new contact
-                $newContact = SuppliersContactsModel::create([
+                $newContact = SupplierContactsModel::create([
                     'supplier_id' => $supplier->supplier_id,
                     'company_id' => Auth::user()->company_id,
                     'name' => $contactData['name'],
@@ -375,7 +375,7 @@ class SuppliersController extends Controller
         }
 
         // Delete contacts not in the request
-        $contactsDeleted = SuppliersContactsModel::where('supplier_id', $supplier->supplier_id)
+        $contactsDeleted = SupplierContactsModel::where('supplier_id', $supplier->supplier_id)
             ->whereNotIn('name', $contactNames)
             ->delete();
 
@@ -446,7 +446,7 @@ class SuppliersController extends Controller
     //         $delete_supplier = SuppliersModel::where('id', $id)->delete();
 
     //         // Delete associated contacts by customer_id
-    //         $delete_contact_records = SuppliersContactsModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
+    //         $delete_contact_records = SupplierContactsModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
 
     //         // Delete associated address by customer_id
     //         $delete_address_records = SupplierAddressModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
@@ -479,7 +479,7 @@ class SuppliersController extends Controller
                 $delete_supplier = SuppliersModel::where('id', $get_supplier_id->id)->delete();
 
                 // Delete associated contacts if they exist
-                $delete_contact_records = SuppliersContactsModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
+                $delete_contact_records = SupplierContactsModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
 
                 // Delete associated addresses if they exist
                 $delete_address_records = SupplierAddressModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
@@ -625,7 +625,7 @@ class SuppliersController extends Controller
     public function importSuppliersData()
     {
         SuppliersModel::truncate();
-        SuppliersContactsModel::truncate();
+        SupplierContactsModel::truncate();
         SupplierAddressModel::truncate();
 
         $url = 'https://expo.egsm.in/assets/custom/migrate/suppliers.php';
@@ -728,10 +728,10 @@ class SuppliersController extends Controller
                 $errors[] = ['record' => $record, 'error' => 'Failed to insert address: ' . $e->getMessage()];
             }
 
-            // Insert all parsed mobile numbers into SuppliersContactsModel
+            // Insert all parsed mobile numbers into SupplierContactsModel
             foreach ($mobileList as $mobile) {
                 try {
-                    SuppliersContactsModel::create([
+                    SupplierContactsModel::create([
                         'supplier_id' => $register_supplier->supplier_id,
                         'company_id' => $company_id,
                         'name' => $record['name'], // Use supplier name as the default contact name

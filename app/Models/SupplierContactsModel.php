@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class SuppliersContactsModel extends Model
+class SupplierContactsModel extends Model
 {
     //
     protected $table = 't_suppliers_contacts';
