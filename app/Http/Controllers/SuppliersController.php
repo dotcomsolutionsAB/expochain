@@ -464,55 +464,124 @@ class SuppliersController extends Controller
     //     }
     // }
 
+    // public function delete_supplier($id)
+    // {
+    //     // Try to find the supplier by the given ID
+    //     $get_supplier_id = SuppliersModel::select('id', 'supplier_id', 'company_id')
+    //         ->where('id', $id)
+    //         ->first();
+
+    //     // Check if the supplier exists
+    //     if ($get_supplier_id && $get_supplier_id->company_id === Auth::user()->company_id) {
+
+    //         DB::transaction(function () use ($get_supplier_id) {
+
+    //             // dd($get_supplier_id->supplier_id);
+    //             // Delete the supplier
+    //             $delete_supplier = SuppliersModel::where('id', $get_supplier_id->id)->delete();
+
+    //             // Delete associated contacts if they exist
+    //             $delete_contact_records = SupplierContactsModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
+
+    //             // Delete associated addresses if they exist
+    //             $delete_address_records = SupplierAddressModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
+
+    //             dd($delete_address_records);
+    //             // If deletion is successful, return success message
+    //             if ($delete_supplier && ($delete_contact_records || $delete_address_records)) {
+    //                 return response()->json([
+    //                     'code' => 200,
+    //                     'success' => true,
+    //                     'message' => 'Supplier and associated contacts and addresses deleted successfully!'
+    //                 ], 200);
+    //             }
+
+    //             // If deletion fails for some reason, return failure message
+    //             return response()->json([
+    //                 'code' => 400,
+    //                 'success' => false,
+    //                 'message' => 'Failed to delete supplier or contacts.'
+    //             ], 400);
+    //         });
+
+    //     } else {
+    //         // Return error response if supplier not found or not belonging to the current company
+    //         return response()->json([
+    //             'code' => 404,
+    //             'success' => false,
+    //             'message' => 'Supplier not found or does not belong to this company.'
+    //         ], 404);
+    //     }
+    // }
+
     public function delete_supplier($id)
-    {
-        // Try to find the supplier by the given ID
-        $get_supplier_id = SuppliersModel::select('id', 'supplier_id', 'company_id')
-            ->where('id', $id)
-            ->first();
+{
+    $companyId = Auth::user()->company_id;
 
-        // Check if the supplier exists
-        if ($get_supplier_id && $get_supplier_id->company_id === Auth::user()->company_id) {
+    // Find the supplier for this company
+    $supplier = SuppliersModel::where('id', $id)
+        ->where('company_id', $companyId)
+        ->first();
 
-            DB::transaction(function () use ($get_supplier_id) {
-
-                // dd($get_supplier_id->supplier_id);
-                // Delete the supplier
-                $delete_supplier = SuppliersModel::where('id', $get_supplier_id->id)->delete();
-
-                // Delete associated contacts if they exist
-                $delete_contact_records = SupplierContactsModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
-
-                // Delete associated addresses if they exist
-                $delete_address_records = SupplierAddressModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
-
-                dd($delete_address_records);
-                // If deletion is successful, return success message
-                if ($delete_supplier && ($delete_contact_records || $delete_address_records)) {
-                    return response()->json([
-                        'code' => 200,
-                        'success' => true,
-                        'message' => 'Supplier and associated contacts and addresses deleted successfully!'
-                    ], 200);
-                }
-
-                // If deletion fails for some reason, return failure message
-                return response()->json([
-                    'code' => 400,
-                    'success' => false,
-                    'message' => 'Failed to delete supplier or contacts.'
-                ], 400);
-            });
-
-        } else {
-            // Return error response if supplier not found or not belonging to the current company
-            return response()->json([
-                'code' => 404,
-                'success' => false,
-                'message' => 'Supplier not found or does not belong to this company.'
-            ], 404);
-        }
+    if (!$supplier) {
+        return response()->json([
+            'code' => 404,
+            'success' => false,
+            'message' => 'Supplier not found.'
+        ], 404);
     }
+
+    try {
+        DB::beginTransaction();
+
+        // Delete contacts first (0 is fine — means none existed)
+        $contactsDeleted = SuppliersContactsModel::where('supplier_id', $supplier->supplier_id)
+            ->where('company_id', $companyId)
+            ->delete();
+
+        // Delete addresses if they exist
+        $addressesDeleted = SupplierAddressModel::where('supplier_id', $supplier->supplier_id)
+            ->where('company_id', $companyId)
+            ->delete();
+
+        // Now delete the supplier (this must delete exactly 1+ row)
+        $supplierDeleted = SuppliersModel::where('id', $id)
+            ->where('company_id', $companyId)
+            ->delete();
+
+        DB::commit();
+
+        if ($supplierDeleted > 0) {
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Supplier (and any associated contacts/addresses, if present) deleted successfully!',
+                'meta' => [
+                    'contacts_deleted'  => $contactsDeleted,   // may be 0
+                    'addresses_deleted' => $addressesDeleted,  // may be 0
+                    'supplier_deleted'  => $supplierDeleted
+                ]
+            ], 200);
+        }
+
+        // Shouldn’t normally get here if we found the supplier earlier
+        return response()->json([
+            'code' => 400,
+            'success' => false,
+            'message' => 'Failed to delete supplier.'
+        ], 400);
+
+    } catch (\Throwable $e) {
+        DB::rollBack();
+        Log::error('Error deleting supplier: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+        return response()->json([
+            'code' => 500,
+            'success' => false,
+            'message' => 'Something went wrong. Please try again later.'
+        ], 500);
+    }
+}
+
 
     // update address
     public function update_supplier_address(Request $request, $supplier_id)
