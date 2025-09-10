@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class SupplierAddressModel extends Model
 {
     //
-    protected $table = 't_supplier_addresses';
+    protected $table = 't_suppliers_addresses';
 
     protected $fillable = [
         'company_id', 'type', 'supplier_id', 'country', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode'

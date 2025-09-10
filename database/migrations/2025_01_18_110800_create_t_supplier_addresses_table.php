@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('t_supplier_addresses', function (Blueprint $table) {
+        Schema::create('t_suppliers_addresses', function (Blueprint $table) {
             $table->id();
             $table->integer('company_id')->unsigned();
             $table->enum('type', ['billing', 'shipping'])->default('billing'); // Billing or Shipping
@@ -31,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('t_supplier_addresses');
+        Schema::dropIfExists('t_suppliers_addresses');
     }
 };
