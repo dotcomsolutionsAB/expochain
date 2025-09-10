@@ -387,7 +387,7 @@ class ClientsController extends Controller
     }
 
     // delete
-    public function delete_clients($id)
+    <!-- public function delete_clients($id)
     {
         // Try to find the client by the given ID
         $get_client_id = ClientsModel::select('customer_id', 'company_id')
@@ -417,6 +417,73 @@ class ClientsController extends Controller
         {
             // Return error response if client not found
             return response()->json(['code' => 404,'success' => false, 'message' => 'Client not found.'], 404);
+        }
+    } -->
+
+    public function delete_clients($id)
+    {
+        $companyId = Auth::user()->company_id;
+
+        // Find the client for this company
+        $client = ClientsModel::where('id', $id)
+            ->where('company_id', $companyId)
+            ->first();
+
+        if (!$client) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'Client not found.'
+            ], 404);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Delete children first (0 is fine — means none existed)
+            $contactsDeleted  = ClientContactsModel::where('customer_id', $client->customer_id)
+                ->where('company_id', $companyId)
+                ->delete();
+
+            $addressesDeleted = ClientAddressModel::where('customer_id', $client->customer_id)
+                ->where('company_id', $companyId)
+                ->delete();
+
+            // Now delete the client (this must delete exactly 1+ row)
+            $clientDeleted = ClientsModel::where('id', $id)
+                ->where('company_id', $companyId)
+                ->delete();
+
+            DB::commit();
+
+            if ($clientDeleted > 0) {
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'Client (and any associated contacts/addresses, if present) deleted successfully!',
+                    'meta' => [
+                        'contacts_deleted'  => $contactsDeleted,   // may be 0
+                        'addresses_deleted' => $addressesDeleted,  // may be 0
+                        'client_deleted'    => $clientDeleted
+                    ]
+                ], 200);
+            }
+
+            // Shouldn’t normally get here if we found the client earlier
+            return response()->json([
+                'code' => 400,
+                'success' => false,
+                'message' => 'Failed to delete client.'
+            ], 400);
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Error deleting client: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong. Please try again later.'
+            ], 500);
         }
     }
 
