@@ -586,8 +586,6 @@ class ClientsController extends Controller
     //     }
     // } 
 
-    use Illuminate\Validation\Rule;
-
 public function update_clients(Request $request, $id)
 {
     // Validate the request input (unique rules ignore this row within the same company)
