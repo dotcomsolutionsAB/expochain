@@ -471,6 +471,8 @@ class SuppliersController extends Controller
             ->where('id', $id)
             ->first();
 
+            dd($get_supplier_id);
+
         // Check if the supplier exists
         if ($get_supplier_id && $get_supplier_id->company_id === Auth::user()->company_id) {
 
