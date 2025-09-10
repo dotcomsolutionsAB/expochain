@@ -387,176 +387,381 @@ class ClientsController extends Controller
     //         : response()->json(['code' => 304, 'success' => false, 'message' => 'No changes detected.'], 304);
     // }
 
-    public function update_clients(Request $request, $id)
-    {
-        // Validate + scope unique rules to this company, ignore this client row
-        $client = ClientsModel::where('id', $id)
-            ->where('company_id', Auth::user()->company_id)
-            ->first();
+    // public function update_clients(Request $request, $id)
+    // {
+    //     // Validate + scope unique rules to this company, ignore this client row
+    //     $client = ClientsModel::where('id', $id)
+    //         ->where('company_id', Auth::user()->company_id)
+    //         ->first();
 
-        if (!$client) {
-            return response()->json(['code' => 404, 'success' => false, 'message' => 'Client not found.'], 404);
-        }
+    //     if (!$client) {
+    //         return response()->json(['code' => 404, 'success' => false, 'message' => 'Client not found.'], 404);
+    //     }
 
-        $request->validate([
-            'name' => [
-                'required','string',
-                Rule::unique('t_clients','name')
-                    ->ignore($client->id)
-                    ->where(fn($q) => $q->where('company_id', $client->company_id)),
-            ],
-            'mobile'   => 'nullable|string',
-            'email'    => 'nullable|email',
-            'type'     => 'required|string',
-            'category' => 'nullable|string',
-            'division' => 'nullable|string',
-            'plant'    => 'nullable|string',
-            'gstin'    => [
-                'nullable','string',
-                Rule::unique('t_clients','gstin')
-                    ->ignore($client->id)
-                    ->where(fn($q) => $q->where('company_id', $client->company_id)),
-            ],
+    //     $request->validate([
+    //         'name' => [
+    //             'required','string',
+    //             Rule::unique('t_clients','name')
+    //                 ->ignore($client->id)
+    //                 ->where(fn($q) => $q->where('company_id', $client->company_id)),
+    //         ],
+    //         'mobile'   => 'nullable|string',
+    //         'email'    => 'nullable|email',
+    //         'type'     => 'required|string',
+    //         'category' => 'nullable|string',
+    //         'division' => 'nullable|string',
+    //         'plant'    => 'nullable|string',
+    //         'gstin'    => [
+    //             'nullable','string',
+    //             Rule::unique('t_clients','gstin')
+    //                 ->ignore($client->id)
+    //                 ->where(fn($q) => $q->where('company_id', $client->company_id)),
+    //         ],
 
-            // Optional arrays
-            'contacts'                  => 'nullable|array|min:1',
-            'contacts.*.name'           => 'required_with:contacts|string',
-            'contacts.*.designation'    => 'nullable|string',
-            'contacts.*.mobile'         => 'nullable|string|min:10|max:15',
-            'contacts.*.email'          => 'nullable|email',
+    //         // Optional arrays
+    //         'contacts'                  => 'nullable|array|min:1',
+    //         'contacts.*.name'           => 'required_with:contacts|string',
+    //         'contacts.*.designation'    => 'nullable|string',
+    //         'contacts.*.mobile'         => 'nullable|string|min:10|max:15',
+    //         'contacts.*.email'          => 'nullable|email',
 
-            'addresses'                     => 'nullable|array|min:1',
-            'addresses.*.type'              => 'nullable|string|in:billing,shipping',
-            'addresses.*.country'           => 'nullable|string',
-            'addresses.*.address_line_1'    => 'nullable|string',
-            'addresses.*.address_line_2'    => 'nullable|string',
-            'addresses.*.city'              => 'nullable|string',
-            'addresses.*.state'             => 'nullable|string',
-            'addresses.*.pincode'           => 'nullable|string|min:4|max:10',
-        ]);
+    //         'addresses'                     => 'nullable|array|min:1',
+    //         'addresses.*.type'              => 'nullable|string|in:billing,shipping',
+    //         'addresses.*.country'           => 'nullable|string',
+    //         'addresses.*.address_line_1'    => 'nullable|string',
+    //         'addresses.*.address_line_2'    => 'nullable|string',
+    //         'addresses.*.city'              => 'nullable|string',
+    //         'addresses.*.state'             => 'nullable|string',
+    //         'addresses.*.pincode'           => 'nullable|string|min:4|max:10',
+    //     ]);
 
-        DB::beginTransaction();
+    //     DB::beginTransaction();
 
-        try {
-            // Update core client fields
-            $clientUpdated = $client->update([
-                'name'     => $request->input('name'),
-                'type'     => $request->input('type'),
-                'category' => $request->input('category'),
-                'division' => $request->input('division'),
-                'plant'    => $request->input('plant'),
-                'gstin'    => $request->input('gstin'),
-            ]);
+    //     try {
+    //         // Update core client fields
+    //         $clientUpdated = $client->update([
+    //             'name'     => $request->input('name'),
+    //             'type'     => $request->input('type'),
+    //             'category' => $request->input('category'),
+    //             'division' => $request->input('division'),
+    //             'plant'    => $request->input('plant'),
+    //             'gstin'    => $request->input('gstin'),
+    //         ]);
 
-            // ===== Contacts (only if provided as array) =====
-            $contactsProvided = is_array($request->input('contacts'));
-            $contactsUpdated  = false;
-            $contactsDeleted  = false;
+    //         // Flags for final response
+    //         $contactsUpdated   = false;
+    //         $addressesUpdated  = false;
+    //         $contactsDeleted   = false;
+    //         $addressesDeleted  = false;
 
-            if ($contactsProvided) {
-                $contacts     = $request->input('contacts', []);
-                $contactNames = [];
+    //         // If BOTH contacts and addresses are explicitly null -> wipe all related rows and return
+    //         if ($request->exists('contacts') && is_null($request->input('contacts'))
+    //             && $request->exists('addresses') && is_null($request->input('addresses'))) {
 
-                foreach ($contacts as $contactData) {
-                    $name = $contactData['name'] ?? null;
-                    if (!$name) { continue; }
+    //             $contactsDeleted  = ClientContactsModel::where('customer_id', $client->customer_id)->delete() > 0;
+    //             $addressesDeleted = ClientAddressModel::where('customer_id', $client->customer_id)->delete() > 0;
 
-                    $contactNames[] = $name;
+    //             return ($clientUpdated || $contactsDeleted || $addressesDeleted)
+    //                 ? response()->json([
+    //                     'code'    => 200,
+    //                     'success' => true,
+    //                     'message' => 'Client updated and all contacts/addresses removed.',
+    //                     'client'  => $client,
+    //                 ], 200)
+    //                 : response()->json([
+    //                     'code'    => 304,
+    //                     'success' => false,
+    //                     'message' => 'No changes detected.',
+    //                 ], 304);
+    //         }
 
-                    $contact = ClientContactsModel::where('customer_id', $client->customer_id)
-                        ->where('name', $name)
-                        ->first();
 
-                    if ($contact) {
-                        $updated = $contact->update([
-                            'designation' => $contactData['designation'] ?? null,
-                            'mobile'      => $contactData['mobile'] ?? null,
-                            'email'       => $contactData['email'] ?? null,
-                        ]);
-                        $contactsUpdated = $contactsUpdated || $updated;
-                    } else {
-                        $newContact = ClientContactsModel::create([
-                            'customer_id' => $client->customer_id,
-                            'company_id'  => $client->company_id,
-                            'name'        => $name,
-                            'designation' => $contactData['designation'] ?? null,
-                            'mobile'      => $contactData['mobile'] ?? null,
-                            'email'       => $contactData['email'] ?? null,
-                        ]);
-                        $contactsUpdated = $contactsUpdated || (bool) $newContact;
-                    }
+    //         // ===== Contacts (only if provided as array) =====
+    //         $contactsProvided = is_array($request->input('contacts'));
+    //         $contactsUpdated  = false;
+    //         $contactsDeleted  = false;
+
+    //         if ($contactsProvided) {
+    //             $contacts     = $request->input('contacts', []);
+    //             $contactNames = [];
+
+    //             foreach ($contacts as $contactData) {
+    //                 $name = $contactData['name'] ?? null;
+    //                 if (!$name) { continue; }
+
+    //                 $contactNames[] = $name;
+
+    //                 $contact = ClientContactsModel::where('customer_id', $client->customer_id)
+    //                     ->where('name', $name)
+    //                     ->first();
+
+    //                 if ($contact) {
+    //                     $updated = $contact->update([
+    //                         'designation' => $contactData['designation'] ?? null,
+    //                         'mobile'      => $contactData['mobile'] ?? null,
+    //                         'email'       => $contactData['email'] ?? null,
+    //                     ]);
+    //                     $contactsUpdated = $contactsUpdated || $updated;
+    //                 } else {
+    //                     $newContact = ClientContactsModel::create([
+    //                         'customer_id' => $client->customer_id,
+    //                         'company_id'  => $client->company_id,
+    //                         'name'        => $name,
+    //                         'designation' => $contactData['designation'] ?? null,
+    //                         'mobile'      => $contactData['mobile'] ?? null,
+    //                         'email'       => $contactData['email'] ?? null,
+    //                     ]);
+    //                     $contactsUpdated = $contactsUpdated || (bool) $newContact;
+    //                 }
+    //             }
+
+    //             // Delete contacts not present in payload (if payload provided)
+    //             $contactsDeleted = ClientContactsModel::where('customer_id', $client->customer_id)
+    //                 ->whereNotIn('name', $contactNames)
+    //                 ->delete() > 0;
+    //         }
+
+    //         // ===== Addresses (only if provided as array) =====
+    //         $addressesProvided = is_array($request->input('addresses'));
+    //         $addressesUpdated  = false;
+    //         $addressesDeleted  = false;
+
+    //         if ($addressesProvided) {
+    //             $addresses   = $request->input('addresses', []);
+    //             $addressTypes= [];
+
+    //             foreach ($addresses as $addressData) {
+    //                 $type = $addressData['type'] ?? null;
+    //                 if (!$type) { continue; }
+
+    //                 $addressTypes[] = $type;
+
+    //                 $address = ClientAddressModel::where('customer_id', $client->customer_id)
+    //                     ->where('type', $type)
+    //                     ->first();
+
+    //                 $payload = [
+    //                     'address_line_1' => $addressData['address_line_1'] ?? null,
+    //                     'address_line_2' => $addressData['address_line_2'] ?? null,
+    //                     'city'           => $addressData['city'] ?? null,
+    //                     'state'          => $addressData['state'] ?? null,
+    //                     'pincode'        => $addressData['pincode'] ?? null,
+    //                     'country'        => $addressData['country'] ?? null,
+    //                 ];
+
+    //                 if ($address) {
+    //                     $updated = $address->update($payload);
+    //                     $addressesUpdated = $addressesUpdated || $updated;
+    //                 } else {
+    //                     $newAddress = ClientAddressModel::create(array_merge($payload, [
+    //                         'customer_id' => $client->customer_id,
+    //                         'company_id'  => $client->company_id,
+    //                         'type'        => $type,
+    //                     ]));
+    //                     $addressesUpdated = $addressesUpdated || (bool) $newAddress;
+    //                 }
+    //             }
+
+    //             // Delete addresses not present in payload (if payload provided)
+    //             $addressesDeleted = ClientAddressModel::where('customer_id', $client->customer_id)
+    //                 ->whereNotIn('type', $addressTypes)
+    //                 ->delete() > 0;
+    //         }
+
+    //         DB::commit();
+
+    //         $changed = ($clientUpdated || $contactsUpdated || $contactsDeleted || $addressesUpdated || $addressesDeleted);
+
+    //         return $changed
+    //             ? response()->json(['code' => 200, 'success' => true, 'message' => 'Client, contacts, and addresses updated successfully!', 'client' => $client], 200)
+    //             : response()->json(['code' => 304, 'success' => false, 'message' => 'No changes detected.'], 304);
+
+    //     } catch (\Illuminate\Validation\ValidationException $e) {
+    //         DB::rollBack();
+    //         throw $e;
+    //     } catch (\Throwable $e) {
+    //         DB::rollBack();
+    //         Log::error('Error updating client: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
+    //         return response()->json(['code' => 500, 'success' => false, 'message' => 'Something went wrong.'], 500);
+    //     }
+    // } 
+
+    use Illuminate\Validation\Rule;
+
+public function update_clients(Request $request, $id)
+{
+    // Validate the request input (unique rules ignore this row within the same company)
+    $request->validate([
+        'name' => [
+            'required',
+            'string',
+            Rule::unique('t_clients', 'name')
+                ->ignore($id) // ignore this client row
+                ->where(fn ($q) => $q->where('company_id', Auth::user()->company_id)),
+        ],
+        'mobile'    => 'nullable|string',
+        'email'     => 'nullable|email',
+        'type'      => 'required|string',
+        'category'  => 'nullable|string',
+        'division'  => 'nullable|string',
+        'plant'     => 'nullable|string',
+        'gstin' => [
+            'nullable',
+            'string',
+            Rule::unique('t_clients', 'gstin')
+                ->ignore($id) // ignore this client row
+                ->where(fn ($q) => $q->where('company_id', Auth::user()->company_id)),
+        ],
+
+        // Contacts & addresses can be null, or arrays (if arrays -> upsert + cleanup)
+        'contacts'              => 'nullable|array|min:1',
+        'contacts.*.name'       => 'required_with:contacts|string',
+        'contacts.*.designation'=> 'nullable|string',
+        'contacts.*.mobile'     => 'nullable|string|min:10|max:15|unique:t_client_contacts,mobile',
+        'contacts.*.email'      => 'nullable|email',
+
+        'addresses'                 => 'nullable|array|min:1',
+        'addresses.*.type'          => 'nullable|string|in:billing,shipping',
+        'addresses.*.country'       => 'nullable|string',
+        'addresses.*.address_line_1'=> 'nullable|string',
+        'addresses.*.address_line_2'=> 'nullable|string',
+        'addresses.*.city'          => 'nullable|string',
+        'addresses.*.state'         => 'nullable|string',
+        'addresses.*.pincode'       => 'nullable|string|min:4|max:10',
+    ]);
+
+    // Validate and fetch the client by ID & company
+    $client = ClientsModel::where('id', $id)
+        ->where('company_id', Auth::user()->company_id)
+        ->first();
+
+    if (!$client) {
+        return response()->json(['code' => 404, 'success' => false, 'message' => 'Client not found.'], 404);
+    }
+
+    // Update client details (same fields as your original)
+    $clientUpdated = $client->update([
+        'name'      => $request->input('name'),
+        'type'      => $request->input('type'),
+        'category'  => $request->input('category'),
+        'division'  => $request->input('division'),
+        'plant'     => $request->input('plant'),
+        'gstin'     => $request->input('gstin'),
+    ]);
+
+    // Flags for final response
+    $contactsUpdated   = false;
+    $addressesUpdated  = false;
+    $contactsDeleted   = false;
+    $addressesDeleted  = false;
+
+    // ========== CONTACTS ==========
+    if ($request->exists('contacts')) {
+        $contactsPayload = $request->input('contacts');
+
+        if (is_null($contactsPayload)) {
+            // Explicit null -> delete all contacts
+            $contactsDeleted = ClientContactsModel::where('customer_id', $client->customer_id)->delete() > 0;
+        } elseif (is_array($contactsPayload)) {
+            // Upsert by name + delete not-in-payload
+            $contactNames = [];
+
+            foreach ($contactsPayload as $contactData) {
+                $name = $contactData['name'];
+                $contactNames[] = $name;
+
+                $contact = ClientContactsModel::where('customer_id', $client->customer_id)
+                    ->where('name', $name)
+                    ->first();
+
+                $payload = [
+                    'designation' => $contactData['designation'] ?? null,
+                    'mobile'      => $contactData['mobile'] ?? null,
+                    'email'       => $contactData['email'] ?? null,
+                ];
+
+                if ($contact) {
+                    $contactsUpdated = $contact->update($payload) || $contactsUpdated;
+                } else {
+                    $newContact = ClientContactsModel::create(array_merge($payload, [
+                        'customer_id' => $client->customer_id,
+                        'company_id'  => Auth::user()->company_id,
+                        'name'        => $name,
+                    ]));
+                    if ($newContact) $contactsUpdated = true;
                 }
-
-                // Delete contacts not present in payload (if payload provided)
-                $contactsDeleted = ClientContactsModel::where('customer_id', $client->customer_id)
-                    ->whereNotIn('name', $contactNames)
-                    ->delete() > 0;
             }
 
-            // ===== Addresses (only if provided as array) =====
-            $addressesProvided = is_array($request->input('addresses'));
-            $addressesUpdated  = false;
-            $addressesDeleted  = false;
+            // Remove contacts not in the request
+            $contactsDeleted = ClientContactsModel::where('customer_id', $client->customer_id)
+                ->whereNotIn('name', $contactNames)
+                ->delete() > 0;
+        }
+        // If omitted entirely -> do nothing
+    }
 
-            if ($addressesProvided) {
-                $addresses   = $request->input('addresses', []);
-                $addressTypes= [];
+    // ========== ADDRESSES ==========
+    if ($request->exists('addresses')) {
+        $addressesPayload = $request->input('addresses');
 
-                foreach ($addresses as $addressData) {
-                    $type = $addressData['type'] ?? null;
-                    if (!$type) { continue; }
+        if (is_null($addressesPayload)) {
+            // Explicit null -> delete all addresses
+            $addressesDeleted = ClientAddressModel::where('customer_id', $client->customer_id)->delete() > 0;
+        } elseif (is_array($addressesPayload)) {
+            // Upsert by type + delete not-in-payload
+            $addressTypes = [];
 
-                    $addressTypes[] = $type;
+            foreach ($addressesPayload as $addressData) {
+                $type = $addressData['type'];
+                $addressTypes[] = $type;
 
-                    $address = ClientAddressModel::where('customer_id', $client->customer_id)
-                        ->where('type', $type)
-                        ->first();
+                $address = ClientAddressModel::where('customer_id', $client->customer_id)
+                    ->where('type', $type)
+                    ->first();
 
-                    $payload = [
-                        'address_line_1' => $addressData['address_line_1'] ?? null,
-                        'address_line_2' => $addressData['address_line_2'] ?? null,
-                        'city'           => $addressData['city'] ?? null,
-                        'state'          => $addressData['state'] ?? null,
-                        'pincode'        => $addressData['pincode'] ?? null,
-                        'country'        => $addressData['country'] ?? null,
-                    ];
+                $payload = [
+                    'address_line_1' => $addressData['address_line_1'] ?? null,
+                    'address_line_2' => $addressData['address_line_2'] ?? null,
+                    'city'           => $addressData['city'] ?? null,
+                    'state'          => $addressData['state'] ?? null,
+                    'pincode'        => $addressData['pincode'] ?? null,
+                    'country'        => $addressData['country'] ?? null,
+                ];
 
-                    if ($address) {
-                        $updated = $address->update($payload);
-                        $addressesUpdated = $addressesUpdated || $updated;
-                    } else {
-                        $newAddress = ClientAddressModel::create(array_merge($payload, [
-                            'customer_id' => $client->customer_id,
-                            'company_id'  => $client->company_id,
-                            'type'        => $type,
-                        ]));
-                        $addressesUpdated = $addressesUpdated || (bool) $newAddress;
-                    }
+                if ($address) {
+                    $addressesUpdated = $address->update($payload) || $addressesUpdated;
+                } else {
+                    $newAddress = ClientAddressModel::create(array_merge($payload, [
+                        'customer_id' => $client->customer_id,
+                        'company_id'  => Auth::user()->company_id,
+                        'type'        => $type,
+                    ]));
+                    if ($newAddress) $addressesUpdated = true;
                 }
-
-                // Delete addresses not present in payload (if payload provided)
-                $addressesDeleted = ClientAddressModel::where('customer_id', $client->customer_id)
-                    ->whereNotIn('type', $addressTypes)
-                    ->delete() > 0;
             }
 
-            DB::commit();
-
-            $changed = ($clientUpdated || $contactsUpdated || $contactsDeleted || $addressesUpdated || $addressesDeleted);
-
-            return $changed
-                ? response()->json(['code' => 200, 'success' => true, 'message' => 'Client, contacts, and addresses updated successfully!', 'client' => $client], 200)
-                : response()->json(['code' => 304, 'success' => false, 'message' => 'No changes detected.'], 304);
-
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            DB::rollBack();
-            throw $e;
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            Log::error('Error updating client: '.$e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return response()->json(['code' => 500, 'success' => false, 'message' => 'Something went wrong.'], 500);
+            // Remove addresses not in the request
+            $addressesDeleted = ClientAddressModel::where('customer_id', $client->customer_id)
+                ->whereNotIn('type', $addressTypes)
+                ->delete() > 0;
         }
-    } 
+        // If omitted entirely -> do nothing
+    }
+
+    return ($clientUpdated || $contactsUpdated || $contactsDeleted || $addressesUpdated || $addressesDeleted)
+        ? response()->json([
+            'code'    => 200,
+            'success' => true,
+            'message' => 'Client, contacts, and addresses updated successfully!',
+            'client'  => $client,
+        ], 200)
+        : response()->json([
+            'code'    => 304,
+            'success' => false,
+            'message' => 'No changes detected.',
+        ], 304);
+}
+
 
     // delete
     // public function delete_clients($id)
