@@ -387,38 +387,38 @@ class ClientsController extends Controller
     }
 
     // delete
-    <!-- public function delete_clients($id)
-    {
-        // Try to find the client by the given ID
-        $get_client_id = ClientsModel::select('customer_id', 'company_id')
-                                     ->where('id', $id)
-                                     ->first();
+    // public function delete_clients($id)
+    // {
+    //     // Try to find the client by the given ID
+    //     $get_client_id = ClientsModel::select('customer_id', 'company_id')
+    //                                  ->where('id', $id)
+    //                                  ->first();
         
-        // Check if the client exists
+    //     // Check if the client exists
 
-        if ($get_client_id && $get_client_id->company_id === Auth::user()->company_id) 
-        {
-            // Delete the client
-            $delete_clients = ClientsModel::where('id', $id)->delete();
+    //     if ($get_client_id && $get_client_id->company_id === Auth::user()->company_id) 
+    //     {
+    //         // Delete the client
+    //         $delete_clients = ClientsModel::where('id', $id)->delete();
 
-            // Delete associated contacts by customer_id
-            $delete_contact_records = ClientContactsModel::where('customer_id', $get_client_id->customer_id)->delete();
+    //         // Delete associated contacts by customer_id
+    //         $delete_contact_records = ClientContactsModel::where('customer_id', $get_client_id->customer_id)->delete();
 
-            // Delete associated address by customer_id
-            $delete_address_records = ClientAddressModel::where('customer_id', $get_client_id->customer_id)->delete();
+    //         // Delete associated address by customer_id
+    //         $delete_address_records = ClientAddressModel::where('customer_id', $get_client_id->customer_id)->delete();
 
-            // Return success response if deletion was successful
-            return $delete_clients && $delete_contact_records && $delete_address_records
-            ? response()->json(['code' => 200,'success' => true, 'message' => 'Client and associated contacts and addresses deleted successfully!'], 200)
-            : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete client or contacts.'], 400);
+    //         // Return success response if deletion was successful
+    //         return $delete_clients && $delete_contact_records && $delete_address_records
+    //         ? response()->json(['code' => 200,'success' => true, 'message' => 'Client and associated contacts and addresses deleted successfully!'], 200)
+    //         : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete client or contacts.'], 400);
 
-        } 
-        else 
-        {
-            // Return error response if client not found
-            return response()->json(['code' => 404,'success' => false, 'message' => 'Client not found.'], 404);
-        }
-    } -->
+    //     } 
+    //     else 
+    //     {
+    //         // Return error response if client not found
+    //         return response()->json(['code' => 404,'success' => false, 'message' => 'Client not found.'], 404);
+    //     }
+    // }
 
     public function delete_clients($id)
     {
