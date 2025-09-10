@@ -475,6 +475,8 @@ class SuppliersController extends Controller
         if ($get_supplier_id && $get_supplier_id->company_id === Auth::user()->company_id) {
 
             DB::transaction(function () use ($get_supplier_id) {
+
+                dd($get_supplier_id->supplier_id);
                 // Delete the supplier
                 $delete_supplier = SuppliersModel::where('id', $get_supplier_id->id)->delete();
 
