@@ -39,7 +39,7 @@ class ClientsController extends Controller
             'contacts' => 'nullable|array|min:1', // ✅ Contacts must be an array with at least 1 contact
             'contacts.*.name' => 'required_with:contacts|string',
             'contacts.*.designation' => 'nullable|string',
-            'contacts.*.mobile' => 'nullable:contacts|string|min:10|max:15|unique:t_client_contacts,mobile',
+            'contacts.*.mobile' => 'nullable:contacts|string|unique:t_client_contacts,mobile',
             'contacts.*.email' => 'nullable|email',
 
             'addresses' => 'nullable|array|min:1', // ✅ Addresses must be an array with at least 1 address
