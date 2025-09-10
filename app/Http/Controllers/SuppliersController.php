@@ -300,7 +300,13 @@ class SuppliersController extends Controller
                     ->ignore($id) // ignore this supplier row
                     ->where(fn ($q) => $q->where('company_id', Auth::user()->company_id)),
             ],
-            'gstin' => 'nullable|string|unique:t_suppliers,gstin',
+            'gstin' => [
+                'nullable',
+                'string',
+                Rule::unique('t_suppliers', 'gstin')
+                    ->ignore($id) // ignore this client row
+                    ->where(fn ($q) => $q->where('company_id', Auth::user()->company_id)),
+            ],
             'mobile' => 'nullable|string|min:10|max:15',
             'email' => 'nullable|email',
 
