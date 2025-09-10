@@ -467,11 +467,9 @@ class SuppliersController extends Controller
     public function delete_supplier($id)
     {
         // Try to find the supplier by the given ID
-        $get_supplier_id = SuppliersModel::select('supplier_id', 'company_id')
+        $get_supplier_id = SuppliersModel::select('id', 'supplier_id', 'company_id')
             ->where('id', $id)
             ->first();
-
-            dd($get_supplier_id);
 
         // Check if the supplier exists
         if ($get_supplier_id && $get_supplier_id->company_id === Auth::user()->company_id) {
