@@ -476,7 +476,7 @@ class SuppliersController extends Controller
 
             DB::transaction(function () use ($get_supplier_id) {
 
-                dd($get_supplier_id->supplier_id);
+                // dd($get_supplier_id->supplier_id);
                 // Delete the supplier
                 $delete_supplier = SuppliersModel::where('id', $get_supplier_id->id)->delete();
 
@@ -486,6 +486,7 @@ class SuppliersController extends Controller
                 // Delete associated addresses if they exist
                 $delete_address_records = SupplierAddressModel::where('supplier_id', $get_supplier_id->supplier_id)->delete();
 
+                dd($delete_address_records);
                 // If deletion is successful, return success message
                 if ($delete_supplier && ($delete_contact_records || $delete_address_records)) {
                     return response()->json([
