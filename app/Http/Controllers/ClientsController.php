@@ -172,22 +172,45 @@ class ClientsController extends Controller
             $offset = $request->input('offset', 0);
 
             // Get total count of records in `t_products`
-            $total_clients = ClientsModel::count(); 
+            // $total_clients = ClientsModel::count();
+            $total_clients = ClientsModel::where('company_id', Auth::user()->company_id)->count(); 
+
+            // $clientsQuery = ClientsModel::with([
+            //     'contacts' => function ($query) use ($search) {
+            //         if ($search) {
+            //             $query->where('mobile', 'LIKE', '%' . $search . '%');
+            //         }
+            //     },
+            //     'addresses' => function ($query) {
+            //         $query->select('customer_id', 'type', 'country', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode');
+            //     },
+            // ])
+            // ->select('id', 'name', 'customer_id', 'mobile', 'email', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
+            // ->where('company_id', Auth::user()->company_id);
+
+            // // Apply search filter
+            // if ($search) {
+            //     $clientsQuery->where(function ($query) use ($search) {
+            //         $query->where('name', 'LIKE', '%' . $search . '%')
+            //             ->orWhere('gstin', 'LIKE', '%' . $search . '%')
+            //             ->orWhereHas('contacts', function ($q) use ($search) {
+            //                 // $q->where('mobile', 'LIKE', '%' . $search . '%');
+            //             });
+            //     });
+            // }
 
             $clientsQuery = ClientsModel::with([
-                'contacts' => function ($query) use ($search) {
-                    if ($search) {
-                        $query->where('mobile', 'LIKE', '%' . $search . '%');
-                    }
+                'contacts' => function ($query) {
+                    // Always load all contacts (no search filter here)
+                    $query->select('customer_id', 'name', 'designation', 'mobile', 'email');
                 },
                 'addresses' => function ($query) {
                     $query->select('customer_id', 'type', 'country', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode');
                 },
             ])
-            ->select('id', 'name', 'customer_id', 'mobile', 'email', 'type', 'category', 'division', 'plant', 'gstin', 'company_id')
+            ->select('id','name','customer_id','mobile','email','type','category','division','plant','gstin','company_id')
             ->where('company_id', Auth::user()->company_id);
 
-            // Apply search filter
             if ($search) {
                 $clientsQuery->where(function ($query) use ($search) {
                     $query->where('name', 'LIKE', '%' . $search . '%')
