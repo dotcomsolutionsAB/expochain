@@ -149,6 +149,7 @@ class SuppliersController extends Controller
             ])
             ->where('company_id', Auth::user()->company_id)
             ->where('id', $id)
+            ->select('id', 'supplier_id', 'name', 'gstin', 'mobile', 'email', 'company_id')
             ->first();
 
             if (!$supplier) {
@@ -203,7 +204,7 @@ class SuppliersController extends Controller
                 $query->select('id', 'supplier_id', 'type', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode', 'country'); // include id too
             },
         ])
-        ->select('id', 'supplier_id', 'name', 'gstin', 'company_id')
+        ->select('id', 'supplier_id', 'name', 'gstin', 'mobile', 'email', 'company_id')
         ->where('company_id', Auth::user()->company_id);
 
         // Search (apply it here, not in with())
