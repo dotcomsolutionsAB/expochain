@@ -173,7 +173,8 @@ class SuppliersController extends Controller
         $suppliersQuery = SuppliersModel::with([
             'contacts' => function ($query) {
                 if ($search) {
-                    $query->where('mobile', 'LIKE', '%' . $search . '%');
+                    // $query->where('mobile', 'LIKE', '%' . $search . '%');
+                    $query->select('id', 'supplier_id', 'name', 'designation', 'mobile', 'email'); // include id too
                 }
                 $query->select('supplier_id', 'name', 'designation', 'mobile', 'email');
             },
