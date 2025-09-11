@@ -170,30 +170,55 @@ class SuppliersController extends Controller
         // 🔹 **Fetch All Suppliers with Filters**
         $total_suppliers = SuppliersModel::where('company_id', Auth::user()->company_id)->count(); 
 
+        // $suppliersQuery = SuppliersModel::with([
+        //     'contacts' => function ($query) use ($search) {
+        //         if ($search) {
+        //             $query->where('mobile', 'LIKE', '%' . $search . '%');
+        //         }
+        //         $query->select('supplier_id', 'name', 'designation', 'mobile', 'email');
+        //     },
+        //     'addresses' => function ($query) {
+        //         $query->select('supplier_id', 'type', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode', 'country');
+        //     },
+        // ])
+        // ->select('id', 'supplier_id', 'name', 'gstin', 'company_id')
+        // ->where('company_id', Auth::user()->company_id);
+
+        // if ($search) {
+        //     $suppliersQuery->where(function ($query) use ($search) {
+        //         $query->where('name', 'LIKE', '%' . $search . '%')
+        //             ->orWhere('gstin', 'LIKE', '%' . $search . '%')
+        //             ->orWhereHas('contacts', function ($q) use ($search) {
+        //                 $q->where('mobile', 'LIKE', '%' . $search . '%');
+        //             });
+        //     });
+        // }
+
+        // Eager-load (no search filter here)
         $suppliersQuery = SuppliersModel::with([
             'contacts' => function ($query) {
-                if ($search) {
-                    // $query->where('mobile', 'LIKE', '%' . $search . '%');
-                    $query->select('id', 'supplier_id', 'name', 'designation', 'mobile', 'email'); // include id too
-                }
-                $query->select('supplier_id', 'name', 'designation', 'mobile', 'email');
+                $query->select('id', 'supplier_id', 'name', 'designation', 'mobile', 'email'); // include id too
             },
             'addresses' => function ($query) {
-                $query->select('supplier_id', 'type', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode', 'country');
+                $query->select('id', 'supplier_id', 'type', 'address_line_1', 'address_line_2', 'city', 'state', 'pincode', 'country'); // include id too
             },
         ])
         ->select('id', 'supplier_id', 'name', 'gstin', 'company_id')
         ->where('company_id', Auth::user()->company_id);
 
+        // Search (apply it here, not in with())
         if ($search) {
             $suppliersQuery->where(function ($query) use ($search) {
-                $query->where('name', 'LIKE', '%' . $search . '%')
-                    ->orWhere('gstin', 'LIKE', '%' . $search . '%')
+                $query->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('gstin', 'LIKE', "%{$search}%")
                     ->orWhereHas('contacts', function ($q) use ($search) {
-                        $q->where('mobile', 'LIKE', '%' . $search . '%');
+                        $q->where('mobile', 'LIKE', "%{$search}%")
+                            ->orWhere('name', 'LIKE', "%{$search}%")
+                            ->orWhere('email', 'LIKE', "%{$search}%");
                     });
             });
         }
+
 
         $suppliersQuery->offset($offset)->limit($limit);
         $suppliers = $suppliersQuery->get();
