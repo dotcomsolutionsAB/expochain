@@ -275,6 +275,13 @@ class SuppliersController extends Controller
             'contacts.*.name' => 'required_with:contacts|string',
             'contacts.*.designation' => 'nullable|string',
             'contacts.*.mobile' => 'nullable|string|min:10|max:15|unique:t_suppliers_contacts,mobile',
+            //  'contacts.*.mobile' => [
+            //     'nullable',
+            //     'string',
+            //     Rule::unique('t_suppliers_contacts', 'mobile')
+            //         ->ignore($id) // ignore this supplier row
+            //         ->where(fn ($q) => $q->where('company_id', Auth::user()->company_id)),
+            // ],
             'contacts.*.email' => 'nullable|email',
 
             // Addresses Validation
@@ -403,7 +410,6 @@ class SuppliersController extends Controller
             ? response()->json(['code' => 200, 'success' => true, 'message' => 'Supplier, contacts, and addresses updated successfully!', 'supplier' => $supplier], 200)
             : response()->json(['code' => 304, 'success' => false, 'message' => 'No changes detected.'], 304);
     }
-
 
     // delete
     public function delete_supplier($id)
