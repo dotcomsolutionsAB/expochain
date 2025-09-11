@@ -171,7 +171,7 @@ class SuppliersController extends Controller
         $total_suppliers = SuppliersModel::where('company_id', Auth::user()->company_id)->count(); 
 
         $suppliersQuery = SuppliersModel::with([
-            'contacts' => function ($query) use ($search) {
+            'contacts' => function ($query) {
                 if ($search) {
                     $query->where('mobile', 'LIKE', '%' . $search . '%');
                 }
