@@ -800,19 +800,20 @@ class SalesOrderController extends Controller
 
                 // Calculate gross from line 'gross' (already pre-discount/pre-tax per your new API)
                 $gross = 0.0;
-                foreach ($itemsData as $line) {
-                    // If 'gross' not present for some legacy rows, fallback to price*qty - discount(%) if needed
-                    if (isset($line['gross'])) {
-                        $gross += (float)$line['gross'];
-                    } else {
-                        $qty  = (float)($line['quantity'] ?? 0);
-                        $price = (float)($line['price'] ?? 0);
-                        $disc  = (float)($line['discount'] ?? 0);
-                        $lineBase = $price * $qty;
-                        $lineDisc = ($disc > 0 && $disc <= 100) ? ($lineBase * $disc / 100) : $disc;
-                        $gross += max(0, $lineBase - $lineDisc);
-                    }
-                }
+                $gross = isset($record['gross_amount']) ? (float)$record['gross_amount'] : 0;
+                // foreach ($itemsData as $line) {
+                //     // If 'gross' not present for some legacy rows, fallback to price*qty - discount(%) if needed
+                //     if (isset($line['gross'])) {
+                //         $gross += (float)$line['gross'];
+                //     } else {
+                //         $qty  = (float)($line['quantity'] ?? 0);
+                //         $price = (float)($line['price'] ?? 0);
+                //         $disc  = (float)($line['discount'] ?? 0);
+                //         $lineBase = $price * $qty;
+                //         $lineDisc = ($disc > 0 && $disc <= 100) ? ($lineBase * $disc / 100) : $disc;
+                //         $gross += max(0, $lineBase - $lineDisc);
+                //     }
+                // }
 
                 $roundoff = (float)($addonsData['roundoff'] ?? 0);
 
