@@ -565,10 +565,193 @@ class SalesOrderController extends Controller
     }
 
     // migrate
+    // public function importSalesOrders()
+    // {
+    //     set_time_limit(300); // prevent timeout
+    //     ini_set('memory_limit', '512M'); // increase memory limit
+
+    //     // Clear existing data
+    //     SalesOrderModel::truncate();
+    //     SalesOrderProductsModel::truncate();
+    //     SalesOrderAddonsModel::truncate();
+
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/sells_order.php';
+
+    //     try {
+    //         $response = Http::get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data from source.'], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['code' => 500, 'success' => false, 'error' => 'Fetch failed.'], 500);
+    //     }
+
+    //     $data = $response->json('data');
+    //     if (empty($data)) {
+    //         return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found.'], 404);
+    //     }
+
+    //     $batchSize = 50;
+    //     $errors = [];
+
+    //     foreach (array_chunk($data, $batchSize) as $dataChunk) {
+
+    //         $salesOrdersBatch = [];
+
+    //         foreach ($dataChunk as $record) {
+    //             $client = ClientsModel::where('name', $record['client'])->first();
+    //             if (!$client) {
+    //                 $errors[] = ['record' => $record, 'error' => 'Client not found: ' . $record['client']];
+    //                 continue;
+    //             }
+
+    //             $itemsData = json_decode($record['items'] ?? '{}', true);
+    //             $addonsData = json_decode($record['addons'] ?? '{}', true);
+
+    //             // Calculate gross
+    //             $gross = 0;
+    //             if (!empty($itemsData['product'])) {
+    //                 foreach ($itemsData['product'] as $i => $product) {
+    //                     $qty = isset($itemsData['quantity'][$i]) ? (float)$itemsData['quantity'][$i] : 0;
+    //                     $price = isset($itemsData['price'][$i]) ? (float)$itemsData['price'][$i] : 0;
+    //                     $gross += $qty * $price;
+    //                 }
+    //             }
+
+    //             $roundoff = isset($addonsData['roundoff']) ? (float)$addonsData['roundoff'] : 0;
+
+    //             $salesOrdersBatch[] = [
+    //                 'company_id'       => Auth::user()->company_id,
+    //                 'client_id'        => $client->id,
+    //                 'name'             => $record['client'],
+    //                 'user'             => Auth::user()->id,
+    //                 'sales_order_no'   => $record['so_no'],
+    //                 'sales_order_date' => date('Y-m-d', strtotime($record['so_date'] ?? now())),
+    //                 'ref_no'           => $record['ref_no'] ?? null,
+    //                 'cgst'             => (float)($record['tax']['cgst'] ?? 0),
+    //                 'sgst'             => (float)($record['tax']['sgst'] ?? 0),
+    //                 'igst'             => (float)($record['tax']['igst'] ?? 0),
+    //                 'total'            => (float)($record['total'] ?? 0),
+    //                 'template'         => json_decode($record['pdf_template'], true)['id'] ?? '0',
+    //                 'status'           => [1 => 'pending', 2 => 'partial', 3 => 'completed'][$record['status']] ?? 'pending',
+    //                 'gross'            => $gross,
+    //                 'round_off'        => $roundoff,
+    //                 'created_at'       => now(),
+    //                 'updated_at'       => now()
+    //             ];
+    //         }
+
+    //         // Insert sales orders
+    //         SalesOrderModel::insert($salesOrdersBatch);
+
+    //         // Get inserted IDs
+    //         $salesOrderIds = SalesOrderModel::whereIn('sales_order_no', array_column($salesOrdersBatch, 'sales_order_no'))
+    //             ->pluck('id', 'sales_order_no')
+    //             ->toArray();
+
+    //         // Prepare product & addon batches
+    //         $productsBatch = [];
+    //         $addonsBatch = [];
+
+    //         foreach ($dataChunk as $record) {
+    //             $salesOrderId = $salesOrderIds[$record['so_no']] ?? null;
+    //             if (!$salesOrderId) continue;
+
+    //             $itemsData = json_decode($record['items'] ?? '{}', true);
+    //             $addonsData = json_decode($record['addons'] ?? '{}', true);
+
+    //             // Products
+    //             if (!empty($itemsData['product'])) {
+    //                 foreach ($itemsData['product'] as $i => $product) {
+    //                     $get_product = ProductsModel::where('name', $product)->first();
+    //                     if (!$get_product) {
+    //                         $errors[] = ['record' => $itemsData, 'error' => "Product not found: {$product}"];
+    //                         continue;
+    //                     }
+
+    //                     $qty = (float)($itemsData['quantity'][$i] ?? 0);
+    //                     $price = (float)($itemsData['price'][$i] ?? 0);
+    //                     $discount = (float)($itemsData['discount'][$i] ?? 0);
+    //                     $amountBeforeTax = $qty * ($price - (($discount * $price) / 100));
+    //                     $taxTotal = (float)($itemsData['cgst'][$i] ?? 0) + (float)($itemsData['sgst'][$i] ?? 0) + (float)($itemsData['igst'][$i] ?? 0);
+
+    //                     $productsBatch[] = [
+    //                         'sales_order_id' => $salesOrderId,
+    //                         'company_id'     => Auth::user()->company_id,
+    //                         'product_id'     => $get_product->id,
+    //                         'product_name'   => $product,
+    //                         'description'    => $itemsData['desc'][$i] ?? '',
+    //                         'quantity'       => (int)$qty,
+    //                         'unit'           => $itemsData['unit'][$i] ?? '',
+    //                         'price'          => $price,
+    //                         'discount_type'  => 'percentage',
+    //                         'discount'       => $discount,
+    //                         'hsn'            => $itemsData['hsn'][$i] ?? '',
+    //                         'tax'            => (float)($itemsData['tax'][$i] ?? 0),
+    //                         'cgst'           => (float)($itemsData['cgst'][$i] ?? 0),
+    //                         'sgst'           => (float)($itemsData['sgst'][$i] ?? 0),
+    //                         'igst'           => (float)($itemsData['igst'][$i] ?? 0),
+    //                         'amount'         => $amountBeforeTax + $taxTotal,
+    //                         'channel'        => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$i])
+    //                             ? (
+    //                                 is_numeric($itemsData['channel'][$i])
+    //                                     ? (float)$itemsData['channel'][$i]
+    //                                     : (
+    //                                         strtolower($itemsData['channel'][$i]) === 'standard' ? 1 :
+    //                                         (strtolower($itemsData['channel'][$i]) === 'non-standard' ? 2 :
+    //                                         (strtolower($itemsData['channel'][$i]) === 'cbs' ? 3 : null))
+    //                                     )
+    //                             )
+    //                             : null,
+    //                         'sent'         => (int)($itemsData['sent'][$i] ?? 0),
+    //                         'created_at'   => now(),
+    //                         'updated_at'   => now()
+    //                     ];
+    //                 }
+    //             }
+
+    //             // Addons
+    //             if (!empty($addonsData)) {
+    //                 foreach ($addonsData as $name => $val) {
+    //                     $addonsBatch[] = [
+    //                         'sales_order_id' => $salesOrderId,
+    //                         'company_id'     => Auth::user()->company_id,
+    //                         'name'           => $name,
+    //                         'amount'         => (float)($val['cgst'] ?? 0) + (float)($val['sgst'] ?? 0) + (float)($val['igst'] ?? 0),
+    //                         'tax'            => 18,
+    //                         'hsn'            => $val['hsn'] ?? '',
+    //                         'cgst'           => (float)($val['cgst'] ?? 0),
+    //                         'sgst'           => (float)($val['sgst'] ?? 0),
+    //                         'igst'           => (float)($val['igst'] ?? 0),
+    //                         'created_at'     => now(),
+    //                         'updated_at'     => now()
+    //                     ];
+    //                 }
+    //             }
+    //         }
+
+    //         // Insert product & addon batches
+    //         foreach (array_chunk($productsBatch, $batchSize) as $productChunk) {
+    //             SalesOrderProductsModel::insert($productChunk);
+    //         }
+
+    //         foreach (array_chunk($addonsBatch, $batchSize) as $addonChunk) {
+    //             SalesOrderAddonsModel::insert($addonChunk);
+    //         }
+    //     }
+
+    //     return response()->json([
+    //         'code'    => 200,
+    //         'success' => true,
+    //         'message' => 'Sales orders import completed successfully.',
+    //         'errors'  => $errors,
+    //     ]);
+    // }
     public function importSalesOrders()
     {
-        set_time_limit(300); // prevent timeout
-        ini_set('memory_limit', '512M'); // increase memory limit
+        set_time_limit(300);
+        ini_set('memory_limit', '512M');
 
         // Clear existing data
         SalesOrderModel::truncate();
@@ -606,20 +789,32 @@ class SalesOrderController extends Controller
                     continue;
                 }
 
-                $itemsData = json_decode($record['items'] ?? '{}', true);
-                $addonsData = json_decode($record['addons'] ?? '{}', true);
+                // --- NEW: items is an array of lines in the new response ---
+                $itemsData = is_array($record['items'])
+                    ? $record['items']
+                    : (json_decode($record['items'] ?? '[]', true) ?: []);
 
-                // Calculate gross
-                $gross = 0;
-                if (!empty($itemsData['product'])) {
-                    foreach ($itemsData['product'] as $i => $product) {
-                        $qty = isset($itemsData['quantity'][$i]) ? (float)$itemsData['quantity'][$i] : 0;
-                        $price = isset($itemsData['price'][$i]) ? (float)$itemsData['price'][$i] : 0;
-                        $gross += $qty * $price;
+                // tax & addons still come as JSON strings in your example
+                $taxData    = is_array($record['tax'])    ? $record['tax']    : (json_decode($record['tax'] ?? '{}', true) ?: []);
+                $addonsData = is_array($record['addons']) ? $record['addons'] : (json_decode($record['addons'] ?? '{}', true) ?: []);
+
+                // Calculate gross from line 'gross' (already pre-discount/pre-tax per your new API)
+                $gross = 0.0;
+                foreach ($itemsData as $line) {
+                    // If 'gross' not present for some legacy rows, fallback to price*qty - discount(%) if needed
+                    if (isset($line['gross'])) {
+                        $gross += (float)$line['gross'];
+                    } else {
+                        $qty  = (float)($line['quantity'] ?? 0);
+                        $price = (float)($line['price'] ?? 0);
+                        $disc  = (float)($line['discount'] ?? 0);
+                        $lineBase = $price * $qty;
+                        $lineDisc = ($disc > 0 && $disc <= 100) ? ($lineBase * $disc / 100) : $disc;
+                        $gross += max(0, $lineBase - $lineDisc);
                     }
                 }
 
-                $roundoff = isset($addonsData['roundoff']) ? (float)$addonsData['roundoff'] : 0;
+                $roundoff = (float)($addonsData['roundoff'] ?? 0);
 
                 $salesOrdersBatch[] = [
                     'company_id'       => Auth::user()->company_id,
@@ -629,11 +824,11 @@ class SalesOrderController extends Controller
                     'sales_order_no'   => $record['so_no'],
                     'sales_order_date' => date('Y-m-d', strtotime($record['so_date'] ?? now())),
                     'ref_no'           => $record['ref_no'] ?? null,
-                    'cgst'             => (float)($record['tax']['cgst'] ?? 0),
-                    'sgst'             => (float)($record['tax']['sgst'] ?? 0),
-                    'igst'             => (float)($record['tax']['igst'] ?? 0),
+                    'cgst'             => (float)($taxData['cgst'] ?? 0),
+                    'sgst'             => (float)($taxData['sgst'] ?? 0),
+                    'igst'             => (float)($taxData['igst'] ?? 0),
                     'total'            => (float)($record['total'] ?? 0),
-                    'template'         => json_decode($record['pdf_template'], true)['id'] ?? '0',
+                    'template'         => (is_array($record['pdf_template']) ? $record['pdf_template'] : (json_decode($record['pdf_template'] ?? '[]', true) ?: []))['id'] ?? '0',
                     'status'           => [1 => 'pending', 2 => 'partial', 3 => 'completed'][$record['status']] ?? 'pending',
                     'gross'            => $gross,
                     'round_off'        => $roundoff,
@@ -643,9 +838,11 @@ class SalesOrderController extends Controller
             }
 
             // Insert sales orders
-            SalesOrderModel::insert($salesOrdersBatch);
+            if (!empty($salesOrdersBatch)) {
+                SalesOrderModel::insert($salesOrdersBatch);
+            }
 
-            // Get inserted IDs
+            // Map inserted IDs
             $salesOrderIds = SalesOrderModel::whereIn('sales_order_no', array_column($salesOrdersBatch, 'sales_order_no'))
                 ->pluck('id', 'sales_order_no')
                 ->toArray();
@@ -658,60 +855,73 @@ class SalesOrderController extends Controller
                 $salesOrderId = $salesOrderIds[$record['so_no']] ?? null;
                 if (!$salesOrderId) continue;
 
-                $itemsData = json_decode($record['items'] ?? '{}', true);
-                $addonsData = json_decode($record['addons'] ?? '{}', true);
+                // items as array of line objects
+                $itemsData = is_array($record['items'])
+                    ? $record['items']
+                    : (json_decode($record['items'] ?? '[]', true) ?: []);
+
+                $addonsData = is_array($record['addons'])
+                    ? $record['addons']
+                    : (json_decode($record['addons'] ?? '{}', true) ?: []);
 
                 // Products
-                if (!empty($itemsData['product'])) {
-                    foreach ($itemsData['product'] as $i => $product) {
-                        $get_product = ProductsModel::where('name', $product)->first();
-                        if (!$get_product) {
-                            $errors[] = ['record' => $itemsData, 'error' => "Product not found: {$product}"];
-                            continue;
-                        }
+                foreach ($itemsData as $line) {
+                    $productName = $line['product'] ?? null;
+                    if (!$productName) continue;
 
-                        $qty = (float)($itemsData['quantity'][$i] ?? 0);
-                        $price = (float)($itemsData['price'][$i] ?? 0);
-                        $discount = (float)($itemsData['discount'][$i] ?? 0);
-                        $amountBeforeTax = $qty * ($price - (($discount * $price) / 100));
-                        $taxTotal = (float)($itemsData['cgst'][$i] ?? 0) + (float)($itemsData['sgst'][$i] ?? 0) + (float)($itemsData['igst'][$i] ?? 0);
-
-                        $productsBatch[] = [
-                            'sales_order_id' => $salesOrderId,
-                            'company_id'     => Auth::user()->company_id,
-                            'product_id'     => $get_product->id,
-                            'product_name'   => $product,
-                            'description'    => $itemsData['desc'][$i] ?? '',
-                            'quantity'       => (int)$qty,
-                            'unit'           => $itemsData['unit'][$i] ?? '',
-                            'price'          => $price,
-                            'discount_type'  => 'percentage',
-                            'discount'       => $discount,
-                            'hsn'            => $itemsData['hsn'][$i] ?? '',
-                            'tax'            => (float)($itemsData['tax'][$i] ?? 0),
-                            'cgst'           => (float)($itemsData['cgst'][$i] ?? 0),
-                            'sgst'           => (float)($itemsData['sgst'][$i] ?? 0),
-                            'igst'           => (float)($itemsData['igst'][$i] ?? 0),
-                            'amount'         => $amountBeforeTax + $taxTotal,
-                            'channel'        => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$i])
-                                ? (
-                                    is_numeric($itemsData['channel'][$i])
-                                        ? (float)$itemsData['channel'][$i]
-                                        : (
-                                            strtolower($itemsData['channel'][$i]) === 'standard' ? 1 :
-                                            (strtolower($itemsData['channel'][$i]) === 'non-standard' ? 2 :
-                                            (strtolower($itemsData['channel'][$i]) === 'cbs' ? 3 : null))
-                                        )
-                                )
-                                : null,
-                            'sent'         => (int)($itemsData['sent'][$i] ?? 0),
-                            'created_at'   => now(),
-                            'updated_at'   => now()
-                        ];
+                    $get_product = ProductsModel::where('name', $productName)->first();
+                    if (!$get_product) {
+                        $errors[] = ['record' => $line, 'error' => "Product not found: {$productName}"];
+                        continue;
                     }
+
+                    $qty       = (float)($line['quantity'] ?? 0);
+                    $price     = (float)($line['price'] ?? 0);
+                    $discount  = (float)($line['discount'] ?? 0); // still treating as percentage by default
+                    $taxPct    = (float)($line['tax'] ?? 0);
+                    $cgstLine  = (float)($line['cgst'] ?? 0);
+                    $sgstLine  = (float)($line['sgst'] ?? 0);
+                    $igstLine  = (float)($line['igst'] ?? 0);
+
+                    // amountBeforeTax (percentage discount if 0-100, else absolute)
+                    $lineBase = $price * $qty;
+                    $discAmt  = ($discount > 0 && $discount <= 100) ? ($lineBase * $discount / 100) : $discount;
+                    $amountBeforeTax = max(0, $lineBase - $discAmt);
+
+                    // Prefer provided tax splits per line; else compute from tax%
+                    $taxTotal = ($cgstLine + $sgstLine + $igstLine);
+                    if ($taxTotal <= 0 && $taxPct > 0) {
+                        $taxTotal = $amountBeforeTax * ($taxPct / 100);
+                    }
+                    // prefer API-provided per-line gross; fallback to computed
+                    $lineGross = isset($line['gross']) ? (float)$line['gross'] : 0;
+
+                    $productsBatch[] = [
+                        'sales_order_id' => $salesOrderId,
+                        'company_id'     => Auth::user()->company_id,
+                        'product_id'     => $get_product->id,
+                        'product_name'   => $productName,
+                        'description'    => $line['desc'] ?? '',
+                        'quantity'       => (int)$qty,
+                        'unit'           => $line['unit'] ?? '',
+                        'price'          => $price,
+                        'gross'          => $lineGross, 
+                        'discount_type'  => 'percentage',
+                        'discount'       => $discount,
+                        'hsn'            => $line['hsn'] ?? '',
+                        'tax'            => $taxPct,
+                        'cgst'           => $cgstLine,
+                        'sgst'           => $sgstLine,
+                        'igst'           => $igstLine,
+                        'amount'         => $amountBeforeTax + $taxTotal, // matches your previous logic
+                        'channel'        => null, // channel not present in new schema; keep null
+                        'sent'           => (int)($line['sent'] ?? 0),
+                        'created_at'     => now(),
+                        'updated_at'     => now()
+                    ];
                 }
 
-                // Addons
+                // Addons (no change; still reading decoded JSON)
                 if (!empty($addonsData)) {
                     foreach ($addonsData as $name => $val) {
                         $addonsBatch[] = [
@@ -735,7 +945,6 @@ class SalesOrderController extends Controller
             foreach (array_chunk($productsBatch, $batchSize) as $productChunk) {
                 SalesOrderProductsModel::insert($productChunk);
             }
-
             foreach (array_chunk($addonsBatch, $batchSize) as $addonChunk) {
                 SalesOrderAddonsModel::insert($addonChunk);
             }
@@ -748,6 +957,7 @@ class SalesOrderController extends Controller
             'errors'  => $errors,
         ]);
     }
+
 
     // export
     public function export_sales_orders(Request $request)
