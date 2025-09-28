@@ -753,6 +753,7 @@ class PurchaseInvoiceController extends Controller
     //         'errors' => $errors,
     //     ], 200);
     // }
+    
     public function importPurchaseInvoices()
     {
         ini_set('max_execution_time', 600); // Increase execution time
@@ -928,7 +929,7 @@ class PurchaseInvoiceController extends Controller
                     if ($discRounded < $discRaw) {
                         $discRounded += 0.01; // keep your upward adjust logic when round goes below
                     }
-
+                    $gross = isset($item['gross']) ? (float)$item['gross'] : 0.00;
                     $lineBase = $qty * ($price - (($discRounded * $price) / 100));
                     $lineCgst = isset($item['cgst']) ? (float)$item['cgst'] : 0.0;
                     $lineSgst = isset($item['sgst']) ? (float)$item['sgst'] : 0.0;
@@ -953,6 +954,7 @@ class PurchaseInvoiceController extends Controller
                         'sgst'                => $lineSgst,
                         'igst'                => $lineIgst,
                         'amount'              => $lineAmount,
+                        'gross'               => $gross,
                         // channel (if present) keep your mapping
                         'channel'             => array_key_exists('channel', $item)
                             ? (
