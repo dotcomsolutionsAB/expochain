@@ -1958,268 +1958,429 @@ class HelperController extends Controller
         return round((float) $value, 2);
     }
 
+    /**
+     * Unified product timeline (optimized).
+     *
+     * JSON Body (all optional):
+     * {
+     *   "start_date": "YYYY-MM-DD",
+     *   "end_date":   "YYYY-MM-DD",
+     *   "type": "sales_invoice" | ["sales_invoice","purchase_invoice",...],
+     *   "search": "COM DOT 123/24",
+     *   "place": "Main Godown",
+     *   "sort_by": "date|client|price|discount|amount|profit|place",
+     *   "sort_dir": "asc|desc"
+     * }
+     *
+     * Defaults:
+     *   - sort_by = "date", sort_dir = "desc" (latest first)
+     *   - type = all supported types
+     *
+     * Notes:
+     *   - Smart search ignores punctuation and word order across `masters` and `voucher_no`.
+     *   - Monetary fields are rounded to 2 decimals in the response.
+     */
     public function product_timeline(Request $request, $productId)
     {
         $companyId = auth()->user()->company_id;
 
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        // ---------- Read JSON body (with safe fallback) ----------
+        $body       = $request->json()->all() ?: [];
+        $startDate  = $body['start_date'] ?? $request->input('start_date');
+        $endDate    = $body['end_date']   ?? $request->input('end_date');
+        $typeFilter = $body['type']       ?? $request->input('type');
+        $search     = $body['search']     ?? $request->input('search');
+        $placeQuery = $body['place']      ?? $request->input('place');
+
+        $sortBy  = strtolower($body['sort_by'] ?? $request->input('sort_by', 'date'));
+        $sortDir = strtolower($body['sort_dir'] ?? $request->input('sort_dir', 'desc'));
+        $sortDir = in_array($sortDir, ['asc','desc'], true) ? $sortDir : 'desc';
+
+        // Normalize type filter to array of lower-case
+        $wantTypes = is_null($typeFilter) ? null
+            : array_values(array_unique(array_map('strtolower', (array)$typeFilter)));
+
+        // Helpers: normalization for smart search
+        $normalize = function (?string $s): string {
+            if (!$s) return '';
+            $s = mb_strtolower($s, 'UTF-8');
+            $s = preg_replace('/[^a-z0-9]+/u', ' ', $s);
+            $s = trim(preg_replace('/\s+/', ' ', $s));
+            return $s;
+        };
+        $wordMatch = function (string $needle, string $haystack) use ($normalize): bool {
+            $n = $normalize($needle); $h = $normalize($haystack);
+            if ($n === '') return true;
+            foreach (explode(' ', $n) as $w) {
+                if ($w !== '' && mb_strpos($h, $w) === false) return false;
+            }
+            return true;
+        };
+
+        // We’ll build per-type queries that already bring `masters` and `place`
+        // to minimize post-processing.
 
         $result = [];
 
-        // --- SALES INVOICE ---
-        $salesInvoiceRows = SalesInvoiceProductsModel::with([
-                'salesInvoice:id,company_id,client_id,sales_invoice_no,sales_invoice_date',
-            ])
-            ->where('product_id', $productId)
-           ->whereHas('salesInvoice', function ($q) use ($companyId, $startDate, $endDate) {
-                $q->where('company_id', $companyId);
-                if ($startDate) $q->where('sales_invoice_date', '>=', $startDate);
-                if ($endDate) $q->where('sales_invoice_date', '<=', $endDate);
-            })
-            ->get();
-
-        // Collect all client_ids for single lookup
-        $clientIds = $salesInvoiceRows->pluck('salesInvoice.client_id')->filter()->unique()->toArray();
-        $clients = $clientIds ? ClientsModel::whereIn('id', $clientIds)->pluck('name', 'id') : [];
-
-        foreach ($salesInvoiceRows as $row) {
-            $clientName = $row->salesInvoice && $row->salesInvoice->client_id
-                ? ($clients[$row->salesInvoice->client_id] ?? null)
-                : null;
-            $godownName = $row->godown ? (GodownModel::find($row->godown)->name ?? null) : null;
-
-            $result[] = [
-                'type' => 'sales_invoice',
-                'voucher_id' => $row->sales_invoice_id,
-                'voucher_no' => $row->salesInvoice->sales_invoice_no ?? null,
-                'date' => $row->salesInvoice->sales_invoice_date ?? null,
-                'masters' => $clientName,
-                'qty' => $row->quantity,
-                'in_stock' => null,
-                'price' => $row->price,
-                'discount' => $row->discount,
-                'amount' => $row->amount,
-                'profit' => $row->profit,
-                'place' => $godownName,
-            ];
+        // ---------------- SALES INVOICE ----------------
+        if (is_null($wantTypes) || in_array('sales_invoice', $wantTypes, true)) {
+            $rows = \App\Models\SalesInvoiceProductsModel::query()
+                ->select([
+                    't_sales_invoice_products.sales_invoice_id   as voucher_id',
+                    't_sales_invoice.sales_invoice_no            as voucher_no',
+                    't_sales_invoice.sales_invoice_date          as date',
+                    DB::raw("'sales_invoice' as type"),
+                    't_clients.name                              as masters',
+                    't_sales_invoice_products.quantity           as qty',
+                    DB::raw('NULL as in_stock'),
+                    't_sales_invoice_products.price              as price',
+                    't_sales_invoice_products.discount           as discount',
+                    't_sales_invoice_products.amount             as amount',
+                    't_sales_invoice_products.profit             as profit',
+                    'g.name                                      as place',
+                ])
+                ->join('t_sales_invoice', 't_sales_invoice.id', '=', 't_sales_invoice_products.sales_invoice_id')
+                ->leftJoin('t_clients', 't_clients.id', '=', 't_sales_invoice.client_id')
+                ->leftJoin('t_godown as g', 'g.id', '=', 't_sales_invoice_products.godown')
+                ->where('t_sales_invoice_products.product_id', $productId)
+                ->where('t_sales_invoice.company_id', $companyId)
+                ->when($startDate, fn($q)=>$q->where('t_sales_invoice.sales_invoice_date','>=',$startDate))
+                ->when($endDate,   fn($q)=>$q->where('t_sales_invoice.sales_invoice_date','<=',$endDate))
+                ->get();
+            foreach ($rows as $r) {
+                $result[] = [
+                    'type'       => 'sales_invoice',
+                    'voucher_id' => $r->voucher_id,
+                    'voucher_no' => $r->voucher_no,
+                    'date'       => $r->date,
+                    'masters'    => $r->masters,
+                    'qty'        => (float)$r->qty,
+                    'in_stock'   => null,
+                    'price'      => is_null($r->price)    ? null : round((float)$r->price, 2),
+                    'discount'   => is_null($r->discount) ? null : round((float)$r->discount, 2),
+                    'amount'     => is_null($r->amount)   ? null : round((float)$r->amount, 2),
+                    'profit'     => is_null($r->profit)   ? null : round((float)$r->profit, 2),
+                    'place'      => $r->place,
+                ];
+            }
         }
 
-        // --- PURCHASE INVOICE ---
-        $purchaseInvoiceRows = PurchaseInvoiceProductsModel::with([
-                'purchaseInvoice:id,company_id,supplier_id,purchase_invoice_no,purchase_invoice_date',
-            ])
-            ->where('product_id', $productId)
-            ->whereHas('purchaseInvoice', function ($q) use ($companyId, $startDate, $endDate) {
-                $q->where('company_id', $companyId);
-                if ($startDate) $q->where('purchase_invoice_date', '>=', $startDate);
-                if ($endDate) $q->where('purchase_invoice_date', '<=', $endDate);
-            })
-            ->get();
-
-        // Collect all supplier_ids for single lookup
-        $supplierIds = $purchaseInvoiceRows->pluck('purchaseInvoice.supplier_id')->filter()->unique()->toArray();
-        $suppliers = $supplierIds ? SuppliersModel::whereIn('id', $supplierIds)->pluck('name', 'id') : [];
-
-        foreach ($purchaseInvoiceRows as $row) {
-            $supplierName = $row->purchaseInvoice && $row->purchaseInvoice->supplier_id
-                ? ($suppliers[$row->purchaseInvoice->supplier_id] ?? null)
-                : null;
-            $godownName = $row->godown ? (GodownModel::find($row->godown)->name ?? null) : null;
-
-            $result[] = [
-                'type' => 'purchase_invoice',
-                'voucher_id' => $row->purchase_invoice_id,
-                'voucher_no' => $row->purchaseInvoice->purchase_invoice_no ?? null,
-                'date' => $row->purchaseInvoice->purchase_invoice_date ?? null,
-                'masters' => $supplierName,
-                'qty' => $row->quantity,
-                'in_stock' => $row->quantity,
-                'price' => $row->price,
-                'discount' => $row->discount,
-                'amount' => $row->amount,
-                'profit' => null,
-                'place' => $godownName,
-            ];
+        // ---------------- PURCHASE INVOICE ----------------
+        if (is_null($wantTypes) || in_array('purchase_invoice', $wantTypes, true)) {
+            $rows = \App\Models\PurchaseInvoiceProductsModel::query()
+                ->select([
+                    't_purchase_invoice_products.purchase_invoice_id as voucher_id',
+                    't_purchase_invoice.purchase_invoice_no          as voucher_no',
+                    't_purchase_invoice.purchase_invoice_date        as date',
+                    DB::raw("'purchase_invoice' as type"),
+                    't_suppliers.name                                as masters',
+                    't_purchase_invoice_products.quantity            as qty',
+                    't_purchase_invoice_products.quantity            as in_stock',
+                    't_purchase_invoice_products.price               as price',
+                    't_purchase_invoice_products.discount            as discount',
+                    't_purchase_invoice_products.amount              as amount',
+                    DB::raw('NULL as profit'),
+                    'g.name                                          as place',
+                ])
+                ->join('t_purchase_invoice', 't_purchase_invoice.id', '=', 't_purchase_invoice_products.purchase_invoice_id')
+                ->leftJoin('t_suppliers', 't_suppliers.id', '=', 't_purchase_invoice.supplier_id')
+                ->leftJoin('t_godown as g', 'g.id', '=', 't_purchase_invoice_products.godown')
+                ->where('t_purchase_invoice_products.product_id', $productId)
+                ->where('t_purchase_invoice.company_id', $companyId)
+                ->when($startDate, fn($q)=>$q->where('t_purchase_invoice.purchase_invoice_date','>=',$startDate))
+                ->when($endDate,   fn($q)=>$q->where('t_purchase_invoice.purchase_invoice_date','<=',$endDate))
+                ->get();
+            foreach ($rows as $r) {
+                $result[] = [
+                    'type'       => 'purchase_invoice',
+                    'voucher_id' => $r->voucher_id,
+                    'voucher_no' => $r->voucher_no,
+                    'date'       => $r->date,
+                    'masters'    => $r->masters,
+                    'qty'        => (float)$r->qty,
+                    'in_stock'   => (float)$r->in_stock,
+                    'price'      => is_null($r->price)    ? null : round((float)$r->price, 2),
+                    'discount'   => is_null($r->discount) ? null : round((float)$r->discount, 2),
+                    'amount'     => is_null($r->amount)   ? null : round((float)$r->amount, 2),
+                    'profit'     => null,
+                    'place'      => $r->place,
+                ];
+            }
         }
 
-        // --- SALES ORDER ---
-        $salesOrderRows = SalesOrderProductsModel::with([
-                'salesOrder:id,client_id,sales_order_no,sales_order_date',
-            ])
-            ->where('product_id', $productId)
-            ->whereHas('salesOrder', function ($q) use ($companyId, $startDate, $endDate) {
-                $q->where('company_id', $companyId);
-                if ($startDate) $q->where('sales_order_date', '>=', $startDate);
-                if ($endDate) $q->where('sales_order_date', '<=', $endDate);
-            })
-            ->get();
-
-        $soClientIds = $salesOrderRows->pluck('salesOrder.client_id')->filter()->unique()->toArray();
-        $soClients = $soClientIds ? ClientsModel::whereIn('id', $soClientIds)->pluck('name', 'id') : [];
-
-        foreach ($salesOrderRows as $row) {
-            $clientName = $row->salesOrder && $row->salesOrder->client_id
-                ? ($soClients[$row->salesOrder->client_id] ?? null)
-                : null;
-            $result[] = [
-                'type' => 'sales_order',
-                'voucher_id' => $row->sales_order_id,
-                'voucher_no' => $row->salesOrder->sales_order_no ?? null,
-                'date' => $row->salesOrder->sales_order_date ?? null,
-                'masters' => $clientName,
-                'qty' => $row->quantity,
-                'in_stock' => null,
-                'price' => $row->price,
-                'discount' => $row->discount,
-                'amount' => $row->amount,
-                'profit' => null,
-                'place' => null,
-            ];
+        // ---------------- SALES ORDER ----------------
+        if (is_null($wantTypes) || in_array('sales_order', $wantTypes, true)) {
+            $rows = \App\Models\SalesOrderProductsModel::query()
+                ->select([
+                    't_sales_order_products.sales_order_id as voucher_id',
+                    't_sales_order.sales_order_no          as voucher_no',
+                    't_sales_order.sales_order_date        as date',
+                    DB::raw("'sales_order' as type"),
+                    't_clients.name                        as masters',
+                    't_sales_order_products.quantity       as qty',
+                    DB::raw('NULL as in_stock'),
+                    't_sales_order_products.price          as price',
+                    't_sales_order_products.discount       as discount',
+                    't_sales_order_products.amount         as amount',
+                    DB::raw('NULL as profit'),
+                    DB::raw('NULL as place'),
+                ])
+                ->join('t_sales_order', 't_sales_order.id', '=', 't_sales_order_products.sales_order_id')
+                ->leftJoin('t_clients', 't_clients.id', '=', 't_sales_order.client_id')
+                ->where('t_sales_order_products.product_id', $productId)
+                ->where('t_sales_order.company_id', $companyId)
+                ->when($startDate, fn($q)=>$q->where('t_sales_order.sales_order_date','>=',$startDate))
+                ->when($endDate,   fn($q)=>$q->where('t_sales_order.sales_order_date','<=',$endDate))
+                ->get();
+            foreach ($rows as $r) {
+                $result[] = [
+                    'type'       => 'sales_order',
+                    'voucher_id' => $r->voucher_id,
+                    'voucher_no' => $r->voucher_no,
+                    'date'       => $r->date,
+                    'masters'    => $r->masters,
+                    'qty'        => (float)$r->qty,
+                    'in_stock'   => null,
+                    'price'      => is_null($r->price)    ? null : round((float)$r->price, 2),
+                    'discount'   => is_null($r->discount) ? null : round((float)$r->discount, 2),
+                    'amount'     => is_null($r->amount)   ? null : round((float)$r->amount, 2),
+                    'profit'     => null,
+                    'place'      => null,
+                ];
+            }
         }
 
-        // --- PURCHASE ORDER ---
-        $purchaseOrderRows = PurchaseOrderProductsModel::with([
-                'purchaseOrder:id,company_id,supplier_id,purchase_order_no,purchase_order_date',
-            ])
-            ->where('product_id', $productId)
-            ->whereHas('purchaseOrder', function ($q) use ($companyId, $startDate, $endDate) {
-                $q->where('company_id', $companyId);
-                if ($startDate) $q->where('purchase_order_date', '>=', $startDate);
-                if ($endDate) $q->where('purchase_order_date', '<=', $endDate);
-            })
-            ->get();
-
-        $poSupplierIds = $purchaseOrderRows->pluck('purchaseOrder.supplier_id')->filter()->unique()->toArray();
-        $poSuppliers = $poSupplierIds ? SuppliersModel::whereIn('id', $poSupplierIds)->pluck('name', 'id') : [];
-
-        foreach ($purchaseOrderRows as $row) {
-            $supplierName = $row->purchaseOrder && $row->purchaseOrder->supplier_id
-                ? ($poSuppliers[$row->purchaseOrder->supplier_id] ?? null)
-                : null;
-            $result[] = [
-                'type' => 'purchase_order',
-                'voucher_id' => $row->purchase_order_id,
-                'voucher_no' => $row->purchaseOrder->purchase_order_no ?? null,
-                'date' => $row->purchaseOrder->purchase_order_date ?? null,
-                'masters' => $supplierName,
-                'qty' => $row->quantity,
-                'in_stock' => $row->quantity,
-                'price' => $row->price,
-                'discount' => $row->discount,
-                'amount' => $row->amount,
-                'profit' => null,
-                'place' => null,
-            ];
+        // ---------------- PURCHASE ORDER ----------------
+        if (is_null($wantTypes) || in_array('purchase_order', $wantTypes, true)) {
+            $rows = \App\Models\PurchaseOrderProductsModel::query()
+                ->select([
+                    't_purchase_order_products.purchase_order_id as voucher_id',
+                    't_purchase_order.purchase_order_no          as voucher_no',
+                    't_purchase_order.purchase_order_date        as date',
+                    DB::raw("'purchase_order' as type"),
+                    't_suppliers.name                            as masters',
+                    't_purchase_order_products.quantity          as qty',
+                    't_purchase_order_products.quantity          as in_stock',
+                    't_purchase_order_products.price             as price',
+                    't_purchase_order_products.discount          as discount',
+                    't_purchase_order_products.amount            as amount',
+                    DB::raw('NULL as profit'),
+                    DB::raw('NULL as place'),
+                ])
+                ->join('t_purchase_order', 't_purchase_order.id', '=', 't_purchase_order_products.purchase_order_id')
+                ->leftJoin('t_suppliers', 't_suppliers.id', '=', 't_purchase_order.supplier_id')
+                ->where('t_purchase_order_products.product_id', $productId)
+                ->where('t_purchase_order.company_id', $companyId)
+                ->when($startDate, fn($q)=>$q->where('t_purchase_order.purchase_order_date','>=',$startDate))
+                ->when($endDate,   fn($q)=>$q->where('t_purchase_order.purchase_order_date','<=',$endDate))
+                ->get();
+            foreach ($rows as $r) {
+                $result[] = [
+                    'type'       => 'purchase_order',
+                    'voucher_id' => $r->voucher_id,
+                    'voucher_no' => $r->voucher_no,
+                    'date'       => $r->date,
+                    'masters'    => $r->masters,
+                    'qty'        => (float)$r->qty,
+                    'in_stock'   => (float)$r->in_stock,
+                    'price'      => is_null($r->price)    ? null : round((float)$r->price, 2),
+                    'discount'   => is_null($r->discount) ? null : round((float)$r->discount, 2),
+                    'amount'     => is_null($r->amount)   ? null : round((float)$r->amount, 2),
+                    'profit'     => null,
+                    'place'      => null,
+                ];
+            }
         }
 
-        // --- PURCHASE RETURN ---
-        $purchaseReturnRows = PurchaseReturnProductsModel::with([
-                'purchaseReturn:id,company_id,supplier_id,purchase_return_no,purchase_return_date',
-            ])
-            ->where('product_id', $productId)
-            ->whereHas('purchaseReturn', function ($q) use ($companyId, $startDate, $endDate) {
-                $q->where('company_id', $companyId);
-                if ($startDate) $q->where('purchase_return_date', '>=', $startDate);
-                if ($endDate) $q->where('purchase_return_date', '<=', $endDate);
-            })
-            ->get();
-
-        $prSupplierIds = $purchaseReturnRows->pluck('purchaseReturn.supplier_id')->filter()->unique()->toArray();
-        $prSuppliers = $prSupplierIds ? \App\Models\SuppliersModel::whereIn('id', $prSupplierIds)->pluck('name', 'id') : [];
-
-        foreach ($purchaseReturnRows as $row) {
-            $supplierName = $row->purchaseReturn && $row->purchaseReturn->supplier_id
-                ? ($prSuppliers[$row->purchaseReturn->supplier_id] ?? null)
-                : null;
-            $result[] = [
-                'type' => 'purchase_return',
-                'voucher_id' => $row->purchase_return_id,
-                'voucher_no' => $row->purchaseReturn->purchase_return_no ?? null,
-                'date' => $row->purchaseReturn->purchase_return_date ?? null,
-                'masters' => $supplierName,
-                'qty' => $row->quantity,
-                'in_stock' => null,
-                'price' => $row->price,
-                'discount' => $row->discount,
-                'amount' => null,
-                'profit' => null,
-                'place' => null,
-            ];
+        // ---------------- PURCHASE RETURN ----------------
+        if (is_null($wantTypes) || in_array('purchase_return', $wantTypes, true)) {
+            $rows = \App\Models\PurchaseReturnProductsModel::query()
+                ->select([
+                    't_purchase_return_products.purchase_return_id as voucher_id',
+                    't_purchase_return.purchase_return_no          as voucher_no',
+                    't_purchase_return.purchase_return_date        as date',
+                    DB::raw("'purchase_return' as type"),
+                    't_suppliers.name                              as masters',
+                    't_purchase_return_products.quantity           as qty',
+                    DB::raw('NULL as in_stock'),
+                    DB::raw('NULL as price'),
+                    DB::raw('NULL as discount'),
+                    DB::raw('NULL as amount'),
+                    DB::raw('NULL as profit'),
+                    'g.name                                        as place',
+                ])
+                ->join('t_purchase_return', 't_purchase_return.id', '=', 't_purchase_return_products.purchase_return_id')
+                ->leftJoin('t_suppliers', 't_suppliers.id', '=', 't_purchase_return.supplier_id')
+                ->leftJoin('t_godown as g', 'g.id', '=', 't_purchase_return_products.godown')
+                ->where('t_purchase_return_products.product_id', $productId)
+                ->where('t_purchase_return.company_id', $companyId)
+                ->when($startDate, fn($q)=>$q->where('t_purchase_return.purchase_return_date','>=',$startDate))
+                ->when($endDate,   fn($q)=>$q->where('t_purchase_return.purchase_return_date','<=',$endDate))
+                ->get();
+            foreach ($rows as $r) {
+                $result[] = [
+                    'type'       => 'purchase_return',
+                    'voucher_id' => $r->voucher_id,
+                    'voucher_no' => $r->voucher_no,
+                    'date'       => $r->date,
+                    'masters'    => $r->masters,
+                    'qty'        => (float)$r->qty,
+                    'in_stock'   => null,
+                    'price'      => null,
+                    'discount'   => null,
+                    'amount'     => null,
+                    'profit'     => null,
+                    'place'      => $r->place,
+                ];
+            }
         }
 
-        // --- ASSEMBLY OPERATION ---
-        $assemblyRows = AssemblyOperationProductsModel::with([
-            'assemblyOperation:id,assembly_operations_date,godown',
-        ])
-            ->where('product_id', $productId)
-            ->whereHas('assemblyOperation', function ($q) use ($companyId, $startDate, $endDate) {
-                $q->where('company_id', $companyId);
-                if ($startDate) $q->where('assembly_operations_date', '>=', $startDate);
-                if ($endDate) $q->where('assembly_operations_date', '<=', $endDate);
-            })
-            ->get();
-
-        foreach ($assemblyRows as $row) {
-            $godownName = $row->godown ? (GodownModel::find($row->godown)->name ?? null) : null;
-            $result[] = [
-                'type' => 'assembly_operation',
-                'voucher_id' => $row->assembly_operations_id, // FK to parent (PK of t_assembly_operations)
-                'voucher_no' => $row->assemblyOperation->assembly_operations_id ?? null, // The voucher/document no from parent
-                'date' => $row->assemblyOperation->assembly_operations_date ?? null,
-                'masters' => null, // As per your latest note
-                'qty' => $row->quantity,
-                'in_stock' => null,
-                'price' => $row->rate,
-                'discount' => null,
-                'amount' => $row->amount,
-                'profit' => null,
-                'place' => $godownName,
-            ];
+        // ---------------- ASSEMBLY OPERATION ----------------
+        if (is_null($wantTypes) || in_array('assembly_operation', $wantTypes, true)) {
+            $rows = \App\Models<AssemblyOperationProductsModel::query()
+                ->select([
+                    't_assembly_operations_products.assembly_operations_id as voucher_id',
+                    't_assembly_operations.assembly_operations_id          as voucher_no', // your model stores a human-facing number here
+                    't_assembly_operations.assembly_operations_date        as date',
+                    DB::raw("'assembly_operation' as type"),
+                    DB::raw('NULL as masters'),
+                    't_assembly_operations_products.quantity               as qty',
+                    DB::raw('NULL as in_stock'),
+                    't_assembly_operations_products.rate                   as price',
+                    DB::raw('NULL as discount'),
+                    't_assembly_operations_products.amount                 as amount',
+                    DB::raw('NULL as profit'),
+                    'g.name                                                as place',
+                ])
+                ->join('t_assembly_operations', 't_assembly_operations.id', '=', 't_assembly_operations_products.assembly_operations_id')
+                ->leftJoin('t_godown as g', 'g.id', '=', 't_assembly_operations_products.godown')
+                ->where('t_assembly_operations_products.product_id', $productId)
+                ->where('t_assembly_operations.company_id', $companyId)
+                ->when($startDate, fn($q)=>$q->where('t_assembly_operations.assembly_operations_date','>=',$startDate))
+                ->when($endDate,   fn($q)=>$q->where('t_assembly_operations.assembly_operations_date','<=',$endDate))
+                ->get();
+            foreach ($rows as $r) {
+                $result[] = [
+                    'type'       => 'assembly_operation',
+                    'voucher_id' => $r->voucher_id,
+                    'voucher_no' => $r->voucher_no,
+                    'date'       => $r->date,
+                    'masters'    => null,
+                    'qty'        => (float)$r->qty,
+                    'in_stock'   => null,
+                    'price'      => is_null($r->price)  ? null : round((float)$r->price, 2),
+                    'discount'   => null,
+                    'amount'     => is_null($r->amount) ? null : round((float)$r->amount, 2),
+                    'profit'     => null,
+                    'place'      => $r->place,
+                ];
+            }
         }
 
-        // --- STOCK TRANSFER ---
-        $stockTransferRows = StockTransferProductsModel::with([
-            'stockTransfer:id,company_id,transfer_date,godown_to,transfer_id',
-        ])
-        ->where('product_id', $productId)
-        ->whereHas('stockTransfer', function ($q) use ($companyId, $startDate, $endDate) {
-            $q->where('company_id', $companyId);
-            if ($startDate) $q->where('transfer_date', '>=', $startDate);
-            if ($endDate) $q->where('transfer_date', '<=', $endDate);
-        })
-        ->get();
-
-        foreach ($stockTransferRows as $row) {
-            $godownName = $row->godown ? (GodownModel::find($row->godown)->name ?? null) : null;
-            $result[] = [
-                'type' => 'stock_transfer',
-                'voucher_id' => $row->stock_transfer_id,
-                'voucher_no' => $row->stockTransfer->transfer_id ?? null,    // <-- now correct!
-                'date' => $row->stockTransfer->receiving_date ?? null,
-                'masters' => null,
-                'qty' => $row->quantity,
-                'in_stock' => null,
-                'price' => null,
-                'discount' => null,
-                'amount' => null,
-                'profit' => null,
-                'place' => $godownName,   // Consider using $row->stockTransfer->godown_to if you want the destination godown!
-            ];
+        // ---------------- STOCK TRANSFER ----------------
+        if (is_null($wantTypes) || in_array('stock_transfer', $wantTypes, true)) {
+            $rows = \App\Models\StockTransferProductsModel::query()
+                ->select([
+                    't_stock_transfer_products.stock_transfer_id as voucher_id',
+                    't_stock_transfer.transfer_id                as voucher_no',
+                    DB::raw('COALESCE(t_stock_transfer.receiving_date, t_stock_transfer.transfer_date) as date'),
+                    DB::raw("'stock_transfer' as type"),
+                    DB::raw('NULL as masters'),
+                    't_stock_transfer_products.quantity         as qty',
+                    DB::raw('NULL as in_stock'),
+                    DB::raw('NULL as price'),
+                    DB::raw('NULL as discount'),
+                    DB::raw('NULL as amount'),
+                    DB::raw('NULL as profit'),
+                    'gd_to.name                                  as place',
+                ])
+                ->join('t_stock_transfer', 't_stock_transfer.id', '=', 't_stock_transfer_products.stock_transfer_id')
+                ->leftJoin('t_godown as gd_to', 'gd_to.id', '=', 't_stock_transfer.godown_to')
+                ->where('t_stock_transfer_products.product_id', $productId)
+                ->where('t_stock_transfer.company_id', $companyId)
+                ->when($startDate, fn($q)=>$q->where('t_stock_transfer.transfer_date','>=',$startDate)) // using transfer_date for range
+                ->when($endDate,   fn($q)=>$q->where('t_stock_transfer.transfer_date','<=',$endDate))
+                ->get();
+            foreach ($rows as $r) {
+                $result[] = [
+                    'type'       => 'stock_transfer',
+                    'voucher_id' => $r->voucher_id,
+                    'voucher_no' => $r->voucher_no,
+                    'date'       => $r->date,
+                    'masters'    => null,
+                    'qty'        => (float)$r->qty,
+                    'in_stock'   => null,
+                    'price'      => null,
+                    'discount'   => null,
+                    'amount'     => null,
+                    'profit'     => null,
+                    'place'      => $r->place,
+                ];
+            }
         }
 
-        // Sort by date asc, nulls last
-        usort($result, function ($a, $b) {
-            if ($a['date'] === $b['date']) return 0;
-            if ($a['date'] === null) return 1;
-            if ($b['date'] === null) return -1;
-            return strcmp($a['date'], $b['date']);
+        // ---------- In-memory filters: place + smart search ----------
+        if ($placeQuery !== null && $placeQuery !== '') {
+            $needle = $normalize($placeQuery);
+            $result = array_values(array_filter($result, function($r) use ($needle, $normalize) {
+                $h = $normalize($r['place'] ?? '');
+                return $needle === '' || ($h !== '' && mb_strpos($h, $needle) !== false);
+            }));
+        }
+
+        if ($search !== null && $search !== '') {
+            $result = array_values(array_filter($result, function($r) use ($search, $wordMatch) {
+                $hay1 = (string)($r['masters'] ?? '');
+                $hay2 = (string)($r['voucher_no'] ?? '');
+                return $wordMatch($search, $hay1) || $wordMatch($search, $hay2);
+            }));
+        }
+
+        // ---------- Sorting (default date desc; nulls last) ----------
+        $fieldMap = [
+            'date'    => 'date',
+            'client'  => 'masters',
+            'masters' => 'masters',
+            'price'   => 'price',
+            'discount'=> 'discount',
+            'amount'  => 'amount',
+            'profit'  => 'profit',
+            'place'   => 'place',
+        ];
+        $key = $fieldMap[$sortBy] ?? 'date';
+
+        usort($result, function ($a, $b) use ($key, $sortDir) {
+            $av = $a[$key] ?? null; $bv = $b[$key] ?? null;
+            $aNull = is_null($av);  $bNull = is_null($bv);
+            if ($aNull && $bNull) return 0;
+            if ($aNull) return 1;
+            if ($bNull) return -1;
+
+            // Dates are YYYY-MM-DD so string compare works; numbers compare numerically
+            if (is_numeric($av) && is_numeric($bv)) $cmp = $av <=> $bv;
+            else                                    $cmp = strcmp((string)$av,(string)$bv);
+
+            return $sortDir === 'asc' ? $cmp : -$cmp;
         });
 
         return response()->json([
             'success' => true,
-            'data' => $result,
+            'data'    => $result,
+            'meta'    => [
+                'filters' => [
+                    'start_date' => $startDate,
+                    'end_date'   => $endDate,
+                    'type'       => $wantTypes,
+                    'search'     => $search,
+                    'place'      => $placeQuery,
+                ],
+                'sort' => [
+                    'by'  => $key,
+                    'dir' => $sortDir,
+                ],
+            ],
         ]);
     }
+
 
 }
