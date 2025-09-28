@@ -2277,13 +2277,14 @@ class HelperController extends Controller
             }
         }
 
-        // ---------------- STOCK TRANSFER ----------------
+        // ---------------- STOCK TRANSFER (fixed: no receiving_date) ----------------
         if (is_null($wantTypes) || in_array('stock_transfer', $wantTypes, true)) {
             $rows = \App\Models\StockTransferProductsModel::query()
                 ->select([
                     't_stock_transfer_products.stock_transfer_id as voucher_id',
                     't_stock_transfer.transfer_id                as voucher_no',
-                    DB::raw('COALESCE(t_stock_transfer.receiving_date, t_stock_transfer.transfer_date) as date'),
+                    // Use transfer_date as the timeline date
+                    't_stock_transfer.transfer_date              as date',
                     DB::raw("'stock_transfer' as type"),
                     DB::raw('NULL as masters'),
                     't_stock_transfer_products.quantity         as qty',
@@ -2292,15 +2293,18 @@ class HelperController extends Controller
                     DB::raw('NULL as discount'),
                     DB::raw('NULL as amount'),
                     DB::raw('NULL as profit'),
+                    // Place shown as destination godown name
                     'gd_to.name                                  as place',
                 ])
                 ->join('t_stock_transfer', 't_stock_transfer.id', '=', 't_stock_transfer_products.stock_transfer_id')
                 ->leftJoin('t_godown as gd_to', 'gd_to.id', '=', 't_stock_transfer.godown_to')
                 ->where('t_stock_transfer_products.product_id', $productId)
                 ->where('t_stock_transfer.company_id', $companyId)
-                ->when($startDate, fn($q)=>$q->where('t_stock_transfer.transfer_date','>=',$startDate)) // using transfer_date for range
-                ->when($endDate,   fn($q)=>$q->where('t_stock_transfer.transfer_date','<=',$endDate))
+                // Date filter on transfer_date
+                ->when($startDate, fn($q) => $q->where('t_stock_transfer.transfer_date', '>=', $startDate))
+                ->when($endDate,   fn($q) => $q->where('t_stock_transfer.transfer_date', '<=', $endDate))
                 ->get();
+
             foreach ($rows as $r) {
                 $result[] = [
                     'type'       => 'stock_transfer',
@@ -2308,16 +2312,17 @@ class HelperController extends Controller
                     'voucher_no' => $r->voucher_no,
                     'date'       => $r->date,
                     'masters'    => null,
-                    'qty'        => (float)$r->qty,
+                    'qty'        => (float) $r->qty,
                     'in_stock'   => null,
                     'price'      => null,
                     'discount'   => null,
                     'amount'     => null,
                     'profit'     => null,
-                    'place'      => $r->place,
+                    'place'      => $r->place, // destination godown
                 ];
             }
         }
+
 
         // ---------- In-memory filters: place + smart search ----------
         if ($placeQuery !== null && $placeQuery !== '') {
