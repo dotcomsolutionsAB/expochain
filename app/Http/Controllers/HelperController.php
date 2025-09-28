@@ -2251,7 +2251,7 @@ class HelperController extends Controller
 
         // ---------------- ASSEMBLY OPERATION ----------------
         if (is_null($wantTypes) || in_array('assembly_operation', $wantTypes, true)) {
-            $rows = \App\Models<AssemblyOperationProductsModel::query()
+            $rows = \App\Models\AssemblyOperationProductsModel::query()
                 ->select([
                     't_assembly_operations_products.assembly_operations_id as voucher_id',
                     't_assembly_operations.assembly_operations_id          as voucher_no',
