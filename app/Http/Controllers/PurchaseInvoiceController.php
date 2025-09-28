@@ -816,7 +816,7 @@ class PurchaseInvoiceController extends Controller
             }
 
             // Prefer API total_gross if present; else sum item.gross; else sum qty*price
-            $apiTotalGross = isset($record['total_gross']) ? (float)$record['total_gross'] : null;
+            $apiTotalGross = isset($record['total_gross']) ? round((float)$record['total_gross'], 2) : null;
             if ($apiTotalGross === null) {
                 $tmpGross = 0.0;
                 foreach ($itemsArray as $it) {
@@ -898,7 +898,7 @@ class PurchaseInvoiceController extends Controller
 
             // Update invoice gross & round_off
             PurchaseInvoiceModel::where('id', $purchaseInvoiceId)->update([
-                'gross'     => $gross,
+                'gross'     => round($gross, 2),
                 'round_off' => $roundoff,
             ]);
 
@@ -929,7 +929,9 @@ class PurchaseInvoiceController extends Controller
                     if ($discRounded < $discRaw) {
                         $discRounded += 0.01; // keep your upward adjust logic when round goes below
                     }
-                    $gross = isset($item['gross']) ? (float)$item['gross'] : 0.00;
+                    $Item_gross = isset($item['gross']) 
+                                ? round((float)$item['gross'], 2) 
+                                : 0.00;
                     $lineBase = $qty * ($price - (($discRounded * $price) / 100));
                     $lineCgst = isset($item['cgst']) ? (float)$item['cgst'] : 0.0;
                     $lineSgst = isset($item['sgst']) ? (float)$item['sgst'] : 0.0;
@@ -954,7 +956,7 @@ class PurchaseInvoiceController extends Controller
                         'sgst'                => $lineSgst,
                         'igst'                => $lineIgst,
                         'amount'              => $lineAmount,
-                        'gross'               => $gross,
+                        'gross'               => round($Item_gross, 2),
                         // channel (if present) keep your mapping
                         'channel'             => array_key_exists('channel', $item)
                             ? (
