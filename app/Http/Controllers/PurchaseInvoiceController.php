@@ -513,6 +513,246 @@ class PurchaseInvoiceController extends Controller
             : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Purchase Invoice.'], 400);
     }
 
+    // public function importPurchaseInvoices()
+    // {
+    //     ini_set('max_execution_time', 600); // Increase execution time
+    //     ini_set('memory_limit', '1024M');   // Optimize memory usage
+
+    //     // Truncate Purchase Invoice and related tables before import
+    //     PurchaseInvoiceModel::truncate();
+    //     PurchaseInvoiceProductsModel::truncate();
+    //     PurchaseInvoiceAddonsModel::truncate();
+
+    //     // Define the external URL
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/purchase_invoice.php';
+
+    //     // Fetch data from the external URL
+    //     try {
+    //         $response = Http::timeout(120)->get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data: ' . $e->getMessage()], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
+    //     }
+
+    //     $data = $response->json('data');
+    //     if (empty($data)) {
+    //         return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
+    //     }
+
+    //     $batchSize = 500; // Optimal batch size for insert
+    //     $purchaseInvoicesBatch = [];
+    //     $productsBatch = [];
+    //     $addonsBatch = [];
+    //     $successfulInserts = 0;
+    //     $errors = [];
+
+    //     // **Step 1️⃣: Fetch Existing Data in Memory**
+    //     $existingSuppliers = SuppliersModel::pluck('id', 'name')->toArray();
+    //     $existingProducts = ProductsModel::pluck('id', 'name')->toArray();
+
+    //     foreach ($data as $record) {
+    //         // Decode JSON fields
+    //         $itemsData = json_decode($record['items'] ?? '{}', true);
+    //         $taxData = json_decode($record['tax'] ?? '{}', true);
+    //         $addonsData = json_decode($record['addons'] ?? '{}', true);
+
+    //         // Get supplier ID
+    //         $supplierId = $existingSuppliers[$record['supplier']] ?? null;
+    //         if (!$supplierId) {
+    //             $errors[] = [
+    //                 'record' => $record,
+    //                 'error' => 'Supplier not found: ' . $record['supplier']
+    //             ];
+    //             continue;
+    //         }
+
+    //         // Prepare purchase invoice data
+    //         $purchaseInvoicesBatch[] = [
+    //             'company_id' => Auth::user()->company_id,
+    //             'supplier_id' => $supplierId,
+    //             'name' => $record['supplier'] ?? null,
+    //             'purchase_invoice_no' => $record['pi_no'] ?? null,
+    //             'purchase_invoice_date' => !empty($record['pi_date']) ? date('Y-m-d', strtotime($record['pi_date'])) : null,
+    //             'oa_no' => $record['oa_no'] ?? null,
+    //             'ref_no' => $record['reference_no'] ?? null,
+    //             'template' => json_decode($record['pdf_template'], true)['id'] ?? 0,
+    //             'user' => Auth::user()->id,
+    //             'cgst' => $taxData['cgst'] ?? 0,
+    //             'sgst' => $taxData['sgst'] ?? 0,
+    //             'igst' => $taxData['igst'] ?? 0,
+    //             'total' => $record['total'] ?? null,
+    //             // gross will be updated later after processing items
+    //             'gross' => 0,
+    //             'round_off' => 0,
+    //             'created_at' => now(),
+    //             'updated_at' => now(),
+    //         ];
+    //     }
+
+    //     // **2️⃣ Batch Insert Purchase Invoices and Fetch IDs**
+    //     foreach (array_chunk($purchaseInvoicesBatch, $batchSize) as $chunk) {
+    //         PurchaseInvoiceModel::insert($chunk);
+    //     }
+
+    //     // Fetch newly inserted IDs
+    //     $purchaseInvoiceIds = PurchaseInvoiceModel::whereIn('purchase_invoice_no', array_column($purchaseInvoicesBatch, 'purchase_invoice_no'))
+    //         ->pluck('id', 'purchase_invoice_no')
+    //         ->toArray();
+
+    //     // **3️⃣ Insert Products and Addons**
+    //     foreach ($data as $record) {
+    //         $purchaseInvoiceId = $purchaseInvoiceIds[$record['pi_no']] ?? null;
+
+    //         if (!$purchaseInvoiceId) {
+    //             continue;
+    //         }
+
+    //         $itemsData = json_decode($record['items'] ?? '{}', true);
+    //         $addonsData = json_decode($record['addons'] ?? '{}', true);
+
+    //         $gross = 0;
+
+    //         if (!empty($itemsData['product'])) {
+    //             foreach ($itemsData['product'] as $index => $productName) {
+    //                 $qty = isset($itemsData['quantity'][$index]) ? (float) $itemsData['quantity'][$index] : 0;
+    //                 $price = isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0;
+    //                 $gross += $qty * $price;
+    //             }
+    //         }
+
+    //         $roundoff = isset($addonsData['roundoff']) ? (float) $addonsData['roundoff'] : 0;
+
+    //         // Now update invoice with correct gross and roundoff
+
+    //         if ($purchaseInvoiceId) {
+    //             PurchaseInvoiceModel::where('id', $purchaseInvoiceId)->update([
+    //                 'gross' => $gross,
+    //                 'round_off' => $roundoff
+    //             ]);
+    //         }
+
+    //         // **Process Items (Products)**
+    //         if (!empty($itemsData['product'])) {
+    //             foreach ($itemsData['product'] as $index => $productName) {
+    //                 $productId = $existingProducts[$productName] ?? null;
+
+    //                 if (!$productId) {
+    //                     $errors[] = [
+    //                         'record' => $record,
+    //                         'error' => "Product not found: {$productName}"
+    //                     ];
+    //                     continue;
+    //                 }
+
+    //                 $productsBatch[] = [
+    //                     'purchase_invoice_id' => $purchaseInvoiceId, // Assign parent ID
+    //                     'company_id' => Auth::user()->company_id,
+    //                     'product_id' => $productId,
+    //                     'product_name' => $productName,
+    //                     'description' => $itemsData['desc'][$index] ?? '',
+    //                     'quantity' => $itemsData['quantity'][$index] ?? 0,
+    //                     'unit' => $itemsData['unit'][$index] ?? '',
+    //                     'price' => isset($itemsData['price'][$index]) && $itemsData['price'][$index] !== '' ? (float)$itemsData['price'][$index] : 0,
+    //                     'discount' => isset($itemsData['discount'][$index]) && $itemsData['discount'][$index] !== ''
+    //                     ? (round((float)$itemsData['discount'][$index], 2) + (round((float)$itemsData['discount'][$index], 2) < (float)$itemsData['discount'][$index] ? 0.01 : 0))
+    //                     : 0,
+    //                     'discount_type' => "percentage",
+    //                     'hsn' => $itemsData['hsn'][$index] ?? '',
+    //                     'tax' => (float)($itemsData['tax'][$index] ?? 0),
+    //                     'cgst' => (float)($itemsData['cgst'][$index] ?? 0),
+    //                     'sgst' => (float)($itemsData['sgst'][$index] ?? 0),
+    //                     'igst' => (float)($itemsData['igst'][$index] ?? 0),
+    //                     'amount' => (
+    //                         (isset($itemsData['quantity'][$index]) ? (float) $itemsData['quantity'][$index] : 0.0) *
+    //                         (
+    //                             (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0) -
+    //                             (
+    //                                 ((isset($itemsData['discount'][$index]) ? (float) $itemsData['discount'][$index] : 0.0) *
+    //                                 (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0)) / 100
+    //                             )
+    //                         )
+    //                     ) + (
+    //                         (isset($itemsData['cgst'][$index]) ? (float) $itemsData['cgst'][$index] : 0.0) +
+    //                         (isset($itemsData['sgst'][$index]) ? (float) $itemsData['sgst'][$index] : 0.0) +
+    //                         (isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0.0)
+    //                     ),
+    //                     'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index]) 
+    //                             ? (
+    //                                 is_numeric($itemsData['channel'][$index]) 
+    //                                     ? (float)$itemsData['channel'][$index] 
+    //                                     : (
+    //                                         strtolower($itemsData['channel'][$index]) === 'standard' ? 1 :
+    //                                         (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 2 :
+    //                                         (strtolower($itemsData['channel'][$index]) === 'cbs' ? 3 : null))
+    //                                     )
+    //                             ) 
+    //                             : null,
+
+    //                     'godown' => isset($itemsData['place'][$index])
+    //                     ? (
+    //                         strtoupper(trim($itemsData['place'][$index])) === 'OFFICE' ? 1 :
+    //                         (strtoupper(trim($itemsData['place'][$index])) === 'KUSHTIA' ? 2 :
+    //                         (strtoupper(trim($itemsData['place'][$index])) === 'ANKURHATI' ? 3 : null))
+    //                     )
+    //                     : null,
+    //                     'sold' => (float)($itemsData['instock'][$index] ?? 0),
+    //                     'created_at' => now(),
+    //                     'updated_at' => now(),
+    //                 ];
+    //             }
+    //         }
+
+    //         // **Process Addons**
+    //         if (!empty($addonsData)) {
+    //             foreach ($addonsData as $name => $values) {
+    //                 $addonsBatch[] = [
+    //                     'purchase_invoice_id' => $purchaseInvoiceId, // Assign parent ID
+    //                     'company_id' => Auth::user()->company_id,
+    //                     'name' => $name,
+    //                     'amount' => (float)($values['cgst'] ?? 0) + (float)($values['sgst'] ?? 0) + (float)($values['igst'] ?? 0),
+    //                     'tax' => 18,
+    //                     'hsn' => $values['hsn'] ?? '',
+    //                     'cgst' => (float)($values['cgst'] ?? 0),
+    //                     'sgst' => (float)($values['sgst'] ?? 0),
+    //                     'igst' => (float)($values['igst'] ?? 0),
+    //                     'created_at' => now(),
+    //                     'updated_at' => now(),
+    //                 ];
+    //             }
+    //         }
+
+    //         $successfulInserts++;
+
+    //         // **Batch Insert when batch size is reached**
+    //         if (count($productsBatch) >= $batchSize) {
+    //             PurchaseInvoiceProductsModel::insert($productsBatch);
+    //             $productsBatch = [];
+    //         }
+    //         if (count($addonsBatch) >= $batchSize) {
+    //             PurchaseInvoiceAddonsModel::insert($addonsBatch);
+    //             $addonsBatch = [];
+    //         }
+    //     }
+
+    //     // **Insert remaining data**
+    //     if (!empty($productsBatch)) {
+    //         PurchaseInvoiceProductsModel::insert($productsBatch);
+    //     }
+    //     if (!empty($addonsBatch)) {
+    //         PurchaseInvoiceAddonsModel::insert($addonsBatch);
+    //     }
+
+    //     // **Return response**
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => "Purchase invoices import completed with $successfulInserts successful inserts.",
+    //         'errors' => $errors,
+    //     ], 200);
+    // }
     public function importPurchaseInvoices()
     {
         ini_set('max_execution_time', 600); // Increase execution time
@@ -537,6 +777,7 @@ class PurchaseInvoiceController extends Controller
             return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
         }
 
+        // NOTE: new shape is { meta: {...}, data: [ ...records... ] }
         $data = $response->json('data');
         if (empty($data)) {
             return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
@@ -551,44 +792,62 @@ class PurchaseInvoiceController extends Controller
 
         // **Step 1️⃣: Fetch Existing Data in Memory**
         $existingSuppliers = SuppliersModel::pluck('id', 'name')->toArray();
-        $existingProducts = ProductsModel::pluck('id', 'name')->toArray();
+        $existingProducts  = ProductsModel::pluck('id', 'name')->toArray();
 
+        // Build the purchase invoice rows (parent) first
         foreach ($data as $record) {
-            // Decode JSON fields
-            $itemsData = json_decode($record['items'] ?? '{}', true);
-            $taxData = json_decode($record['tax'] ?? '{}', true);
-            $addonsData = json_decode($record['addons'] ?? '{}', true);
+            // New response fields
+            $itemsArray  = $record['items'] ?? [];                 // array of item objects
+            $taxObj      = $record['tax'] ?? [];                   // object { cgst, sgst, igst }
+            $addonsObj   = $record['addons'] ?? [];                // object with nested (freight, pf, roundoff, etc.)
+            $templateObj = $record['pdf_template'] ?? [];          // object { id, name }
 
             // Get supplier ID
-            $supplierId = $existingSuppliers[$record['supplier']] ?? null;
+            $supplierName = $record['supplier'] ?? null;
+            $supplierId   = $supplierName ? ($existingSuppliers[$supplierName] ?? null) : null;
+
             if (!$supplierId) {
                 $errors[] = [
                     'record' => $record,
-                    'error' => 'Supplier not found: ' . $record['supplier']
+                    'error'  => 'Supplier not found: ' . ($supplierName ?? '[null]')
                 ];
                 continue;
             }
 
-            // Prepare purchase invoice data
+            // Prefer API total_gross if present; else sum item.gross; else sum qty*price
+            $apiTotalGross = isset($record['total_gross']) ? (float)$record['total_gross'] : null;
+            if ($apiTotalGross === null) {
+                $tmpGross = 0.0;
+                foreach ($itemsArray as $it) {
+                    if (isset($it['gross']) && $it['gross'] !== '') {
+                        $tmpGross += (float)$it['gross'];
+                    } else {
+                        $q = isset($it['quantity']) ? (float)$it['quantity'] : 0.0;
+                        $p = isset($it['price'])    ? (float)$it['price']    : 0.0;
+                        $tmpGross += $q * $p;
+                    }
+                }
+                $apiTotalGross = $tmpGross;
+            }
+
             $purchaseInvoicesBatch[] = [
-                'company_id' => Auth::user()->company_id,
-                'supplier_id' => $supplierId,
-                'name' => $record['supplier'] ?? null,
-                'purchase_invoice_no' => $record['pi_no'] ?? null,
+                'company_id'            => Auth::user()->company_id,
+                'supplier_id'           => $supplierId,
+                'name'                  => $supplierName,
+                'purchase_invoice_no'   => $record['pi_no'] ?? null,
                 'purchase_invoice_date' => !empty($record['pi_date']) ? date('Y-m-d', strtotime($record['pi_date'])) : null,
-                'oa_no' => $record['oa_no'] ?? null,
-                'ref_no' => $record['reference_no'] ?? null,
-                'template' => json_decode($record['pdf_template'], true)['id'] ?? 0,
-                'user' => Auth::user()->id,
-                'cgst' => $taxData['cgst'] ?? 0,
-                'sgst' => $taxData['sgst'] ?? 0,
-                'igst' => $taxData['igst'] ?? 0,
-                'total' => $record['total'] ?? null,
-                // gross will be updated later after processing items
-                'gross' => 0,
-                'round_off' => 0,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'oa_no'                 => $record['oa_no'] ?? null,
+                'ref_no'                => $record['reference_no'] ?? null,
+                'template'              => isset($templateObj['id']) ? (int)$templateObj['id'] : 0,
+                'user'                  => Auth::user()->id,
+                'cgst'                  => isset($taxObj['cgst']) ? (float)$taxObj['cgst'] : 0.0,
+                'sgst'                  => isset($taxObj['sgst']) ? (float)$taxObj['sgst'] : 0.0,
+                'igst'                  => isset($taxObj['igst']) ? (float)$taxObj['igst'] : 0.0,
+                'total'                 => isset($record['total']) ? (float)$record['total'] : null,
+                'gross'                 => $apiTotalGross,  // will keep; we also update once more below just in case
+                'round_off'             => 0,               // updated later from addons.roundoff
+                'created_at'            => now(),
+                'updated_at'            => now(),
             ];
         }
 
@@ -598,128 +857,155 @@ class PurchaseInvoiceController extends Controller
         }
 
         // Fetch newly inserted IDs
-        $purchaseInvoiceIds = PurchaseInvoiceModel::whereIn('purchase_invoice_no', array_column($purchaseInvoicesBatch, 'purchase_invoice_no'))
-            ->pluck('id', 'purchase_invoice_no')
-            ->toArray();
+        $purchaseInvoiceIds = PurchaseInvoiceModel::whereIn(
+            'purchase_invoice_no',
+            array_column($purchaseInvoicesBatch, 'purchase_invoice_no')
+        )->pluck('id', 'purchase_invoice_no')->toArray();
 
         // **3️⃣ Insert Products and Addons**
         foreach ($data as $record) {
-            $purchaseInvoiceId = $purchaseInvoiceIds[$record['pi_no']] ?? null;
-
+            $piNo = $record['pi_no'] ?? null;
+            $purchaseInvoiceId = $piNo ? ($purchaseInvoiceIds[$piNo] ?? null) : null;
             if (!$purchaseInvoiceId) {
                 continue;
             }
 
-            $itemsData = json_decode($record['items'] ?? '{}', true);
-            $addonsData = json_decode($record['addons'] ?? '{}', true);
+            $itemsArray  = $record['items'] ?? [];
+            $addonsObj   = $record['addons'] ?? [];
 
-            $gross = 0;
-
-            if (!empty($itemsData['product'])) {
-                foreach ($itemsData['product'] as $index => $productName) {
-                    $qty = isset($itemsData['quantity'][$index]) ? (float) $itemsData['quantity'][$index] : 0;
-                    $price = isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0;
-                    $gross += $qty * $price;
+            // Prefer API total_gross; fallback as above
+            $gross = isset($record['total_gross']) ? (float)$record['total_gross'] : null;
+            if ($gross === null) {
+                $gross = 0.0;
+                foreach ($itemsArray as $it) {
+                    if (isset($it['gross']) && $it['gross'] !== '') {
+                        $gross += (float)$it['gross'];
+                    } else {
+                        $q = isset($it['quantity']) ? (float)$it['quantity'] : 0.0;
+                        $p = isset($it['price'])    ? (float)$it['price']    : 0.0;
+                        $gross += $q * $p;
+                    }
                 }
             }
 
-            $roundoff = isset($addonsData['roundoff']) ? (float) $addonsData['roundoff'] : 0;
-
-            // Now update invoice with correct gross and roundoff
-
-            if ($purchaseInvoiceId) {
-                PurchaseInvoiceModel::where('id', $purchaseInvoiceId)->update([
-                    'gross' => $gross,
-                    'round_off' => $roundoff
-                ]);
+            // roundoff now comes from addons.roundoff (string/number)
+            $roundoff = 0.0;
+            if (isset($addonsObj['roundoff']) && $addonsObj['roundoff'] !== '') {
+                // Some payloads show roundoff as string e.g. "-0.37"
+                $roundoff = (float)$addonsObj['roundoff'];
             }
 
-            // **Process Items (Products)**
-            if (!empty($itemsData['product'])) {
-                foreach ($itemsData['product'] as $index => $productName) {
-                    $productId = $existingProducts[$productName] ?? null;
+            // Update invoice gross & round_off
+            PurchaseInvoiceModel::where('id', $purchaseInvoiceId)->update([
+                'gross'     => $gross,
+                'round_off' => $roundoff,
+            ]);
 
+            // **Process Items (Products) — new items shape**
+            if (!empty($itemsArray)) {
+                foreach ($itemsArray as $item) {
+                    $productName = $item['product'] ?? null;
+                    if (!$productName) {
+                        // skip if no product name
+                        continue;
+                    }
+
+                    $productId = $existingProducts[$productName] ?? null;
                     if (!$productId) {
                         $errors[] = [
                             'record' => $record,
-                            'error' => "Product not found: {$productName}"
+                            'error'  => "Product not found: {$productName}"
                         ];
                         continue;
                     }
 
+                    $qty   = isset($item['quantity']) ? (float)$item['quantity'] : 0.0;
+                    $price = isset($item['price'])    ? (float)$item['price']    : 0.0;
+
+                    // Discount percent rounding to 2 decimals (keeping your original approach)
+                    $discRaw = isset($item['discount']) && $item['discount'] !== '' ? (float)$item['discount'] : 0.0;
+                    $discRounded = round($discRaw, 2);
+                    if ($discRounded < $discRaw) {
+                        $discRounded += 0.01; // keep your upward adjust logic when round goes below
+                    }
+
+                    $lineBase = $qty * ($price - (($discRounded * $price) / 100));
+                    $lineCgst = isset($item['cgst']) ? (float)$item['cgst'] : 0.0;
+                    $lineSgst = isset($item['sgst']) ? (float)$item['sgst'] : 0.0;
+                    $lineIgst = isset($item['igst']) ? (float)$item['igst'] : 0.0;
+                    $lineAmount = $lineBase + $lineCgst + $lineSgst + $lineIgst;
+
                     $productsBatch[] = [
                         'purchase_invoice_id' => $purchaseInvoiceId, // Assign parent ID
-                        'company_id' => Auth::user()->company_id,
-                        'product_id' => $productId,
-                        'product_name' => $productName,
-                        'description' => $itemsData['desc'][$index] ?? '',
-                        'quantity' => $itemsData['quantity'][$index] ?? 0,
-                        'unit' => $itemsData['unit'][$index] ?? '',
-                        'price' => isset($itemsData['price'][$index]) && $itemsData['price'][$index] !== '' ? (float)$itemsData['price'][$index] : 0,
-                        'discount' => isset($itemsData['discount'][$index]) && $itemsData['discount'][$index] !== ''
-                        ? (round((float)$itemsData['discount'][$index], 2) + (round((float)$itemsData['discount'][$index], 2) < (float)$itemsData['discount'][$index] ? 0.01 : 0))
-                        : 0,
-                        'discount_type' => "percentage",
-                        'hsn' => $itemsData['hsn'][$index] ?? '',
-                        'tax' => (float)($itemsData['tax'][$index] ?? 0),
-                        'cgst' => (float)($itemsData['cgst'][$index] ?? 0),
-                        'sgst' => (float)($itemsData['sgst'][$index] ?? 0),
-                        'igst' => (float)($itemsData['igst'][$index] ?? 0),
-                        'amount' => (
-                            (isset($itemsData['quantity'][$index]) ? (float) $itemsData['quantity'][$index] : 0.0) *
-                            (
-                                (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0) -
-                                (
-                                    ((isset($itemsData['discount'][$index]) ? (float) $itemsData['discount'][$index] : 0.0) *
-                                    (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0)) / 100
-                                )
+                        'company_id'          => Auth::user()->company_id,
+                        'product_id'          => $productId,
+                        'product_name'        => $productName,
+                        'description'         => $item['desc'] ?? '',
+                        'quantity'            => $qty,
+                        'unit'                => $item['unit'] ?? '',
+                        'price'               => $price,
+                        'discount'            => $discRounded,
+                        'discount_type'       => "percentage",
+                        'hsn'                 => $item['hsn'] ?? '',
+                        // tax % if provided; many payloads have only 'tax' (%), and separate cgst/sgst/igst values
+                        'tax'                 => isset($item['tax']) ? (float)$item['tax'] : 0.0,
+                        'cgst'                => $lineCgst,
+                        'sgst'                => $lineSgst,
+                        'igst'                => $lineIgst,
+                        'amount'              => $lineAmount,
+                        // channel (if present) keep your mapping
+                        'channel'             => array_key_exists('channel', $item)
+                            ? (
+                                is_numeric($item['channel'])
+                                    ? (float)$item['channel']
+                                    : (
+                                        strtolower((string)$item['channel']) === 'standard'     ? 1 :
+                                        (strtolower((string)$item['channel']) === 'non-standard'? 2 :
+                                        (strtolower((string)$item['channel']) === 'cbs'         ? 3 : null))
+                                    )
                             )
-                        ) + (
-                            (isset($itemsData['cgst'][$index]) ? (float) $itemsData['cgst'][$index] : 0.0) +
-                            (isset($itemsData['sgst'][$index]) ? (float) $itemsData['sgst'][$index] : 0.0) +
-                            (isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0.0)
-                        ),
-                        'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index]) 
-                                ? (
-                                    is_numeric($itemsData['channel'][$index]) 
-                                        ? (float)$itemsData['channel'][$index] 
-                                        : (
-                                            strtolower($itemsData['channel'][$index]) === 'standard' ? 1 :
-                                            (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 2 :
-                                            (strtolower($itemsData['channel'][$index]) === 'cbs' ? 3 : null))
-                                        )
-                                ) 
-                                : null,
-
-                        'godown' => isset($itemsData['place'][$index])
-                        ? (
-                            strtoupper(trim($itemsData['place'][$index])) === 'OFFICE' ? 1 :
-                            (strtoupper(trim($itemsData['place'][$index])) === 'KUSHTIA' ? 2 :
-                            (strtoupper(trim($itemsData['place'][$index])) === 'ANKURHATI' ? 3 : null))
-                        )
-                        : null,
-                        'sold' => (float)($itemsData['instock'][$index] ?? 0),
-                        'created_at' => now(),
-                        'updated_at' => now(),
+                            : null,
+                        // godown mapping from 'place'
+                        'godown'              => isset($item['place'])
+                            ? (
+                                strtoupper(trim((string)$item['place'])) === 'OFFICE'     ? 1 :
+                                (strtoupper(trim((string)$item['place'])) === 'KUSHTIA'   ? 2 :
+                                (strtoupper(trim((string)$item['place'])) === 'ANKURHATI' ? 3 : null))
+                            )
+                            : null,
+                        'sold'                => isset($item['instock']) ? (float)$item['instock'] : 0.0,
+                        'created_at'          => now(),
+                        'updated_at'          => now(),
                     ];
                 }
             }
 
-            // **Process Addons**
-            if (!empty($addonsData)) {
-                foreach ($addonsData as $name => $values) {
+            // **Process Addons** — new shape keeps freight/pf objects and roundoff separate
+            if (!empty($addonsObj)) {
+                foreach ($addonsObj as $name => $values) {
+                    // Skip 'roundoff' key from becoming an addon row
+                    if (strtolower($name) === 'roundoff') {
+                        continue;
+                    }
+
+                    // Some addons carry { value, cgst, sgst, igst } or only { value } or only { igst }
+                    $valCgst = is_array($values) && array_key_exists('cgst', $values) ? (float)$values['cgst'] : 0.0;
+                    $valSgst = is_array($values) && array_key_exists('sgst', $values) ? (float)$values['sgst'] : 0.0;
+                    $valIgst = is_array($values) && array_key_exists('igst', $values) ? (float)$values['igst'] : 0.0;
+                    $valHsn  = is_array($values) && array_key_exists('hsn',  $values) ? (string)$values['hsn'] : '';
+
                     $addonsBatch[] = [
                         'purchase_invoice_id' => $purchaseInvoiceId, // Assign parent ID
-                        'company_id' => Auth::user()->company_id,
-                        'name' => $name,
-                        'amount' => (float)($values['cgst'] ?? 0) + (float)($values['sgst'] ?? 0) + (float)($values['igst'] ?? 0),
-                        'tax' => 18,
-                        'hsn' => $values['hsn'] ?? '',
-                        'cgst' => (float)($values['cgst'] ?? 0),
-                        'sgst' => (float)($values['sgst'] ?? 0),
-                        'igst' => (float)($values['igst'] ?? 0),
-                        'created_at' => now(),
-                        'updated_at' => now(),
+                        'company_id'          => Auth::user()->company_id,
+                        'name'                => $name,
+                        'amount'              => $valCgst + $valSgst + $valIgst, // preserving your previous behavior
+                        'tax'                 => 18, // unchanged from your code
+                        'hsn'                 => $valHsn,
+                        'cgst'                => $valCgst,
+                        'sgst'                => $valSgst,
+                        'igst'                => $valIgst,
+                        'created_at'          => now(),
+                        'updated_at'          => now(),
                     ];
                 }
             }
@@ -747,12 +1033,13 @@ class PurchaseInvoiceController extends Controller
 
         // **Return response**
         return response()->json([
-            'code' => 200,
+            'code'    => 200,
             'success' => true,
             'message' => "Purchase invoices import completed with $successfulInserts successful inserts.",
-            'errors' => $errors,
+            'errors'  => $errors,
         ], 200);
     }
+
 
     // export purchase invoice report
     public function exportPurchaseInvoiceReport(Request $request)
