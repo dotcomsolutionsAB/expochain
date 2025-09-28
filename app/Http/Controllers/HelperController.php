@@ -1959,52 +1959,64 @@ class HelperController extends Controller
     }
 
     /**
-     * Unified product timeline (optimized).
+     * Unified product timeline with filters, sorting, rounding, and pagination.
      *
      * JSON Body (all optional):
      * {
-     *   "start_date": "YYYY-MM-DD",
-     *   "end_date":   "YYYY-MM-DD",
-     *   "type": "sales_invoice" | ["sales_invoice","purchase_invoice",...],
-     *   "search": "COM DOT 123/24",
-     *   "place": "Main Godown",
-     *   "sort_by": "date|client|price|discount|amount|profit|place",
-     *   "sort_dir": "asc|desc"
+     *   "start_date": "YYYY-MM-DD",                    // inclusive
+     *   "end_date":   "YYYY-MM-DD",                    // inclusive
+     *   "type": "sales_invoice" | ["sales_invoice",...], // if omitted/empty -> ALL types
+     *   "search": "COM DOT 123/24",                    // smart search in masters & voucher_no
+     *   "place": "Main Godown",                        // filter by godown/place
+     *   "sort_by": "date|client|masters|price|discount|amount|profit|place",
+     *   "sort_dir": "asc|desc",
+     *   "page": 1,                                     // default 1
+     *   "per_page": 50                                 // default 50, max 500
      * }
-     *
-     * Defaults:
-     *   - sort_by = "date", sort_dir = "desc" (latest first)
-     *   - type = all supported types
-     *
-     * Notes:
-     *   - Smart search ignores punctuation and word order across `masters` and `voucher_no`.
-     *   - Monetary fields are rounded to 2 decimals in the response.
      */
     public function product_timeline(Request $request, $productId)
     {
         $companyId = auth()->user()->company_id;
 
-        // ---------- Read JSON body (with safe fallback) ----------
+        // ---------- Read JSON body (fallback-safe) ----------
         $body       = $request->json()->all() ?: [];
         $startDate  = $body['start_date'] ?? $request->input('start_date');
         $endDate    = $body['end_date']   ?? $request->input('end_date');
         $typeFilter = $body['type']       ?? $request->input('type');
         $search     = $body['search']     ?? $request->input('search');
         $placeQuery = $body['place']      ?? $request->input('place');
+        $sortBy     = strtolower($body['sort_by'] ?? $request->input('sort_by', 'date'));
+        $sortDir    = strtolower($body['sort_dir'] ?? $request->input('sort_dir', 'desc'));
+        $sortDir    = in_array($sortDir, ['asc','desc'], true) ? $sortDir : 'desc';
 
-        $sortBy  = strtolower($body['sort_by'] ?? $request->input('sort_by', 'date'));
-        $sortDir = strtolower($body['sort_dir'] ?? $request->input('sort_dir', 'desc'));
-        $sortDir = in_array($sortDir, ['asc','desc'], true) ? $sortDir : 'desc';
+        // ---------- Pagination inputs ----------
+        $page    = max(1, (int) ($body['page'] ?? $request->input('page', 1)));
+        $perPage = min(500, max(1, (int) ($body['per_page'] ?? $request->input('per_page', 50))));
 
-        // Normalize type filter to array of lower-case
-        $wantTypes = is_null($typeFilter) ? null
-            : array_values(array_unique(array_map('strtolower', (array)$typeFilter)));
+        // ---------- Normalize type filter ----------
+        // Rules: if type is omitted OR empty string OR empty array => all types
+        $wantTypes = null; // null means "all types"
+        if (isset($typeFilter)) {
+            if (is_array($typeFilter)) {
+                // Remove empty strings/nulls
+                $clean = array_values(array_filter(array_map(function ($v) {
+                    return is_string($v) ? trim(strtolower($v)) : null;
+                }, $typeFilter), fn($v) => !empty($v)));
 
-        // Helpers: normalization for smart search
+                $wantTypes = count($clean) ? array_values(array_unique($clean)) : null;
+            } else {
+                $s = trim((string)$typeFilter);
+                if ($s !== '') {
+                    $wantTypes = [strtolower($s)];
+                } // else leave null => all types
+            }
+        }
+
+        // ---------- Helpers: normalize & word-match ----------
         $normalize = function (?string $s): string {
             if (!$s) return '';
             $s = mb_strtolower($s, 'UTF-8');
-            $s = preg_replace('/[^a-z0-9]+/u', ' ', $s);
+            $s = preg_replace('/[^a-z0-9]+/u', ' ', $s); // strip punctuation to spaces
             $s = trim(preg_replace('/\s+/', ' ', $s));
             return $s;
         };
@@ -2016,9 +2028,6 @@ class HelperController extends Controller
             }
             return true;
         };
-
-        // We’ll build per-type queries that already bring `masters` and `place`
-        // to minimize post-processing.
 
         $result = [];
 
@@ -2047,6 +2056,7 @@ class HelperController extends Controller
                 ->when($startDate, fn($q)=>$q->where('t_sales_invoice.sales_invoice_date','>=',$startDate))
                 ->when($endDate,   fn($q)=>$q->where('t_sales_invoice.sales_invoice_date','<=',$endDate))
                 ->get();
+
             foreach ($rows as $r) {
                 $result[] = [
                     'type'       => 'sales_invoice',
@@ -2057,7 +2067,7 @@ class HelperController extends Controller
                     'qty'        => (float)$r->qty,
                     'in_stock'   => null,
                     'price'      => is_null($r->price)    ? null : round((float)$r->price, 2),
-                    'discount'   => is_null($r->discount) ? null : round((float)$r->discount, 2),
+                    'discount'   => is_null($r->discount) ? null : round((float)$r->discount, 2), // rounded
                     'amount'     => is_null($r->amount)   ? null : round((float)$r->amount, 2),
                     'profit'     => is_null($r->profit)   ? null : round((float)$r->profit, 2),
                     'place'      => $r->place,
@@ -2090,6 +2100,7 @@ class HelperController extends Controller
                 ->when($startDate, fn($q)=>$q->where('t_purchase_invoice.purchase_invoice_date','>=',$startDate))
                 ->when($endDate,   fn($q)=>$q->where('t_purchase_invoice.purchase_invoice_date','<=',$endDate))
                 ->get();
+
             foreach ($rows as $r) {
                 $result[] = [
                     'type'       => 'purchase_invoice',
@@ -2100,7 +2111,7 @@ class HelperController extends Controller
                     'qty'        => (float)$r->qty,
                     'in_stock'   => (float)$r->in_stock,
                     'price'      => is_null($r->price)    ? null : round((float)$r->price, 2),
-                    'discount'   => is_null($r->discount) ? null : round((float)$r->discount, 2),
+                    'discount'   => is_null($r->discount) ? null : round((float)$r->discount, 2), // rounded
                     'amount'     => is_null($r->amount)   ? null : round((float)$r->amount, 2),
                     'profit'     => null,
                     'place'      => $r->place,
@@ -2132,6 +2143,7 @@ class HelperController extends Controller
                 ->when($startDate, fn($q)=>$q->where('t_sales_order.sales_order_date','>=',$startDate))
                 ->when($endDate,   fn($q)=>$q->where('t_sales_order.sales_order_date','<=',$endDate))
                 ->get();
+
             foreach ($rows as $r) {
                 $result[] = [
                     'type'       => 'sales_order',
@@ -2142,7 +2154,7 @@ class HelperController extends Controller
                     'qty'        => (float)$r->qty,
                     'in_stock'   => null,
                     'price'      => is_null($r->price)    ? null : round((float)$r->price, 2),
-                    'discount'   => is_null($r->discount) ? null : round((float)$r->discount, 2),
+                    'discount'   => is_null($r->discount) ? null : round((float)$r->discount, 2), // rounded
                     'amount'     => is_null($r->amount)   ? null : round((float)$r->amount, 2),
                     'profit'     => null,
                     'place'      => null,
@@ -2174,6 +2186,7 @@ class HelperController extends Controller
                 ->when($startDate, fn($q)=>$q->where('t_purchase_order.purchase_order_date','>=',$startDate))
                 ->when($endDate,   fn($q)=>$q->where('t_purchase_order.purchase_order_date','<=',$endDate))
                 ->get();
+
             foreach ($rows as $r) {
                 $result[] = [
                     'type'       => 'purchase_order',
@@ -2184,7 +2197,7 @@ class HelperController extends Controller
                     'qty'        => (float)$r->qty,
                     'in_stock'   => (float)$r->in_stock,
                     'price'      => is_null($r->price)    ? null : round((float)$r->price, 2),
-                    'discount'   => is_null($r->discount) ? null : round((float)$r->discount, 2),
+                    'discount'   => is_null($r->discount) ? null : round((float)$r->discount, 2), // rounded
                     'amount'     => is_null($r->amount)   ? null : round((float)$r->amount, 2),
                     'profit'     => null,
                     'place'      => null,
@@ -2217,6 +2230,7 @@ class HelperController extends Controller
                 ->when($startDate, fn($q)=>$q->where('t_purchase_return.purchase_return_date','>=',$startDate))
                 ->when($endDate,   fn($q)=>$q->where('t_purchase_return.purchase_return_date','<=',$endDate))
                 ->get();
+
             foreach ($rows as $r) {
                 $result[] = [
                     'type'       => 'purchase_return',
@@ -2240,7 +2254,7 @@ class HelperController extends Controller
             $rows = \App\Models<AssemblyOperationProductsModel::query()
                 ->select([
                     't_assembly_operations_products.assembly_operations_id as voucher_id',
-                    't_assembly_operations.assembly_operations_id          as voucher_no', // your model stores a human-facing number here
+                    't_assembly_operations.assembly_operations_id          as voucher_no',
                     't_assembly_operations.assembly_operations_date        as date',
                     DB::raw("'assembly_operation' as type"),
                     DB::raw('NULL as masters'),
@@ -2259,6 +2273,7 @@ class HelperController extends Controller
                 ->when($startDate, fn($q)=>$q->where('t_assembly_operations.assembly_operations_date','>=',$startDate))
                 ->when($endDate,   fn($q)=>$q->where('t_assembly_operations.assembly_operations_date','<=',$endDate))
                 ->get();
+
             foreach ($rows as $r) {
                 $result[] = [
                     'type'       => 'assembly_operation',
@@ -2277,13 +2292,12 @@ class HelperController extends Controller
             }
         }
 
-        // ---------------- STOCK TRANSFER (fixed: no receiving_date) ----------------
+        // ---------------- STOCK TRANSFER (no receiving_date) ----------------
         if (is_null($wantTypes) || in_array('stock_transfer', $wantTypes, true)) {
             $rows = \App\Models\StockTransferProductsModel::query()
                 ->select([
                     't_stock_transfer_products.stock_transfer_id as voucher_id',
                     't_stock_transfer.transfer_id                as voucher_no',
-                    // Use transfer_date as the timeline date
                     't_stock_transfer.transfer_date              as date',
                     DB::raw("'stock_transfer' as type"),
                     DB::raw('NULL as masters'),
@@ -2293,16 +2307,14 @@ class HelperController extends Controller
                     DB::raw('NULL as discount'),
                     DB::raw('NULL as amount'),
                     DB::raw('NULL as profit'),
-                    // Place shown as destination godown name
                     'gd_to.name                                  as place',
                 ])
                 ->join('t_stock_transfer', 't_stock_transfer.id', '=', 't_stock_transfer_products.stock_transfer_id')
                 ->leftJoin('t_godown as gd_to', 'gd_to.id', '=', 't_stock_transfer.godown_to')
                 ->where('t_stock_transfer_products.product_id', $productId)
                 ->where('t_stock_transfer.company_id', $companyId)
-                // Date filter on transfer_date
-                ->when($startDate, fn($q) => $q->where('t_stock_transfer.transfer_date', '>=', $startDate))
-                ->when($endDate,   fn($q) => $q->where('t_stock_transfer.transfer_date', '<=', $endDate))
+                ->when($startDate, fn($q)=>$q->where('t_stock_transfer.transfer_date','>=',$startDate))
+                ->when($endDate,   fn($q)=>$q->where('t_stock_transfer.transfer_date','<=',$endDate))
                 ->get();
 
             foreach ($rows as $r) {
@@ -2312,7 +2324,7 @@ class HelperController extends Controller
                     'voucher_no' => $r->voucher_no,
                     'date'       => $r->date,
                     'masters'    => null,
-                    'qty'        => (float) $r->qty,
+                    'qty'        => (float)$r->qty,
                     'in_stock'   => null,
                     'price'      => null,
                     'discount'   => null,
@@ -2322,7 +2334,6 @@ class HelperController extends Controller
                 ];
             }
         }
-
 
         // ---------- In-memory filters: place + smart search ----------
         if ($placeQuery !== null && $placeQuery !== '') {
@@ -2361,21 +2372,25 @@ class HelperController extends Controller
             if ($aNull) return 1;
             if ($bNull) return -1;
 
-            // Dates are YYYY-MM-DD so string compare works; numbers compare numerically
             if (is_numeric($av) && is_numeric($bv)) $cmp = $av <=> $bv;
             else                                    $cmp = strcmp((string)$av,(string)$bv);
 
             return $sortDir === 'asc' ? $cmp : -$cmp;
         });
 
+        // ---------- Pagination ----------
+        $total  = count($result);
+        $offset = ($page - 1) * $perPage;
+        $paged  = array_slice($result, $offset, $perPage);
+
         return response()->json([
             'success' => true,
-            'data'    => $result,
+            'data'    => $paged,
             'meta'    => [
                 'filters' => [
                     'start_date' => $startDate,
                     'end_date'   => $endDate,
-                    'type'       => $wantTypes,
+                    'type'       => $wantTypes,     // null means "all"
                     'search'     => $search,
                     'place'      => $placeQuery,
                 ],
@@ -2383,9 +2398,16 @@ class HelperController extends Controller
                     'by'  => $key,
                     'dir' => $sortDir,
                 ],
+                'pagination' => [
+                    'page'        => $page,
+                    'per_page'    => $perPage,
+                    'total'       => $total,
+                    'total_pages' => (int) ceil($total / $perPage),
+                ],
             ],
         ]);
     }
+
 
 
 }
