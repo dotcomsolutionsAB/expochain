@@ -604,235 +604,486 @@ class SalesInvoiceController extends Controller
     }
 
     // import   
+    // public function importSalesInvoices()
+    // {
+    //     set_time_limit(1200);
+
+    //     // Clear existing data from SalesInvoice and related tables
+    //     SalesInvoiceModel::truncate();
+    //     SalesInvoiceProductsModel::truncate();
+    //     SalesInvoiceAddonsModel::truncate();
+
+    //     // Define the external URL
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/sells_invoice.php';
+
+    //     // Fetch data from the external URL
+    //     try {
+    //         $response = Http::timeout(120)->get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data: ' . $e->getMessage()], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
+    //     }
+
+    //     $data = $response->json('data');
+
+    //     if (empty($data)) {
+    //         return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
+    //     }
+
+    //     $successfulInserts = 0;
+    //     $errors = [];
+    //     $batchSize = 500; // Define batch size for optimal insertion
+
+    //     // Chunk the data for batch processing
+    //     foreach (array_chunk($data, $batchSize) as $chunk) {
+    //         $salesInvoicesBatch = [];
+    //         $productsBatch = [];
+    //         $addonsBatch = [];
+
+    //         foreach ($chunk as $record) {
+    //             // Decode JSON fields for items, tax, and addons
+    //             $itemsData = json_decode($record['items'] ?? '{}', true);
+    //             $taxData = json_decode($record['tax'] ?? '{}', true);
+    //             $addonsData = json_decode($record['addons'] ?? '{}', true);
+
+    //             // Retrieve client and client contact IDs
+    //             $client = ClientsModel::where('name', $record['client'])->first();
+    //             if (!$client) {
+    //                 $errors[] = [
+    //                     'record' => $record,
+    //                     'error' => 'Client not found for the provided name: ' . $record['client']
+    //                 ];
+    //                 continue;
+    //             }
+
+    //             // Gross calculation
+    //             $gross = 0;
+    //             if (!empty($itemsData['product'])) {
+    //                 foreach ($itemsData['product'] as $index => $productName) {
+    //                     $qty = isset($itemsData['quantity'][$index]) ? (float)$itemsData['quantity'][$index] : 0;
+    //                     $price = isset($itemsData['price'][$index]) ? (float)$itemsData['price'][$index] : 0;
+    //                     $gross += $qty * $price;
+    //                 }
+    //             }
+
+    //             // Roundoff (if available in addons)
+    //             $roundoff = isset($addonsData['roundoff']) ? (float)$addonsData['roundoff'] : 0;
+
+    //             $client_address_record = ClientAddressModel::select('address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country')
+    //                 ->where('customer_id', $client->customer_id)
+    //                 ->where('type', 'billing')
+    //                 ->first();
+
+    //             // Prepare sales invoice data for batch insert
+    //             $salesInvoicesBatch[] = [
+    //                 'company_id' => Auth::user()->company_id,
+    //                 'client_id' => $client->id ?? null,
+    //                 'name' => $record['client'] ?? 'Unnamed Client',
+    //                 'sales_invoice_no' => !empty($record['si_no']) ? trim($record['si_no']) : null,
+    //                 'sales_invoice_date' => $record['si_date'] ?? now(),
+    //                 // 'sales_order_id' => !empty($record['so_no']) ? (int) $record['so_no'] : 0,
+    //                 'sales_order_id' => isset($record['so_no']) 
+    //                 ? (
+    //                     is_array($record['so_no']) 
+    //                         ? (empty(array_filter($record['so_no'])) ? null : implode(', ', array_filter($record['so_no'])))
+    //                         : (!empty($record['so_no']) ? (int) $record['so_no'] : null)
+    //                 )
+    //                 : null,
+    //                 'template' => json_decode($record['pdf_template'], true)['id'] ?? '0',
+    //                 'commission' => !empty($record['commission']) ? (float) $record['commission'] : 0,
+    //                 'cash' => !empty($record['cash']) ? (string) $record['cash'] : '0',
+    //                 'user' => Auth::user()->id,
+    //                 'cgst' => $taxData['cgst'] ?? 0,
+    //                 'sgst' => $taxData['sgst'] ?? 0,
+    //                 'igst' => $taxData['igst'] ?? 0,
+    //                 'total' => $record['total'] ?? 0,
+    //                 'gross' => $gross,
+    //                 'round_off' => $roundoff,
+    //                 'created_at' => now(),
+    //                 'updated_at' => now()
+    //             ];
+    //         }
+
+    //         // **Batch insert sales invoices**
+    //         if (!empty($salesInvoicesBatch)) {
+    //             SalesInvoiceModel::insert($salesInvoicesBatch);
+    //             $successfulInserts += count($salesInvoicesBatch);
+
+    //             // Fetch inserted invoice IDs for mapping
+    //             $insertedInvoices = SalesInvoiceModel::whereIn('sales_invoice_no', array_column($salesInvoicesBatch, 'sales_invoice_no'))
+    //                 ->pluck('id', 'sales_invoice_no')
+    //                 ->toArray();
+    //         }
+
+    //         // **Batch process products**
+    //         foreach ($chunk as $record) {
+    //             $salesInvoiceId = $insertedInvoices[$record['si_no']] ?? null;
+    //             if (!$salesInvoiceId) continue;
+
+    //             $itemsData = json_decode($record['items'] ?? '{}', true);
+
+    //             if ($itemsData && isset($itemsData['product']) && is_array($itemsData['product'])) {
+    //                 foreach ($itemsData['product'] as $index => $product) {
+    //                     $productModel = ProductsModel::where('name', $product)->first();
+
+    //                     if (!$productModel) {
+    //                         $errors[] = [
+    //                             'record' => $itemsData,
+    //                             'error' => "Product with name '{$product}' not found."
+    //                         ];
+    //                         continue;
+    //                     }
+
+    //                     $productsBatch[] = [
+    //                         'sales_invoice_id' => $salesInvoiceId,
+    //                         'company_id' => Auth::user()->company_id,
+    //                         'product_id' => $productModel->id,
+    //                         'product_name' => $product,
+    //                         'description' => $itemsData['desc'][$index] ?? '',
+    //                         // 'brand' => $itemsData['group'][$index] ?? '',
+    //                         // 'brand' => is_array($itemsData['group'] ?? '') ? json_encode($itemsData['group']) : ($itemsData['group'] ?? ''),
+    //                         'quantity' => $itemsData['quantity'][$index] ?? 0,
+    //                         'unit' => $itemsData['unit'][$index] ?? '',
+    //                         'price' => isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0,
+    //                         'discount' => (float) ($itemsData['discount'][$index] ?? 0),
+    //                         'discount_type' => 'percentage',
+    //                         'hsn' => $itemsData['hsn'][$index] ?? '',
+    //                         // 'tax' => $itemsData['tax'][$index] ?? 0,
+    //                         'tax' => isset($itemsData['tax'][$index]) && is_numeric($itemsData['tax'][$index]) ? (float) $itemsData['tax'][$index] : 0,
+    //                         'cgst' =>  isset($itemsData['cgst'][$index]) && is_numeric($itemsData['cgst'][$index]) ? (float) $itemsData['cgst'][$index] : 0,
+    //                         'sgst' => isset($itemsData['sgst'][$index]) && is_numeric($itemsData['sgst'][$index]) ? (float) $itemsData['sgst'][$index] : 0,
+    //                         'igst' => isset($itemsData['igst'][$index]) && is_numeric($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
+    //                         'amount' => (
+    //                             (isset($itemsData['quantity'][$index]) ? (float) $itemsData['quantity'][$index] : 0.0) *
+    //                             (
+    //                                 (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0) -
+    //                                 (
+    //                                     ((isset($itemsData['discount'][$index]) ? (float) $itemsData['discount'][$index] : 0.0) *
+    //                                     (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0)) / 100
+    //                                 )
+    //                             )
+    //                         ) + (
+    //                             (isset($itemsData['cgst'][$index]) ? (float) $itemsData['cgst'][$index] : 0.0) +
+    //                             (isset($itemsData['sgst'][$index]) ? (float) $itemsData['sgst'][$index] : 0.0) +
+    //                             (isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0.0)
+    //                         ),
+    //                         'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index])
+    //                             ? (is_numeric($itemsData['channel'][$index])
+    //                                 ? (float)$itemsData['channel'][$index]
+    //                                 : (strtolower($itemsData['channel'][$index]) === 'standard' ? 1
+    //                                     : (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 2
+    //                                         : (strtolower($itemsData['channel'][$index]) === 'cbs' ? 3 : null))))
+    //                             : null,
+    //                         'godown' => isset($itemsData['place'][$index])
+    //                         ? (
+    //                             strtoupper(trim($itemsData['place'][$index])) === 'OFFICE' ? 1 :
+    //                             (strtoupper(trim($itemsData['place'][$index])) === 'KUSHTIA' ? 2 :
+    //                             (strtoupper(trim($itemsData['place'][$index])) === 'ANKURHATI' ? 3 : null))
+    //                         )
+    //                         : null,
+    //                        'so_id' => isset($itemsData['so_no'][$index]) 
+    //                         ? (is_numeric($itemsData['so_no'][$index]) ? (int)$itemsData['so_no'][$index] : null)
+    //                         : null,
+    //                         'returned' => $itemsData['returned'][$index] ?? 0,
+    //                         'profit' => $itemsData['profit'][$index] ?? 0.0,
+    //                         'created_at' => now(),
+    //                         'updated_at' => now()
+    //                     ];
+    //                 }
+    //             }
+    //         }
+
+    //         // **Batch insert products**
+    //         foreach (array_chunk($productsBatch, $batchSize) as $productChunk) {
+    //             SalesInvoiceProductsModel::insert($productChunk);
+    //         }
+
+    //         // **Batch insert addons**
+    //         foreach ($chunk as $record) {
+    //             $salesInvoiceId = $insertedInvoices[$record['si_no']] ?? null;
+    //             if (!$salesInvoiceId) continue;
+
+    //             $addonsData = json_decode($record['addons'] ?? '{}', true);
+
+    //             if ($addonsData) {
+    //                 foreach ($addonsData as $name => $values) {
+    //                     $addonsBatch[] = [
+    //                         'sales_invoice_id' => $salesInvoiceId,
+    //                         'company_id' => Auth::user()->company_id,
+    //                         'name' => $name,
+    //                         'amount' => (float) ($values['igst'] ?? 0),
+    //                         'tax' => 18,
+    //                         'hsn' => $values['hsn'] ?? '',
+    //                         'cgst' => 0,
+    //                         'sgst' => 0,
+    //                         'igst' => (float) ($values['igst'] ?? 0),
+    //                         'created_at' => now(),
+    //                         'updated_at' => now()
+    //                     ];
+    //                 }
+    //             }
+    //         }
+
+    //         foreach (array_chunk($addonsBatch, $batchSize) as $addonChunk) {
+    //             SalesInvoiceAddonsModel::insert($addonChunk);
+    //         }
+    //     }
+
+    //     return response()->json(['code' => 200, 'success' => true, 'message' => "Sales invoices import completed with $successfulInserts successful inserts.", 'errors' => $errors], 200);
+    // }
     public function importSalesInvoices()
     {
         set_time_limit(1200);
 
-        // Clear existing data from SalesInvoice and related tables
+        // Clear existing data
         SalesInvoiceModel::truncate();
         SalesInvoiceProductsModel::truncate();
         SalesInvoiceAddonsModel::truncate();
 
-        // Define the external URL
         $url = 'https://expo.egsm.in/assets/custom/migrate/sells_invoice.php';
 
-        // Fetch data from the external URL
         try {
             $response = Http::timeout(120)->get($url);
         } catch (\Exception $e) {
             return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data: ' . $e->getMessage()], 500);
         }
-
         if ($response->failed()) {
             return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
         }
 
         $data = $response->json('data');
-
         if (empty($data)) {
             return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
         }
 
         $successfulInserts = 0;
         $errors = [];
-        $batchSize = 500; // Define batch size for optimal insertion
+        $batchSize = 500;
 
-        // Chunk the data for batch processing
         foreach (array_chunk($data, $batchSize) as $chunk) {
             $salesInvoicesBatch = [];
             $productsBatch = [];
             $addonsBatch = [];
 
+            // 1) Build parent rows
             foreach ($chunk as $record) {
-                // Decode JSON fields for items, tax, and addons
-                $itemsData = json_decode($record['items'] ?? '{}', true);
-                $taxData = json_decode($record['tax'] ?? '{}', true);
-                $addonsData = json_decode($record['addons'] ?? '{}', true);
+                $itemsArr  = $record['items'] ?? [];          // array of item objects
+                $taxObj    = $record['tax'] ?? [];            // {cgst, sgst, igst}
+                $addonsObj = $record['addons'] ?? [];         // {freight, pf, discount, roundoff}
+                $tplObj    = $record['pdf_template'] ?? [];   // {id, name}
 
-                // Retrieve client and client contact IDs
-                $client = ClientsModel::where('name', $record['client'])->first();
+                // Find client
+                $client = ClientsModel::where('name', $record['client'] ?? '')->first();
                 if (!$client) {
                     $errors[] = [
                         'record' => $record,
-                        'error' => 'Client not found for the provided name: ' . $record['client']
+                        'error'  => 'Client not found: ' . ($record['client'] ?? '[null]')
                     ];
                     continue;
                 }
 
-                // Gross calculation
-                $gross = 0;
-                if (!empty($itemsData['product'])) {
-                    foreach ($itemsData['product'] as $index => $productName) {
-                        $qty = isset($itemsData['quantity'][$index]) ? (float)$itemsData['quantity'][$index] : 0;
-                        $price = isset($itemsData['price'][$index]) ? (float)$itemsData['price'][$index] : 0;
-                        $gross += $qty * $price;
+                // Invoice gross: prefer total_gross -> sum item.gross -> qty * (price - %disc)
+                $invGross = isset($record['total_gross']) ? round((float)$record['total_gross'], 2) : null;
+                if ($invGross === null) {
+                    $tmp = 0.0;
+                    foreach ($itemsArr as $it) {
+                        if (isset($it['gross']) && $it['gross'] !== '') {
+                            $tmp += (float)$it['gross'];
+                        } else {
+                            $q = isset($it['quantity']) ? (float)$it['quantity'] : 0.0;
+                            $p = isset($it['price'])    ? (float)$it['price']    : 0.0;
+                            $discRaw = isset($it['discount']) && $it['discount'] !== '' ? (float)$it['discount'] : 0.0;
+                            $disc    = round($discRaw, 2);
+                            if ($disc < $discRaw) $disc += 0.01;
+                            $tmp += $q * ($p - ($disc * $p) / 100);
+                        }
+                    }
+                    $invGross = round($tmp, 2);
+                }
+
+                // Roundoff from addons
+                $roundoff = isset($addonsObj['roundoff']) && $addonsObj['roundoff'] !== '' ? (float)$addonsObj['roundoff'] : 0.0;
+
+                // Sales order mapping (string/array/empty)
+                $salesOrderId = null;
+                if (array_key_exists('so_no', $record)) {
+                    if (is_array($record['so_no'])) {
+                        $filtered = array_filter($record['so_no']);
+                        $salesOrderId = empty($filtered) ? null : implode(', ', $filtered);
+                    } else {
+                        $salesOrderId = !empty($record['so_no']) && is_numeric($record['so_no']) ? (int)$record['so_no'] : null;
                     }
                 }
 
-                // Roundoff (if available in addons)
-                $roundoff = isset($addonsData['roundoff']) ? (float)$addonsData['roundoff'] : 0;
-
-                $client_address_record = ClientAddressModel::select('address_line_1', 'address_line_2', 'city', 'pincode', 'state', 'country')
-                    ->where('customer_id', $client->customer_id)
-                    ->where('type', 'billing')
-                    ->first();
-
-                // Prepare sales invoice data for batch insert
                 $salesInvoicesBatch[] = [
-                    'company_id' => Auth::user()->company_id,
-                    'client_id' => $client->id ?? null,
-                    'name' => $record['client'] ?? 'Unnamed Client',
-                    'sales_invoice_no' => !empty($record['si_no']) ? trim($record['si_no']) : null,
-                    'sales_invoice_date' => $record['si_date'] ?? now(),
-                    // 'sales_order_id' => !empty($record['so_no']) ? (int) $record['so_no'] : 0,
-                    'sales_order_id' => isset($record['so_no']) 
-                    ? (
-                        is_array($record['so_no']) 
-                            ? (empty(array_filter($record['so_no'])) ? null : implode(', ', array_filter($record['so_no'])))
-                            : (!empty($record['so_no']) ? (int) $record['so_no'] : null)
-                    )
-                    : null,
-                    'template' => json_decode($record['pdf_template'], true)['id'] ?? '0',
-                    'commission' => !empty($record['commission']) ? (float) $record['commission'] : 0,
-                    'cash' => !empty($record['cash']) ? (string) $record['cash'] : '0',
-                    'user' => Auth::user()->id,
-                    'cgst' => $taxData['cgst'] ?? 0,
-                    'sgst' => $taxData['sgst'] ?? 0,
-                    'igst' => $taxData['igst'] ?? 0,
-                    'total' => $record['total'] ?? 0,
-                    'gross' => $gross,
-                    'round_off' => $roundoff,
-                    'created_at' => now(),
-                    'updated_at' => now()
+                    'company_id'         => Auth::user()->company_id,
+                    'client_id'          => $client->id,
+                    'name'               => $record['client'] ?? 'Unnamed Client',
+                    'sales_invoice_no'   => !empty($record['si_no']) ? trim($record['si_no']) : null,
+                    'sales_invoice_date' => !empty($record['si_date']) && $record['si_date'] !== '0000-00-00'
+                                            ? date('Y-m-d', strtotime($record['si_date'])) : now(),
+                    'sales_order_id'     => $salesOrderId,
+                    'template'           => isset($tplObj['id']) ? (int)$tplObj['id'] : 0,
+                    'commission'         => !empty($record['commission']) ? (float)$record['commission'] : 0.0,
+                    'cash'               => !empty($record['cash']) ? (string)$record['cash'] : '0',
+                    'user'               => Auth::user()->id,
+                    'cgst'               => isset($taxObj['cgst']) ? (float)$taxObj['cgst'] : 0.0,
+                    'sgst'               => isset($taxObj['sgst']) ? (float)$taxObj['sgst'] : 0.0,
+                    'igst'               => isset($taxObj['igst']) ? (float)$taxObj['igst'] : 0.0,
+                    'total'              => isset($record['total']) ? round((float)$record['total'], 2) : 0.0,
+                    'gross'              => $invGross,                 // 2 decimals
+                    'round_off'          => round($roundoff, 2),
+                    'created_at'         => now(),
+                    'updated_at'         => now(),
                 ];
             }
 
-            // **Batch insert sales invoices**
+            // Insert parents
             if (!empty($salesInvoicesBatch)) {
                 SalesInvoiceModel::insert($salesInvoicesBatch);
                 $successfulInserts += count($salesInvoicesBatch);
 
-                // Fetch inserted invoice IDs for mapping
-                $insertedInvoices = SalesInvoiceModel::whereIn('sales_invoice_no', array_column($salesInvoicesBatch, 'sales_invoice_no'))
-                    ->pluck('id', 'sales_invoice_no')
-                    ->toArray();
+                $insertedInvoices = SalesInvoiceModel::whereIn(
+                    'sales_invoice_no',
+                    array_column($salesInvoicesBatch, 'sales_invoice_no')
+                )->pluck('id', 'sales_invoice_no')->toArray();
+            } else {
+                $insertedInvoices = [];
             }
 
-            // **Batch process products**
+            // 2) Products
             foreach ($chunk as $record) {
-                $salesInvoiceId = $insertedInvoices[$record['si_no']] ?? null;
-                if (!$salesInvoiceId) continue;
+                $siId = $insertedInvoices[$record['si_no']] ?? null;
+                if (!$siId) continue;
 
-                $itemsData = json_decode($record['items'] ?? '{}', true);
+                $itemsArr = $record['items'] ?? [];
+                if (!is_array($itemsArr)) continue;
 
-                if ($itemsData && isset($itemsData['product']) && is_array($itemsData['product'])) {
-                    foreach ($itemsData['product'] as $index => $product) {
-                        $productModel = ProductsModel::where('name', $product)->first();
+                foreach ($itemsArr as $it) {
+                    $productName = $it['product'] ?? null;
+                    if (!$productName) continue;
 
-                        if (!$productModel) {
-                            $errors[] = [
-                                'record' => $itemsData,
-                                'error' => "Product with name '{$product}' not found."
-                            ];
-                            continue;
-                        }
-
-                        $productsBatch[] = [
-                            'sales_invoice_id' => $salesInvoiceId,
-                            'company_id' => Auth::user()->company_id,
-                            'product_id' => $productModel->id,
-                            'product_name' => $product,
-                            'description' => $itemsData['desc'][$index] ?? '',
-                            // 'brand' => $itemsData['group'][$index] ?? '',
-                            // 'brand' => is_array($itemsData['group'] ?? '') ? json_encode($itemsData['group']) : ($itemsData['group'] ?? ''),
-                            'quantity' => $itemsData['quantity'][$index] ?? 0,
-                            'unit' => $itemsData['unit'][$index] ?? '',
-                            'price' => isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0,
-                            'discount' => (float) ($itemsData['discount'][$index] ?? 0),
-                            'discount_type' => 'percentage',
-                            'hsn' => $itemsData['hsn'][$index] ?? '',
-                            // 'tax' => $itemsData['tax'][$index] ?? 0,
-                            'tax' => isset($itemsData['tax'][$index]) && is_numeric($itemsData['tax'][$index]) ? (float) $itemsData['tax'][$index] : 0,
-                            'cgst' =>  isset($itemsData['cgst'][$index]) && is_numeric($itemsData['cgst'][$index]) ? (float) $itemsData['cgst'][$index] : 0,
-                            'sgst' => isset($itemsData['sgst'][$index]) && is_numeric($itemsData['sgst'][$index]) ? (float) $itemsData['sgst'][$index] : 0,
-                            'igst' => isset($itemsData['igst'][$index]) && is_numeric($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0,
-                            'amount' => (
-                                (isset($itemsData['quantity'][$index]) ? (float) $itemsData['quantity'][$index] : 0.0) *
-                                (
-                                    (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0) -
-                                    (
-                                        ((isset($itemsData['discount'][$index]) ? (float) $itemsData['discount'][$index] : 0.0) *
-                                        (isset($itemsData['price'][$index]) ? (float) $itemsData['price'][$index] : 0.0)) / 100
-                                    )
-                                )
-                            ) + (
-                                (isset($itemsData['cgst'][$index]) ? (float) $itemsData['cgst'][$index] : 0.0) +
-                                (isset($itemsData['sgst'][$index]) ? (float) $itemsData['sgst'][$index] : 0.0) +
-                                (isset($itemsData['igst'][$index]) ? (float) $itemsData['igst'][$index] : 0.0)
-                            ),
-                            'channel' => array_key_exists('channel', $itemsData) && isset($itemsData['channel'][$index])
-                                ? (is_numeric($itemsData['channel'][$index])
-                                    ? (float)$itemsData['channel'][$index]
-                                    : (strtolower($itemsData['channel'][$index]) === 'standard' ? 1
-                                        : (strtolower($itemsData['channel'][$index]) === 'non-standard' ? 2
-                                            : (strtolower($itemsData['channel'][$index]) === 'cbs' ? 3 : null))))
-                                : null,
-                            'godown' => isset($itemsData['place'][$index])
-                            ? (
-                                strtoupper(trim($itemsData['place'][$index])) === 'OFFICE' ? 1 :
-                                (strtoupper(trim($itemsData['place'][$index])) === 'KUSHTIA' ? 2 :
-                                (strtoupper(trim($itemsData['place'][$index])) === 'ANKURHATI' ? 3 : null))
-                            )
-                            : null,
-                           'so_id' => isset($itemsData['so_no'][$index]) 
-                            ? (is_numeric($itemsData['so_no'][$index]) ? (int)$itemsData['so_no'][$index] : null)
-                            : null,
-                            'returned' => $itemsData['returned'][$index] ?? 0,
-                            'profit' => $itemsData['profit'][$index] ?? 0.0,
-                            'created_at' => now(),
-                            'updated_at' => now()
-                        ];
+                    $product = ProductsModel::where('name', $productName)->first();
+                    if (!$product) {
+                        $errors[] = ['record' => $record, 'error' => "Product not found: {$productName}"];
+                        continue;
                     }
+
+                    $qty   = isset($it['quantity']) ? (float)$it['quantity'] : 0.0;
+                    $price = isset($it['price'])    ? (float)$it['price']    : 0.0;
+
+                    $discRaw = isset($it['discount']) && $it['discount'] !== '' ? (float)$it['discount'] : 0.0;
+                    $disc    = round($discRaw, 2);
+                    if ($disc < $discRaw) $disc += 0.01;
+
+                    // line gross: prefer API field
+                    if (isset($it['gross']) && $it['gross'] !== '') {
+                        $lineGross = round((float)$it['gross'], 2);
+                    } else {
+                        $lineGross = round($qty * ($price - ($disc * $price) / 100), 2);
+                    }
+
+                    $lineCgst = isset($it['cgst']) ? (float)$it['cgst'] : 0.0;
+                    $lineSgst = isset($it['sgst']) ? (float)$it['sgst'] : 0.0;
+                    $lineIgst = isset($it['igst']) ? (float)$it['igst'] : 0.0;
+
+                    $lineAmount = round($lineGross + $lineCgst + $lineSgst + $lineIgst, 2);
+
+                    $productsBatch[] = [
+                        'sales_invoice_id' => $siId,
+                        'company_id'       => Auth::user()->company_id,
+                        'product_id'       => $product->id,
+                        'product_name'     => $productName,
+                        'description'      => $it['desc'] ?? '',
+                        'quantity'         => $qty,
+                        'unit'             => $it['unit'] ?? '',
+                        'price'            => $price,
+                        'discount'         => $disc,
+                        'discount_type'    => 'percentage',
+                        'hsn'              => $it['hsn'] ?? '',
+                        'tax'              => isset($it['tax']) ? (float)$it['tax'] : 0.0,
+                        'cgst'             => $lineCgst,
+                        'sgst'             => $lineSgst,
+                        'igst'             => $lineIgst,
+                        'gross'            => $lineGross,   // <-- REQUIRED in DB
+                        'amount'           => $lineAmount,
+                        'channel'          => array_key_exists('channel', $it)
+                                                ? (is_numeric($it['channel']) ? (float)$it['channel'] : (
+                                                    strtolower((string)$it['channel']) === 'standard'      ? 1 :
+                                                    (strtolower((string)$it['channel']) === 'non-standard' ? 2 :
+                                                    (strtolower((string)$it['channel']) === 'cbs'          ? 3 : null))
+                                                ))
+                                                : null,
+                        'godown'           => isset($it['place'])
+                                                ? (
+                                                    strtoupper(trim((string)$it['place'])) === 'OFFICE'     ? 1 :
+                                                    (strtoupper(trim((string)$it['place'])) === 'KUSHTIA'   ? 2 :
+                                                    (strtoupper(trim((string)$it['place'])) === 'ANKURHATI' ? 3 : null))
+                                                )
+                                                : null,
+                        'so_id'            => isset($it['so_no']) && is_numeric($it['so_no']) ? (int)$it['so_no'] : null,
+                        'returned'         => isset($it['returned']) ? (float)$it['returned'] : 0.0,
+                        'profit'           => isset($it['profit']) ? (float)$it['profit'] : 0.0,
+                        'created_at'       => now(),
+                        'updated_at'       => now(),
+                    ];
                 }
             }
 
-            // **Batch insert products**
-            foreach (array_chunk($productsBatch, $batchSize) as $productChunk) {
-                SalesInvoiceProductsModel::insert($productChunk);
-            }
-
-            // **Batch insert addons**
-            foreach ($chunk as $record) {
-                $salesInvoiceId = $insertedInvoices[$record['si_no']] ?? null;
-                if (!$salesInvoiceId) continue;
-
-                $addonsData = json_decode($record['addons'] ?? '{}', true);
-
-                if ($addonsData) {
-                    foreach ($addonsData as $name => $values) {
-                        $addonsBatch[] = [
-                            'sales_invoice_id' => $salesInvoiceId,
-                            'company_id' => Auth::user()->company_id,
-                            'name' => $name,
-                            'amount' => (float) ($values['igst'] ?? 0),
-                            'tax' => 18,
-                            'hsn' => $values['hsn'] ?? '',
-                            'cgst' => 0,
-                            'sgst' => 0,
-                            'igst' => (float) ($values['igst'] ?? 0),
-                            'created_at' => now(),
-                            'updated_at' => now()
-                        ];
-                    }
+            if (!empty($productsBatch)) {
+                foreach (array_chunk($productsBatch, $batchSize) as $productChunk) {
+                    SalesInvoiceProductsModel::insert($productChunk);
                 }
             }
 
-            foreach (array_chunk($addonsBatch, $batchSize) as $addonChunk) {
-                SalesInvoiceAddonsModel::insert($addonChunk);
+            // 3) Addons (skip roundoff as a row)
+            foreach ($chunk as $record) {
+                $siId = $insertedInvoices[$record['si_no']] ?? null;
+                if (!$siId) continue;
+
+                $addonsObj = $record['addons'] ?? [];
+                if (empty($addonsObj)) continue;
+
+                foreach ($addonsObj as $name => $values) {
+                    if (strtolower($name) === 'roundoff') continue;
+
+                    $valCgst = is_array($values) && array_key_exists('cgst', $values) ? (float)$values['cgst'] : 0.0;
+                    $valSgst = is_array($values) && array_key_exists('sgst', $values) ? (float)$values['sgst'] : 0.0;
+                    $valIgst = is_array($values) && array_key_exists('igst', $values) ? (float)$values['igst'] : 0.0;
+                    $valHsn  = is_array($values) && array_key_exists('hsn',  $values) ? (string)$values['hsn'] : '';
+
+                    $addonsBatch[] = [
+                        'sales_invoice_id' => $siId,
+                        'company_id'       => Auth::user()->company_id,
+                        'name'             => $name,
+                        'amount'           => round($valCgst + $valSgst + $valIgst, 2), // keep in sync with others
+                        'tax'              => 18,
+                        'hsn'              => $valHsn,
+                        'cgst'             => $valCgst,
+                        'sgst'             => $valSgst,
+                        'igst'             => $valIgst,
+                        'created_at'       => now(),
+                        'updated_at'       => now(),
+                    ];
+                }
+            }
+
+            if (!empty($addonsBatch)) {
+                foreach (array_chunk($addonsBatch, $batchSize) as $addonChunk) {
+                    SalesInvoiceAddonsModel::insert($addonChunk);
+                }
             }
         }
 
-        return response()->json(['code' => 200, 'success' => true, 'message' => "Sales invoices import completed with $successfulInserts successful inserts.", 'errors' => $errors], 200);
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => "Sales invoices import completed with $successfulInserts successful inserts.",
+            'errors' => $errors
+        ], 200);
     }
 
     // export sales invoice report
