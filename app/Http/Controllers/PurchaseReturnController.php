@@ -710,7 +710,7 @@ class PurchaseReturnController extends Controller
                 $lineCgst = isset($it['cgst']) ? (float)$it['cgst'] : 0.0;
                 $lineSgst = isset($it['sgst']) ? (float)$it['sgst'] : 0.0;
                 $lineIgst = isset($it['igst']) ? (float)$it['igst'] : 0.0;
-                $lineAmt  = round($lineGross + $lineCgst + $lineSgst + $lineIgst, 2);
+                // $lineAmt  = round($lineGross + $lineCgst + $lineSgst + $lineIgst, 2);
 
                 $purchaseReturnProductsBatch[] = [
                     'purchase_return_id' => $purchaseReturnId,
@@ -729,7 +729,7 @@ class PurchaseReturnController extends Controller
                     'sgst'               => $lineSgst,
                     'igst'               => $lineIgst,
                     'gross'              => $lineGross, // if your table has it
-                    'amount'             => $lineAmt,   // if your table has it
+                    // 'amount'             => $lineAmt,   // if your table has it
                     'godown'             => $godownId,
                     'created_at'         => now(),
                     'updated_at'         => now(),
