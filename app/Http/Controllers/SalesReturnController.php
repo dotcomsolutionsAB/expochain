@@ -580,201 +580,201 @@ class SalesReturnController extends Controller
     // }
 
     public function importSalesReturns()
-{
-    // Increase execution time for large data sets
-    set_time_limit(300);
+    {
+        // Increase execution time for large data sets
+        set_time_limit(300);
 
-    // Clear existing records before importing
-    SalesReturnModel::truncate();
-    SalesReturnProductsModel::truncate();
+        // Clear existing records before importing
+        SalesReturnModel::truncate();
+        SalesReturnProductsModel::truncate();
 
-    // Define the external URL
-    $url = 'https://expo.egsm.in/assets/custom/migrate/sales_return.php';
+        // Define the external URL
+        $url = 'https://expo.egsm.in/assets/custom/migrate/sales_return.php';
 
-    // Fetch data from the external URL
-    try {
-        $response = Http::timeout(120)->get($url);
-    } catch (\Exception $e) {
-        return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data from the external source: ' . $e->getMessage()], 500);
-    }
-
-    if ($response->failed()) {
-        return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
-    }
-
-    $data = $response->json('data');
-    if (empty($data)) {
-        return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
-    }
-
-    $successfulInserts = 0;
-    $errors = [];
-
-    // ✅ Pre-fetch all required clients (Suppliers) — note: API field is "supplier"
-    $supplierNames = collect($data)->pluck('supplier')->filter()->unique();
-    $suppliers = ClientsModel::whereIn('name', $supplierNames)->get()->keyBy('name');
-
-    // ✅ Pre-fetch all Sales Invoices to map sales_invoice_no to sales_invoice_id
-    $invoiceNumbers = collect($data)->pluck('reference_no')->filter()->unique();
-    $salesInvoices = $invoiceNumbers->isNotEmpty()
-        ? SalesInvoiceModel::whereIn('sales_invoice_no', $invoiceNumbers)->pluck('id', 'sales_invoice_no')
-        : collect();
-
-    // ✅ Build parent rows
-    $salesReturnDataBatch = [];
-    foreach ($data as $record) {
-        // New API shape
-        $itemsArr   = $record['items'] ?? [];
-        $taxObj     = $record['tax'] ?? [];
-        $addonsObj  = $record['addons'] ?? [];
-        $tplObj     = $record['pdf_template'] ?? [];
-
-        // Supplier (client) lookup
-        $supplierName = $record['supplier'] ?? null;
-        $supplier     = $supplierName ? ($suppliers[$supplierName] ?? null) : null;
-        if (!$supplier) {
-            $errors[] = ['record' => $record, 'error' => 'Supplier not found: ' . ($supplierName ?? '[null]')];
-            continue;
+        // Fetch data from the external URL
+        try {
+            $response = Http::timeout(120)->get($url);
+        } catch (\Exception $e) {
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data from the external source: ' . $e->getMessage()], 500);
         }
 
-        // Sales Invoice link (nullable)
-        $salesInvoiceId = null;
-        if (!empty($record['reference_no'])) {
-            $salesInvoiceId = $salesInvoices[$record['reference_no']] ?? null;
+        if ($response->failed()) {
+            return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
         }
 
-        // Parent gross/round off from API
-        $parentGross = isset($record['total_gross']) ? round((float)$record['total_gross'], 2) : 0.0;
-        $roundoff    = isset($addonsObj['roundoff']) ? round((float)$addonsObj['roundoff'], 2) : 0.0;
-
-        $salesReturnDataBatch[] = [
-            'company_id'        => Auth::user()->company_id,
-            'client_id'         => $supplier->id,
-            'name'              => $supplierName,
-            'sales_return_no'   => $record['pi_no'] ?? 'Unknown',
-            'sales_return_date' => (!empty($record['pi_date']) && $record['pi_date'] !== '0000-00-00')
-                                    ? date('Y-m-d', strtotime($record['pi_date'])) : now()->format('Y-m-d'),
-            'sales_invoice_id'  => $salesInvoiceId, // ✅ nullable
-            'remarks'           => $record['remarks'] ?? null,
-            'cgst'              => isset($taxObj['cgst']) ? (float)$taxObj['cgst'] : 0.0,
-            'sgst'              => isset($taxObj['sgst']) ? (float)$taxObj['sgst'] : 0.0,
-            'igst'              => isset($taxObj['igst']) ? (float)$taxObj['igst'] : 0.0,
-            'total'             => isset($record['total']) ? (float)$record['total'] : 0.0,
-            'currency'          => 'INR',
-            'template'          => isset($tplObj['id']) ? (int)$tplObj['id'] : null,
-            'gross'             => $parentGross,
-            'round_off'         => $roundoff,
-            'created_at'        => now(),
-            'updated_at'        => now(),
-        ];
-    }
-
-    // ✅ Batch Insert Sales Returns
-    foreach (array_chunk($salesReturnDataBatch, 100) as $batch) {
-        SalesReturnModel::insert($batch);
-        $successfulInserts += count($batch);
-    }
-
-    // ✅ Map inserted sales returns
-    $returnNos = array_column($salesReturnDataBatch, 'sales_return_no');
-    $salesReturnIds = !empty($returnNos)
-        ? SalesReturnModel::whereIn('sales_return_no', $returnNos)->pluck('id', 'sales_return_no')->toArray()
-        : [];
-
-    // ✅ Pre-fetch products
-    $productNames = collect($data)
-        ->flatMap(function ($rec) {
-            $items = $rec['items'] ?? [];
-            return collect($items)->pluck('product')->filter()->all();
-        })
-        ->unique()
-        ->values();
-    $products = $productNames->isNotEmpty()
-        ? ProductsModel::whereIn('name', $productNames)->get()->keyBy('name')
-        : collect();
-
-    // ✅ Build child rows
-    $salesReturnProductsBatch = [];
-    foreach ($data as $record) {
-        $itemsArr = $record['items'] ?? [];
-        $srNo     = $record['pi_no'] ?? null;
-        $salesReturnId = $srNo && isset($salesReturnIds[$srNo]) ? $salesReturnIds[$srNo] : null;
-
-        if (!$salesReturnId || empty($itemsArr) || !is_array($itemsArr)) {
-            if (!$salesReturnId) {
-                $errors[] = ['record' => $record, 'error' => "Sales Return '".($srNo ?? '[null]')."' not found after insert."];
-            }
-            continue;
+        $data = $response->json('data');
+        if (empty($data)) {
+            return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
         }
 
-        foreach ($itemsArr as $it) {
-            $productName = $it['product'] ?? null;
-            if (!$productName) continue;
+        $successfulInserts = 0;
+        $errors = [];
 
-            $product = $products[$productName] ?? null;
-            if (!$product) {
-                $errors[] = ['record' => $record, 'error' => "Product not found: {$productName}"];
+        // ✅ Pre-fetch all required clients (Suppliers) — note: API field is "supplier"
+        $supplierNames = collect($data)->pluck('supplier')->filter()->unique();
+        $suppliers = ClientsModel::whereIn('name', $supplierNames)->get()->keyBy('name');
+
+        // ✅ Pre-fetch all Sales Invoices to map sales_invoice_no to sales_invoice_id
+        $invoiceNumbers = collect($data)->pluck('reference_no')->filter()->unique();
+        $salesInvoices = $invoiceNumbers->isNotEmpty()
+            ? SalesInvoiceModel::whereIn('sales_invoice_no', $invoiceNumbers)->pluck('id', 'sales_invoice_no')
+            : collect();
+
+        // ✅ Build parent rows
+        $salesReturnDataBatch = [];
+        foreach ($data as $record) {
+            // New API shape
+            $itemsArr   = $record['items'] ?? [];
+            $taxObj     = $record['tax'] ?? [];
+            $addonsObj  = $record['addons'] ?? [];
+            $tplObj     = $record['pdf_template'] ?? [];
+
+            // Supplier (client) lookup
+            $supplierName = $record['supplier'] ?? null;
+            $supplier     = $supplierName ? ($suppliers[$supplierName] ?? null) : null;
+            if (!$supplier) {
+                $errors[] = ['record' => $record, 'error' => 'Supplier not found: ' . ($supplierName ?? '[null]')];
                 continue;
             }
 
-            // Godown by place (company-scoped)
-            $godownId = null;
-            if (!empty($it['place'])) {
-                $godown = GodownModel::where('name', $it['place'])
-                    ->where('company_id', Auth::user()->company_id)->first();
-                $godownId = $godown ? $godown->id : null;
+            // Sales Invoice link (nullable)
+            $salesInvoiceId = null;
+            if (!empty($record['reference_no'])) {
+                $salesInvoiceId = $salesInvoices[$record['reference_no']] ?? null;
             }
 
-            $qty   = isset($it['quantity']) ? (float)$it['quantity'] : 0.0;
-            $price = isset($it['price'])    ? (float)$it['price']    : 0.0;
-            $disc  = isset($it['discount']) && $it['discount'] !== '' ? (float)$it['discount'] : 0.0;
+            // Parent gross/round off from API
+            $parentGross = isset($record['total_gross']) ? round((float)$record['total_gross'], 2) : 0.0;
+            $roundoff    = isset($addonsObj['roundoff']) ? round((float)$addonsObj['roundoff'], 2) : 0.0;
 
-            // Prefer API gross; fallback to qty * (price - %disc)
-            $lineGross = isset($it['gross']) && $it['gross'] !== '' ? (float)$it['gross']
-                          : ($qty * ($price - ($disc * $price) / 100));
-            $lineGross = round($lineGross, 2);
-
-            $lineCgst = isset($it['cgst']) ? (float)$it['cgst'] : 0.0;
-            $lineSgst = isset($it['sgst']) ? (float)$it['sgst'] : 0.0;
-            $lineIgst = isset($it['igst']) ? (float)$it['igst'] : 0.0;
-            // $lineAmt  = round($lineGross + $lineCgst + $lineSgst + $lineIgst, 2);
-
-            $salesReturnProductsBatch[] = [
-                'sales_return_id' => $salesReturnId,
-                'company_id'      => Auth::user()->company_id,
-                'product_id'      => $product->id,
-                'product_name'    => $productName,
-                'description'     => $it['desc'] ?? null,
-                'quantity'        => (int)$qty,
-                'unit'            => $it['unit'] ?? '',
-                'price'           => $price,
-                'discount'        => $disc,
-                'discount_type'   => "percentage",
-                'hsn'             => $it['hsn'] ?? '',
-                'tax'             => isset($it['tax']) ? (float)$it['tax'] : 0.0,
-                'cgst'            => $lineCgst,
-                'sgst'            => $lineSgst,
-                'igst'            => $lineIgst,
-                'gross'           => $lineGross, // keep if your table has it
-                // 'amount'          => $lineAmt,   // keep if your table has it
-                'godown'          => $godownId,
-                'created_at'      => now(),
-                'updated_at'      => now(),
+            $salesReturnDataBatch[] = [
+                'company_id'        => Auth::user()->company_id,
+                'client_id'         => $supplier->id,
+                'name'              => $supplierName,
+                'sales_return_no'   => $record['pi_no'] ?? 'Unknown',
+                'sales_return_date' => (!empty($record['pi_date']) && $record['pi_date'] !== '0000-00-00')
+                                        ? date('Y-m-d', strtotime($record['pi_date'])) : now()->format('Y-m-d'),
+                'sales_invoice_id'  => $salesInvoiceId, // ✅ nullable
+                'remarks'           => $record['remarks'] ?? null,
+                'cgst'              => isset($taxObj['cgst']) ? (float)$taxObj['cgst'] : 0.0,
+                'sgst'              => isset($taxObj['sgst']) ? (float)$taxObj['sgst'] : 0.0,
+                'igst'              => isset($taxObj['igst']) ? (float)$taxObj['igst'] : 0.0,
+                'total'             => isset($record['total']) ? (float)$record['total'] : 0.0,
+                'currency'          => 'INR',
+                'template'          => isset($tplObj['id']) ? (int)$tplObj['id'] : null,
+                'gross'             => $parentGross,
+                'round_off'         => $roundoff,
+                'created_at'        => now(),
+                'updated_at'        => now(),
             ];
         }
-    }
 
-    // ✅ Batch Insert Sales Return Products
-    foreach (array_chunk($salesReturnProductsBatch, 100) as $batch) {
-        SalesReturnProductsModel::insert($batch);
-    }
+        // ✅ Batch Insert Sales Returns
+        foreach (array_chunk($salesReturnDataBatch, 100) as $batch) {
+            SalesReturnModel::insert($batch);
+            $successfulInserts += count($batch);
+        }
 
-    return response()->json([
-        'code' => 200,
-        'success' => true,
-        'message' => "Data import completed with $successfulInserts successful inserts.",
-        'errors' => $errors,
-    ], 200);
-}
+        // ✅ Map inserted sales returns
+        $returnNos = array_column($salesReturnDataBatch, 'sales_return_no');
+        $salesReturnIds = !empty($returnNos)
+            ? SalesReturnModel::whereIn('sales_return_no', $returnNos)->pluck('id', 'sales_return_no')->toArray()
+            : [];
+
+        // ✅ Pre-fetch products
+        $productNames = collect($data)
+            ->flatMap(function ($rec) {
+                $items = $rec['items'] ?? [];
+                return collect($items)->pluck('product')->filter()->all();
+            })
+            ->unique()
+            ->values();
+        $products = $productNames->isNotEmpty()
+            ? ProductsModel::whereIn('name', $productNames)->get()->keyBy('name')
+            : collect();
+
+        // ✅ Build child rows
+        $salesReturnProductsBatch = [];
+        foreach ($data as $record) {
+            $itemsArr = $record['items'] ?? [];
+            $srNo     = $record['pi_no'] ?? null;
+            $salesReturnId = $srNo && isset($salesReturnIds[$srNo]) ? $salesReturnIds[$srNo] : null;
+
+            if (!$salesReturnId || empty($itemsArr) || !is_array($itemsArr)) {
+                if (!$salesReturnId) {
+                    $errors[] = ['record' => $record, 'error' => "Sales Return '".($srNo ?? '[null]')."' not found after insert."];
+                }
+                continue;
+            }
+
+            foreach ($itemsArr as $it) {
+                $productName = $it['product'] ?? null;
+                if (!$productName) continue;
+
+                $product = $products[$productName] ?? null;
+                if (!$product) {
+                    $errors[] = ['record' => $record, 'error' => "Product not found: {$productName}"];
+                    continue;
+                }
+
+                // Godown by place (company-scoped)
+                $godownId = null;
+                if (!empty($it['place'])) {
+                    $godown = GodownModel::where('name', $it['place'])
+                        ->where('company_id', Auth::user()->company_id)->first();
+                    $godownId = $godown ? $godown->id : null;
+                }
+
+                $qty   = isset($it['quantity']) ? (float)$it['quantity'] : 0.0;
+                $price = isset($it['price'])    ? (float)$it['price']    : 0.0;
+                $disc  = isset($it['discount']) && $it['discount'] !== '' ? (float)$it['discount'] : 0.0;
+
+                // Prefer API gross; fallback to qty * (price - %disc)
+                $lineGross = isset($it['gross']) && $it['gross'] !== '' ? (float)$it['gross']
+                            : ($qty * ($price - ($disc * $price) / 100));
+                $lineGross = round($lineGross, 2);
+
+                $lineCgst = isset($it['cgst']) ? (float)$it['cgst'] : 0.0;
+                $lineSgst = isset($it['sgst']) ? (float)$it['sgst'] : 0.0;
+                $lineIgst = isset($it['igst']) ? (float)$it['igst'] : 0.0;
+                // $lineAmt  = round($lineGross + $lineCgst + $lineSgst + $lineIgst, 2);
+
+                $salesReturnProductsBatch[] = [
+                    'sales_return_id' => $salesReturnId,
+                    'company_id'      => Auth::user()->company_id,
+                    'product_id'      => $product->id,
+                    'product_name'    => $productName,
+                    'description'     => $it['desc'] ?? null,
+                    'quantity'        => (int)$qty,
+                    'unit'            => $it['unit'] ?? '',
+                    'price'           => $price,
+                    'discount'        => $disc,
+                    'discount_type'   => "percentage",
+                    'hsn'             => $it['hsn'] ?? '',
+                    'tax'             => isset($it['tax']) ? (float)$it['tax'] : 0.0,
+                    'cgst'            => $lineCgst,
+                    'sgst'            => $lineSgst,
+                    'igst'            => $lineIgst,
+                    'gross'           => $lineGross, // keep if your table has it
+                    // 'amount'          => $lineAmt,   // keep if your table has it
+                    'godown'          => $godownId,
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
+                ];
+            }
+        }
+
+        // ✅ Batch Insert Sales Return Products
+        foreach (array_chunk($salesReturnProductsBatch, 100) as $batch) {
+            SalesReturnProductsModel::insert($batch);
+        }
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => "Data import completed with $successfulInserts successful inserts.",
+            'errors' => $errors,
+        ], 200);
+    }
 
 }
