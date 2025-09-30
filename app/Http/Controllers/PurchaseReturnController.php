@@ -553,7 +553,7 @@ class PurchaseReturnController extends Controller
     //         'errors' => $errors,
     //     ], 200);
     // }
-    
+
     public function importPurchaseReturns()
     {
         set_time_limit(300); // Extend execution time for large data sets
@@ -727,7 +727,7 @@ class PurchaseReturnController extends Controller
                     $lineSgst = isset($it['sgst']) ? (float)$it['sgst'] : 0.0;
                     $lineIgst = isset($it['igst']) ? (float)$it['igst'] : 0.0;
 
-                    $lineAmount = round($lineGross + $lineCgst + $lineSgst + $lineIgst, 2);
+                    // $lineAmount = round($lineGross + $lineCgst + $lineSgst + $lineIgst, 2);
 
                     $purchaseReturnProductsBatch[] = [
                         'purchase_return_id' => $purchaseReturnId,
@@ -746,7 +746,7 @@ class PurchaseReturnController extends Controller
                         'sgst'               => $lineSgst,
                         'igst'               => $lineIgst,
                         'gross'              => $lineGross,   // <-- include gross on product
-                        'amount'             => $lineAmount,
+                        // 'amount'             => $lineAmount,
                         'godown'             => $godownId,
                         'created_at'         => now(),
                         'updated_at'         => now(),
