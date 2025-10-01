@@ -1057,6 +1057,8 @@ class PurchaseInvoiceController extends Controller
         PurchaseInvoiceModel::truncate();
         PurchaseInvoiceProductsModel::truncate();
         PurchaseInvoiceAddonsModel::truncate();
+        DB::statement("SET SESSION sql_mode = REPLACE(REPLACE(@@sql_mode,'NO_ZERO_DATE',''),'NO_ZERO_IN_DATE','')");
+        DB::statement("SET SESSION sql_mode = REPLACE(@@sql_mode,'STRICT_TRANS_TABLES','')");
 
         // Define the external URL
         $url = 'https://expo.egsm.in/assets/custom/migrate/purchase_invoice.php';
