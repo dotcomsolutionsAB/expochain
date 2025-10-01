@@ -1131,7 +1131,7 @@ class PurchaseInvoiceController extends Controller
                 'name'                  => $supplierName ?? 'Unnamed Supplier',
                 'purchase_invoice_no'   => $record['pi_no'] ?? null,
                 // 'purchase_invoice_date' => !empty($record['pi_date']) ? date('Y-m-d', strtotime($record['pi_date'])) : null,
-                'purchase_invoice_date' => (function($v){$v=trim((string)($v??''));return $v===''?null:(in_array($v,['0','0000-00-00','0000/00/00'],true)?'0000-00-00':((($d=DateTime::createFromFormat('Y-m-d',$v))&&$d->format('Y-m-d')===$v)?$v:(($t=strtotime($v))?date('Y-m-d',$t):null)));})($record['pi_date']??null),
+                'purchase_invoice_date' => (function($v){ $v=trim((string)($v??'')); return ($v===''||$v==='0')?'0000-00-00':$v; })($record['pi_date']??null),
                 'oa_no'                 => $record['oa_no'] ?? null,
                 'ref_no'                => $record['reference_no'] ?? null,
                 'template'              => isset($templateObj['id']) ? (int)$templateObj['id'] : 0,
