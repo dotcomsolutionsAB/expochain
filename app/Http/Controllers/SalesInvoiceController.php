@@ -1123,22 +1123,19 @@ class SalesInvoiceController extends Controller
             $productsBatch = [];
             $addonsBatch = [];
 
-            // 1) Build parent rows (DON’T SKIP IF CLIENT MISSING)
+            // 1) Build parent rows (client can be null)
             foreach ($chunk as $record) {
-                $itemsArr  = $record['items'] ?? [];          // array of item objects
-                $taxObj    = $record['tax'] ?? [];            // {cgst, sgst, igst}
-                $addonsObj = $record['addons'] ?? [];         // {freight, pf, discount, roundoff}
-                $tplObj    = $record['pdf_template'] ?? [];   // {id, name}
+                $itemsArr  = $record['items'] ?? [];
+                $taxObj    = $record['tax'] ?? [];
+                $addonsObj = $record['addons'] ?? [];
+                $tplObj    = $record['pdf_template'] ?? [];
 
-                // Try to find client; allow null if not found
+                // Client lookup (allow null)
                 $clientName = $record['client'] ?? '';
-                $client = null;
-                if ($clientName !== '') {
-                    $client = ClientsModel::where('name', $clientName)->first();
-                }
-                $clientId = $client?->id;   // null when not found
+                $client = $clientName !== '' ? ClientsModel::where('name', $clientName)->first() : null;
+                $clientId = $client?->id;
 
-                // Invoice gross: prefer total_gross -> sum item.gross -> qty * (price - %disc)
+                // Invoice gross calculation
                 $invGross = isset($record['total_gross']) ? round((float)$record['total_gross'], 2) : null;
                 if ($invGross === null) {
                     $tmp = 0.0;
@@ -1157,7 +1154,6 @@ class SalesInvoiceController extends Controller
                     $invGross = round($tmp, 2);
                 }
 
-                // Roundoff from addons
                 $roundoff = isset($addonsObj['roundoff']) && $addonsObj['roundoff'] !== '' ? (float)$addonsObj['roundoff'] : 0.0;
 
                 // Sales order mapping (string/array/empty)
@@ -1173,7 +1169,7 @@ class SalesInvoiceController extends Controller
 
                 $salesInvoicesBatch[] = [
                     'company_id'         => Auth::user()->company_id,
-                    'client_id'          => $clientId,  // <-- allow NULL
+                    'client_id'          => $clientId,  // can be null
                     'name'               => $clientName !== '' ? $clientName : 'Unnamed Client',
                     'sales_invoice_no'   => !empty($record['si_no']) ? trim($record['si_no']) : null,
                     'sales_invoice_date' => !empty($record['si_date']) && $record['si_date'] !== '0000-00-00'
@@ -1187,7 +1183,7 @@ class SalesInvoiceController extends Controller
                     'sgst'               => isset($taxObj['sgst']) ? (float)$taxObj['sgst'] : 0.0,
                     'igst'               => isset($taxObj['igst']) ? (float)$taxObj['igst'] : 0.0,
                     'total'              => isset($record['total']) ? round((float)$record['total'], 2) : 0.0,
-                    'gross'              => $invGross,                 // 2 decimals
+                    'gross'              => $invGross,
                     'round_off'          => round($roundoff, 2),
                     'created_at'         => now(),
                     'updated_at'         => now(),
@@ -1199,7 +1195,6 @@ class SalesInvoiceController extends Controller
                 SalesInvoiceModel::insert($salesInvoicesBatch);
                 $successfulInserts += count($salesInvoicesBatch);
 
-                // Build a list of non-null invoice numbers to map IDs
                 $siNos = array_values(array_filter(array_map(
                     fn($r) => $r['sales_invoice_no'] ?? null,
                     $salesInvoicesBatch
@@ -1215,12 +1210,11 @@ class SalesInvoiceController extends Controller
                 $insertedInvoices = [];
             }
 
-            // 2) Products
+            // 2) Products (product can be null)
             foreach ($chunk as $record) {
                 $siNo = $record['si_no'] ?? null;
                 if (!$siNo || !isset($insertedInvoices[$siNo])) {
-                    // If we can’t map by si_no (null or not found), skip product rows for that invoice
-                    // (All provided examples have si_no; keeping it simple and safe.)
+                    // Cannot map products/addons without a saved parent
                     continue;
                 }
                 $siId = $insertedInvoices[$siNo];
@@ -1230,13 +1224,13 @@ class SalesInvoiceController extends Controller
 
                 foreach ($itemsArr as $it) {
                     $productName = $it['product'] ?? null;
-                    if (!$productName) continue;
+                    // Allow empty product names but still record the line
+                    $product = $productName ? ProductsModel::where('name', $productName)->first() : null;
+                    $productId = $product?->id;
 
-                    $product = ProductsModel::where('name', $productName)->first();
-                    if (!$product) {
-                        // Keep logging product-miss (unchanged behavior)
-                        $errors[] = ['record' => $record, 'error' => "Product not found: {$productName}"];
-                        continue;
+                    if (!$productId && $productName) {
+                        // log a warning but DO NOT skip
+                        $errors[] = ['record' => $record, 'warning' => "Product not found, saved with product_id=null: {$productName}"];
                     }
 
                     $qty   = isset($it['quantity']) ? (float)$it['quantity'] : 0.0;
@@ -1246,7 +1240,7 @@ class SalesInvoiceController extends Controller
                     $disc    = round($discRaw, 2);
                     if ($disc < $discRaw) $disc += 0.01;
 
-                    // line gross: prefer API field
+                    // line gross: prefer provided gross
                     if (isset($it['gross']) && $it['gross'] !== '') {
                         $lineGross = round((float)$it['gross'], 2);
                     } else {
@@ -1262,8 +1256,8 @@ class SalesInvoiceController extends Controller
                     $productsBatch[] = [
                         'sales_invoice_id' => $siId,
                         'company_id'       => Auth::user()->company_id,
-                        'product_id'       => $product->id,
-                        'product_name'     => $productName,
+                        'product_id'       => $productId,            // <-- can be null now
+                        'product_name'     => $productName ?? '',    // keep the provided name
                         'description'      => $it['desc'] ?? '',
                         'quantity'         => $qty,
                         'unit'             => $it['unit'] ?? '',
@@ -1275,7 +1269,7 @@ class SalesInvoiceController extends Controller
                         'cgst'             => $lineCgst,
                         'sgst'             => $lineSgst,
                         'igst'             => $lineIgst,
-                        'gross'            => $lineGross,   // REQUIRED in DB
+                        'gross'            => $lineGross,
                         'amount'           => $lineAmount,
                         'channel'          => array_key_exists('channel', $it)
                                                 ? (is_numeric($it['channel']) ? (float)$it['channel'] : (
@@ -1327,7 +1321,7 @@ class SalesInvoiceController extends Controller
                         'sales_invoice_id' => $siId,
                         'company_id'       => Auth::user()->company_id,
                         'name'             => $name,
-                        'amount'           => round($valCgst + $valSgst + $valIgst, 2), // keep in sync with others
+                        'amount'           => round($valCgst + $valSgst + $valIgst, 2),
                         'tax'              => 18,
                         'hsn'              => $valHsn,
                         'cgst'             => $valCgst,
@@ -1353,8 +1347,6 @@ class SalesInvoiceController extends Controller
             'errors' => $errors
         ], 200);
     }
-
-
 
     // export sales invoice report
     public function exportSalesInvoiceReport(Request $request)
