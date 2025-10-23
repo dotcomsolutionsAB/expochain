@@ -192,11 +192,10 @@ class UsersController extends Controller
         ], 404);
     }
 
-
     // update
     public function update(Request $request, $id)
     {
-        // Get the logged-in user
+        // Get logged-in user
         $authUser = Auth::user();
         if (!$authUser) {
             return response()->json([
@@ -206,7 +205,7 @@ class UsersController extends Controller
             ], 401);
         }
 
-        // Fetch user record
+        // Find the user in the same company
         $user = User::where('id', $id)
             ->where('company_id', $authUser->company_id)
             ->first();
@@ -219,14 +218,29 @@ class UsersController extends Controller
             ], 404);
         }
 
-        // Validation rules
+        // Validation
         $request->validate([
             'name'     => 'required|string',
             'email'    => 'required|email',
             'mobile'   => 'required|string|regex:/^\+?\d{10,19}$/',
-            'username' => 'nullable|string',
             'role'     => 'required|in:admin,user',
             'password' => 'nullable|string|min:6',
+            'username' => [
+                'nullable',
+                'string',
+                function ($attribute, $value, $fail) use ($authUser, $id) {
+                    if (!$value) return;
+
+                    $exists = User::where('username', strtolower($value))
+                        ->where('company_id', $authUser->company_id)
+                        ->where('id', '!=', $id) // exclude current user
+                        ->exists();
+
+                    if ($exists) {
+                        $fail('This username is already taken within your company.');
+                    }
+                },
+            ],
         ]);
 
         // Prepare update data
@@ -234,11 +248,15 @@ class UsersController extends Controller
             'name'     => $request->input('name'),
             'email'    => strtolower($request->input('email')),
             'mobile'   => $request->input('mobile'),
-            'username' => $request->input('username') ? strtolower($request->input('username')) : $user->username,
             'role'     => strtolower($request->input('role')),
         ];
 
-        // Update password only if provided
+        // Handle username if provided
+        if ($request->filled('username')) {
+            $updateData['username'] = strtolower($request->input('username'));
+        }
+
+        // Only update password if provided (non-empty)
         if ($request->filled('password')) {
             $updateData['password'] = bcrypt($request->input('password'));
         }
@@ -259,7 +277,6 @@ class UsersController extends Controller
                 'message' => 'No changes detected.',
             ], 204);
     }
-
 
     // delete
     public function delete($id)
