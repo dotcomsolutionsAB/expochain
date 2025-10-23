@@ -281,14 +281,39 @@ class UsersController extends Controller
     // delete
     public function delete($id)
     {
-        // Delete the client
-        $delete_user = User::where('id', $id)->delete();
+        // Get logged-in user
+        $authUser = Auth::user();
+        if (!$authUser) {
+            return response()->json([
+                'code' => 401,
+                'success' => false,
+                'message' => 'Unauthorized. Please log in.'
+            ], 401);
+        }
 
-        // Return success response if deletion was successful
-        return $delete_user
-        ? response()->json(['code' => 204,'success' => true, 'message' => 'Delete User record successfully!'], 204)
-        : response()->json(['code' => 400,'success' => false, 'message' => 'Sorry, User record not found'], 400);
+        // Find the user in the same company
+        $user = User::where('id', $id)
+            ->where('company_id', $authUser->company_id)
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'User not found or not part of your company.'
+            ], 404);
+        }
+
+        // Delete the record
+        $user->delete();
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'User record deleted successfully!'
+        ], 200);
     }
+
 
     // migrate from old
     public function get_migrate()
