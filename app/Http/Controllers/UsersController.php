@@ -15,9 +15,8 @@ class UsersController extends Controller
     //register user
     public function register(Request $request)
     {
-        // Get company_id from the authenticated user
+        // Must be logged in
         $authUser = Auth::user();
-
         if (!$authUser) {
             return response()->json([
                 'code' => 401,
@@ -26,9 +25,9 @@ class UsersController extends Controller
             ], 401);
         }
 
-        $companyId = $authUser->company_id;
+        $companyId = (int) $authUser->company_id;
 
-        // Validate the request
+        // Validate input (role must be admin or user)
         $request->validate([
             'name' => 'required|string',
             'email' => [
@@ -62,12 +61,23 @@ class UsersController extends Controller
                     }
                 },
             ],
+            'role' => 'required|in:admin,user',
         ]);
 
-        // Default username if not provided
-        $username = $request->input('username') ?? strtolower($request->input('email'));
+        // Normalize role & username
+        $role = strtolower($request->input('role'));
+        $username = $request->input('username') ? strtolower($request->input('username')) : strtolower($request->input('email'));
 
-        // Create the user
+        // Optional safety: only admins can create admin users
+        if ($role === 'admin' && strtolower((string) $authUser->role) !== 'admin') {
+            return response()->json([
+                'code' => 403,
+                'success' => false,
+                'message' => 'Only admins can create admin users.'
+            ], 403);
+        }
+
+        // Create user
         $register_user = User::create([
             'name'        => $request->input('name'),
             'email'       => strtolower($request->input('email')),
@@ -75,10 +85,10 @@ class UsersController extends Controller
             'mobile'      => $request->input('mobile'),
             'company_id'  => $companyId,
             'username'    => $username,
+            'role'        => $role,
         ]);
 
-        // Prepare response
-        $data = $register_user->only(['name', 'email', 'mobile', 'username', 'company_id']);
+        $data = $register_user->only(['name','email','mobile','username','company_id','role']);
 
         return response()->json([
             'code' => 201,
@@ -87,6 +97,7 @@ class UsersController extends Controller
             'data' => $data
         ], 201);
     }
+
 
 
     //view
