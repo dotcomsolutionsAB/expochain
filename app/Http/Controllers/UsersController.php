@@ -12,27 +12,37 @@ use Auth;
 
 class UsersController extends Controller
 {
-    //
     //register user
     public function register(Request $request)
     {
+        // Get company_id from the authenticated user
+        $authUser = Auth::user();
+
+        if (!$authUser) {
+            return response()->json([
+                'code' => 401,
+                'success' => false,
+                'message' => 'Unauthorized. Please log in.'
+            ], 401);
+        }
+
+        $companyId = $authUser->company_id;
+
+        // Validate the request
         $request->validate([
             'name' => 'required|string',
-            'company_id' => 'required|integer',
             'email' => [
                 'required',
                 'email',
-                function ($attribute, $value, $fail) use ($request) {
-                    // Check if the combination of email and contact_id already exists
-                    $exists = User::where('email', $value)
-                                            ->where('company_id', $request->input('company_id'))
-                                            ->exists();
+                function ($attribute, $value, $fail) use ($companyId) {
+                    $exists = User::where('email', strtolower($value))
+                        ->where('company_id', $companyId)
+                        ->exists();
                     if ($exists) {
                         $fail('The combination of email and company ID must be unique.');
                     }
                 },
             ],
-            // 'mobile' => 'required|string',
             'mobile' => [
                 'required',
                 'string',
@@ -42,35 +52,42 @@ class UsersController extends Controller
             'username' => [
                 'nullable',
                 'string',
-                function ($attribute, $value, $fail) use ($request) {
-                    $exists = \App\Models\User::where('username', $value)
-                        ->where('company_id', $request->input('company_id'))
+                function ($attribute, $value, $fail) use ($companyId) {
+                    if (!$value) return;
+                    $exists = User::where('username', strtolower($value))
+                        ->where('company_id', $companyId)
                         ->exists();
                     if ($exists) {
                         $fail('The combination of username and company ID must be unique.');
                     }
                 },
-            ], // Allow username to be nullable
+            ],
         ]);
 
-         // If username is null, set email as the username
+        // Default username if not provided
         $username = $request->input('username') ?? strtolower($request->input('email'));
 
+        // Create the user
         $register_user = User::create([
-            'name' => $request->input('name'),
-            'email' => strtolower($request->input('email')),
-            'password' => bcrypt($request->input('password')),
-            'mobile' => $request->input('mobile'),
-            'company_id' => $request->input('company_id'),
-            'username' => $username,
+            'name'        => $request->input('name'),
+            'email'       => strtolower($request->input('email')),
+            'password'    => bcrypt($request->input('password')),
+            'mobile'      => $request->input('mobile'),
+            'company_id'  => $companyId,
+            'username'    => $username,
         ]);
-        
-        unset($register_user['id'], $register_user['created_at'], $register_user['updated_at']);
 
-        return isset($register_user) && $register_user !== null
-        ? response()->json(['code' => 201,'success' => true, 'User registered successfully!', 'data' => $register_user], 201)
-        : response()->json(['code' => 400,'success' => false, 'Failed to register user'], 400);
+        // Prepare response
+        $data = $register_user->only(['name', 'email', 'mobile', 'username', 'company_id']);
+
+        return response()->json([
+            'code' => 201,
+            'success' => true,
+            'message' => 'User registered successfully!',
+            'data' => $data
+        ], 201);
     }
+
 
     //view
     public function view()

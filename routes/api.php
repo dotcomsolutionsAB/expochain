@@ -38,7 +38,6 @@ use App\Http\Controllers\StatsController;
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
 // })->middleware('auth:sanctum');
-Route::post('/register', [UsersController::class, 'register']);
 
 Route::post('/login/{otp?}', [AuthController::class, 'login']);
 
@@ -56,6 +55,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/reset_calculation', [ResetController::class, 'stock_calculation']);
     Route::get('/reset_status', [ResetController::class, 'reset_queue_status']);
 
+    Route::post('/user/create', [UsersController::class, 'register']);
 
     Route::get('/user', [UsersController::class, 'view']);
     Route::post('/fetch', [UsersController::class, 'view_user']);
