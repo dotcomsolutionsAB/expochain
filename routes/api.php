@@ -58,9 +58,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/user/create', [UsersController::class, 'register']);
 
     Route::get('/user', [UsersController::class, 'view']);
-    Route::post('/fetch', [UsersController::class, 'view_user']);
-    Route::post('/edit/{id}', [UsersController::class, 'update']);
-    Route::delete('/delete/{id}', [UsersController::class, 'delete']);
+    Route::post('/user/retrieve', [UsersController::class, 'view_user']);
+    Route::post('/user/update/{id}', [UsersController::class, 'update']);
+    Route::post('/user/delete/{id}', [UsersController::class, 'delete']);
     
     Route::get('/users_migrate', [UsersController::class, 'get_migrate']);
 

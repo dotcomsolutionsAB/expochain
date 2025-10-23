@@ -98,8 +98,6 @@ class UsersController extends Controller
         ], 201);
     }
 
-
-
     //view
     public function view()
     {        
