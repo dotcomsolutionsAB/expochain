@@ -128,19 +128,32 @@ class UsersController extends Controller
     // view user's record
     public function view_user(Request $request)
     {
-        // Get filter inputs
-        $name = $request->input('name'); // Filter by name
-        $email = $request->input('email'); // Filter by email
-        $mobile = $request->input('mobile'); // Filter by mobile
-        $role = $request->input('role'); // Filter by role
-        $limit = $request->input('limit', 10); // Default limit to 10
-        $offset = $request->input('offset', 0); // Default offset to 0
+        // Get authenticated user
+        $authUser = Auth::user();
 
-        // Build the query
-        $query = User::select('name', 'email', 'mobile', 'role')
-            ->where('id', Auth::id()); // Ensure the user is authorized
+        if (!$authUser) {
+            return response()->json([
+                'code' => 401,
+                'success' => false,
+                'message' => 'Unauthorized. Please log in.'
+            ], 401);
+        }
 
-        // Apply filters
+        $companyId = (int) $authUser->company_id;
+
+        // Filters
+        $name   = $request->input('name');
+        $email  = $request->input('email');
+        $mobile = $request->input('mobile');
+        $role   = $request->input('role');
+        $limit  = (int) $request->input('limit', 10);
+        $offset = (int) $request->input('offset', 0);
+
+        // Base query: same company only
+        $query = User::select('id', 'name', 'email', 'mobile', 'role')
+            ->where('company_id', $companyId);
+
+        // Apply filters dynamically
         if ($name) {
             $query->where('name', 'LIKE', '%' . $name . '%');
         }
@@ -154,27 +167,31 @@ class UsersController extends Controller
             $query->where('role', $role);
         }
 
-        // Apply limit and offset
-        $query->offset($offset)->limit($limit);
+        // Clone query to get total count
+        $totalCount = $query->count();
 
-        // Execute the query
-        $get_records = $query->get();
+        // Apply pagination
+        $users = $query->offset($offset)->limit($limit)->get();
 
-        // Return the response
-        return $get_records->isNotEmpty()
-            ? response()->json([
+        // Return formatted JSON response
+        if ($users->isNotEmpty()) {
+            return response()->json([
                 'code' => 200,
                 'success' => true,
-                'message' => 'Fetch data successfully!',
-                'data' => $get_records,
-                'count' => $get_records->count(),
-            ], 200)
-            : response()->json([
-                'code' => 404,
-                'success' => false,
-                'message' => 'No records found!',
-            ], 404);
+                'message' => 'Fetched users successfully!',
+                'data' => $users,
+                'count' => $users->count(),
+                'total' => $totalCount,
+            ], 200);
+        }
+
+        return response()->json([
+            'code' => 404,
+            'success' => false,
+            'message' => 'No records found!',
+        ], 404);
     }
+
 
     // update
     public function update(Request $request, $id)
