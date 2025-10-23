@@ -196,24 +196,70 @@ class UsersController extends Controller
     // update
     public function update(Request $request, $id)
     {
+        // Get the logged-in user
+        $authUser = Auth::user();
+        if (!$authUser) {
+            return response()->json([
+                'code' => 401,
+                'success' => false,
+                'message' => 'Unauthorized. Please log in.'
+            ], 401);
+        }
+
+        // Fetch user record
+        $user = User::where('id', $id)
+            ->where('company_id', $authUser->company_id)
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'User not found or not part of your company.'
+            ], 404);
+        }
+
+        // Validation rules
         $request->validate([
-            'name' => 'required|string',
-            'mobile' => 'required|string',
-            'password' => 'required|string',
+            'name'     => 'required|string',
+            'email'    => 'required|email',
+            'mobile'   => 'required|string|regex:/^\+?\d{10,19}$/',
+            'username' => 'nullable|string',
+            'role'     => 'required|in:admin,user',
+            'password' => 'nullable|string|min:6',
         ]);
 
-        $update_user = User::where('id', $id)
-        ->update([
-            'name' => $request->input('name'),
-            'email' => strtolower($request->input('email')),
-            'password' => bcrypt($request->input('password')),
-            'mobile' => $request->input('mobile'),
-        ]);
-        
-        return $update_user
-        ? response()->json(['code' => 200,'success' => true, 'User record updated successfully!', 'data' => $update_user], 200)
-        : response()->json(['code' => 204,'success' => false, 'No changes detected'], 204);
+        // Prepare update data
+        $updateData = [
+            'name'     => $request->input('name'),
+            'email'    => strtolower($request->input('email')),
+            'mobile'   => $request->input('mobile'),
+            'username' => $request->input('username') ? strtolower($request->input('username')) : $user->username,
+            'role'     => strtolower($request->input('role')),
+        ];
+
+        // Update password only if provided
+        if ($request->filled('password')) {
+            $updateData['password'] = bcrypt($request->input('password'));
+        }
+
+        // Perform update
+        $updated = $user->update($updateData);
+
+        return $updated
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'User record updated successfully!',
+                'data' => $user->only(['id', 'name', 'email', 'mobile', 'username', 'role']),
+            ], 200)
+            : response()->json([
+                'code' => 204,
+                'success' => false,
+                'message' => 'No changes detected.',
+            ], 204);
     }
+
 
     // delete
     public function delete($id)
