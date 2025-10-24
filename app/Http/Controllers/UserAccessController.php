@@ -260,27 +260,62 @@ class UserAccessController extends Controller
     /**
      * Delete (company scoped)
      */
-    public function destroy($id)
+    public function destroy(Request $request)
     {
         $auth = Auth::user();
         if (!$auth) {
             return response()->json(['code'=>401,'success'=>false,'message'=>'Unauthorized'], 401);
         }
 
-        $row = UserAccessModel::where('id', $id)
-            ->where('company_id', $auth->company_id)
+        // Validate inputs
+        $request->validate([
+            'user_id'  => 'required|integer|exists:users,id',
+            'module'   => 'required|string|max:100',
+            'function' => 'required|string|max:100',
+        ]);
+
+        $companyId = (int) $auth->company_id;
+        $userId    = (int) $request->input('user_id');
+        $module    = trim((string) $request->input('module'));
+        $function  = trim((string) $request->input('function'));
+
+        // Ensure target user is in the same company
+        $targetUser = User::where('id', $userId)
+            ->where('company_id', $companyId)
             ->first();
 
-        if (!$row) {
-            return response()->json(['code'=>404,'success'=>false,'message'=>'Not found'], 404);
+        if (!$targetUser) {
+            return response()->json([
+                'code'=>422,'success'=>false,'message'=>'User is not in your company.'
+            ], 422);
         }
 
-        $row->delete();
+        // Normalization helpers (case-insensitive match; map update->edit)
+        $norm = fn(string $s) => strtolower(trim($s));
+        $moduleNorm   = $norm($module);
+        $functionNorm = $norm($function);
+        if ($functionNorm === 'update') $functionNorm = 'edit';
+
+        // Delete row(s) if exist (case-insensitive)
+        $deleted = UserAccessModel::where('company_id', $companyId)
+            ->where('user_id', $userId)
+            ->whereRaw('LOWER(`module`) = ?', [$moduleNorm])
+            ->whereRaw('LOWER(`function`) = ?', [$functionNorm])
+            ->delete();
+
+        if ($deleted < 1) {
+            return response()->json([
+                'code'=>404,
+                'success'=>false,
+                'message'=>'No matching access record found to delete.'
+            ], 404);
+        }
 
         return response()->json([
             'code'=>200,
             'success'=>true,
-            'message'=>'Access deleted'
+            'message'=>'Access deleted',
+            'deleted'=> $deleted
         ], 200);
     }
 }
