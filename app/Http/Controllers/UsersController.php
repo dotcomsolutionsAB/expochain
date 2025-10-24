@@ -181,7 +181,7 @@ class UsersController extends Controller
                 'message' => 'Fetched users successfully!',
                 'data' => $users,
                 'count' => $users->count(),
-                'total' => $totalCount,
+                'total_records' => $totalCount,
             ], 200);
         }
 
