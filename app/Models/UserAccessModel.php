@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class UserAccess extends Model
+class UserAccessModel extends Model
 {
     protected $table = 't_user_access';
 
