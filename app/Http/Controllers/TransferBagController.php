@@ -62,8 +62,8 @@ class TransferBagController extends Controller
             'product_id'    => 'required|exists:t_products,id',  // Product must exist
             'quantity'      => 'required|numeric',               // Quantity is required
             'tb_date'       => 'required|date',                  // Transfer date is required
-            'godown_from'   => 'required|exists:godown,id',      // Godown from must exist
-            'godown_to'     => 'required|exists:godown,id',      // Godown to must exist
+            'godown_from'   => 'required|exists:t_godown,id',      // Godown from must exist
+            'godown_to'     => 'required|exists:t_godown,id',      // Godown to must exist
         ]);
 
         // Create a new TransferBag entry
