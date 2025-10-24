@@ -164,7 +164,7 @@ class UserAccessController extends Controller
         }
 
         // Fetch all access rows for this user & company
-        $rows = UserAccess::where('company_id', $companyId)
+        $rows = UserAccessModel::where('company_id', $companyId)
             ->where('user_id', $userId)
             ->get(['module','function']);
 
