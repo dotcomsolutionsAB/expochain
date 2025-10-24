@@ -189,6 +189,7 @@ class UsersController extends Controller
             'code' => 404,
             'success' => false,
             'message' => 'No records found!',
+            'data' => [],
         ], 404);
     }
 
