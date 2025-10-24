@@ -77,7 +77,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get   ('/purchase-bag/retrieve/{id}',   [PurchaseBagController::class, 'show']);
     Route::post  ('/purchase-bag/create',        [PurchaseBagController::class, 'store']);
     Route::post  ('/purchase-bag/update/{id}', [PurchaseBagController::class, 'update']);
-    Route::post. ('/purchase-bag/delete/{id}',   [PurchaseBagController::class, 'destroy']);
+    Route::post  ('/purchase-bag/delete/{id}',   [PurchaseBagController::class, 'destroy']);
 
     Route::get('/users_migrate', [UsersController::class, 'get_migrate']);
 
