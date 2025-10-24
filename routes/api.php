@@ -34,6 +34,8 @@ use App\Http\Controllers\AdjustmentController;
 use App\Http\Controllers\VendorsController;
 use App\Http\Controllers\CustomerVisitController;
 use App\Http\Controllers\StatsController;
+use App\Http\Controllers\UserAccessController;
+
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -61,7 +63,13 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/user/retrieve', [UsersController::class, 'view_user']);
     Route::post('/user/update/{id}', [UsersController::class, 'update']);
     Route::post('/user/delete/{id}', [UsersController::class, 'delete']);
-    
+
+    Route::post('/user-access', [UserAccessController::class, 'store']);
+    Route::get('/user-access/retrieve', [UserAccessController::class, 'index']);
+    Route::get('/user-access/retrieve/{id}', [UserAccessController::class, 'show']);
+    Route::post('/user-access/update/{id}', [UserAccessController::class, 'update']);
+    Route::post('/user-access/delete/{id}', [UserAccessController::class, 'destroy']);
+
     Route::get('/users_migrate', [UsersController::class, 'get_migrate']);
 
     Route::post('/client', [ClientsController::class, 'add_clients']);
