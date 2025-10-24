@@ -37,7 +37,7 @@ class UserAccessController extends Controller
         $rows  = $q->offset($offset)->limit($limit)->orderBy('id','desc')->get();
 
         if ($rows->isEmpty()) {
-            return response()->json(['code'=>404,'success'=>false,'message'=>'No records found'], 404);
+            return response()->json(['code'=>404,'success'=>false,'message'=>'No records found','data' => []], 404);
         }
 
         return response()->json([
