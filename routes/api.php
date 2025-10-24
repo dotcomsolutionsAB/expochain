@@ -35,7 +35,8 @@ use App\Http\Controllers\VendorsController;
 use App\Http\Controllers\CustomerVisitController;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\UserAccessController;
-    use App\Http\Controllers\PurchaseBagController;
+use App\Http\Controllers\PurchaseBagController;
+use App\Http\Controllers\TransferBagController;
 
 
 // Route::get('/user', function (Request $request) {
@@ -78,6 +79,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post  ('/purchase-bag/create',        [PurchaseBagController::class, 'store']);
     Route::post  ('/purchase-bag/update/{id}', [PurchaseBagController::class, 'update']);
     Route::post  ('/purchase-bag/delete/{id}',   [PurchaseBagController::class, 'destroy']);
+
+    Route::get   ('/transfer-bag/retrieve',        [TransferBagController::class, 'index']);
+    Route::get   ('/transfer-bag/retrieve/{id}',   [TransferBagController::class, 'show']);
+    Route::post  ('/transfer-bag/create',          [TransferBagController::class, 'store']);
+    Route::post  ('/transfer-bag/update/{id}',     [TransferBagController::class, 'update']);
+    Route::post  ('/transfer-bag/delete/{id}',     [TransferBagController::class, 'destroy']);
 
     Route::get('/users_migrate', [UsersController::class, 'get_migrate']);
 
