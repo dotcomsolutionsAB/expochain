@@ -115,22 +115,82 @@ class UserAccessController extends Controller
     /**
      * Show one (company scoped)
      */
-    public function show($id)
+    public function permissionsByUser(Request $request, int $userId)
     {
         $auth = Auth::user();
         if (!$auth) {
             return response()->json(['code'=>401,'success'=>false,'message'=>'Unauthorized'], 401);
         }
 
-        $row = UserAccessModel::where('id', $id)
-            ->where('company_id', $auth->company_id)
-            ->first();
+        $companyId = (int) $auth->company_id;
 
-        if (!$row) {
-            return response()->json(['code'=>404,'success'=>false,'message'=>'Not found'], 404);
+        // Ensure target user belongs to same company
+        $target = User::where('id', $userId)->where('company_id', $companyId)->first();
+        if (!$target) {
+            return response()->json([
+                'code'=>404,'success'=>false,'message'=>'User not found or not part of your company.'
+            ], 404);
         }
 
-        return response()->json(['code'=>200,'success'=>true,'data'=>$row], 200);
+        // Canonical function set (lowercase slugs)
+        $functions = ['create','view','edit','delete','export','import','print'];
+
+        // Canonical module set (use whatever slugs you prefer to expose)
+        $modules = [
+            'products',
+            'clients',
+            'suppliers',
+            'quotations',
+            'sales_order',
+            'sales_invoice',
+            'lot_info',
+            'purchase_order',
+            'purchase_invoice',
+            'stock_transfer',
+            'pdf_template',
+            'test_certificate',
+            'physical_stock',
+            'credit_note',
+            'debit_note',
+        ];
+
+        // Helper normalizer (DB may contain spaces/case)
+        $normalize = fn(string $s) => preg_replace('/[^a-z0-9_]/', '', str_replace([' ', '-'], '_', strtolower(trim($s))));
+
+        // Start with all false
+        $result = [];
+        foreach ($modules as $m) {
+            $result[$m] = array_fill_keys($functions, false);
+        }
+
+        // Fetch all access rows for this user & company
+        $rows = UserAccess::where('company_id', $companyId)
+            ->where('user_id', $userId)
+            ->get(['module','function']);
+
+        // Turn on flags where a record exists
+        foreach ($rows as $row) {
+            $mod = $normalize((string)$row->module);
+            $fun = $normalize((string)$row->function);
+
+            // Map non-canonical synonyms if any (e.g., "update" => "edit")
+            if ($fun === 'update') $fun = 'edit';
+
+            if (isset($result[$mod]) && in_array($fun, $functions, true)) {
+                $result[$mod][$fun] = true;
+            }
+        }
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Permissions fetched successfully.',
+            'data' => [
+                'company_id'  => $companyId,
+                'user_id'     => $userId,
+                'permissions' => $result,
+            ]
+        ], 200);
     }
 
     /**

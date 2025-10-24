@@ -66,7 +66,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/user-access/create', [UserAccessController::class, 'store']);
     Route::get('/user-access/retrieve', [UserAccessController::class, 'index']);
-    Route::get('/user-access/retrieve/{id}', [UserAccessController::class, 'show']);
+    Route::get('/user-access/retrieve/{id}', [UserAccessController::class, 'permissionsByUser']);
     Route::post('/user-access/update/{id}', [UserAccessController::class, 'update']);
     Route::post('/user-access/delete/{id}', [UserAccessController::class, 'destroy']);
 
