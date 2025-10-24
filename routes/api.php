@@ -35,6 +35,7 @@ use App\Http\Controllers\VendorsController;
 use App\Http\Controllers\CustomerVisitController;
 use App\Http\Controllers\StatsController;
 use App\Http\Controllers\UserAccessController;
+    use App\Http\Controllers\PurchaseBagController;
 
 
 // Route::get('/user', function (Request $request) {
@@ -69,6 +70,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/user-access/retrieve/{id}', [UserAccessController::class, 'permissionsByUser']);
     Route::post('/user-access/update/{id}', [UserAccessController::class, 'update']);
     Route::post('/user-access/delete', [UserAccessController::class, 'destroy']);
+
+    // routes/api.php
+
+    Route::get   ('/purchase-bag/retrieve',        [PurchaseBagController::class, 'index']);
+    Route::get   ('/purchase-bag/retrieve/{id}',   [PurchaseBagController::class, 'show']);
+    Route::post  ('/purchase-bag/create',        [PurchaseBagController::class, 'store']);
+    Route::post  ('/purchase-bag/update/{id}', [PurchaseBagController::class, 'update']);
+    Route::post. ('/purchase-bag/delete/{id}',   [PurchaseBagController::class, 'destroy']);
 
     Route::get('/users_migrate', [UsersController::class, 'get_migrate']);
 
