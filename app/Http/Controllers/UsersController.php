@@ -150,7 +150,7 @@ class UsersController extends Controller
         $offset = (int) $request->input('offset', 0);
 
         // Base query: same company only
-        $query = User::select('id', 'name', 'email', 'mobile', 'role')
+        $query = User::select('id', 'username', 'name', 'email', 'mobile', 'role')
             ->where('company_id', $companyId);
 
         // Apply filters dynamically
