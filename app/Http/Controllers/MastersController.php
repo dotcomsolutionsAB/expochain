@@ -564,8 +564,8 @@ class MastersController extends Controller
                     'unit' => $record['unit'] ?? 'N/A',
                     'hsn' => $record['hsn'] ?? 'N/A',
                     'tax' => $tax,
-                    'si1' => $si1, // Store stock_indication si1
-                    'si2' => $si2, // Store stock_indication si2
+                    // 'si1' => $si1, // Store stock_indication si1
+                    // 'si2' => $si2, // Store stock_indication si2
                     'pb_level' => $pbLevel, // Store pb_level
                     'created_at' => now(),
                     'updated_at' => now()
