@@ -478,7 +478,7 @@ class MastersController extends Controller
             return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
         }
 
-        $batchSize = 1000; // Define a batch size for inserting products
+        $batchSize = 500; // Define a batch size for inserting products
         $batchData = [];
         $successfulInserts = 0;
         $errors = [];
@@ -542,9 +542,9 @@ class MastersController extends Controller
                 $tax = is_numeric($record['tax']) ? $record['tax'] : 0;
 
                 // Parse stock_indication data
-                // $stockIndication = $record['stock_indication'] ?? [];
-                // $si1 = isset($stockIndication['si1']) ? (double)$stockIndication['si1'] : 0;
-                // $si2 = isset($stockIndication['si2']) ? (double)$stockIndication['si2'] : 0;
+                $stockIndication = $record['stock_indication'] ?? [];
+                $si1 = isset($stockIndication['si1']) ? (double)$stockIndication['si1'] : 0;
+                $si2 = isset($stockIndication['si2']) ? (double)$stockIndication['si2'] : 0;
                 $pbLevel = $record['pb_level'] ?? null;
 
                 // Prepare product data
@@ -564,8 +564,8 @@ class MastersController extends Controller
                     'unit' => $record['unit'] ?? 'N/A',
                     'hsn' => $record['hsn'] ?? 'N/A',
                     'tax' => $tax,
-                    // 'si1' => $si1, // Store stock_indication si1
-                    // 'si2' => $si2, // Store stock_indication si2
+                    'si1' => $si1, // Store stock_indication si1
+                    'si2' => $si2, // Store stock_indication si2
                     'pb_level' => $pbLevel, // Store pb_level
                     'created_at' => now(),
                     'updated_at' => now()
