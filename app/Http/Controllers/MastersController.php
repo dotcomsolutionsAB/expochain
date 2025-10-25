@@ -460,8 +460,8 @@ class MastersController extends Controller
         SubCategoryModel::truncate();
         ProductsModel::truncate();
 
-        // $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
-        $url = 'https://expo.egsm.in/assets/custom/migrate/products.php?limit=500&offset=0';
+        $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
+        // $url = 'https://expo.egsm.in/assets/custom/migrate/products.php?limit=500&offset=0';
 
         try {
             // Fetch data from the external URL
@@ -479,7 +479,7 @@ class MastersController extends Controller
             return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
         }
 
-        $batchSize = 200; // Define a batch size for inserting products
+        $batchSize = 300; // Define a batch size for inserting products
         $batchData = [];
         $successfulInserts = 0;
         $errors = [];
