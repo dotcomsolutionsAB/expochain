@@ -52,7 +52,7 @@ Route::post('/get_otp', [AuthController::class, 'generate_otp']);
 Route::get('/stats', [StatsController::class, 'index']);
 Route::get('/import-adjustment', [StatsController::class, 'importAdjustment']);
 Route::get('/import-fabrication', [StatsController::class, 'importFabrication']);
-
+Route::get('products_migrate', [MastersController::class, 'importProducts']);
 Route::middleware(['auth:sanctum'])->group(function () {
 
     // Route::get('/reset_calculation/{id}', [ResetController::class, 'stock_calculation']);
@@ -117,7 +117,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/get_products', [MastersController::class, 'get_product']);
 
-    Route::get('products_migrate', [MastersController::class, 'importProducts']);
+    // Route::get('products_migrate', [MastersController::class, 'importProducts']);
     Route::get('opening_stock_migrate', [MastersController::class, 'importOpeningStock']);
     Route::get('financial_year_migrate', [MastersController::class, 'importFinancialYears']);
 
