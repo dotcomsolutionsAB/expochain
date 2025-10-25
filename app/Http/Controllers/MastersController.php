@@ -460,7 +460,8 @@ class MastersController extends Controller
         SubCategoryModel::truncate();
         ProductsModel::truncate();
 
-        $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
+        // $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
+        $url = 'https://expo.egsm.in/assets/custom/migrate/products.php?limit=500&offset=0';
 
         try {
             // Fetch data from the external URL
