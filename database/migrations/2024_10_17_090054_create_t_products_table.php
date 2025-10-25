@@ -28,6 +28,9 @@ return new class extends Migration
             $table->string('unit')->nullable();
             $table->string('hsn')->nullable();
             $table->float('tax')->nullable();
+            $table->float('si1')->nullable();
+            $table->float('si2')->nullable();
+            $table->float('pb_level')->nullable();
             $table->timestamps();
         });
     }
