@@ -448,6 +448,7 @@ class MastersController extends Controller
     //         'errors' => $errors,
     //     ], 200);
     // }
+
     public function importProducts()
     {
         ini_set('max_execution_time', 1200); // Increase execution time
@@ -562,13 +563,7 @@ class MastersController extends Controller
                     'hsn' => $record['hsn'] ?? 'N/A',
                     'tax' => $tax,
                     'created_at' => now(),
-                    'updated_at' => now(),
-                    'stock' => json_encode($stock), // Save stock as JSON
-                    'physical' => json_encode($physical), // Save physical as JSON
-                    'current_stock' => json_encode($currentStock), // Save current stock as JSON
-                    'current_stock_level' => $currentStockTotal,
-                    'log_user' => $record['log_user'],
-                    'log_date' => $record['log_date'],
+                    'updated_at' => now()
                 ];
 
                 // Add to batch
