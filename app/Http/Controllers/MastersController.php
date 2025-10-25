@@ -495,7 +495,8 @@ class MastersController extends Controller
                     if (!isset($existingGroups[$record['group_name']])) {
                         $group = GroupModel::create([
                             'name' => $record['group_name'],
-                            'company_id' => Auth::user()->company_id,
+                            // 'company_id' => Auth::user()->company_id,
+                            'company_id' => 1,
                             'serial_number' => random_int(10000, 99999),
                             'logo' => random_int(10000, 99999),
                         ]);
@@ -510,7 +511,8 @@ class MastersController extends Controller
                     if (!isset($existingCategories[$record['category']])) {
                         $category = CategoryModel::create([
                             'name' => $record['category'],
-                            'company_id' => Auth::user()->company_id,
+                            // 'company_id' => Auth::user()->company_id,
+                            'company_id' => 1,
                             'serial_number' => random_int(10000, 99999),
                         ]);
                         $existingCategories[$record['category']] = $category->id;
@@ -525,7 +527,8 @@ class MastersController extends Controller
                         $subCategory = SubCategoryModel::create([
                             'name' => $record['sub_category'],
                             'category_id' => $categoryId,
-                            'company_id' => Auth::user()->company_id,
+                            // 'company_id' => Auth::user()->company_id,
+                            'company_id' => 1,
                             'serial_number' => random_int(10000, 99999),
                         ]);
                         $existingSubCategories[$record['sub_category']] = $subCategory->id;
