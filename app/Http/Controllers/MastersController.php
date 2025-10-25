@@ -546,7 +546,10 @@ class MastersController extends Controller
                 $stockIndication = $record['stock_indication'] ?? [];
                 $si1 = isset($stockIndication['si1']) ? (double)$stockIndication['si1'] : 0;
                 $si2 = isset($stockIndication['si2']) ? (double)$stockIndication['si2'] : 0;
-                $pbLevel = $record['pb_level'] ?? null;
+                $pbLevel = isset($record['pb_level']) && in_array($record['pb_level'], ['si1', 'si2'])
+                ? $record['pb_level']
+                : null; // Set to NULL if not 'si1' or 'si2'
+
 
                 // Prepare product data
                 $productData = [
