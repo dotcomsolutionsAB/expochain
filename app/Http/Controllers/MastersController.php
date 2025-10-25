@@ -542,9 +542,9 @@ class MastersController extends Controller
                 $tax = is_numeric($record['tax']) ? $record['tax'] : 0;
 
                 // Parse stock_indication data
-                $stockIndication = $record['stock_indication'] ?? [];
-                $si1 = isset($stockIndication['si1']) ? (double)$stockIndication['si1'] : 0;
-                $si2 = isset($stockIndication['si2']) ? (double)$stockIndication['si2'] : 0;
+                // $stockIndication = $record['stock_indication'] ?? [];
+                // $si1 = isset($stockIndication['si1']) ? (double)$stockIndication['si1'] : 0;
+                // $si2 = isset($stockIndication['si2']) ? (double)$stockIndication['si2'] : 0;
                 $pbLevel = $record['pb_level'] ?? null;
 
                 // Prepare product data
