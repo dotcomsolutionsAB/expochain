@@ -607,6 +607,42 @@ class MastersController extends Controller
         ], 200);
     }
 
+    // Function to update stock indication values (si1, si2, pb_level)
+    public function stock_indication(Request $request)
+    {
+        // Validate the incoming request data
+        $request->validate([
+            'product_id' => 'required|exists:t_products,id', // Ensure the product exists
+            'si1' => 'required|numeric|min:0',               // Validate si1 value
+            'si2' => 'required|numeric|min:0',               // Validate si2 value
+            'pb_level' => 'required|in:si1,si2',          // Validate pb_level value
+        ]);
+
+        // Find the product to update
+        $product = ProductsModel::find($request->input('product_id'));
+
+        if ($product) {
+            // Update the product with the new si1, si2, and pb_level values
+            $product->update([
+                'si1' => $request->input('si1'),
+                'si2' => $request->input('si2'),
+                'pb_level' => $request->input('pb_level'),
+            ]);
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Product stock indication updated successfully!',
+                'data' => $product
+            ], 200);
+        }
+
+        return response()->json([
+            'code' => 404,
+            'success' => false,
+            'message' => 'Product not found!',
+        ], 404);
+    }
 
     // public function importOpeningStock()
     // {
