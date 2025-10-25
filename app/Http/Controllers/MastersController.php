@@ -308,6 +308,146 @@ class MastersController extends Controller
     }
 
     // import products
+    // public function importProducts()
+    // {
+    //     ini_set('max_execution_time', 1200); // Increase execution time
+    //     ini_set('memory_limit', '2048M');   // Increase memory limit
+
+    //     // Truncate all related tables
+    //     GroupModel::truncate();
+    //     CategoryModel::truncate();
+    //     SubCategoryModel::truncate();
+    //     ProductsModel::truncate();
+
+    //     $url = 'https://expo.egsm.in/assets/custom/migrate/products.php';
+
+    //     try {
+    //         // Fetch data from the external URL
+    //         $response = Http::get($url);
+    //     } catch (\Exception $e) {
+    //         return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data from the external source.'], 500);
+    //     }
+
+    //     if ($response->failed()) {
+    //         return response()->json(['code' => 500, 'success' => false, 'error' => 'Failed to fetch data.'], 500);
+    //     }
+
+    //     $data = $response->json('data');
+    //     if (empty($data)) {
+    //         return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
+    //     }
+
+    //     $batchSize = 1000; // Define a batch size for inserting products
+    //     $batchData = [];
+    //     $successfulInserts = 0;
+    //     $errors = [];
+
+    //     $existingGroups = [];
+    //     $existingCategories = [];
+    //     $existingSubCategories = [];
+
+    //     foreach ($data as $record) {
+    //         try {
+    //             // Handle and create Group
+    //             $groupId = null;
+    //             if (!empty($record['group_name'])) {
+    //                 if (!isset($existingGroups[$record['group_name']])) {
+    //                     $group = GroupModel::create([
+    //                         'name' => $record['group_name'],
+    //                         'company_id' => Auth::user()->company_id,
+    //                         'serial_number' => random_int(10000, 99999),
+    //                         'logo' => random_int(10000, 99999),
+    //                     ]);
+    //                     $existingGroups[$record['group_name']] = $group->id;
+    //                 }
+    //                 $groupId = $existingGroups[$record['group_name']];
+    //             }
+
+    //             // Handle and create Category
+    //             $categoryId = null;
+    //             if (!empty($record['category'])) {
+    //                 if (!isset($existingCategories[$record['category']])) {
+    //                     $category = CategoryModel::create([
+    //                         'name' => $record['category'],
+    //                         'company_id' => Auth::user()->company_id,
+    //                         'serial_number' => random_int(10000, 99999),
+    //                     ]);
+    //                     $existingCategories[$record['category']] = $category->id;
+    //                 }
+    //                 $categoryId = $existingCategories[$record['category']];
+    //             }
+
+    //             // Handle and create Sub-Category
+    //             $subCategoryId = null;
+    //             if (!empty($record['sub_category'])) {
+    //                 if (!isset($existingSubCategories[$record['sub_category']])) {
+    //                     $subCategory = SubCategoryModel::create([
+    //                         'name' => $record['sub_category'],
+    //                         'category_id' => $categoryId,
+    //                         'company_id' => Auth::user()->company_id,
+    //                         'serial_number' => random_int(10000, 99999),
+    //                     ]);
+    //                     $existingSubCategories[$record['sub_category']] = $subCategory->id;
+    //                 }
+    //                 $subCategoryId = $existingSubCategories[$record['sub_category']];
+    //             }
+
+    //             // Sanitize numeric fields
+    //             $costPrice = is_numeric($record['cost_price']) ? $record['cost_price'] : 0;
+    //             $salePrice = is_numeric($record['sale_price']) ? $record['sale_price'] : 0;
+    //             $tax = is_numeric($record['tax']) ? $record['tax'] : 0;
+
+    //             // Prepare product data
+    //             $productData = [
+    //                 'serial_number' => $record['sn'],
+    //                 'company_id' => Auth::user()->company_id,
+    //                 'name' => $record['name'],
+    //                 'alias' => $record['alias'],
+    //                 'description' => $record['description'] ?? 'No description available',
+    //                 'type' => $record['type'],
+    //                 'group' => $groupId,
+    //                 'category' => $categoryId,
+    //                 'sub_category' => $subCategoryId,
+    //                 'cost_price' => $costPrice,
+    //                 'sale_price' => $salePrice,
+    //                 'unit' => $record['unit'] ?? 'N/A',
+    //                 'hsn' => $record['hsn'] ?? 'N/A',
+    //                 'tax' => $tax,
+    //                 'created_at' => now(),
+    //                 'updated_at' => now(),
+    //             ];
+
+    //             // Add to batch
+    //             $batchData[] = $productData;
+
+    //             // Insert batch when batch size is reached
+    //             if (count($batchData) >= $batchSize) {
+    //                 ProductsModel::insert($batchData);
+    //                 $successfulInserts += count($batchData);
+    //                 $batchData = []; // Reset batch
+    //             }
+    //         } catch (\Exception $e) {
+    //             $errors[] = [
+    //                 'record' => $record,
+    //                 'error' => $e->getMessage(),
+    //             ];
+    //         }
+    //     }
+
+    //     // Insert remaining products in batch
+    //     if (!empty($batchData)) {
+    //         ProductsModel::insert($batchData);
+    //         $successfulInserts += count($batchData);
+    //     }
+
+    //     // Return response
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => "Product data import completed. Successful inserts: $successfulInserts.",
+    //         'errors' => $errors,
+    //     ], 200);
+    // }
     public function importProducts()
     {
         ini_set('max_execution_time', 1200); // Increase execution time
@@ -397,6 +537,13 @@ class MastersController extends Controller
                 $salePrice = is_numeric($record['sale_price']) ? $record['sale_price'] : 0;
                 $tax = is_numeric($record['tax']) ? $record['tax'] : 0;
 
+                // Parse stock and physical data (nested structure)
+                $stock = $record['stock'] ?? [];
+                $physical = $record['physical'] ?? [];
+
+                $currentStock = $record['current_stock'] ?? [];
+                $currentStockTotal = isset($currentStock['TOTAL']) ? $currentStock['TOTAL'] : 0;
+
                 // Prepare product data
                 $productData = [
                     'serial_number' => $record['sn'],
@@ -415,6 +562,12 @@ class MastersController extends Controller
                     'tax' => $tax,
                     'created_at' => now(),
                     'updated_at' => now(),
+                    'stock' => json_encode($stock), // Save stock as JSON
+                    'physical' => json_encode($physical), // Save physical as JSON
+                    'current_stock' => json_encode($currentStock), // Save current stock as JSON
+                    'current_stock_level' => $currentStockTotal,
+                    'log_user' => $record['log_user'],
+                    'log_date' => $record['log_date'],
                 ];
 
                 // Add to batch
@@ -448,6 +601,7 @@ class MastersController extends Controller
             'errors' => $errors,
         ], 200);
     }
+
 
     // public function importOpeningStock()
     // {
