@@ -547,7 +547,8 @@ class MastersController extends Controller
                 // Prepare product data
                 $productData = [
                     'serial_number' => $record['sn'],
-                    'company_id' => Auth::user()->company_id,
+                    // 'company_id' => Auth::user()->company_id,
+                    'company_id' => 1,
                     'name' => $record['name'],
                     'alias' => $record['alias'],
                     'description' => $record['description'] ?? 'No description available',
