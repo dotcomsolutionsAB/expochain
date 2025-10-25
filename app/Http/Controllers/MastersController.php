@@ -541,12 +541,11 @@ class MastersController extends Controller
                 $salePrice = is_numeric($record['sale_price']) ? $record['sale_price'] : 0;
                 $tax = is_numeric($record['tax']) ? $record['tax'] : 0;
 
-                // Parse stock and physical data (nested structure)
-                $stock = $record['stock'] ?? [];
-                $physical = $record['physical'] ?? [];
-
-                $currentStock = $record['current_stock'] ?? [];
-                $currentStockTotal = isset($currentStock['TOTAL']) ? $currentStock['TOTAL'] : 0;
+                // Extract stock_indication and pb_level
+                $stockIndication = $record['stock_indication'] ?? [];
+                $si1 = isset($stockIndication['si1']) ? $stockIndication['si1'] : null;
+                $si2 = isset($stockIndication['si2']) ? $stockIndication['si2'] : null;
+                $pbLevel = $record['pb_level'] ?? null;
 
                 // Prepare product data
                 $productData = [
@@ -565,6 +564,9 @@ class MastersController extends Controller
                     'unit' => $record['unit'] ?? 'N/A',
                     'hsn' => $record['hsn'] ?? 'N/A',
                     'tax' => $tax,
+                    'si1' => $si1, // Store stock_indication si1
+                    'si2' => $si2, // Store stock_indication si2
+                    'pb_level' => $pbLevel, // Store pb_level
                     'created_at' => now(),
                     'updated_at' => now()
                 ];
