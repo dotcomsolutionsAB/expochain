@@ -24,6 +24,9 @@ class ProductsModel extends Model
         'unit',
         'hsn',
         'tax',
+        'si1',
+        'si2',
+        'pb_level',
     ];
 
     public function groupRelation()
