@@ -34,11 +34,14 @@ use App\Http\Controllers\AdjustmentController;
 use App\Http\Controllers\VendorsController;
 use App\Http\Controllers\CustomerVisitController;
 use App\Http\Controllers\StatsController;
+use App\Http\Controllers\UserAccessController;
+use App\Http\Controllers\PurchaseBagController;
+use App\Http\Controllers\TransferBagController;
+
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
 // })->middleware('auth:sanctum');
-Route::post('/register', [UsersController::class, 'register']);
 
 Route::post('/login/{otp?}', [AuthController::class, 'login']);
 
@@ -56,12 +59,33 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/reset_calculation', [ResetController::class, 'stock_calculation']);
     Route::get('/reset_status', [ResetController::class, 'reset_queue_status']);
 
+    Route::post('/user/create', [UsersController::class, 'register']);
 
     Route::get('/user', [UsersController::class, 'view']);
-    Route::post('/fetch', [UsersController::class, 'view_user']);
-    Route::post('/edit/{id}', [UsersController::class, 'update']);
-    Route::delete('/delete/{id}', [UsersController::class, 'delete']);
-    
+    Route::post('/user/retrieve', [UsersController::class, 'view_user']);
+    Route::post('/user/update/{id}', [UsersController::class, 'update']);
+    Route::post('/user/delete/{id}', [UsersController::class, 'delete']);
+
+    Route::post('/user-access/create', [UserAccessController::class, 'store']);
+    Route::get('/user-access/retrieve', [UserAccessController::class, 'index']);
+    Route::get('/user-access/retrieve/{id}', [UserAccessController::class, 'permissionsByUser']);
+    Route::post('/user-access/update/{id}', [UserAccessController::class, 'update']);
+    Route::post('/user-access/delete', [UserAccessController::class, 'destroy']);
+
+    // routes/api.php
+
+    Route::get   ('/purchase-bag/retrieve',        [PurchaseBagController::class, 'index']);
+    Route::get   ('/purchase-bag/retrieve/{id}',   [PurchaseBagController::class, 'show']);
+    Route::post  ('/purchase-bag/create',        [PurchaseBagController::class, 'store']);
+    Route::post  ('/purchase-bag/update/{id}', [PurchaseBagController::class, 'update']);
+    Route::post  ('/purchase-bag/delete/{id}',   [PurchaseBagController::class, 'destroy']);
+
+    Route::get   ('/transfer-bag/retrieve',        [TransferBagController::class, 'index']);
+    Route::get   ('/transfer-bag/retrieve/{id}',   [TransferBagController::class, 'show']);
+    Route::post  ('/transfer-bag/create',          [TransferBagController::class, 'store']);
+    Route::post  ('/transfer-bag/update/{id}',     [TransferBagController::class, 'update']);
+    Route::post  ('/transfer-bag/delete/{id}',     [TransferBagController::class, 'destroy']);
+
     Route::get('/users_migrate', [UsersController::class, 'get_migrate']);
 
     Route::post('/client', [ClientsController::class, 'add_clients']);

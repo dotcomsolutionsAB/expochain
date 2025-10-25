@@ -12,27 +12,36 @@ use Auth;
 
 class UsersController extends Controller
 {
-    //
     //register user
     public function register(Request $request)
     {
+        // Must be logged in
+        $authUser = Auth::user();
+        if (!$authUser) {
+            return response()->json([
+                'code' => 401,
+                'success' => false,
+                'message' => 'Unauthorized. Please log in.'
+            ], 401);
+        }
+
+        $companyId = (int) $authUser->company_id;
+
+        // Validate input (role must be admin or user)
         $request->validate([
             'name' => 'required|string',
-            'company_id' => 'required|integer',
             'email' => [
                 'required',
                 'email',
-                function ($attribute, $value, $fail) use ($request) {
-                    // Check if the combination of email and contact_id already exists
-                    $exists = User::where('email', $value)
-                                            ->where('company_id', $request->input('company_id'))
-                                            ->exists();
+                function ($attribute, $value, $fail) use ($companyId) {
+                    $exists = User::where('email', strtolower($value))
+                        ->where('company_id', $companyId)
+                        ->exists();
                     if ($exists) {
                         $fail('The combination of email and company ID must be unique.');
                     }
                 },
             ],
-            // 'mobile' => 'required|string',
             'mobile' => [
                 'required',
                 'string',
@@ -42,34 +51,51 @@ class UsersController extends Controller
             'username' => [
                 'nullable',
                 'string',
-                function ($attribute, $value, $fail) use ($request) {
-                    $exists = \App\Models\User::where('username', $value)
-                        ->where('company_id', $request->input('company_id'))
+                function ($attribute, $value, $fail) use ($companyId) {
+                    if (!$value) return;
+                    $exists = User::where('username', strtolower($value))
+                        ->where('company_id', $companyId)
                         ->exists();
                     if ($exists) {
                         $fail('The combination of username and company ID must be unique.');
                     }
                 },
-            ], // Allow username to be nullable
+            ],
+            'role' => 'required|in:admin,user',
         ]);
 
-         // If username is null, set email as the username
-        $username = $request->input('username') ?? strtolower($request->input('email'));
+        // Normalize role & username
+        $role = strtolower($request->input('role'));
+        $username = $request->input('username') ? strtolower($request->input('username')) : strtolower($request->input('email'));
 
+        // Optional safety: only admins can create admin users
+        if ($role === 'admin' && strtolower((string) $authUser->role) !== 'admin') {
+            return response()->json([
+                'code' => 403,
+                'success' => false,
+                'message' => 'Only admins can create admin users.'
+            ], 403);
+        }
+
+        // Create user
         $register_user = User::create([
-            'name' => $request->input('name'),
-            'email' => strtolower($request->input('email')),
-            'password' => bcrypt($request->input('password')),
-            'mobile' => $request->input('mobile'),
-            'company_id' => $request->input('company_id'),
-            'username' => $username,
+            'name'        => $request->input('name'),
+            'email'       => strtolower($request->input('email')),
+            'password'    => bcrypt($request->input('password')),
+            'mobile'      => $request->input('mobile'),
+            'company_id'  => $companyId,
+            'username'    => $username,
+            'role'        => $role,
         ]);
-        
-        unset($register_user['id'], $register_user['created_at'], $register_user['updated_at']);
 
-        return isset($register_user) && $register_user !== null
-        ? response()->json(['code' => 201,'success' => true, 'User registered successfully!', 'data' => $register_user], 201)
-        : response()->json(['code' => 400,'success' => false, 'Failed to register user'], 400);
+        $data = $register_user->only(['name','email','mobile','username','company_id','role']);
+
+        return response()->json([
+            'code' => 201,
+            'success' => true,
+            'message' => 'User registered successfully!',
+            'data' => $data
+        ], 201);
     }
 
     //view
@@ -102,19 +128,32 @@ class UsersController extends Controller
     // view user's record
     public function view_user(Request $request)
     {
-        // Get filter inputs
-        $name = $request->input('name'); // Filter by name
-        $email = $request->input('email'); // Filter by email
-        $mobile = $request->input('mobile'); // Filter by mobile
-        $role = $request->input('role'); // Filter by role
-        $limit = $request->input('limit', 10); // Default limit to 10
-        $offset = $request->input('offset', 0); // Default offset to 0
+        // Get authenticated user
+        $authUser = Auth::user();
 
-        // Build the query
-        $query = User::select('name', 'email', 'mobile', 'role')
-            ->where('id', Auth::id()); // Ensure the user is authorized
+        if (!$authUser) {
+            return response()->json([
+                'code' => 401,
+                'success' => false,
+                'message' => 'Unauthorized. Please log in.'
+            ], 401);
+        }
 
-        // Apply filters
+        $companyId = (int) $authUser->company_id;
+
+        // Filters
+        $name   = $request->input('name');
+        $email  = $request->input('email');
+        $mobile = $request->input('mobile');
+        $role   = $request->input('role');
+        $limit  = (int) $request->input('limit', 10);
+        $offset = (int) $request->input('offset', 0);
+
+        // Base query: same company only
+        $query = User::select('id', 'username', 'name', 'email', 'mobile', 'role')
+            ->where('company_id', $companyId);
+
+        // Apply filters dynamically
         if ($name) {
             $query->where('name', 'LIKE', '%' . $name . '%');
         }
@@ -128,61 +167,154 @@ class UsersController extends Controller
             $query->where('role', $role);
         }
 
-        // Apply limit and offset
-        $query->offset($offset)->limit($limit);
+        // Clone query to get total count
+        $totalCount = $query->count();
 
-        // Execute the query
-        $get_records = $query->get();
+        // Apply pagination
+        $users = $query->offset($offset)->limit($limit)->get();
 
-        // Return the response
-        return $get_records->isNotEmpty()
-            ? response()->json([
+        // Return formatted JSON response
+        if ($users->isNotEmpty()) {
+            return response()->json([
                 'code' => 200,
                 'success' => true,
-                'message' => 'Fetch data successfully!',
-                'data' => $get_records,
-                'count' => $get_records->count(),
-            ], 200)
-            : response()->json([
-                'code' => 404,
-                'success' => false,
-                'message' => 'No records found!',
-            ], 404);
+                'message' => 'Fetched users successfully!',
+                'data' => $users,
+                'count' => $users->count(),
+                'total_records' => $totalCount,
+            ], 200);
+        }
+
+        return response()->json([
+            'code' => 404,
+            'success' => false,
+            'message' => 'No records found!',
+            'data' => [],
+        ], 404);
     }
 
     // update
     public function update(Request $request, $id)
     {
+        // Get logged-in user
+        $authUser = Auth::user();
+        if (!$authUser) {
+            return response()->json([
+                'code' => 401,
+                'success' => false,
+                'message' => 'Unauthorized. Please log in.'
+            ], 401);
+        }
+
+        // Find the user in the same company
+        $user = User::where('id', $id)
+            ->where('company_id', $authUser->company_id)
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'User not found or not part of your company.'
+            ], 404);
+        }
+
+        // Validation
         $request->validate([
-            'name' => 'required|string',
-            'mobile' => 'required|string',
-            'password' => 'required|string',
+            'name'     => 'required|string',
+            'email'    => 'required|email',
+            'mobile'   => 'required|string|regex:/^\+?\d{10,19}$/',
+            'role'     => 'required|in:admin,user',
+            'password' => 'nullable|string|min:6',
+            'username' => [
+                'nullable',
+                'string',
+                function ($attribute, $value, $fail) use ($authUser, $id) {
+                    if (!$value) return;
+
+                    $exists = User::where('username', strtolower($value))
+                        ->where('company_id', $authUser->company_id)
+                        ->where('id', '!=', $id) // exclude current user
+                        ->exists();
+
+                    if ($exists) {
+                        $fail('This username is already taken within your company.');
+                    }
+                },
+            ],
         ]);
 
-        $update_user = User::where('id', $id)
-        ->update([
-            'name' => $request->input('name'),
-            'email' => strtolower($request->input('email')),
-            'password' => bcrypt($request->input('password')),
-            'mobile' => $request->input('mobile'),
-        ]);
-        
-        return $update_user
-        ? response()->json(['code' => 200,'success' => true, 'User record updated successfully!', 'data' => $update_user], 200)
-        : response()->json(['code' => 204,'success' => false, 'No changes detected'], 204);
+        // Prepare update data
+        $updateData = [
+            'name'     => $request->input('name'),
+            'email'    => strtolower($request->input('email')),
+            'mobile'   => $request->input('mobile'),
+            'role'     => strtolower($request->input('role')),
+        ];
+
+        // Handle username if provided
+        if ($request->filled('username')) {
+            $updateData['username'] = strtolower($request->input('username'));
+        }
+
+        // Only update password if provided (non-empty)
+        if ($request->filled('password')) {
+            $updateData['password'] = bcrypt($request->input('password'));
+        }
+
+        // Perform update
+        $updated = $user->update($updateData);
+
+        return $updated
+            ? response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'User record updated successfully!',
+                'data' => $user->only(['id', 'name', 'email', 'mobile', 'username', 'role']),
+            ], 200)
+            : response()->json([
+                'code' => 204,
+                'success' => false,
+                'message' => 'No changes detected.',
+            ], 204);
     }
 
     // delete
     public function delete($id)
     {
-        // Delete the client
-        $delete_user = User::where('id', $id)->delete();
+        // Get logged-in user
+        $authUser = Auth::user();
+        if (!$authUser) {
+            return response()->json([
+                'code' => 401,
+                'success' => false,
+                'message' => 'Unauthorized. Please log in.'
+            ], 401);
+        }
 
-        // Return success response if deletion was successful
-        return $delete_user
-        ? response()->json(['code' => 204,'success' => true, 'message' => 'Delete User record successfully!'], 204)
-        : response()->json(['code' => 400,'success' => false, 'message' => 'Sorry, User record not found'], 400);
+        // Find the user in the same company
+        $user = User::where('id', $id)
+            ->where('company_id', $authUser->company_id)
+            ->first();
+
+        if (!$user) {
+            return response()->json([
+                'code' => 404,
+                'success' => false,
+                'message' => 'User not found or not part of your company.'
+            ], 404);
+        }
+
+        // Delete the record
+        $user->delete();
+
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'User record deleted successfully!'
+        ], 200);
     }
+
 
     // migrate from old
     public function get_migrate()
