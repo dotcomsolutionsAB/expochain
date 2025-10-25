@@ -478,7 +478,7 @@ class MastersController extends Controller
             return response()->json(['code' => 404, 'success' => false, 'message' => 'No data found'], 404);
         }
 
-        $batchSize = 500; // Define a batch size for inserting products
+        $batchSize = 200; // Define a batch size for inserting products
         $batchData = [];
         $successfulInserts = 0;
         $errors = [];
