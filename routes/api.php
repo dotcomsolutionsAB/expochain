@@ -110,6 +110,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_supplier_address/{id}', [SuppliersController::class, 'update_supplier_address']);
     Route::post('/update_supplier_gst/{id}', [SuppliersController::class, 'update_supplier_gst']);
 
+    Route::get('/alias', [MastersController::class, 'getDistinctAliases']);
     Route::post('/products', [MastersController::class, 'add_products']);
     Route::post('/products/stock_indication', [MastersController::class, 'stock_indication']);
     Route::post('/get_products/{id?}', [MastersController::class, 'view_products']);

@@ -607,6 +607,27 @@ class MastersController extends Controller
         ], 200);
     }
 
+    // Function to get distinct aliases from t_products, sorted and filtered by search parameter
+    public function getDistinctAliases(Request $request)
+    {
+        // Get the search parameter (if provided)
+        $search = $request->input('search', '');
+
+        // Fetch distinct aliases from the products table, optionally filtered by search and ordered in ascending order
+        $distinctAliases = ProductsModel::select('alias')
+            ->distinct()
+            ->where('alias', 'like', '%' . $search . '%')  // Filter based on search parameter
+            ->orderBy('alias', 'asc')                      // Sort by alias in ascending order
+            ->get();
+
+        return response()->json([
+            'code' => 200,
+            'status' => true,
+            'message' => 'Distinct aliases fetched successfully!',
+            'data' => $distinctAliases,
+        ], 200);
+    }
+
     // Function to update stock indication values (si1, si2, pb_level)
     public function stock_indication(Request $request)
     {
