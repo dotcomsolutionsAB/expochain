@@ -108,7 +108,7 @@ class MastersController extends Controller
 
         // 🔹 **Fetch Single Product by ID**
         if ($id) {
-            $product = $query->where('id', $id)->first();
+            $product = $query->where('serial_number', $id)->first();
             if (!$product) {
                 return response()->json([
                     'code' => 404,
