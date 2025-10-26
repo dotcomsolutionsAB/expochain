@@ -397,6 +397,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
         Route::get('/product_profit_fy', [HelperController::class, 'getProductWiseYearlySalesSummary']);
 
+        Route::get('/product_profit_fy_export', [HelperController::class, 'exportProductWiseYearlySalesSummaryExcel']);
+
         Route::get('/client_profit_fy', [HelperController::class, 'getClientWiseYearlySalesSummary']);
         
         Route::get('/client_profit_fy_export', [HelperController::class, 'exportClientWiseYearlySalesSummaryExcel']);

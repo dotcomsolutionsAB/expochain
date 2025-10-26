@@ -903,6 +903,252 @@ class HelperController extends Controller
         }
     }
 
+    public function exportProductWiseYearlySalesSummaryExcel(Request $request)
+    {
+        try {
+            $companyId = auth()->user()->company_id;
+
+            // ---- Inputs (same options as JSON endpoint) ----
+            $searchKey = (string) $request->input('search_key', '');
+            $sortByRaw = (string) $request->input('sort_by', 'name');
+            $sortDir   = strtolower((string) $request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+            // Years (comma-separated IDs); default to latest 4 FYs
+            $providedIds = collect(explode(',', (string)$request->input('years', '')))
+                ->filter(fn($id) => is_numeric(trim($id)))
+                ->map(fn($id) => (int) trim($id))
+                ->unique()
+                ->values();
+
+            $fysQuery = FinancialYearModel::query()->where('company_id', $companyId);
+            if ($providedIds->isNotEmpty()) {
+                $fysQuery->whereIn('id', $providedIds);
+            } else {
+                $fysQuery->orderBy('start_date', 'desc')->limit(4);
+            }
+            $fys = $fysQuery->get()->sortBy('start_date')->values();
+
+            if ($fys->isEmpty()) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'No financial years found for the given IDs.',
+                ], 404);
+            }
+
+            // ---- FY labels (YY-YY), ranges ----
+            $selectedFyIds   = $fys->pluck('id')->all();
+            $fyLabelsOrdered = [];
+            $fyIdToLabel     = [];
+            $minStart = null; $maxEnd = null;
+
+            foreach ($fys as $fy) {
+                $start = $fy->start_date instanceof Carbon ? $fy->start_date : Carbon::parse($fy->start_date);
+                $end   = $fy->end_date   instanceof Carbon ? $fy->end_date   : Carbon::parse($fy->end_date);
+
+                $sy = (int)$start->format('y');
+                $ey = (int)$end->format('y');
+                $label = sprintf('%02d-%02d', $sy, $ey);
+
+                $fyLabelsOrdered[]    = $label;
+                $fyIdToLabel[$fy->id] = $label;
+
+                $minStart = $minStart ? $minStart->min($start) : $start;
+                $maxEnd   = $maxEnd   ? $maxEnd->max($end)     : $end;
+            }
+
+            // ---- Aggregate product totals by FY (date-range join) ----
+            $rows = DB::table('t_sales_invoice as si')
+                ->join('t_sales_invoice_products as sip', function ($j) use ($companyId) {
+                    $j->on('sip.sales_invoice_id', '=', 'si.id')
+                    ->where('sip.company_id', '=', $companyId);
+                })
+                ->join('t_financial_year as fy', function ($j) {
+                    $j->on('si.sales_invoice_date', '>=', 'fy.start_date')
+                    ->on('si.sales_invoice_date', '<=', 'fy.end_date');
+                })
+                ->where('si.company_id', $companyId)
+                ->whereIn('fy.id', $selectedFyIds)
+                ->whereBetween('si.sales_invoice_date', [$minStart, $maxEnd])
+                ->when($searchKey !== '', function ($q) use ($searchKey) {
+                    $q->where('sip.product_name', 'like', '%'.$searchKey.'%');
+                })
+                ->groupBy('sip.product_id', 'sip.product_name', 'fy.id')
+                ->select([
+                    'sip.product_id',
+                    'sip.product_name',
+                    'fy.id as fy_id',
+                    DB::raw('ROUND(COALESCE(SUM(sip.amount), 0), 2) as total_amount'),
+                    DB::raw('ROUND(COALESCE(SUM(sip.profit), 0), 2) as total_profit'),
+                ])
+                ->get();
+
+            // ---- Pivot per product ----
+            // product_id => ['name'=>..., 'amounts'=>[label=>float], 'profits'=>[label=>float]]
+            $byProduct = [];
+            foreach ($rows as $r) {
+                $pid = (int)$r->product_id;
+                $lbl = $fyIdToLabel[$r->fy_id] ?? null;
+                if ($lbl === null) continue;
+
+                if (!isset($byProduct[$pid])) {
+                    $byProduct[$pid] = [
+                        'name'    => $r->product_name ?: 'Unknown',
+                        'amounts' => [],
+                        'profits' => [],
+                    ];
+                }
+                $byProduct[$pid]['amounts'][$lbl] = (float)$r->total_amount;
+                $byProduct[$pid]['profits'][$lbl] = (float)$r->total_profit;
+            }
+
+            // ---- Sorting (name / amount FY / profit FY / percentage) ----
+            $norm = strtolower(trim($sortByRaw));
+            $norm = str_replace(['%20','%2F'], ' ', $norm);
+            $norm = preg_replace('/\s+/', ' ', $norm);
+
+            $sortType = 'name';
+            $sortLabel = null;
+            if (in_array($norm, ['percentage','percentage (amount)','percentage_amount','pct','growth'], true)) {
+                $sortType = 'percentage';
+            } elseif (preg_match('/^(amount|profit)[\s:_-]*([0-9]{2}-[0-9]{2})$/i', $norm, $m)) {
+                $sortType = strtolower($m[1]);  // amount|profit
+                $sortLabel = $m[2];              // YY-YY
+            } elseif (in_array($norm, ['amount','profit'], true)) {
+                $sortType = $norm;
+                $sortLabel = end($fyLabelsOrdered);
+            } elseif (in_array($norm, ['name','product','product_name'], true)) {
+                $sortType = 'name';
+            } else {
+                if (preg_match('/^(amount|profit)\s+([0-9]{2}-[0-9]{2})$/i', $sortByRaw, $m2)) {
+                    $sortType  = strtolower($m2[1]);
+                    $sortLabel = $m2[2];
+                } else {
+                    $sortType  = 'name';
+                }
+            }
+
+            $latestLabel = end($fyLabelsOrdered);
+            $prevLabel   = count($fyLabelsOrdered) >= 2 ? $fyLabelsOrdered[count($fyLabelsOrdered)-2] : null;
+
+            $list = [];
+            foreach ($byProduct as $pid => $data) {
+                $keyVal = null;
+                if ($sortType === 'name') {
+                    $keyVal = strtolower($data['name']);
+                } elseif ($sortType === 'amount') {
+                    $label  = $sortLabel ?: $latestLabel;
+                    $keyVal = (float)($data['amounts'][$label] ?? 0.0);
+                } elseif ($sortType === 'profit') {
+                    $label  = $sortLabel ?: $latestLabel;
+                    $keyVal = (float)($data['profits'][$label] ?? 0.0);
+                } elseif ($sortType === 'percentage') {
+                    if ($prevLabel) {
+                        $curr = (float)($data['amounts'][$latestLabel] ?? 0.0);
+                        $prev = (float)($data['amounts'][$prevLabel]   ?? 0.0);
+                        if ($prev == 0.0 && $curr > 0.0)       $keyVal = 100.0;
+                        elseif ($prev > 0.0 && $curr == 0.0)   $keyVal = -100.0;
+                        elseif ($prev > 0.0)                   $keyVal = (($curr - $prev) / $prev) * 100.0;
+                        else                                    $keyVal = 0.0;
+                    } else {
+                        $keyVal = 0.0;
+                    }
+                }
+
+                $list[] = ['data' => $data, 'key' => $keyVal];
+            }
+
+            usort($list, function ($a, $b) use ($sortDir) {
+                if ($a['key'] == $b['key']) return strcasecmp($a['data']['name'], $b['data']['name']);
+                return $sortDir === 'asc'
+                    ? (($a['key'] < $b['key']) ? -1 : 1)
+                    : (($a['key'] > $b['key']) ? -1 : 1);
+            });
+
+            // ---- Build Excel headings + rows (percentage number, no “%”) ----
+            $headings = ['SN', 'Name'];
+            foreach ($fyLabelsOrdered as $lbl) {
+                $headings[] = "Amount {$lbl}";
+                $headings[] = "Profit {$lbl}";
+            }
+            $headings[] = 'Percentage (Amount)';
+
+            $fmt2 = fn($v) => round((float)$v, 2);
+
+            $excelRows = [];
+            $sn = 1;
+            foreach ($list as $item) {
+                $data = $item['data'];
+                $row = [$sn++, $data['name']];
+                foreach ($fyLabelsOrdered as $lbl) {
+                    $row[] = $fmt2($data['amounts'][$lbl] ?? 0.0);
+                    $row[] = $fmt2($data['profits'][$lbl] ?? 0.0);
+                }
+                // percentage latest vs previous
+                $pct = 0.0;
+                if ($prevLabel) {
+                    $curr = (float)($data['amounts'][$latestLabel] ?? 0.0);
+                    $prev = (float)($data['amounts'][$prevLabel]   ?? 0.0);
+                    if ($prev == 0.0 && $curr > 0.0)       $pct = 100.0;
+                    elseif ($prev > 0.0 && $curr == 0.0)   $pct = -100.0;
+                    elseif ($prev > 0.0)                   $pct = (($curr - $prev) / $prev) * 100.0;
+                }
+                $row[] = $fmt2($pct); // numeric, no symbol
+                $excelRows[] = $row;
+            }
+
+            // ---- Save to storage/app/public/uploads & return URL ----
+            $disk = 'public';
+            $directory = 'uploads';
+            if (!Storage::disk($disk)->exists($directory)) {
+                Storage::disk($disk)->makeDirectory($directory);
+            }
+
+            $fileName = 'ProductWise_Yearly_Summary_' . now()->format('Ymd_His') . '.xlsx';
+            $relativePath = $directory . '/' . $fileName;
+
+            // Column styling indices
+            $percentageColIndex = 2 + (count($fyLabelsOrdered) * 2) + 1; // 1-based
+            $numericCols = [];
+            for ($i = 3; $i < $percentageColIndex; $i++) $numericCols[] = $i; // amount/profit cols
+            $numericCols[] = $percentageColIndex; // percentage col
+
+            $stored = Excel::store(
+                new ClientWiseYearlySalesSummaryExport($excelRows, $headings, $percentageColIndex, $numericCols),
+                $relativePath,
+                $disk
+            );
+
+            if (!$stored) {
+                return response()->json([
+                    'code' => 500,
+                    'success' => false,
+                    'message' => 'Excel could not be saved.',
+                ], 500);
+            }
+
+            $publicUrl = Storage::disk($disk)->url($relativePath);
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Excel exported successfully!',
+                'data' => [
+                    'url'       => asset($publicUrl),
+                    'file_name' => $fileName,
+                ],
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong while exporting product-wise Excel.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function getClientWiseYearlySalesSummary(Request $request)
     {
         try {
