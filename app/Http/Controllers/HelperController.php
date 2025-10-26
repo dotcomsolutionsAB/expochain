@@ -716,100 +716,113 @@ class HelperController extends Controller
         try {
             $companyId = auth()->user()->company_id;
 
-            // 1️⃣ Accept comma-separated FY IDs (e.g. ?years=3,4,5)
-            $yearIds = $request->input('years', '');
-            $yearIdsArray = collect(explode(',', $yearIds))
+            // 1) Parse comma-separated FY IDs (?years=3,4,5,6)
+            $providedIds = collect(explode(',', (string)$request->input('years', '')))
                 ->filter(fn($id) => is_numeric(trim($id)))
                 ->map(fn($id) => (int) trim($id))
                 ->unique()
                 ->values();
 
-            // 2️⃣ Fetch financial years
+            // 2) Load FYs
             $fysQuery = FinancialYearModel::query()
                 ->where('company_id', $companyId);
 
-            if ($yearIdsArray->isNotEmpty()) {
-                $fysQuery->whereIn('id', $yearIdsArray);
+            if ($providedIds->isNotEmpty()) {
+                $fysQuery->whereIn('id', $providedIds);
             } else {
+                // Default: latest 4 FYs
                 $fysQuery->orderBy('start_date', 'desc')->limit(4);
             }
 
+            // Ensure ascending order (oldest -> newest)
             $fys = $fysQuery->get()->sortBy('start_date')->values();
 
             if ($fys->isEmpty()) {
                 return response()->json([
                     'code' => 404,
                     'success' => false,
-                    'message' => 'No financial years found for the given IDs.',
+                    'message' => 'No financial years found for the given IDs.'
                 ], 404);
             }
 
-            // 3️⃣ Build FY label map (like 21-22)
-            $fyLabels = [];
-            $ranges = [];
+            // 3) Build FY metadata and label map
+            //    Labels like "21-22" derived from FY start/end
+            $selectedFyIds = $fys->pluck('id')->all(); // used in WHERE IN for join
+            $fyLabelsOrdered = [];                     // ordered oldest -> newest
+            $fyIdToLabel = [];                         // id => "YY-YY"
+            $minStart = null;
+            $maxEnd   = null;
+
             foreach ($fys as $fy) {
                 $start = $fy->start_date instanceof Carbon ? $fy->start_date : Carbon::parse($fy->start_date);
                 $end   = $fy->end_date   instanceof Carbon ? $fy->end_date   : Carbon::parse($fy->end_date);
+
                 $sy = (int)$start->format('y');
                 $ey = (int)$end->format('y');
                 $label = sprintf('%02d-%02d', $sy, $ey);
-                $fyLabels[$fy->id] = $label;
-                $ranges[$fy->id] = [$start, $end];
+
+                $fyLabelsOrdered[] = $label;
+                $fyIdToLabel[$fy->id] = $label;
+
+                $minStart = $minStart ? $minStart->min($start) : $start;
+                $maxEnd   = $maxEnd   ? $maxEnd->max($end)     : $end;
             }
 
-            $minStart = collect($ranges)->min(fn($r) => $r[0]);
-            $maxEnd   = collect($ranges)->max(fn($r) => $r[1]);
-
-            // 4️⃣ Query: client-wise yearly totals
+            // 4) Aggregate by joining invoices into the selected FY ranges
+            //    This ensures only chosen FYs are included.
             $rows = DB::table('t_sales_invoice as si')
                 ->join('t_sales_invoice_products as sip', 'sip.sales_invoice_id', '=', 'si.id')
                 ->join('t_clients as c', 'c.id', '=', 'si.client_id')
+                ->join('t_financial_year as fy', function ($j) {
+                    // Match invoice date inside FY range
+                    $j->on('si.sales_invoice_date', '>=', 'fy.start_date')
+                    ->on('si.sales_invoice_date', '<=', 'fy.end_date');
+                })
                 ->where('si.company_id', $companyId)
+                ->whereIn('fy.id', $selectedFyIds)
+                // Optional overall boundary (fast filter)
                 ->whereBetween('si.sales_invoice_date', [$minStart, $maxEnd])
-                ->select(
+                ->groupBy('si.client_id', 'c.name', 'fy.id')
+                ->select([
                     'si.client_id',
                     'c.name as client_name',
-                    DB::raw("
-                        CASE
-                            WHEN MONTH(si.sales_invoice_date) >= 4
-                                THEN CONCAT(
-                                    LPAD(MOD(YEAR(si.sales_invoice_date), 100), 2, '0'),
-                                    '-',
-                                    LPAD(MOD(YEAR(si.sales_invoice_date) + 1, 100), 2, '0')
-                                )
-                            ELSE CONCAT(
-                                    LPAD(MOD(YEAR(si.sales_invoice_date) - 1, 100), 2, '0'),
-                                    '-',
-                                    LPAD(MOD(YEAR(si.sales_invoice_date), 100), 2, '0')
-                                )
-                        END AS fy_label
-                    "),
-                    DB::raw('COALESCE(SUM(sip.amount), 0) as total_amount'),
-                    DB::raw('COALESCE(SUM(sip.profit), 0) as total_profit')
-                )
-                ->groupBy('si.client_id', 'c.name', DB::raw('fy_label'))
+                    'fy.id as fy_id',
+                    // ROUND in SQL to avoid float tails; COALESCE to avoid nulls
+                    DB::raw('ROUND(COALESCE(SUM(sip.amount), 0), 2) as total_amount'),
+                    DB::raw('ROUND(COALESCE(SUM(sip.profit), 0), 2) as total_profit'),
+                ])
                 ->get();
 
-            // 5️⃣ Pivot data per client
-            $byClient = [];
+            // 5) Pivot per client -> FY label (store as floats for math, format later)
+            $byClient = []; // client_id => ['name'=>..., 'amounts'=>[label=>float], 'profits'=>[label=>float]]
             foreach ($rows as $r) {
                 $cid = (int)$r->client_id;
+                $label = $fyIdToLabel[$r->fy_id] ?? null;
+                if ($label === null) continue; // safety
+
                 if (!isset($byClient[$cid])) {
                     $byClient[$cid] = [
-                        'name' => $r->client_name ?: 'Unknown',
+                        'name'    => $r->client_name ?: 'Unknown',
                         'amounts' => [],
                         'profits' => [],
                     ];
                 }
-                $byClient[$cid]['amounts'][$r->fy_label] = (float)$r->total_amount;
-                $byClient[$cid]['profits'][$r->fy_label] = (float)$r->total_profit;
+                // Cast to float for percentage math
+                $byClient[$cid]['amounts'][$label] = (float)$r->total_amount;
+                $byClient[$cid]['profits'][$label] = (float)$r->total_profit;
             }
 
-            // 6️⃣ Sort clients alphabetically
+            // 6) Sort clients alphabetically
             uasort($byClient, fn($a, $b) => strcasecmp($a['name'], $b['name']));
 
-            // 7️⃣ Build final table
-            $fyLabelsOrdered = array_values($fyLabels);
+            // Helper: format to "max 2 decimals" as string (trim trailing zeros)
+            $fmt2 = function ($v) {
+                $s = number_format((float)$v, 2, '.', '');  // e.g. "1234.50"
+                $s = rtrim(rtrim($s, '0'), '.');           // -> "1234.5" or "1234"
+                return $s;
+            };
+
+            // 7) Build final rows
             $latestLabel = end($fyLabelsOrdered);
             $prevLabel   = count($fyLabelsOrdered) >= 2 ? $fyLabelsOrdered[count($fyLabelsOrdered)-2] : null;
 
@@ -821,51 +834,48 @@ class HelperController extends Controller
                     'name' => $data['name'],
                 ];
 
+                // Add Amount/Profit columns (oldest -> newest)
                 foreach ($fyLabelsOrdered as $lbl) {
-                    $amt = round($data['amounts'][$lbl] ?? 0.0, 2);
-                    $prf = round($data['profits'][$lbl] ?? 0.0, 2);
-                    $row["Amount {$lbl}"] = $amt;
-                    $row["Profit {$lbl}"] = $prf;
+                    $amt = $data['amounts'][$lbl] ?? 0.0;
+                    $prf = $data['profits'][$lbl] ?? 0.0;
+                    $row["Amount {$lbl}"] = $fmt2($amt); // strings with max 2 dp
+                    $row["Profit {$lbl}"] = $fmt2($prf);
                 }
 
-                // 8️⃣ Calculate percentage (Amount)
+                // Percentage (Amount): latest vs previous
                 $pct = '0 %';
                 if ($prevLabel) {
-                    $curr = $data['amounts'][$latestLabel] ?? 0.0;
-                    $prev = $data['amounts'][$prevLabel] ?? 0.0;
-
-                    if ($prev == 0 && $curr > 0) {
-                        $pct = '100 %';
-                    } elseif ($prev > 0 && $curr == 0) {
-                        $pct = '-100 %';
-                    } elseif ($prev > 0) {
+                    $curr = (float)($data['amounts'][$latestLabel] ?? 0.0);
+                    $prev = (float)($data['amounts'][$prevLabel]   ?? 0.0);
+                    if ($prev == 0.0 && $curr > 0.0)       $pct = '100 %';
+                    elseif ($prev > 0.0 && $curr == 0.0)   $pct = '-100 %';
+                    elseif ($prev > 0.0) {
                         $growth = (($curr - $prev) / $prev) * 100;
-                        $pct = round($growth, 2) . ' %';
+                        $pct = $fmt2($growth) . ' %'; // e.g. "-6 %", "12.5 %"
                     }
                 }
-
                 $row['Percentage (Amount)'] = $pct;
+
                 $table[] = $row;
             }
 
-            // 9️⃣ Return response
             return response()->json([
-                'code' => 200,
+                'code'    => 200,
                 'success' => true,
                 'message' => 'Client-wise yearly sales summary fetched successfully!',
-                'data' => [
-                    'years' => $fyLabelsOrdered,  // ["21-22","22-23","23-24","24-25"]
-                    'rows'  => $table,
+                'data'    => [
+                    'years' => $fyLabelsOrdered,     // e.g. ["21-22","22-23","23-24","24-25"]
+                    'rows'  => $table,               // wide table rows
                     'count' => count($table),
                 ],
-            ]);
+            ], 200);
 
         } catch (\Throwable $e) {
             return response()->json([
-                'code' => 500,
+                'code'    => 500,
                 'success' => false,
                 'message' => 'Something went wrong while fetching yearly summary.',
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
