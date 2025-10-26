@@ -943,210 +943,229 @@ class HelperController extends Controller
 
     public function exportClientWiseYearlySalesSummaryExcel(Request $request)
     {
-        $companyId = auth()->user()->company_id;
+        try {
+            $companyId = auth()->user()->company_id;
 
-        // ----------- Pull & validate financial years (same as API) -----------
-        $providedIds = collect(explode(',', (string)$request->input('years', '')))
-            ->filter(fn($id) => is_numeric(trim($id)))
-            ->map(fn($id) => (int) trim($id))
-            ->unique()
-            ->values();
+            // --- Step 1: Get Financial Years ---
+            $providedIds = collect(explode(',', (string)$request->input('years', '')))
+                ->filter(fn($id) => is_numeric(trim($id)))
+                ->map(fn($id) => (int) trim($id))
+                ->unique()
+                ->values();
 
-        $fysQuery = FinancialYearModel::query()->where('company_id', $companyId);
-        if ($providedIds->isNotEmpty()) {
-            $fysQuery->whereIn('id', $providedIds);
-        } else {
-            $fysQuery->orderBy('start_date', 'desc')->limit(4);
-        }
-
-        $fys = $fysQuery->get()->sortBy('start_date')->values();
-
-        if ($fys->isEmpty()) {
-            return response()->json([
-                'code' => 404,
-                'success' => false,
-                'message' => 'No financial years found for the given IDs.',
-            ], 404);
-        }
-
-        if ($fys->count() < 2) {
-            return response()->json([
-                'code' => 422,
-                'success' => false,
-                'message' => 'At least two financial years are required to apply the last-2-years filter.',
-            ], 422);
-        }
-
-        // ----------- Build labels, ranges -----------
-        $selectedFyIds   = $fys->pluck('id')->all();
-        $fyLabelsOrdered = [];
-        $fyIdToLabel     = [];
-        $minStart = null; $maxEnd = null;
-
-        foreach ($fys as $fy) {
-            $start = $fy->start_date instanceof Carbon ? $fy->start_date : Carbon::parse($fy->start_date);
-            $end   = $fy->end_date   instanceof Carbon ? $fy->end_date   : Carbon::parse($fy->end_date);
-            $sy = (int)$start->format('y');
-            $ey = (int)$end->format('y');
-            $label = sprintf('%02d-%02d', $sy, $ey);
-
-            $fyLabelsOrdered[] = $label;
-            $fyIdToLabel[$fy->id] = $label;
-
-            $minStart = $minStart ? $minStart->min($start) : $start;
-            $maxEnd   = $maxEnd   ? $maxEnd->max($end)     : $end;
-        }
-
-        // ----------- Aggregate totals (same as API) -----------
-        $rows = DB::table('t_sales_invoice as si')
-            ->join('t_sales_invoice_products as sip', 'sip.sales_invoice_id', '=', 'si.id')
-            ->join('t_clients as c', 'c.id', '=', 'si.client_id')
-            ->join('t_financial_year as fy', function ($j) {
-                $j->on('si.sales_invoice_date', '>=', 'fy.start_date')
-                ->on('si.sales_invoice_date', '<=', 'fy.end_date');
-            })
-            ->where('si.company_id', $companyId)
-            ->whereIn('fy.id', $selectedFyIds)
-            ->whereBetween('si.sales_invoice_date', [$minStart, $maxEnd])
-            ->groupBy('si.client_id', 'c.name', 'fy.id')
-            ->select([
-                'si.client_id',
-                'c.name as client_name',
-                'fy.id as fy_id',
-                DB::raw('ROUND(COALESCE(SUM(sip.amount), 0), 2) as total_amount'),
-                DB::raw('ROUND(COALESCE(SUM(sip.profit), 0),  2) as total_profit'),
-            ])
-            ->get();
-
-        // Pivot per client
-        $byClient = []; // client_id => ['name'=>..., 'amounts'=>[lbl=>float], 'profits'=>[lbl=>float]]
-        foreach ($rows as $r) {
-            $cid = (int)$r->client_id;
-            $lbl = $fyIdToLabel[$r->fy_id] ?? null;
-            if ($lbl === null) continue;
-
-            if (!isset($byClient[$cid])) {
-                $byClient[$cid] = [
-                    'name'    => $r->client_name ?: 'Unknown',
-                    'amounts' => [],
-                    'profits' => [],
-                ];
+            $fysQuery = FinancialYearModel::query()->where('company_id', $companyId);
+            if ($providedIds->isNotEmpty()) {
+                $fysQuery->whereIn('id', $providedIds);
+            } else {
+                $fysQuery->orderBy('start_date', 'desc')->limit(4);
             }
-            $byClient[$cid]['amounts'][$lbl] = (float)$r->total_amount;
-            $byClient[$cid]['profits'][$lbl] = (float)$r->total_profit;
-        }
 
-        // ----------- Filter: Amount > 0 in each of last two FYs -----------
-        $latestLabel = $fyLabelsOrdered[count($fyLabelsOrdered)-1];
-        $prevLabel   = $fyLabelsOrdered[count($fyLabelsOrdered)-2];
-
-        $byClient = array_filter($byClient, function ($data) use ($latestLabel, $prevLabel) {
-            $currAmt = (float)($data['amounts'][$latestLabel] ?? 0.0);
-            $prevAmt = (float)($data['amounts'][$prevLabel]   ?? 0.0);
-            return ($currAmt > 0) && ($prevAmt > 0);
-        });
-
-        // ----------- Sorting (same options as API) -----------
-        $sortByRaw = (string) $request->input('sort_by', 'name');
-        $sortDir   = strtolower((string) $request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
-
-        $norm = strtolower(trim($sortByRaw));
-        $norm = str_replace(['%20','%2F'], ' ', $norm);
-        $norm = preg_replace('/\s+/', ' ', $norm);
-        $sortType = 'name'; $sortLabel = null;
-
-        if (in_array($norm, ['percentage', 'percentage (amount)', 'percentage_amount', 'pct', 'growth'], true)) {
-            $sortType = 'percentage';
-        } elseif (preg_match('/^(amount|profit)[\s:_-]*([0-9]{2}-[0-9]{2})$/i', $norm, $m)) {
-            $sortType = strtolower($m[1]);
-            $sortLabel = $m[2];
-        } elseif (in_array($norm, ['amount','profit'], true)) {
-            $sortType = $norm;
-            $sortLabel = $latestLabel;
-        } elseif (in_array($norm, ['name','client','client_name'], true)) {
-            $sortType = 'name';
-        }
-
-        $list = [];
-        foreach ($byClient as $cid => $data) {
-            $keyVal = 0;
-            if ($sortType === 'name') {
-                $keyVal = strtolower($data['name']);
-            } elseif ($sortType === 'amount') {
-                $label = $sortLabel ?: $latestLabel;
-                $keyVal = (float)($data['amounts'][$label] ?? 0.0);
-            } elseif ($sortType === 'profit') {
-                $label = $sortLabel ?: $latestLabel;
-                $keyVal = (float)($data['profits'][$label] ?? 0.0);
-            } elseif ($sortType === 'percentage') {
-                $curr = (float)($data['amounts'][$latestLabel] ?? 0.0);
-                $prev = (float)($data['amounts'][$prevLabel]   ?? 0.0);
-                if ($prev == 0.0 && $curr > 0.0)       $keyVal = 100.0;
-                elseif ($prev > 0.0 && $curr == 0.0)   $keyVal = -100.0;
-                elseif ($prev > 0.0)                   $keyVal = (($curr - $prev) / $prev) * 100.0;
-                else                                    $keyVal = 0.0;
+            $fys = $fysQuery->get()->sortBy('start_date')->values();
+            if ($fys->isEmpty()) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'No financial years found for the given IDs.',
+                ], 404);
             }
-            $list[] = ['cid' => $cid, 'data' => $data, 'key' => $keyVal];
-        }
 
-        usort($list, function ($a, $b) use ($sortDir) {
-            if ($a['key'] == $b['key']) return strcasecmp($a['data']['name'], $b['data']['name']);
-            if ($sortDir === 'asc') return ($a['key'] < $b['key']) ? -1 : 1;
-            return ($a['key'] > $b['key']) ? -1 : 1;
-        });
+            if ($fys->count() < 2) {
+                return response()->json([
+                    'code' => 422,
+                    'success' => false,
+                    'message' => 'At least two financial years are required to apply the last-2-years filter.',
+                ], 422);
+            }
 
-        // ----------- Build headings and rows (no % sign) -----------
-        $headings = ['SN', 'Name'];
-        foreach ($fyLabelsOrdered as $lbl) {
-            $headings[] = "Amount {$lbl}";
-            $headings[] = "Profit {$lbl}";
-        }
-        $headings[] = 'Percentage (Amount)'; // numeric, no % sign
+            // --- Step 2: Prepare FY label mapping ---
+            $selectedFyIds = $fys->pluck('id')->all();
+            $fyLabelsOrdered = [];
+            $fyIdToLabel = [];
+            $minStart = null; $maxEnd = null;
 
-        // Helper to 2-decimal
-        $fmt2 = fn($v) => round((float)$v, 2);
+            foreach ($fys as $fy) {
+                $start = $fy->start_date instanceof Carbon ? $fy->start_date : Carbon::parse($fy->start_date);
+                $end   = $fy->end_date   instanceof Carbon ? $fy->end_date   : Carbon::parse($fy->end_date);
+                $sy = (int)$start->format('y');
+                $ey = (int)$end->format('y');
+                $label = sprintf('%02d-%02d', $sy, $ey);
 
-        $exportRows = [];
-        $sn = 1;
-        foreach ($list as $item) {
-            $data = $item['data'];
-            $row = [
-                $sn++,            // SN
-                $data['name'],    // Name
-            ];
+                $fyLabelsOrdered[] = $label;
+                $fyIdToLabel[$fy->id] = $label;
+
+                $minStart = $minStart ? $minStart->min($start) : $start;
+                $maxEnd   = $maxEnd   ? $maxEnd->max($end)     : $end;
+            }
+
+            // --- Step 3: Aggregate Totals ---
+            $rows = DB::table('t_sales_invoice as si')
+                ->join('t_sales_invoice_products as sip', 'sip.sales_invoice_id', '=', 'si.id')
+                ->join('t_clients as c', 'c.id', '=', 'si.client_id')
+                ->join('t_financial_year as fy', function ($j) {
+                    $j->on('si.sales_invoice_date', '>=', 'fy.start_date')
+                    ->on('si.sales_invoice_date', '<=', 'fy.end_date');
+                })
+                ->where('si.company_id', $companyId)
+                ->whereIn('fy.id', $selectedFyIds)
+                ->whereBetween('si.sales_invoice_date', [$minStart, $maxEnd])
+                ->groupBy('si.client_id', 'c.name', 'fy.id')
+                ->select([
+                    'si.client_id',
+                    'c.name as client_name',
+                    'fy.id as fy_id',
+                    DB::raw('ROUND(COALESCE(SUM(sip.amount), 0), 2) as total_amount'),
+                    DB::raw('ROUND(COALESCE(SUM(sip.profit), 0),  2) as total_profit'),
+                ])
+                ->get();
+
+            // --- Step 4: Pivot per client ---
+            $byClient = [];
+            foreach ($rows as $r) {
+                $cid = (int)$r->client_id;
+                $lbl = $fyIdToLabel[$r->fy_id] ?? null;
+                if (!$lbl) continue;
+                if (!isset($byClient[$cid])) {
+                    $byClient[$cid] = [
+                        'name' => $r->client_name ?: 'Unknown',
+                        'amounts' => [],
+                        'profits' => [],
+                    ];
+                }
+                $byClient[$cid]['amounts'][$lbl] = (float)$r->total_amount;
+                $byClient[$cid]['profits'][$lbl] = (float)$r->total_profit;
+            }
+
+            // --- Step 5: Filter (last 2 FYs > 0 amount) ---
+            $latestLabel = $fyLabelsOrdered[count($fyLabelsOrdered) - 1];
+            $prevLabel   = $fyLabelsOrdered[count($fyLabelsOrdered) - 2];
+            $byClient = array_filter($byClient, function ($data) use ($latestLabel, $prevLabel) {
+                $currAmt = (float)($data['amounts'][$latestLabel] ?? 0);
+                $prevAmt = (float)($data['amounts'][$prevLabel] ?? 0);
+                return $currAmt > 0 && $prevAmt > 0;
+            });
+
+            if (empty($byClient)) {
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'No clients found with positive amounts in last 2 years.',
+                    'data' => [],
+                ], 200);
+            }
+
+            // --- Step 6: Sorting (optional same as API) ---
+            $sortByRaw = (string)$request->input('sort_by', 'name');
+            $sortDir   = strtolower((string)$request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+            $sortType = 'name'; $sortLabel = null;
+            $norm = strtolower(preg_replace('/\s+/', ' ', str_replace(['%20','%2F'], ' ', $sortByRaw)));
+
+            if (in_array($norm, ['percentage', 'percentage (amount)', 'pct', 'growth'], true)) {
+                $sortType = 'percentage';
+            } elseif (preg_match('/^(amount|profit)[\s:_-]*([0-9]{2}-[0-9]{2})$/i', $norm, $m)) {
+                $sortType = strtolower($m[1]);
+                $sortLabel = $m[2];
+            } elseif (in_array($norm, ['amount','profit'], true)) {
+                $sortType = $norm;
+                $sortLabel = $latestLabel;
+            }
+
+            $list = [];
+            foreach ($byClient as $cid => $data) {
+                $keyVal = 0;
+                if ($sortType === 'name') $keyVal = strtolower($data['name']);
+                elseif ($sortType === 'amount') {
+                    $label = $sortLabel ?: $latestLabel;
+                    $keyVal = (float)($data['amounts'][$label] ?? 0);
+                } elseif ($sortType === 'profit') {
+                    $label = $sortLabel ?: $latestLabel;
+                    $keyVal = (float)($data['profits'][$label] ?? 0);
+                } elseif ($sortType === 'percentage') {
+                    $curr = (float)($data['amounts'][$latestLabel] ?? 0);
+                    $prev = (float)($data['amounts'][$prevLabel] ?? 0);
+                    if ($prev == 0 && $curr > 0) $keyVal = 100;
+                    elseif ($prev > 0 && $curr == 0) $keyVal = -100;
+                    elseif ($prev > 0) $keyVal = (($curr - $prev) / $prev) * 100;
+                }
+                $list[] = ['data' => $data, 'key' => $keyVal];
+            }
+
+            usort($list, function ($a, $b) use ($sortDir) {
+                if ($a['key'] == $b['key']) return strcasecmp($a['data']['name'], $b['data']['name']);
+                return $sortDir === 'asc'
+                    ? (($a['key'] < $b['key']) ? -1 : 1)
+                    : (($a['key'] > $b['key']) ? -1 : 1);
+            });
+
+            // --- Step 7: Build Excel rows ---
+            $headings = ['SN', 'Name'];
             foreach ($fyLabelsOrdered as $lbl) {
-                $row[] = $fmt2($data['amounts'][$lbl] ?? 0.0);
-                $row[] = $fmt2($data['profits'][$lbl] ?? 0.0);
+                $headings[] = "Amount {$lbl}";
+                $headings[] = "Profit {$lbl}";
             }
-            // percentage numeric (no symbol)
-            $curr = (float)($data['amounts'][$latestLabel] ?? 0.0);
-            $prev = (float)($data['amounts'][$prevLabel]   ?? 0.0);
-            $pct  = 0.0;
-            if ($prev == 0.0 && $curr > 0.0)       $pct = 100.0;
-            elseif ($prev > 0.0 && $curr == 0.0)   $pct = -100.0;
-            elseif ($prev > 0.0)                   $pct = (($curr - $prev) / $prev) * 100.0;
+            $headings[] = 'Percentage (Amount)';
 
-            $row[] = $fmt2($pct);
-            $exportRows[] = $row;
+            $fmt2 = fn($v) => round((float)$v, 2);
+            $excelRows = [];
+            $sn = 1;
+            foreach ($list as $item) {
+                $data = $item['data'];
+                $row = [$sn++, $data['name']];
+                foreach ($fyLabelsOrdered as $lbl) {
+                    $row[] = $fmt2($data['amounts'][$lbl] ?? 0);
+                    $row[] = $fmt2($data['profits'][$lbl] ?? 0);
+                }
+                $curr = (float)($data['amounts'][$latestLabel] ?? 0);
+                $prev = (float)($data['amounts'][$prevLabel] ?? 0);
+                $pct = 0.0;
+                if ($prev == 0 && $curr > 0) $pct = 100.0;
+                elseif ($prev > 0 && $curr == 0) $pct = -100.0;
+                elseif ($prev > 0) $pct = (($curr - $prev) / $prev) * 100.0;
+                $row[] = $fmt2($pct);
+                $excelRows[] = $row;
+            }
+
+            // --- Step 8: File Save Path & Style Settings ---
+            $directory = 'uploads';
+            if (!Storage::disk('public')->exists($directory)) {
+                Storage::disk('public')->makeDirectory($directory);
+            }
+
+            $fileName = 'ClientWise_Yearly_Summary_' . now()->format('Ymd_His') . '.xlsx';
+            $fullPath = "public/{$directory}/{$fileName}";
+
+            $percentageColIndex = 2 + (count($fyLabelsOrdered) * 2) + 1;
+            $numericCols = [];
+            for ($i = 3; $i < $percentageColIndex; $i++) $numericCols[] = $i;
+            $numericCols[] = $percentageColIndex;
+
+            // Save Excel file to storage
+            Excel::store(
+                new ClientWiseYearlySalesSummaryExport($excelRows, $headings, $percentageColIndex, $numericCols),
+                $fullPath,
+                'local'
+            );
+
+            $publicUrl = Storage::url("uploads/{$fileName}");
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Excel exported successfully!',
+                'data' => [
+                    'url' => asset($publicUrl),
+                    'file_name' => $fileName,
+                ],
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong while exporting Excel.',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        // Column indexes for styling
-        // SN=1, Name=2, then each FY adds 2 columns; Percentage is last
-        $percentageColIndex = 2 + (count($fyLabelsOrdered) * 2) + 1;
-        $numericColIndexes  = [];
-        // Amount/Profit columns are numeric
-        for ($i = 3; $i < $percentageColIndex; $i++) {
-            $numericColIndexes[] = $i;
-        }
-        // Percentage column is also numeric
-        $numericColIndexes[] = $percentageColIndex;
-
-        $fileName = 'ClientWise_Yearly_Summary_' . now()->format('Ymd_His') . '.xlsx';
-
-        return Excel::download(
-            new ClientWiseYearlySalesSummaryExport($exportRows, $headings, $percentageColIndex, $numericColIndexes),
-            $fileName
-        );
     }
 
     // sales vs sales barchart
