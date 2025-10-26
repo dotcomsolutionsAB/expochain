@@ -946,7 +946,7 @@ class HelperController extends Controller
         try {
             $companyId = auth()->user()->company_id;
 
-            // --- Step 1: Get Financial Years ---
+            // ---- Financial years (comma-separated ids) ----
             $providedIds = collect(explode(',', (string)$request->input('years', '')))
                 ->filter(fn($id) => is_numeric(trim($id)))
                 ->map(fn($id) => (int) trim($id))
@@ -957,10 +957,11 @@ class HelperController extends Controller
             if ($providedIds->isNotEmpty()) {
                 $fysQuery->whereIn('id', $providedIds);
             } else {
+                // default to latest 4 FYs
                 $fysQuery->orderBy('start_date', 'desc')->limit(4);
             }
-
             $fys = $fysQuery->get()->sortBy('start_date')->values();
+
             if ($fys->isEmpty()) {
                 return response()->json([
                     'code' => 404,
@@ -968,7 +969,6 @@ class HelperController extends Controller
                     'message' => 'No financial years found for the given IDs.',
                 ], 404);
             }
-
             if ($fys->count() < 2) {
                 return response()->json([
                     'code' => 422,
@@ -977,15 +977,16 @@ class HelperController extends Controller
                 ], 422);
             }
 
-            // --- Step 2: Prepare FY label mapping ---
-            $selectedFyIds = $fys->pluck('id')->all();
-            $fyLabelsOrdered = [];
-            $fyIdToLabel = [];
+            // ---- Build FY label map (YY-YY), ranges ----
+            $selectedFyIds   = $fys->pluck('id')->all();
+            $fyLabelsOrdered = []; // oldest -> newest
+            $fyIdToLabel     = [];
             $minStart = null; $maxEnd = null;
 
             foreach ($fys as $fy) {
                 $start = $fy->start_date instanceof Carbon ? $fy->start_date : Carbon::parse($fy->start_date);
                 $end   = $fy->end_date   instanceof Carbon ? $fy->end_date   : Carbon::parse($fy->end_date);
+
                 $sy = (int)$start->format('y');
                 $ey = (int)$end->format('y');
                 $label = sprintf('%02d-%02d', $sy, $ey);
@@ -997,7 +998,7 @@ class HelperController extends Controller
                 $maxEnd   = $maxEnd   ? $maxEnd->max($end)     : $end;
             }
 
-            // --- Step 3: Aggregate Totals ---
+            // ---- Aggregate totals for selected FYs (date-range join) ----
             $rows = DB::table('t_sales_invoice as si')
                 ->join('t_sales_invoice_products as sip', 'sip.sales_invoice_id', '=', 'si.id')
                 ->join('t_clients as c', 'c.id', '=', 'si.client_id')
@@ -1018,15 +1019,16 @@ class HelperController extends Controller
                 ])
                 ->get();
 
-            // --- Step 4: Pivot per client ---
-            $byClient = [];
+            // ---- Pivot per client -> FY label ----
+            $byClient = []; // client_id => ['name'=>..., 'amounts'=>[], 'profits'=>[]]
             foreach ($rows as $r) {
                 $cid = (int)$r->client_id;
                 $lbl = $fyIdToLabel[$r->fy_id] ?? null;
-                if (!$lbl) continue;
+                if ($lbl === null) continue;
+
                 if (!isset($byClient[$cid])) {
                     $byClient[$cid] = [
-                        'name' => $r->client_name ?: 'Unknown',
+                        'name'    => $r->client_name ?: 'Unknown',
                         'amounts' => [],
                         'profits' => [],
                     ];
@@ -1035,13 +1037,14 @@ class HelperController extends Controller
                 $byClient[$cid]['profits'][$lbl] = (float)$r->total_profit;
             }
 
-            // --- Step 5: Filter (last 2 FYs > 0 amount) ---
-            $latestLabel = $fyLabelsOrdered[count($fyLabelsOrdered) - 1];
-            $prevLabel   = $fyLabelsOrdered[count($fyLabelsOrdered) - 2];
+            // ---- Filter: Amount > 0 in each of the last two FYs ----
+            $latestLabel = $fyLabelsOrdered[count($fyLabelsOrdered)-1];
+            $prevLabel   = $fyLabelsOrdered[count($fyLabelsOrdered)-2];
+
             $byClient = array_filter($byClient, function ($data) use ($latestLabel, $prevLabel) {
-                $currAmt = (float)($data['amounts'][$latestLabel] ?? 0);
-                $prevAmt = (float)($data['amounts'][$prevLabel] ?? 0);
-                return $currAmt > 0 && $prevAmt > 0;
+                $currAmt = (float)($data['amounts'][$latestLabel] ?? 0.0);
+                $prevAmt = (float)($data['amounts'][$prevLabel]   ?? 0.0);
+                return ($currAmt > 0) && ($prevAmt > 0);
             });
 
             if (empty($byClient)) {
@@ -1053,39 +1056,45 @@ class HelperController extends Controller
                 ], 200);
             }
 
-            // --- Step 6: Sorting (optional same as API) ---
-            $sortByRaw = (string)$request->input('sort_by', 'name');
-            $sortDir   = strtolower((string)$request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+            // ---- Sorting (same options as API) ----
+            $sortByRaw = (string) $request->input('sort_by', 'name');
+            $sortDir   = strtolower((string) $request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+            $norm = strtolower(trim($sortByRaw));
+            $norm = str_replace(['%20','%2F'], ' ', $norm);
+            $norm = preg_replace('/\s+/', ' ', $norm);
 
             $sortType = 'name'; $sortLabel = null;
-            $norm = strtolower(preg_replace('/\s+/', ' ', str_replace(['%20','%2F'], ' ', $sortByRaw)));
-
-            if (in_array($norm, ['percentage', 'percentage (amount)', 'pct', 'growth'], true)) {
+            if (in_array($norm, ['percentage', 'percentage (amount)', 'percentage_amount', 'pct', 'growth'], true)) {
                 $sortType = 'percentage';
             } elseif (preg_match('/^(amount|profit)[\s:_-]*([0-9]{2}-[0-9]{2})$/i', $norm, $m)) {
-                $sortType = strtolower($m[1]);
-                $sortLabel = $m[2];
+                $sortType  = strtolower($m[1]); // amount|profit
+                $sortLabel = $m[2];             // YY-YY
             } elseif (in_array($norm, ['amount','profit'], true)) {
-                $sortType = $norm;
+                $sortType  = $norm;
                 $sortLabel = $latestLabel;
+            } elseif (in_array($norm, ['name','client','client_name'], true)) {
+                $sortType = 'name';
             }
 
             $list = [];
             foreach ($byClient as $cid => $data) {
                 $keyVal = 0;
-                if ($sortType === 'name') $keyVal = strtolower($data['name']);
-                elseif ($sortType === 'amount') {
-                    $label = $sortLabel ?: $latestLabel;
-                    $keyVal = (float)($data['amounts'][$label] ?? 0);
+                if ($sortType === 'name') {
+                    $keyVal = strtolower($data['name']);
+                } elseif ($sortType === 'amount') {
+                    $label  = $sortLabel ?: $latestLabel;
+                    $keyVal = (float)($data['amounts'][$label] ?? 0.0);
                 } elseif ($sortType === 'profit') {
-                    $label = $sortLabel ?: $latestLabel;
-                    $keyVal = (float)($data['profits'][$label] ?? 0);
+                    $label  = $sortLabel ?: $latestLabel;
+                    $keyVal = (float)($data['profits'][$label] ?? 0.0);
                 } elseif ($sortType === 'percentage') {
-                    $curr = (float)($data['amounts'][$latestLabel] ?? 0);
-                    $prev = (float)($data['amounts'][$prevLabel] ?? 0);
-                    if ($prev == 0 && $curr > 0) $keyVal = 100;
-                    elseif ($prev > 0 && $curr == 0) $keyVal = -100;
-                    elseif ($prev > 0) $keyVal = (($curr - $prev) / $prev) * 100;
+                    $curr = (float)($data['amounts'][$latestLabel] ?? 0.0);
+                    $prev = (float)($data['amounts'][$prevLabel]   ?? 0.0);
+                    if ($prev == 0.0 && $curr > 0.0)       $keyVal = 100.0;
+                    elseif ($prev > 0.0 && $curr == 0.0)   $keyVal = -100.0;
+                    elseif ($prev > 0.0)                   $keyVal = (($curr - $prev) / $prev) * 100.0;
+                    else                                    $keyVal = 0.0;
                 }
                 $list[] = ['data' => $data, 'key' => $keyVal];
             }
@@ -1097,7 +1106,7 @@ class HelperController extends Controller
                     : (($a['key'] > $b['key']) ? -1 : 1);
             });
 
-            // --- Step 7: Build Excel rows ---
+            // ---- Build headings & Excel rows (percentage number, no '%') ----
             $headings = ['SN', 'Name'];
             foreach ($fyLabelsOrdered as $lbl) {
                 $headings[] = "Amount {$lbl}";
@@ -1106,47 +1115,58 @@ class HelperController extends Controller
             $headings[] = 'Percentage (Amount)';
 
             $fmt2 = fn($v) => round((float)$v, 2);
+
             $excelRows = [];
             $sn = 1;
             foreach ($list as $item) {
                 $data = $item['data'];
                 $row = [$sn++, $data['name']];
                 foreach ($fyLabelsOrdered as $lbl) {
-                    $row[] = $fmt2($data['amounts'][$lbl] ?? 0);
-                    $row[] = $fmt2($data['profits'][$lbl] ?? 0);
+                    $row[] = $fmt2($data['amounts'][$lbl] ?? 0.0);
+                    $row[] = $fmt2($data['profits'][$lbl] ?? 0.0);
                 }
-                $curr = (float)($data['amounts'][$latestLabel] ?? 0);
-                $prev = (float)($data['amounts'][$prevLabel] ?? 0);
-                $pct = 0.0;
-                if ($prev == 0 && $curr > 0) $pct = 100.0;
-                elseif ($prev > 0 && $curr == 0) $pct = -100.0;
-                elseif ($prev > 0) $pct = (($curr - $prev) / $prev) * 100.0;
-                $row[] = $fmt2($pct);
+                $curr = (float)($data['amounts'][$latestLabel] ?? 0.0);
+                $prev = (float)($data['amounts'][$prevLabel]   ?? 0.0);
+                $pct  = 0.0;
+                if ($prev == 0.0 && $curr > 0.0)       $pct = 100.0;
+                elseif ($prev > 0.0 && $curr == 0.0)   $pct = -100.0;
+                elseif ($prev > 0.0)                   $pct = (($curr - $prev) / $prev) * 100.0;
+                $row[] = $fmt2($pct); // numeric, no symbol
                 $excelRows[] = $row;
             }
 
-            // --- Step 8: File Save Path & Style Settings ---
+            // ---- Save to storage/app/public/uploads and return URL ----
+            $disk = 'public';
             $directory = 'uploads';
-            if (!Storage::disk('public')->exists($directory)) {
-                Storage::disk('public')->makeDirectory($directory);
+            if (!Storage::disk($disk)->exists($directory)) {
+                Storage::disk($disk)->makeDirectory($directory);
             }
 
             $fileName = 'ClientWise_Yearly_Summary_' . now()->format('Ymd_His') . '.xlsx';
-            $fullPath = "public/{$directory}/{$fileName}";
+            $relativePath = $directory . '/' . $fileName;
 
-            $percentageColIndex = 2 + (count($fyLabelsOrdered) * 2) + 1;
+            // Determine numeric column indices for right align + number format, and percentage column for color
+            $percentageColIndex = 2 + (count($fyLabelsOrdered) * 2) + 1; // 1-based
             $numericCols = [];
-            for ($i = 3; $i < $percentageColIndex; $i++) $numericCols[] = $i;
-            $numericCols[] = $percentageColIndex;
+            for ($i = 3; $i < $percentageColIndex; $i++) $numericCols[] = $i; // Amount/Profit cols
+            $numericCols[] = $percentageColIndex; // Percentage col
 
-            // Save Excel file to storage
-            Excel::store(
+            $stored = Excel::store(
                 new ClientWiseYearlySalesSummaryExport($excelRows, $headings, $percentageColIndex, $numericCols),
-                $fullPath,
-                'local'
+                $relativePath,
+                $disk
             );
 
-            $publicUrl = Storage::url("uploads/{$fileName}");
+            if (!$stored) {
+                return response()->json([
+                    'code' => 500,
+                    'success' => false,
+                    'message' => 'Excel could not be saved.',
+                ], 500);
+            }
+
+            // Public URL (requires: php artisan storage:link)
+            $publicUrl = Storage::disk($disk)->url($relativePath);
 
             return response()->json([
                 'code' => 200,
