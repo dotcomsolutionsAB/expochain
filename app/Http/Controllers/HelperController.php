@@ -775,16 +775,20 @@ class HelperController extends Controller
                     DB::raw("
                         CASE
                             WHEN MONTH(si.sales_invoice_date) >= 4
-                                THEN LPAD(MOD(YEAR(si.sales_invoice_date), 100), 2, '0')
-                                    || '-' ||
-                                    LPAD(MOD(YEAR(si.sales_invoice_date)+1, 100), 2, '0')
-                            ELSE LPAD(MOD(YEAR(si.sales_invoice_date)-1, 100), 2, '0')
-                                    || '-' ||
+                                THEN CONCAT(
+                                    LPAD(MOD(YEAR(si.sales_invoice_date), 100), 2, '0'),
+                                    '-',
+                                    LPAD(MOD(YEAR(si.sales_invoice_date) + 1, 100), 2, '0')
+                                )
+                            ELSE CONCAT(
+                                    LPAD(MOD(YEAR(si.sales_invoice_date) - 1, 100), 2, '0'),
+                                    '-',
                                     LPAD(MOD(YEAR(si.sales_invoice_date), 100), 2, '0')
+                                )
                         END AS fy_label
                     "),
-                    DB::raw('SUM(sip.amount) as total_amount'),
-                    DB::raw('SUM(sip.profit) as total_profit')
+                    DB::raw('COALESCE(SUM(sip.amount), 0)  as total_amount'),
+                    DB::raw('COALESCE(SUM(sip.profit), 0)  as total_profit')
                 )
                 ->groupBy('si.client_id', 'c.name', DB::raw('fy_label'))
                 ->get();
