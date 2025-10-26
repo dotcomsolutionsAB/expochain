@@ -658,56 +658,247 @@ class HelperController extends Controller
         }
     }
 
-    // last 3 years fy wise product wise profit
-    public function getProductWiseYearlySalesSummary()
+    public function getProductWiseYearlySalesSummary(Request $request)
     {
         try {
             $companyId = auth()->user()->company_id;
-            $now = Carbon::now();
 
-            $years = [];
+            // Pagination
+            $limit  = (int) $request->input('limit', 10);
+            $offset = (int) $request->input('offset', 0);
+            if ($limit <= 0)  $limit = 10;
+            if ($limit > 500) $limit = 500;
 
-            // Get current and last 2 years
-            for ($i = 0; $i < 3; $i++) {
-                $start = Carbon::create($now->year - $i, 4, 1)->startOfDay(); // Financial year starts April 1
-                $end = Carbon::create($now->year - $i + 1, 3, 31)->endOfDay(); // Ends March 31 next year
+            // Sorting
+            $sortByRaw = (string) $request->input('sort_by', 'name'); // default name
+            $sortDir   = strtolower((string) $request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
-                $label = $start->format('Y') . '-' . $end->format('Y');
+            // Search by product name
+            $searchKey = (string) $request->input('search_key', '');
 
-                $salesInvoiceIds = SalesInvoiceModel::where('company_id', $companyId)
-                    ->whereBetween('sales_invoice_date', [$start, $end])
-                    ->pluck('id');
+            // Financial year IDs (comma-separated)
+            $providedIds = collect(explode(',', (string)$request->input('years', '')))
+                ->filter(fn($id) => is_numeric(trim($id)))
+                ->map(fn($id) => (int) trim($id))
+                ->unique()
+                ->values();
 
-                $yearlyData = SalesInvoiceProductsModel::select('product_id', 'product_name')
-                    ->where('company_id', $companyId)
-                    ->whereIn('sales_invoice_id', $salesInvoiceIds)
-                    ->selectRaw('SUM(amount) as total_amount, SUM(profit) as total_profit')
-                    ->groupBy('product_id', 'product_name')
-                    ->get()
-                    ->map(function ($item) {
-                        return [
-                            'product_id' => $item->product_id,
-                            'product_name' => $item->product_name,
-                            'total_amount' => round($item->total_amount, 2),
-                            'total_profit' => round($item->total_profit, 2),
-                        ];
-                    });
+            // Load FYs (ascending by start_date)
+            $fysQuery = FinancialYearModel::query()->where('company_id', $companyId);
+            if ($providedIds->isNotEmpty()) {
+                $fysQuery->whereIn('id', $providedIds);
+            } else {
+                // Default to latest 4 FYs if none provided
+                $fysQuery->orderBy('start_date', 'desc')->limit(4);
+            }
+            $fys = $fysQuery->get()->sortBy('start_date')->values();
 
-                $years[$label] = $yearlyData;
+            if ($fys->isEmpty()) {
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'No financial years found for the given IDs.',
+                    'data' => [],
+                    'count' => 0,
+                    'total_records' => 0,
+                ], 200);
+            }
+
+            // Build FY label map (YY-YY) & ranges
+            $selectedFyIds   = $fys->pluck('id')->all();
+            $fyLabelsOrdered = []; // ["21-22","22-23",...], oldest -> newest
+            $fyIdToLabel     = []; // id => "YY-YY"
+            $minStart = null; $maxEnd = null;
+
+            foreach ($fys as $fy) {
+                $start = $fy->start_date instanceof Carbon ? $fy->start_date : Carbon::parse($fy->start_date);
+                $end   = $fy->end_date   instanceof Carbon ? $fy->end_date   : Carbon::parse($fy->end_date);
+
+                $sy = (int)$start->format('y');
+                $ey = (int)$end->format('y');
+                $label = sprintf('%02d-%02d', $sy, $ey);
+
+                $fyLabelsOrdered[]    = $label;
+                $fyIdToLabel[$fy->id] = $label;
+
+                $minStart = $minStart ? $minStart->min($start) : $start;
+                $maxEnd   = $maxEnd   ? $maxEnd->max($end)     : $end;
+            }
+
+            // Aggregate product totals by FY (date-range join)
+            $rows = DB::table('t_sales_invoice as si')
+                ->join('t_sales_invoice_products as sip', function ($j) use ($companyId) {
+                    $j->on('sip.sales_invoice_id', '=', 'si.id')
+                    ->where('sip.company_id', '=', $companyId);
+                })
+                ->join('t_financial_year as fy', function ($j) {
+                    $j->on('si.sales_invoice_date', '>=', 'fy.start_date')
+                    ->on('si.sales_invoice_date', '<=', 'fy.end_date');
+                })
+                ->where('si.company_id', $companyId)
+                ->whereIn('fy.id', $selectedFyIds)
+                ->whereBetween('si.sales_invoice_date', [$minStart, $maxEnd])
+                // optional search by product_name (in the aggregated set)
+                ->when($searchKey !== '', function ($q) use ($searchKey) {
+                    $q->where('sip.product_name', 'like', '%'.$searchKey.'%');
+                })
+                ->groupBy('sip.product_id', 'sip.product_name', 'fy.id')
+                ->select([
+                    'sip.product_id',
+                    'sip.product_name',
+                    'fy.id as fy_id',
+                    DB::raw('ROUND(COALESCE(SUM(sip.amount), 0), 2) as total_amount'),
+                    DB::raw('ROUND(COALESCE(SUM(sip.profit), 0), 2) as total_profit'),
+                ])
+                ->get();
+
+            // Pivot per product -> FY label
+            // product_id => ['name'=>..., 'amounts'=>[label=>float], 'profits'=>[label=>float]]
+            $byProduct = [];
+            foreach ($rows as $r) {
+                $pid = (int)$r->product_id;
+                $lbl = $fyIdToLabel[$r->fy_id] ?? null;
+                if ($lbl === null) continue;
+
+                if (!isset($byProduct[$pid])) {
+                    $byProduct[$pid] = [
+                        'name'    => $r->product_name ?: 'Unknown',
+                        'amounts' => [],
+                        'profits' => [],
+                    ];
+                }
+                $byProduct[$pid]['amounts'][$lbl] = (float)$r->total_amount;
+                $byProduct[$pid]['profits'][$lbl] = (float)$r->total_profit;
+            }
+
+            // ---- Sorting (same patterns as client-wise) ----
+            $norm = strtolower(trim($sortByRaw));
+            $norm = str_replace(['%20','%2F'], ' ', $norm);
+            $norm = preg_replace('/\s+/', ' ', $norm);
+
+            $sortType = 'name';  // 'name' | 'amount' | 'profit' | 'percentage'
+            $sortLabel = null;   // FY label "YY-YY" for amount/profit
+
+            if (in_array($norm, ['percentage', 'percentage (amount)', 'percentage_amount', 'pct', 'growth'], true)) {
+                $sortType = 'percentage';
+            } elseif (preg_match('/^(amount|profit)[\s:_-]*([0-9]{2}-[0-9]{2})$/i', $norm, $m)) {
+                $sortType  = strtolower($m[1]);
+                $sortLabel = $m[2];
+            } elseif (in_array($norm, ['amount','profit'], true)) {
+                $sortType  = $norm;
+                $sortLabel = end($fyLabelsOrdered); // default to latest FY
+            } elseif (in_array($norm, ['name','product','product_name'], true)) {
+                $sortType = 'name';
+            } else {
+                // also support exact headers like "Amount 24-25"
+                if (preg_match('/^(amount|profit)\s+([0-9]{2}-[0-9]{2})$/i', $sortByRaw, $m2)) {
+                    $sortType  = strtolower($m2[1]);
+                    $sortLabel = $m2[2];
+                } else {
+                    $sortType = 'name';
+                }
+            }
+
+            $latestLabel = end($fyLabelsOrdered);
+            $prevLabel   = count($fyLabelsOrdered) >= 2 ? $fyLabelsOrdered[count($fyLabelsOrdered)-2] : null;
+
+            $list = [];
+            foreach ($byProduct as $pid => $data) {
+                $keyVal = null;
+                if ($sortType === 'name') {
+                    $keyVal = strtolower($data['name']);
+                } elseif ($sortType === 'amount') {
+                    $label  = $sortLabel ?: $latestLabel;
+                    $keyVal = (float)($data['amounts'][$label] ?? 0.0);
+                } elseif ($sortType === 'profit') {
+                    $label  = $sortLabel ?: $latestLabel;
+                    $keyVal = (float)($data['profits'][$label] ?? 0.0);
+                } elseif ($sortType === 'percentage') {
+                    if ($prevLabel) {
+                        $curr = (float)($data['amounts'][$latestLabel] ?? 0.0);
+                        $prev = (float)($data['amounts'][$prevLabel]   ?? 0.0);
+                        if ($prev == 0.0 && $curr > 0.0)       $keyVal = 100.0;
+                        elseif ($prev > 0.0 && $curr == 0.0)   $keyVal = -100.0;
+                        elseif ($prev > 0.0)                   $keyVal = (($curr - $prev) / $prev) * 100.0;
+                        else                                    $keyVal = 0.0;
+                    } else {
+                        $keyVal = 0.0;
+                    }
+                }
+
+                $list[] = ['pid' => $pid, 'data' => $data, 'key' => $keyVal];
+            }
+
+            // Sort then paginate
+            usort($list, function ($a, $b) use ($sortType, $sortDir) {
+                if ($a['key'] == $b['key']) {
+                    return strcasecmp($a['data']['name'], $b['data']['name']);
+                }
+                if ($sortDir === 'asc')  return ($a['key'] < $b['key']) ? -1 : 1;
+                return ($a['key'] > $b['key']) ? -1 : 1;
+            });
+
+            $totalRecords = count($list);
+            $pageSlice    = array_slice($list, $offset, $limit);
+            $count        = count($pageSlice);
+
+            // Format numbers to max 2 decimals (string)
+            $fmt2 = fn($v) => rtrim(rtrim(number_format((float)$v, 2, '.', ''), '0'), '.');
+
+            // Build table rows
+            $table = [];
+            $sn = $offset + 1;
+            foreach ($pageSlice as $item) {
+                $data = $item['data'];
+                $row = [
+                    'sn'   => $sn++,
+                    'name' => $data['name'],
+                ];
+
+                foreach ($fyLabelsOrdered as $lbl) {
+                    $row["Amount {$lbl}"] = $fmt2($data['amounts'][$lbl] ?? 0.0);
+                    $row["Profit {$lbl}"] = $fmt2($data['profits'][$lbl] ?? 0.0);
+                }
+
+                // Percentage (Amount): latest vs previous
+                $pct = '0 %';
+                if ($prevLabel) {
+                    $curr = (float)($data['amounts'][$latestLabel] ?? 0.0);
+                    $prev = (float)($data['amounts'][$prevLabel]   ?? 0.0);
+                    if ($prev == 0.0 && $curr > 0.0)       $pct = '100 %';
+                    elseif ($prev > 0.0 && $curr == 0.0)   $pct = '-100 %';
+                    elseif ($prev > 0.0) {
+                        $growth = (($curr - $prev) / $prev) * 100.0;
+                        $pct = $fmt2($growth) . ' %';
+                    }
+                }
+                $row['Percentage (Amount)'] = $pct;
+
+                $table[] = $row;
             }
 
             return response()->json([
-                'code' => 200,
+                'code'    => 200,
                 'success' => true,
-                'message' => 'Year-wise product sales summary fetched successfully!',
-                'data' => $years
-            ]);
-        } catch (\Exception $e) {
+                'message' => 'Product-wise yearly sales summary fetched successfully!',
+                'data'    => [
+                    'years' => $fyLabelsOrdered,   // ["21-22","22-23","23-24","24-25"]
+                    'rows'  => $table,
+                    'sort'  => [
+                        'sort_by'  => $sortByRaw,
+                        'sort_dir' => $sortDir,
+                    ],
+                ],
+                'count'         => $count,
+                'total_records' => $totalRecords,
+            ], 200);
+
+        } catch (\Throwable $e) {
             return response()->json([
-                'code' => 500,
+                'code'    => 500,
                 'success' => false,
-                'message' => 'Something went wrong while fetching year-wise summary.',
-                'error' => $e->getMessage()
+                'message' => 'Something went wrong while fetching product-wise yearly summary.',
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
