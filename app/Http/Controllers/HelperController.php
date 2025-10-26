@@ -723,27 +723,23 @@ class HelperController extends Controller
             if ($limit > 500) $limit = 500;
 
             // Sorting
-            $sortByRaw  = (string) $request->input('sort_by', 'name'); // default
-            $sortDir    = strtolower((string) $request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+            $sortByRaw = (string) $request->input('sort_by', 'name');
+            $sortDir   = strtolower((string) $request->input('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
 
-            // Accept comma-separated FY IDs (?years=3,4,5,6)
+            // Financial year IDs (comma-separated)
             $providedIds = collect(explode(',', (string)$request->input('years', '')))
                 ->filter(fn($id) => is_numeric(trim($id)))
                 ->map(fn($id) => (int) trim($id))
                 ->unique()
                 ->values();
 
-            // Load FYs (ascending by start_date)
-            $fysQuery = FinancialYearModel::query()
-                ->where('company_id', $companyId);
-
+            // Load FYs (ascending order)
+            $fysQuery = FinancialYearModel::query()->where('company_id', $companyId);
             if ($providedIds->isNotEmpty()) {
                 $fysQuery->whereIn('id', $providedIds);
             } else {
-                // Default: latest 4 FYs
                 $fysQuery->orderBy('start_date', 'desc')->limit(4);
             }
-
             $fys = $fysQuery->get()->sortBy('start_date')->values();
 
             if ($fys->isEmpty()) {
@@ -751,19 +747,16 @@ class HelperController extends Controller
                     'code' => 200,
                     'success' => true,
                     'message' => 'No financial years found for the given IDs.',
-                    'data' => [
-                        'years' => [],
-                        'rows'  => [],
-                        'count' => 0,
-                    ],
+                    'data' => [],
+                    'count' => 0,
                     'total_records' => 0,
-                ], 200);
+                ]);
             }
 
-            // Build FY metadata & labels (YY-YY)
+            // Build FY label map
             $selectedFyIds   = $fys->pluck('id')->all();
-            $fyLabelsOrdered = [];  // ["21-22","22-23",...]
-            $fyIdToLabel     = [];  // id => "YY-YY"
+            $fyLabelsOrdered = [];
+            $fyIdToLabel     = [];
             $minStart = null; $maxEnd = null;
 
             foreach ($fys as $fy) {
@@ -772,15 +765,13 @@ class HelperController extends Controller
                 $sy = (int)$start->format('y');
                 $ey = (int)$end->format('y');
                 $label = sprintf('%02d-%02d', $sy, $ey);
-
-                $fyLabelsOrdered[]     = $label;
-                $fyIdToLabel[$fy->id]  = $label;
-
+                $fyLabelsOrdered[] = $label;
+                $fyIdToLabel[$fy->id] = $label;
                 $minStart = $minStart ? $minStart->min($start) : $start;
                 $maxEnd   = $maxEnd   ? $maxEnd->max($end)     : $end;
             }
 
-            // Aggregate for selected FYs (date-range join)
+            // Aggregate client totals by FY
             $rows = DB::table('t_sales_invoice as si')
                 ->join('t_sales_invoice_products as sip', 'sip.sales_invoice_id', '=', 'si.id')
                 ->join('t_clients as c', 'c.id', '=', 'si.client_id')
@@ -802,7 +793,6 @@ class HelperController extends Controller
                 ->get();
 
             // Pivot per client
-            // client_id => ['name'=>..., 'amounts'=>[label=>float], 'profits'=>[label=>float]]
             $byClient = [];
             foreach ($rows as $r) {
                 $cid = (int)$r->client_id;
@@ -819,108 +809,66 @@ class HelperController extends Controller
                 $byClient[$cid]['profits'][$lbl] = (float)$r->total_profit;
             }
 
-            // ---------- Sorting (before pagination) ----------
-            // Normalize sort_by: allow "name", "Amount 24-25", "amount:24-25", "profit_24-25", "percentage"
+            // Determine sort type
             $norm = strtolower(trim($sortByRaw));
-            $norm = str_replace(['%20', '%2F'], ' ', $norm); // if url-encoded by mistake
+            $norm = str_replace(['%20','%2F'], ' ', $norm);
             $norm = preg_replace('/\s+/', ' ', $norm);
 
-            $sortType = 'name';   // 'name' | 'amount' | 'profit' | 'percentage'
-            $sortLabel = null;    // for amount/profit: "YY-YY"
-
-            // detect percentage
+            $sortType = 'name'; $sortLabel = null;
             if (in_array($norm, ['percentage', 'percentage (amount)', 'percentage_amount', 'pct', 'growth'], true)) {
                 $sortType = 'percentage';
-            } else {
-                // detect amount/profit with a YY-YY
-                // supported patterns:
-                //   "amount 24-25", "amount:24-25", "amount_24-25", "Amount 24-25"
-                //   "profit 24-25", "profit:24-25", ...
-                if (preg_match('/^(amount|profit)[\s:_-]*([0-9]{2}-[0-9]{2})$/i', $norm, $m)) {
-                    $sortType  = strtolower($m[1]);       // amount|profit
-                    $sortLabel = $m[2];                   // e.g. 24-25
-                } elseif (preg_match('/^(amount|profit)\s+([0-9]{2})[-_ ]([0-9]{2})$/i', $norm, $m)) {
-                    $sortType  = strtolower($m[1]);
-                    $sortLabel = sprintf('%02d-%02d', (int)$m[2], (int)$m[3]);
-                } elseif (preg_match('/^(amount|profit)\s+([0-9]{2}-[0-9]{2})$/i', $norm, $m)) {
-                    $sortType  = strtolower($m[1]);
-                    $sortLabel = $m[2];
-                } elseif (in_array($norm, ['amount', 'profit'], true)) {
-                    // if only "amount" or "profit" was given, default to latest FY
-                    $sortType  = $norm;
-                    $sortLabel = end($fyLabelsOrdered);
-                } elseif (in_array($norm, ['name', 'client', 'client_name'], true)) {
-                    $sortType = 'name';
-                } else {
-                    // also accept exact table header like "Amount 24-25" / "Profit 24-25"
-                    if (preg_match('/^(amount|profit)\s+([0-9]{2}-[0-9]{2})$/i', $sortByRaw, $m2)) {
-                        $sortType  = strtolower($m2[1]);
-                        $sortLabel = $m2[2];
-                    } else {
-                        $sortType = 'name';
-                    }
-                }
+            } elseif (preg_match('/^(amount|profit)[\s:_-]*([0-9]{2}-[0-9]{2})$/i', $norm, $m)) {
+                $sortType = strtolower($m[1]);
+                $sortLabel = $m[2];
+            } elseif (in_array($norm, ['amount','profit'], true)) {
+                $sortType = $norm;
+            } elseif (in_array($norm, ['name','client','client_name'], true)) {
+                $sortType = 'name';
             }
 
-            // Prepare values needed for percentage sorting
+            // Prepare for sorting
             $latestLabel = end($fyLabelsOrdered);
             $prevLabel   = count($fyLabelsOrdered) >= 2 ? $fyLabelsOrdered[count($fyLabelsOrdered)-2] : null;
 
-            // Build an array for sorting (keep client_id association)
             $byClientList = [];
             foreach ($byClient as $cid => $data) {
-                // compute numeric key for sorting based on requested column
-                $keyVal = null;
+                $keyVal = 0;
                 if ($sortType === 'name') {
                     $keyVal = strtolower($data['name']);
                 } elseif ($sortType === 'amount') {
-                    $label  = $sortLabel ?: $latestLabel;
+                    $label = $sortLabel ?: $latestLabel;
                     $keyVal = (float)($data['amounts'][$label] ?? 0.0);
                 } elseif ($sortType === 'profit') {
-                    $label  = $sortLabel ?: $latestLabel;
+                    $label = $sortLabel ?: $latestLabel;
                     $keyVal = (float)($data['profits'][$label] ?? 0.0);
-                } elseif ($sortType === 'percentage') {
-                    if ($prevLabel) {
-                        $curr = (float)($data['amounts'][$latestLabel] ?? 0.0);
-                        $prev = (float)($data['amounts'][$prevLabel]   ?? 0.0);
-                        if ($prev == 0.0 && $curr > 0.0)       $keyVal = 100.0;
-                        elseif ($prev > 0.0 && $curr == 0.0)   $keyVal = -100.0;
-                        elseif ($prev > 0.0)                   $keyVal = (($curr - $prev) / $prev) * 100.0;
-                        else                                    $keyVal = 0.0;
-                    } else {
-                        $keyVal = 0.0;
-                    }
+                } elseif ($sortType === 'percentage' && $prevLabel) {
+                    $curr = (float)($data['amounts'][$latestLabel] ?? 0.0);
+                    $prev = (float)($data['amounts'][$prevLabel]   ?? 0.0);
+                    if ($prev == 0.0 && $curr > 0.0)       $keyVal = 100.0;
+                    elseif ($prev > 0.0 && $curr == 0.0)   $keyVal = -100.0;
+                    elseif ($prev > 0.0)                   $keyVal = (($curr - $prev) / $prev) * 100.0;
                 }
                 $byClientList[] = ['cid' => $cid, 'data' => $data, 'key' => $keyVal];
             }
 
-            // Sort by key, then tie-breaker by name asc
-            usort($byClientList, function ($a, $b) use ($sortType, $sortDir) {
+            // Sort
+            usort($byClientList, function ($a, $b) use ($sortDir) {
                 if ($a['key'] == $b['key']) {
                     return strcasecmp($a['data']['name'], $b['data']['name']);
                 }
-                if ($sortDir === 'asc') {
-                    // string compare for name, numeric compare otherwise
-                    return ($a['key'] < $b['key']) ? -1 : 1;
-                } else {
-                    return ($a['key'] > $b['key']) ? -1 : 1;
-                }
+                if ($sortDir === 'asc')  return ($a['key'] < $b['key']) ? -1 : 1;
+                return ($a['key'] > $b['key']) ? -1 : 1;
             });
 
-            // Total before pagination
+            // Total & page slice
             $totalRecords = count($byClientList);
+            $pageSlice    = array_slice($byClientList, $offset, $limit);
+            $count        = count($pageSlice);
 
-            // Page slice
-            $pageSlice = array_slice($byClientList, $offset, $limit);
+            // Format numbers to max 2 decimals (string)
+            $fmt2 = fn($v) => rtrim(rtrim(number_format((float)$v, 2, '.', ''), '0'), '.');
 
-            // Helper: format to "max 2 decimals" as string
-            $fmt2 = function ($v) {
-                $s = number_format((float)$v, 2, '.', '');
-                $s = rtrim(rtrim($s, '0'), '.');
-                return $s;
-            };
-
-            // Build rows for current page
+            // Build table
             $table = [];
             $sn = $offset + 1;
             foreach ($pageSlice as $item) {
@@ -930,11 +878,10 @@ class HelperController extends Controller
                     'name' => $data['name'],
                 ];
                 foreach ($fyLabelsOrdered as $lbl) {
-                    $amt = $data['amounts'][$lbl] ?? 0.0;
-                    $prf = $data['profits'][$lbl] ?? 0.0;
-                    $row["Amount {$lbl}"] = $fmt2($amt);
-                    $row["Profit {$lbl}"] = $fmt2($prf);
+                    $row["Amount {$lbl}"] = $fmt2($data['amounts'][$lbl] ?? 0.0);
+                    $row["Profit {$lbl}"] = $fmt2($data['profits'][$lbl] ?? 0.0);
                 }
+
                 // Percentage (Amount)
                 $pct = '0 %';
                 if ($prevLabel) {
@@ -952,28 +899,29 @@ class HelperController extends Controller
                 $table[] = $row;
             }
 
+            // ✅ Response with count & total_records outside data
             return response()->json([
-                'code'    => 200,
+                'code' => 200,
                 'success' => true,
                 'message' => 'Client-wise yearly sales summary fetched successfully!',
-                'data'    => [
+                'data' => [
                     'years' => $fyLabelsOrdered,
                     'rows'  => $table,
-                    'count' => count($table),
                     'sort'  => [
                         'sort_by'  => $sortByRaw,
                         'sort_dir' => $sortDir,
                     ],
                 ],
+                'count' => $count,
                 'total_records' => $totalRecords,
             ], 200);
 
         } catch (\Throwable $e) {
             return response()->json([
-                'code'    => 500,
+                'code' => 500,
                 'success' => false,
                 'message' => 'Something went wrong while fetching yearly summary.',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
