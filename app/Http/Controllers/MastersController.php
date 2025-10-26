@@ -628,6 +628,42 @@ class MastersController extends Controller
         ], 200);
     }
 
+    public function listFinancialYears()
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            $years = FinancialYearModel::where('company_id', $companyId)
+                ->select('id', 'name', 'start_date', 'end_date')
+                ->orderBy('start_date', 'desc')
+                ->get()
+                ->map(function ($year) {
+                    return [
+                        'id'          => $year->id,
+                        'name'        => $year->name,
+                        'start_date'  => $year->start_date ? date('Y-m-d', strtotime($year->start_date)) : null,
+                        'end_date'    => $year->end_date ? date('Y-m-d', strtotime($year->end_date)) : null,
+                    ];
+                });
+
+            return response()->json([
+                'code'    => 200,
+                'success' => true,
+                'message' => 'Financial years fetched successfully!',
+                'data'    => $years,
+                'count'   => $years->count(),
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code'    => 500,
+                'success' => false,
+                'message' => 'Something went wrong while fetching financial years.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     // Function to update stock indication values (si1, si2, pb_level)
     public function stock_indication(Request $request)
     {

@@ -123,6 +123,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('opening_stock_migrate', [MastersController::class, 'importOpeningStock']);
     Route::get('financial_year_migrate', [MastersController::class, 'importFinancialYears']);
 
+    Route::get('financial_year', [MastersController::class, 'listFinancialYears']);
+
     Route::post('export_product', [MastersController::class, 'export_products']);
     
     Route::get('/get_tax', [MastersController::class, 'get_tax']);
