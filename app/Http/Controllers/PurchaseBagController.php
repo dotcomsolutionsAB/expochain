@@ -18,7 +18,7 @@ class PurchaseBagController extends Controller
 
         return response()->json([
             'code'    => 200,
-            'status'  => true,
+            'success' => true,
             'message' => 'OK',
             'data'    => $rows,
             'total_records' => $rows->count(),  // Total count of records
@@ -36,7 +36,7 @@ class PurchaseBagController extends Controller
         if (! $row) {
             return response()->json([
                 'code'=>404,
-                'status'=>false,
+                'success'=>false,
                 'message'=>'Not found',
                 'data' => [],  // Return empty array for data
                 'total_records' => 0,
@@ -46,7 +46,7 @@ class PurchaseBagController extends Controller
 
         return response()->json([
             'code'=>200,
-            'status'=>true,
+            'success'=>true,
             'message'=>'OK',
             'data'=>$row,
             'total_records'=>1,  // Single item
@@ -68,7 +68,7 @@ class PurchaseBagController extends Controller
         if (!$product) {
             return response()->json([
                 'code' => 404,
-                'status' => false,
+                'success' => false,
                 'message' => 'Product not found',
                 'data' => [],
                 'total_records' => 0,
@@ -94,7 +94,7 @@ class PurchaseBagController extends Controller
 
         return response()->json([
             'code'=>201,
-            'status'=>true,
+            'success'=>true,
             'message'=>'Created',
             'data'=>$row,
             'total_records'=>1,
@@ -112,7 +112,7 @@ class PurchaseBagController extends Controller
         if (! $row) {
             return response()->json([
                 'code'=>404,
-                'status'=>false,
+                'success'=>false,
                 'message'=>'Not found',
                 'data' => [],  // Return empty array for data
                 'total_records' => 0,
@@ -147,7 +147,7 @@ class PurchaseBagController extends Controller
 
         return response()->json([
             'code'=>200,
-            'status'=>true,
+            'success'=>true,
             'message'=>'Updated',
             'data'=>$row,
             'total_records'=>1,
@@ -164,7 +164,7 @@ class PurchaseBagController extends Controller
         if (! $row) {
             return response()->json([
                 'code'=>404,
-                'status'=>false,
+                'success'=>false,
                 'message'=>'Not found',
                 'data' => [],  // Return empty array for data
                 'total_records' => 0,
@@ -176,7 +176,7 @@ class PurchaseBagController extends Controller
 
         return response()->json([
             'code'=>200,
-            'status'=>true,
+            'success'=>true,
             'message'=>'Deleted',
             'data'=>[],  // Empty array for deleted item
             'total_records'=>0,
