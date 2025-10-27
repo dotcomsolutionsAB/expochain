@@ -461,7 +461,7 @@ class HelperController extends Controller
                 ], 401);
             }
 
-            // --- Validate dates (required, Y-m-d) ---
+            // Validate dates
             $validated = $request->validate([
                 'start_date' => 'required|date_format:Y-m-d',
                 'end_date'   => 'required|date_format:Y-m-d|after_or_equal:start_date',
@@ -487,22 +487,22 @@ class HelperController extends Controller
                 ->get(['id','name','order_by'])
                 ->keyBy('id');
 
-            // Products (minimal) for this company
+            // Products
             $products = ProductsModel::where('company_id', $companyId)
                 ->select('id','group','category','sub_category')
                 ->get()
                 ->keyBy('id');
 
-            $productIds = $products->keys(); // used to scope stock query tightly
+            $productIds = $products->keys();
 
-            // Precompute stock qty (scoped to product IDs for this company)
+            // Stock qty by product
             $stockQtyByProduct = ClosingStockModel::where('company_id', $companyId)
                 ->whereIn('product_id', $productIds)
                 ->select('product_id', DB::raw('SUM(quantity) as total_qty'))
                 ->groupBy('product_id')
                 ->pluck('total_qty', 'product_id');
 
-            // Invoices data in range
+            // Invoices data
             $purchaseData = PurchaseInvoiceProductsModel::with('purchaseInvoice')
                 ->whereIn('product_id', $productIds)
                 ->whereHas('purchaseInvoice', function ($q) use ($companyId, $startDate, $endDate) {
@@ -520,17 +520,20 @@ class HelperController extends Controller
             // Result container
             $result = [];
 
+            // Helper: normalize ID (treat null/empty/"0" as 0 int)
+            $norm = fn($v) => (is_numeric($v) && (int)$v > 0) ? (int)$v : 0;
+
             // Helper: ensure buckets exist
-            $ensureBucket = function ($groupId, $categoryId, $subCategoryId) use (&$result, $groups, $categories, $subCategories) {
-                $gid = $groupId ?: 0;
-                $cid = $categoryId ?: 0;
-                $sid = $subCategoryId ?: 0;
+            $ensureBucket = function ($groupId, $categoryId, $subCategoryId) use (&$result, $groups, $categories, $subCategories, $norm) {
+                $gid = $norm($groupId);
+                $cid = $norm($categoryId);
+                $sid = $norm($subCategoryId);
 
                 if (!isset($result[$gid])) {
                     $result[$gid] = [
                         'group_id'       => $gid,
                         'group_name'     => $groups[$gid]->name ?? 'Unknown',
-                        'total_stock'    => 0,  // stock first
+                        'total_stock'    => 0,
                         'total_sales'    => 0,
                         'total_purchase' => 0,
                         'total_profit'   => 0,
@@ -542,7 +545,7 @@ class HelperController extends Controller
                     $result[$gid]['categories'][$cid] = [
                         'category_id'    => $cid,
                         'category_name'  => $categories[$cid]->name ?? 'Unknown',
-                        'total_stock'    => 0,  // stock first
+                        'total_stock'    => 0,
                         'total_sales'    => 0,
                         'total_purchase' => 0,
                         'total_profit'   => 0,
@@ -554,7 +557,7 @@ class HelperController extends Controller
                     $result[$gid]['categories'][$cid]['sub_categories'][$sid] = [
                         'sub_category_id'   => $sid,
                         'sub_category_name' => $subCategories[$sid]->name ?? 'Unknown',
-                        'total_stock'       => 0,  // stock first
+                        'total_stock'       => 0,
                         'total_sales'       => 0,
                         'total_purchase'    => 0,
                         'total_profit'      => 0
@@ -562,9 +565,9 @@ class HelperController extends Controller
                 }
             };
 
-            // Initialize ordered buckets
+            // Initialize ordered buckets based on existing masters & products
             foreach ($groups as $groupId => $group) {
-                $catIds = $products->where('group', $groupId)->pluck('category')->unique()->filter();
+                $catIds = $products->where('group', $groupId)->pluck('category')->map($norm)->unique()->filter();
                 $catsOrdered = $categories->only($catIds->toArray())->sortBy('order_by');
 
                 if ($catsOrdered->isEmpty()) {
@@ -575,7 +578,7 @@ class HelperController extends Controller
                 foreach ($catsOrdered as $categoryId => $category) {
                     $subIds = $products->where('group', $groupId)
                                     ->where('category', $categoryId)
-                                    ->pluck('sub_category')->unique()->filter();
+                                    ->pluck('sub_category')->map($norm)->unique()->filter();
                     $subsOrdered = $subCategories->only($subIds->toArray())->sortBy('order_by');
 
                     if ($subsOrdered->isEmpty()) {
@@ -594,7 +597,7 @@ class HelperController extends Controller
                 $p = $products[$item->product_id] ?? null;
                 if (!$p) continue;
 
-                $gid = $p->group; $cid = $p->category; $sid = $p->sub_category;
+                $gid = $norm($p->group); $cid = $norm($p->category); $sid = $norm($p->sub_category);
                 $ensureBucket($gid, $cid, $sid);
 
                 $amount = (float) ($item->amount ?? 0);
@@ -608,7 +611,7 @@ class HelperController extends Controller
                 $p = $products[$item->product_id] ?? null;
                 if (!$p) continue;
 
-                $gid = $p->group; $cid = $p->category; $sid = $p->sub_category;
+                $gid = $norm($p->group); $cid = $norm($p->category); $sid = $norm($p->sub_category);
                 $ensureBucket($gid, $cid, $sid);
 
                 $amount = (float) ($item->amount ?? 0);
@@ -626,7 +629,7 @@ class HelperController extends Controller
 
             // STOCK totals (qty)
             foreach ($products as $productId => $p) {
-                $gid = $p->group; $cid = $p->category; $sid = $p->sub_category;
+                $gid = $norm($p->group); $cid = $norm($p->category); $sid = $norm($p->sub_category);
                 $ensureBucket($gid, $cid, $sid);
 
                 $qty = (float) ($stockQtyByProduct[$productId] ?? 0);
@@ -635,19 +638,38 @@ class HelperController extends Controller
                 $result[$gid]['categories'][$cid]['sub_categories'][$sid]['total_stock'] += $qty;
             }
 
-            // Order final structure by master order_by
+            // ---- SAFE ORDERING (prevents "Undefined array key \"\"") ----
+            $safeOrderIdx = function($map, $id, $fallbackName = 'Unknown') {
+                // If ID missing/zero or master not found, push to bottom; second key for stable tiebreaker
+                $order = (is_int($id) && $id > 0 && isset($map[$id]) && isset($map[$id]->order_by))
+                    ? (int)$map[$id]->order_by
+                    : PHP_INT_MAX;
+                $name  = (is_int($id) && $id > 0 && isset($map[$id]) && isset($map[$id]->name))
+                    ? $map[$id]->name
+                    : $fallbackName;
+                return [$order, $name];
+            };
+
             $ordered = [];
             foreach ($groups->sortBy('order_by') as $gid => $g) {
                 if (!isset($result[$gid])) continue;
                 $ordered[$gid] = $result[$gid];
 
+                // sort categories; handle missing/empty IDs safely
                 $ordered[$gid]['categories'] = collect($ordered[$gid]['categories'])
-                    ->sortBy(fn($cat, $id) => $categories[$id]->order_by ?? PHP_INT_MAX)
+                    ->sortBy(function ($cat, $cid) use ($categories, $safeOrderIdx) {
+                        $cid = (is_numeric($cid) ? (int)$cid : 0);
+                        return $safeOrderIdx($categories, $cid, $cat['category_name'] ?? 'Unknown');
+                    })
                     ->all();
 
+                // sort subcategories under each category; safe
                 foreach ($ordered[$gid]['categories'] as $cid => $cat) {
                     $ordered[$gid]['categories'][$cid]['sub_categories'] = collect($cat['sub_categories'])
-                        ->sortBy(fn($sub, $id) => $subCategories[$id]->order_by ?? PHP_INT_MAX)
+                        ->sortBy(function ($sub, $sid) use ($subCategories, $safeOrderIdx) {
+                            $sid = (is_numeric($sid) ? (int)$sid : 0);
+                            return $safeOrderIdx($subCategories, $sid, $sub['sub_category_name'] ?? 'Unknown');
+                        })
                         ->all();
                 }
             }
