@@ -181,7 +181,7 @@ class HelperController extends Controller
                 'data'    => [
                     'count'          => $products->count(),
                     'total_records'  => $totalProducts,
-                    'total_stock_value' => round($totalStockValue, 2), // ✅ new key
+                    'total_stock_value' => round($totalStockValue), // ✅ new key
                     'limit'          => $limit,
                     'offset'         => $offset,
                     'records'        => $productsTransformed,
