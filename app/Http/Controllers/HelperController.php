@@ -202,14 +202,24 @@ class HelperController extends Controller
         try {
             $auth = Auth::user();
             if (!$auth) {
-                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+                return response()->json([
+                    'code' => 401,
+                    'success' => false,
+                    'message' => 'Unauthorized.',
+                    'data' => []
+                ], 401);
             }
 
             $product = ProductsModel::where('company_id', $auth->company_id)
                 ->find($productId);
 
             if (!$product) {
-                return response()->json(['success' => false, 'message' => 'Product not found.'], 404);
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'Product not found.',
+                    'data' => []
+                ], 404);
             }
 
             // Step 1: Reset pb_alias = 0 for all products in the same alias group
@@ -222,15 +232,22 @@ class HelperController extends Controller
             $product->save();
 
             return response()->json([
+                'code' => 200,
                 'success' => true,
-                'message' => "Product '{$product->name}' has been set as PB Alias for alias group '{$product->alias}'."
+                'message' => "Product '{$product->name}' has been set as PB Alias for alias group '{$product->alias}'.",
+                'data' => [
+                    'product_id' => $product->id,
+                    'alias_group' => $product->alias,
+                    'pb_alias' => $product->pb_alias
+                ]
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
+                'code' => 500,
                 'success' => false,
                 'message' => 'Something went wrong.',
-                'error' => $e->getMessage()
+                'data' => ['error' => $e->getMessage()]
             ], 500);
         }
     }
