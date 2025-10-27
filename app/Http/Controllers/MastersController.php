@@ -857,9 +857,10 @@ class MastersController extends Controller
                     continue;
                 }
 
-                die($record['stock']);
+                // die(json_encode($record['stock']);
 
-                $stockData = json_decode($record['stock'], true);
+                // $stockData = json_decode($record['stock'], true);
+                $stockData = $record['stock'];
                 if (!isset($stockData['place'], $stockData['quantity'])) {
                     continue;
                 }
