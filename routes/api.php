@@ -53,10 +53,10 @@ Route::get('/stats', [StatsController::class, 'index']);
 Route::get('/import-adjustment', [StatsController::class, 'importAdjustment']);
 Route::get('/import-fabrication', [StatsController::class, 'importFabrication']);
 Route::get('products_migrate', [MastersController::class, 'importProducts']);
+Route::get('/reset_calculation', [ResetController::class, 'stock_calculation']);
 Route::middleware(['auth:sanctum'])->group(function () {
 
     // Route::get('/reset_calculation/{id}', [ResetController::class, 'stock_calculation']);
-    Route::get('/reset_calculation', [ResetController::class, 'stock_calculation']);
     Route::get('/reset_status', [ResetController::class, 'reset_queue_status']);
     Route::get('/reset_all', [ResetController::class, 'addAllProductsToResetQueue']);
 

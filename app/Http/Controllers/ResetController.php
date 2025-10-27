@@ -253,7 +253,7 @@ class ResetController extends Controller
         $start_date = "2025-04-01";
         $end_date   = Carbon::now()->format('Y-m-d');
         $get_year   = 6;
-        $company_id = Auth::user()->company_id;
+        $company_id = 1;
 
         // Run for ~5 minutes max; cron will call us every 5 minutes
         set_time_limit(300);
