@@ -320,10 +320,44 @@ class HelperController extends Controller
     public function exportDashboardExcel(Request $request)
     {
         try {
-            // Optional: Validate incoming params (types, enums, etc.) if you want.
+            $companyId = Auth::user()->company_id ?? null;
+            if (!$companyId) {
+                return response()->json([
+                    'code'    => 401,
+                    'success' => false,
+                    'message' => 'Unauthorized.',
+                    'data'    => []
+                ], 401);
+            }
 
+            // Ensure export directory exists on public disk
+            $directory = 'exports';
+            if (!Storage::disk('public')->exists($directory)) {
+                Storage::disk('public')->makeDirectory($directory);
+            }
+
+            // File name & path
             $fileName = 'Stock_Dashboard_' . now()->format('Ymd_His') . '.xlsx';
-            return Excel::download(new DashboardStockExport($request->all()), $fileName);
+            $relativePath = $directory . '/' . $fileName; // storage/app/public/exports/...
+            
+            // Save to disk (public)
+            Excel::store(new DashboardStockExport($request->all()), $relativePath, 'public');
+
+            // Public URL (requires `php artisan storage:link` done once)
+            $publicUrl = Storage::disk('public')->url($relativePath);  // e.g. /storage/exports/Stock_Dashboard_20251027_1120.xlsx
+            $absoluteUrl = url($publicUrl);                            // full URL
+
+            return response()->json([
+                'code'    => 200,
+                'success' => true,
+                'message' => 'Export generated successfully.',
+                'data'    => [
+                    'file_name'    => $fileName,
+                    'relative_path'=> $relativePath,
+                    'public_url'   => $publicUrl,
+                    'absolute_url' => $absoluteUrl
+                ]
+            ], 200);
 
         } catch (\Throwable $e) {
             return response()->json([
