@@ -197,6 +197,44 @@ class HelperController extends Controller
         }
     }
 
+    public function setProductAsPbAlias($productId)
+    {
+        try {
+            $auth = Auth::user();
+            if (!$auth) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            }
+
+            $product = ProductsModel::where('company_id', $auth->company_id)
+                ->find($productId);
+
+            if (!$product) {
+                return response()->json(['success' => false, 'message' => 'Product not found.'], 404);
+            }
+
+            // Step 1: Reset pb_alias = 0 for all products in the same alias group
+            ProductsModel::where('company_id', $auth->company_id)
+                ->where('alias', $product->alias)
+                ->update(['pb_alias' => 0]);
+
+            // Step 2: Set pb_alias = 1 for the selected product
+            $product->pb_alias = 1;
+            $product->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Product '{$product->name}' has been set as PB Alias for alias group '{$product->alias}'."
+            ], 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Something went wrong.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     public function getSummary()
     {
         $companyId = Auth::user()->company_id;

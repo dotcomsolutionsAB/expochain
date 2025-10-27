@@ -14,6 +14,7 @@ class ProductsModel extends Model
         'company_id',
         'name',
         'alias',
+        'pb_alias',
         'description',
         'type',
         'group',
