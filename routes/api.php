@@ -58,6 +58,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Route::get('/reset_calculation/{id}', [ResetController::class, 'stock_calculation']);
     Route::get('/reset_calculation', [ResetController::class, 'stock_calculation']);
     Route::get('/reset_status', [ResetController::class, 'reset_queue_status']);
+    Route::get('/reset_all', [ResetController::class, 'addAllProductsToResetQueue']);
 
     Route::post('/user/create', [UsersController::class, 'register']);
 
