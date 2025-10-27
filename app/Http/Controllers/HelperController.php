@@ -353,9 +353,7 @@ class HelperController extends Controller
                 'message' => 'Export generated successfully.',
                 'data'    => [
                     'file_name'    => $fileName,
-                    'relative_path'=> $relativePath,
-                    'public_url'   => $publicUrl,
-                    'absolute_url' => $absoluteUrl
+                    'file_url' => $absoluteUrl
                 ]
             ], 200);
 
