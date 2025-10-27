@@ -14,6 +14,7 @@ use App\Models\SalesReturnProductsModel;
 use App\Models\AssemblyOperationModel;
 use App\Models\AssemblyOperationProductsModel;
 use App\Models\StockTransferProductsModel;
+use App\Models\ProductsModel;
 use Carbon\Carbon;
 use Auth;
 use DB;
