@@ -417,15 +417,28 @@ class ResetController extends Controller
                                 $sale = SalesInvoiceProductsModel::find($e['source_id']);
                                 if ($sale) {
                                     $purchaseDetails = [];
-                                    $rem = $q; $cost = 0;
+                                    $rem = $q;
+                                    $cost = 0;
+                                    $firstPurchaseInvoiceId = null;
+
                                     while ($rem > 0 && $fifo) {
                                         $layer = &$fifo[0];
                                         $used = min($layer['qty'], $rem);
                                         $cost += $used * $layer['rate'];
+
+                                        // Determine purchase_invoice_id if the layer is from a purchase
+                                        if ($layer['source_type'] === 'purchase' && !$firstPurchaseInvoiceId) {
+                                            $firstPurchaseInvoiceId = PurchaseInvoiceProductsModel::where('id', $layer['source_id'])
+                                                ->value('purchase_invoice_id');
+                                        }
+
                                         $purchaseDetails[] = [
-                                            'id' => $layer['source_id'], 'type' => $layer['source_type'], 'quantity' => $used
+                                            'id'       => $layer['source_id'],
+                                            'type'     => $layer['source_type'],
+                                            'quantity' => $used
                                         ];
-                                        // Mark sold in source
+
+                                        // Mark sold in the source
                                         switch ($layer['source_type']) {
                                             case 'purchase':
                                                 PurchaseInvoiceProductsModel::where('id', $layer['source_id'])->increment('sold', $used);
@@ -440,12 +453,21 @@ class ResetController extends Controller
                                                 AssemblyOperationModel::where('id', $layer['source_id'])->increment('sold', $used);
                                                 break;
                                         }
-                                        $layer['qty'] -= $used; $rem -= $used;
+
+                                        $layer['qty'] -= $used;
+                                        $rem -= $used;
                                         if ($layer['qty'] == 0) array_shift($fifo);
                                     }
-                                    $sale->profit = ($sale->amount ?? 0) - ($sale->cgst ?: 0) - ($sale->sgst ?: 0) - ($sale->igst ?: 0) - $cost;
+
+                                    // 🔹 Save the proper purchase_invoice_id and FIFO trace JSON
+                                    $sale->profit = ($sale->amount ?? 0)
+                                        - ($sale->cgst ?: 0)
+                                        - ($sale->sgst ?: 0)
+                                        - ($sale->igst ?: 0)
+                                        - $cost;
+
                                     $sale->purchase_rate = $cost;
-                                    $sale->purchase_invoice_id = json_encode($purchaseDetails);
+                                    $sale->purchase_invoice_id = $firstPurchaseInvoiceId; // ✅ actual parent invoice ID
                                     $sale->save();
                                 }
                                 break;
