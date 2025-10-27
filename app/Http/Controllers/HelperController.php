@@ -45,19 +45,19 @@ class HelperController extends Controller
             $filterGroup    = $request->input('group');
             $filterCategory = $request->input('category');
             $filterSubCat   = $request->input('sub_category');
-            $filterAlias    = $request->input('alias'); // ✅ new
+            $filterAlias    = $request->input('alias'); // single or CSV
             $search         = $request->input('search');
             $sortBy         = $request->input('sort_by', 'name');   // name, group, category, sub_category, alias
             $sortOrder      = $request->input('sort_order', 'asc'); // asc or desc
-            $stockLevelReq  = $request->input('stock_level');       // critical | sufficient | excessive | null
+            $stockLevelReq  = $request->input('stock_level');       // critical|sufficient|excessive|null
 
-            // Normalize stock level param
+            // Normalize stock_level
             $validLevels = ['critical','sufficient','excessive'];
             $stockLevel  = in_array(strtolower((string) $stockLevelReq), $validLevels, true)
                 ? strtolower($stockLevelReq)
-                : null; // null => no stock-level filter
+                : null;
 
-            // Mapping for hex codes
+            // Hex map
             $levelHex = [
                 'critical'   => 'FFCDD2',
                 'sufficient' => 'B3E5FC',
@@ -93,9 +93,11 @@ class HelperController extends Controller
                 $subCatIds = array_filter(explode(',', $filterSubCat));
                 $baseQuery->whereIn('sub_category', $subCatIds);
             }
-            if (!empty($filterAlias)) { // ✅ alias filter
-                $aliasValues = array_filter(explode(',', $filterAlias));
-                $baseQuery->whereIn('alias', $aliasValues);
+            if (!empty($filterAlias)) {
+                $aliasValues = array_map('trim', array_filter(explode(',', $filterAlias)));
+                if (!empty($aliasValues)) {
+                    $baseQuery->whereIn('alias', $aliasValues);
+                }
             }
 
             // Sorting
@@ -103,50 +105,90 @@ class HelperController extends Controller
             $sortCol  = in_array($sortBy, $sortable, true) ? $sortBy : 'name';
             $sortDir  = strtolower($sortOrder) === 'desc' ? 'desc' : 'asc';
 
-            // --- Build subquery of filtered product IDs (no pagination yet) ---
+            // --- Subquery of filtered product IDs (no pagination yet) ---
             $filteredIdsSub = (clone $baseQuery)->select('id');
 
-            // --- Precompute TOTAL QUANTITY per product across ALL godowns ---
+            // --- Gather aliases for filtered products ---
+            $aliasList = (clone $baseQuery)->distinct()->pluck('alias'); // aliases present after filters
+
+            // --- Total quantity per PRODUCT (for per-row total_quantity) ---
             $totalQtyByProduct = ClosingStockModel::where('company_id', $companyId)
                 ->whereIn('product_id', $filteredIdsSub)
                 ->select('product_id', DB::raw('SUM(quantity) as total_qty'))
                 ->groupBy('product_id')
                 ->pluck('total_qty', 'product_id');
 
-            // Fetch si1/si2 for the same filtered set
-            $siMap = ProductsModel::where('company_id', $companyId)
-                ->whereIn('id', $filteredIdsSub)
-                ->select('id','si1','si2')
+            // --- Total quantity per ALIAS (for group-level stock_level) ---
+            // join closing_stock -> products to sum by alias
+            $aliasQty = DB::table((new ClosingStockModel)->getTable().' as cs')
+                ->join((new ProductsModel)->getTable().' as p', 'p.id', '=', 'cs.product_id')
+                ->where('p.company_id', $companyId)
+                ->when(!empty($aliasList), fn($q) => $q->whereIn('p.alias', $aliasList))
+                ->select('p.alias', DB::raw('SUM(cs.quantity) as total_qty'))
+                ->groupBy('p.alias')
+                ->pluck('total_qty', 'alias'); // alias => total qty across products
+
+            // --- Effective SI thresholds per alias ---
+            // Prefer pb_alias=1 thresholds; if none, fallback to MAX(si1), MAX(si2) among that alias
+            $pbSi = ProductsModel::where('company_id', $companyId)
+                ->when(!empty($aliasList), fn($q) => $q->whereIn('alias', $aliasList))
+                ->where('pb_alias', 1)
+                ->select('alias','si1','si2')
                 ->get()
-                ->keyBy('id');
+                ->keyBy('alias'); // alias => model (si1, si2)
 
-            // Decide stock level per product
-            $levelByProduct = [];
-            foreach ($siMap as $pid => $row) {
-                $qty = (float) ($totalQtyByProduct[$pid] ?? 0);
-                $si1 = (float) ($row->si1 ?? 0);
-                $si2 = (float) ($row->si2 ?? 0);
+            $maxSi = ProductsModel::where('company_id', $companyId)
+                ->when(!empty($aliasList), fn($q) => $q->whereIn('alias', $aliasList))
+                ->select('alias', DB::raw('MAX(si1) as max_si1'), DB::raw('MAX(si2) as max_si2'))
+                ->groupBy('alias')
+                ->get()
+                ->keyBy('alias'); // alias => { max_si1, max_si2 }
 
-                if ($qty < $si1) {
-                    $levelByProduct[$pid] = 'critical';
-                } elseif ($qty <= $si2) {
-                    $levelByProduct[$pid] = 'sufficient';
+            $effectiveSiByAlias = [];
+            foreach ($aliasList as $alias) {
+                if (isset($pbSi[$alias])) {
+                    $effectiveSiByAlias[$alias] = [
+                        'si1' => (float) $pbSi[$alias]->si1,
+                        'si2' => (float) $pbSi[$alias]->si2,
+                    ];
+                } elseif (isset($maxSi[$alias])) {
+                    $effectiveSiByAlias[$alias] = [
+                        'si1' => (float) $maxSi[$alias]->max_si1,
+                        'si2' => (float) $maxSi[$alias]->max_si2,
+                    ];
                 } else {
-                    $levelByProduct[$pid] = 'excessive';
+                    $effectiveSiByAlias[$alias] = ['si1' => 0.0, 'si2' => 0.0];
                 }
             }
 
-            // If a stock_level filter was requested, restrict to those product IDs
+            // --- Alias-level stock_level ---
+            $levelByAlias = [];
+            foreach ($aliasList as $alias) {
+                $qty = (float) ($aliasQty[$alias] ?? 0);
+                $esi1 = (float) ($effectiveSiByAlias[$alias]['si1'] ?? 0);
+                $esi2 = (float) ($effectiveSiByAlias[$alias]['si2'] ?? 0);
+
+                if ($qty < $esi1) {
+                    $levelByAlias[$alias] = 'critical';
+                } elseif ($qty <= $esi2) {
+                    $levelByAlias[$alias] = 'sufficient';
+                } else {
+                    $levelByAlias[$alias] = 'excessive';
+                }
+            }
+
+            // --- Apply stock_level filter at alias level (if requested) ---
             if ($stockLevel !== null) {
-                $idsByLevel = array_keys(array_filter($levelByProduct, fn ($lvl) => $lvl === $stockLevel));
-                $baseQuery->whereIn('id', $idsByLevel ?: [-1]);
+                $aliasesMatchingLevel = array_keys(array_filter($levelByAlias, fn ($lvl) => $lvl === $stockLevel));
+                // Ensure we don't break when empty
+                $baseQuery->whereIn('alias', !empty($aliasesMatchingLevel) ? $aliasesMatchingLevel : ['__none__']);
             }
 
             // ----- Counts after all filters -----
-            $countQuery = (clone $baseQuery);
+            $countQuery    = (clone $baseQuery);
             $totalProducts = $countQuery->count();
 
-            // ----- Pagination query (include si1 & si2 for row-level output) -----
+            // ----- Pagination query (include si1/si2 for per-row display) -----
             $pageQuery = (clone $baseQuery)
                 ->select('id','name','alias','group','category','sub_category','unit','si1','si2')
                 ->orderBy($sortCol, $sortDir)
@@ -190,10 +232,13 @@ class HelperController extends Controller
                 ->flatMap(fn ($order) => $order->products->pluck('id'))
                 ->countBy();
 
-            // Transform page rows
-            $productsTransformed = $products->map(function ($product) use ($closingStockPage, $godowns, $pendingPurchase, $pendingSales, $stockValueByProduct, $levelHex) {
+            // Transform page rows (alias-level stock classification)
+            $productsTransformed = $products->map(function ($product) use (
+                $closingStockPage, $godowns, $pendingPurchase, $pendingSales,
+                $stockValueByProduct, $levelHex, $totalQtyByProduct, $aliasQty, $effectiveSiByAlias, $levelByAlias
+            ) {
                 $stockData = [];
-                $totalQuantity = 0;
+                $productTotalQty = 0;
 
                 $rows = $closingStockPage->get($product->id, collect())->keyBy('godown_id');
 
@@ -204,41 +249,40 @@ class HelperController extends Controller
                         'godown_name' => $godown->name,
                         'quantity'    => $qty,
                     ];
-                    $totalQuantity += $qty;
+                    $productTotalQty += $qty;
                 }
 
-                // Determine stock level
-                $si1 = (float) ($product->si1 ?? 0);
-                $si2 = (float) ($product->si2 ?? 0);
-                if ($totalQuantity < $si1) {
-                    $level = 'critical';
-                } elseif ($totalQuantity <= $si2) {
-                    $level = 'sufficient';
-                } else {
-                    $level = 'excessive';
-                }
+                // Alias-level info
+                $alias = $product->alias;
+                $aliasTotalQty = (float) ($aliasQty[$alias] ?? 0.0);
+                $esi1 = (float) ($effectiveSiByAlias[$alias]['si1'] ?? 0.0);
+                $esi2 = (float) ($effectiveSiByAlias[$alias]['si2'] ?? 0.0);
+                $level = $levelByAlias[$alias] ?? 'sufficient';
 
                 return [
-                    'id'                => $product->id,
-                    'name'              => $product->name,
-                    'alias'             => $product->alias,
-                    'group'             => optional($product->groupRelation)->name,
-                    'category'          => optional($product->categoryRelation)->name,
-                    'sub_category'      => optional($product->subCategoryRelation)->name,
-                    'unit'              => $product->unit,
-                    'si1'               => $si1,
-                    'si2'               => $si2,
-                    'stock_level'       => $level,
-                    'stock_level_hex'   => $levelHex[$level] ?? null,
-                    'stock_by_godown'   => $stockData,
-                    'total_quantity'    => $totalQuantity,
-                    'stock_value'       => (float) ($stockValueByProduct[$product->id] ?? 0.0),
-                    'pending_po'        => (int) ($pendingPurchase[$product->id] ?? 0),
-                    'pending_so'        => (int) ($pendingSales[$product->id] ?? 0),
+                    'id'                  => $product->id,
+                    'name'                => $product->name,
+                    'alias'               => $alias,
+                    'group'               => optional($product->groupRelation)->name,
+                    'category'            => optional($product->categoryRelation)->name,
+                    'sub_category'        => optional($product->subCategoryRelation)->name,
+                    'unit'                => $product->unit,
+                    'si1'                 => (float) ($product->si1 ?? 0), // product's own
+                    'si2'                 => (float) ($product->si2 ?? 0), // product's own
+                    'effective_si1'       => $esi1,                        // alias-level used for classification
+                    'effective_si2'       => $esi2,                        // alias-level used for classification
+                    'stock_level'         => $level,                       // alias-level
+                    'stock_level_hex'     => $levelHex[$level] ?? null,
+                    'stock_by_godown'     => $stockData,
+                    'total_quantity'      => $productTotalQty,             // product-level total
+                    'alias_total_quantity'=> $aliasTotalQty,               // alias-level total
+                    'stock_value'         => (float) ($stockValueByProduct[$product->id] ?? 0.0),
+                    'pending_po'          => (int) ($pendingPurchase[$product->id] ?? 0),
+                    'pending_so'          => (int) ($pendingSales[$product->id] ?? 0),
                 ];
             });
 
-            // ---- Grand total stock value ----
+            // ---- Grand total stock value across ALL filtered products (respect stock_level alias filter if present) ----
             $filteredIds = (clone $baseQuery)->pluck('id');
             $totalStockValue = $filteredIds->isNotEmpty()
                 ? (float) ClosingStockModel::where('company_id', $companyId)
@@ -256,7 +300,7 @@ class HelperController extends Controller
                     'total_stock_value' => round($totalStockValue),
                     'limit'             => $limit,
                     'offset'            => $offset,
-                    'stock_level'       => $stockLevel ?? null,
+                    'stock_level'       => $stockLevel ?? null, // echo applied level (alias-based)
                     'alias_filter'      => $filterAlias ?? null,
                     'records'           => $productsTransformed,
                 ]
