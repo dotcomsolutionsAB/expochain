@@ -255,15 +255,13 @@ class ResetController extends Controller
         $get_year = 6;
         $company_id = Auth::user()->company_id;
 
-        // 🔹 Increase the PHP timeout to handle long-running process
-        set_time_limit(0);  // Unlimited time limit (adjust if needed)
+        set_time_limit(0);
 
-        // 🔹 Pagination setup
-        $batchSize = 5;  // Number of products per batch
-        $offset = 0;     // Start from first record
+        $batchSize = 50; // tune as needed
+        $offset = 0;
 
         do {
-            // 🔹 Fetch next batch of product IDs with status = '0'
+            // Get next batch of product IDs that are pending
             $product_ids = DB::table('t_reset_queue')
                 ->where('status', '0')
                 ->orderBy('id')
@@ -272,34 +270,28 @@ class ResetController extends Controller
                 ->pluck('product_id');
 
             if ($product_ids->isEmpty()) {
-                break;  // No more records to process
+                break;
             }
 
-            // 🔹 Process each product in the batch
             foreach ($product_ids as $id) {
+                DB::transaction(function () use ($id, $start_date, $end_date, $get_year, $company_id) {
 
-                DB::transaction(function() use ($id, $start_date, $end_date, $get_year, $company_id) {
-
-                    // 🔹 STEP 1 : Reset 'sold' in opening stock for this product and year
+                    // 1) Reset sold flags for this product
                     OpeningStockModel::where('year', $get_year)
-                        ->where('company_id', Auth::user()->company_id)
+                        ->where('company_id', $company_id)
                         ->where('product_id', $id)
                         ->update(['sold' => 0]);
 
-                    // 🔹 STEP 2 : Reset 'sold' in purchase invoice products within the date range for this product
-                    PurchaseInvoiceProductsModel::whereHas('purchaseInvoice', function ($query) use ($start_date, $end_date) {
-                            $query->whereDate('purchase_invoice_date', '>=', $start_date)
-                                ->whereDate('purchase_invoice_date', '<=', $end_date);
+                    PurchaseInvoiceProductsModel::where('product_id', $id)
+                        ->whereHas('purchaseInvoice', function ($q) use ($start_date, $end_date) {
+                            $q->whereBetween('purchase_invoice_date', [$start_date, $end_date]);
                         })
-                        ->where('product_id', $id)
                         ->update(['sold' => 0]);
 
-                    // 🔹 STEP 3 : Reset sales invoice products fields for this product within the date range
-                    SalesInvoiceProductsModel::whereHas('salesInvoice', function ($query) use ($start_date, $end_date) {
-                            $query->whereDate('sales_invoice_date', '>=', $start_date)
-                                ->whereDate('sales_invoice_date', '<=', $end_date);
+                    SalesInvoiceProductsModel::where('product_id', $id)
+                        ->whereHas('salesInvoice', function ($q) use ($start_date, $end_date) {
+                            $q->whereBetween('sales_invoice_date', [$start_date, $end_date]);
                         })
-                        ->where('product_id', $id)  // 👈 Add filter for this product
                         ->update([
                             'profit' => 0,
                             'returned' => 0,
@@ -307,230 +299,303 @@ class ResetController extends Controller
                             'purchase_rate' => null,
                         ]);
 
+                    // 2) Build event stream (each with godown)
                     $events = [];
 
-                    // 1️⃣ Opening Stock
+                    // Opening stock (date set to very old so it sorts first)
                     $openings = OpeningStockModel::where('product_id', $id)
                         ->where('company_id', $company_id)
                         ->where('year', $get_year)
                         ->get();
+
                     foreach ($openings as $o) {
+                        if ($o->godown_id === null) continue;
                         $events[] = [
-                            'type' => 'opening', 'product_id' => $id, 'godown_id' => $o->godown_id,
-                            'quantity' => $o->quantity, 'rate' => $o->value, 'amount' => $o->quantity * $o->value,
-                            'date' => '0000-00-00', 'source_id' => $o->id, 'source_type' => 'opening'
+                            'type' => 'opening',
+                            'product_id' => $id,
+                            'godown_id' => (int)$o->godown_id,
+                            'quantity' => (float)$o->quantity,
+                            'rate' => (float)$o->value,
+                            'date' => '1970-01-01',
+                            'source_id' => $o->id,
+                            'source_type' => 'opening',
                         ];
                     }
 
-                    // 2️⃣ Purchases (net of returns)
+                    // Purchases (net of returns)
                     $purchases = PurchaseInvoiceProductsModel::where('product_id', $id)
                         ->whereHas('purchaseInvoice', fn($q) => $q->whereBetween('purchase_invoice_date', [$start_date, $end_date]))
-                        ->with('purchaseInvoice')->get();
+                        ->with('purchaseInvoice')
+                        ->get();
+
                     foreach ($purchases as $p) {
-                        $netQty = $p->quantity - ($p->returned ?? 0);
+                        $netQty = (float)$p->quantity - (float)($p->returned ?? 0);
                         if ($netQty <= 0) continue;
+                        if ($p->godown === null) continue;
                         $events[] = [
-                            'type' => 'purchase', 'product_id' => $id, 'godown_id' => null,
-                            'quantity' => $netQty, 'rate' => $p->price, 'amount' => $netQty * $p->price,
-                            'date' => $p->purchaseInvoice->purchase_invoice_date, 'source_id' => $p->id, 'source_type' => 'purchase'
+                            'type' => 'purchase',
+                            'product_id' => $id,
+                            'godown_id' => (int)$p->godown,
+                            'quantity' => $netQty,
+                            'rate' => (float)$p->price,
+                            'date' => $p->purchaseInvoice->purchase_invoice_date,
+                            'source_id' => $p->id,
+                            'source_type' => 'purchase',
                         ];
                     }
 
-                    // 3️⃣ Sales (net of returns)
+                    // Sales (net of returns)
                     $sales = SalesInvoiceProductsModel::where('product_id', $id)
                         ->whereHas('salesInvoice', fn($q) => $q->whereBetween('sales_invoice_date', [$start_date, $end_date]))
-                        ->with('salesInvoice')->get();
+                        ->with('salesInvoice')
+                        ->get();
+
                     foreach ($sales as $s) {
-                        $netQty = $s->quantity - ($s->returned ?? 0);
+                        $netQty = (float)$s->quantity - (float)($s->returned ?? 0);
                         if ($netQty <= 0) continue;
+                        if ($s->godown === null) continue;
                         $events[] = [
-                            'type' => 'sale', 'product_id' => $id, 'godown_id' => null,
-                            'quantity' => $netQty, 'rate' => null, 'amount' => $s->amount,
-                            'date' => $s->salesInvoice->sales_invoice_date, 'source_id' => $s->id
+                            'type' => 'sale',
+                            'product_id' => $id,
+                            'godown_id' => (int)$s->godown,
+                            'quantity' => $netQty,
+                            'rate' => null,
+                            'date' => $s->salesInvoice->sales_invoice_date,
+                            'source_id' => $s->id,
+                            'source_type' => 'sale',
                         ];
                     }
 
-                    // 4️⃣ Assembly
-                    // Assemblies (already filtered)
+                    // Assemblies
                     $assemblies = AssemblyOperationModel::where('company_id', $company_id)
                         ->whereBetween('assembly_operations_date', [$start_date, $end_date])
-                        ->with('products')->get();
-                        foreach ($assemblies as $a) {
-                        $type = strtolower($a->type);
+                        ->with('products')
+                        ->get();
+
+                    foreach ($assemblies as $a) {
+                        $atype = strtolower($a->type ?? '');
+                        // components
                         foreach ($a->products as $c) {
-                            if ($c->product_id == $id) {
-                                $qty = $c->quantity * $a->quantity;
+                            if ((int)$c->product_id !== (int)$id) continue;
+                            if ($c->godown === null) continue;
+                            $qty = (float)$c->quantity * (float)$a->quantity;
+                            $events[] = [
+                                'type' => ($atype === 'assemble') ? 'assembly_component_out' : 'assembly_component_in',
+                                'product_id' => $id,
+                                'godown_id' => (int)$c->godown,
+                                'quantity' => $qty,
+                                'rate' => null,
+                                'date' => $a->assembly_operations_date,
+                                'source_id' => $c->id,
+                                'source_type' => 'assembly_product',
+                            ];
+                        }
+                        // product
+                        if ((int)$a->product_id === (int)$id) {
+                            if ($a->godown !== null) {
                                 $events[] = [
-                                    'type' => ($type == 'assemble') ? 'assembly_component_out' : 'assembly_component_in',
-                                    'product_id' => $id, 'godown_id' => $c->godown, 'quantity' => $qty,
-                                    'date' => $a->assembly_operations_date, 'source_id' => $c->id, 'source_type' => 'assembly_product'
+                                    'type' => ($atype === 'assemble') ? 'assembly_product_in' : 'assembly_product_out',
+                                    'product_id' => $id,
+                                    'godown_id' => (int)$a->godown,
+                                    'quantity' => (float)$a->quantity,
+                                    'rate' => (float)($a->rate ?? 0),
+                                    'date' => $a->assembly_operations_date,
+                                    'source_id' => $a->id,
+                                    'source_type' => 'assembly',
                                 ];
                             }
                         }
-                        if ($a->product_id == $id) {
-                            $events[] = [
-                                'type' => ($type == 'assemble') ? 'assembly_product_in' : 'assembly_product_out',
-                                'product_id' => $id, 'godown_id' => $a->godown, 'quantity' => $a->quantity,
-                                'rate' => $a->rate, 'amount' => $a->amount, 'date' => $a->assembly_operations_date, 'source_id' => $a->id, 'source_type' => 'assembly'
-                            ];
-                        }
                     }
 
-                    // Transfers (filtered by date)
+                    // Transfers – create a single "transfer" event that knows from/to
                     $transfers = StockTransferProductsModel::where('product_id', $id)
                         ->whereHas('stockTransfer', fn($q) => $q->whereBetween('transfer_date', [$start_date, $end_date]))
-                        ->with('stockTransfer')->get();
-                        foreach ($transfers as $t) {
-                        $transferDate = $t->stockTransfer->transfer_date;
+                        ->with('stockTransfer')
+                        ->get();
+
+                    foreach ($transfers as $t) {
+                        $from = $t->stockTransfer->godown_from;
+                        $to   = $t->stockTransfer->godown_to;
+                        if ($from === null || $to === null) continue;
                         $events[] = [
-                            'type' => 'transfer_out', 'product_id' => $id, 'godown_id' => $t->stockTransfer->godown_from,
-                            'quantity' => $t->quantity, 'date' => $transferDate, 'source_id' => $t->id
-                        ];
-                        $events[] = [
-                            'type' => 'transfer_in', 'product_id' => $id, 'godown_id' => $t->stockTransfer->godown_to,
-                            'quantity' => $t->quantity, 'date' => $transferDate, 'source_id' => $t->id
+                            'type' => 'transfer',
+                            'product_id' => $id,
+                            'godown_from' => (int)$from,
+                            'godown_to' => (int)$to,
+                            'quantity' => (float)$t->quantity,
+                            'date' => $t->stockTransfer->transfer_date,
+                            'source_id' => $t->id,
+                            'source_type' => 'transfer',
                         ];
                     }
 
+                    // 3) Sort by date ASC
+                    usort($events, function ($a, $b) {
+                        return strtotime($a['date']) <=> strtotime($b['date']);
+                    });
 
-                    // 6️⃣ Sort Events
-                    usort($events, fn($a, $b) => strtotime($a['date']) <=> strtotime($b['date']));
+                    // 4) FIFO per-godown utilities
+                    $fifo = [];        // $fifo[$godownId] = [ ['qty','rate','source_type','source_id'], ... ]
+                    $godownStock = []; // running qty per godown
 
-                    // header('Content-Type: application/json');
-                    // die(json_encode($events));
+                    $pushLayer = function (&$fifo, int $g, float $qty, float $rate, string $stype, int $sid) {
+                        if ($qty <= 0) return;
+                        $fifo[$g] ??= [];
+                        $fifo[$g][] = ['qty' => $qty, 'rate' => $rate, 'source_type' => $stype, 'source_id' => $sid];
+                    };
 
-                    $fifo = [];  // [{qty, rate, source_id, source_type}]
-                    $godownStock = [];
+                    $consumeFrom = function (&$fifo, int $g, float $qtyNeeded) {
+                        $cost = 0.0; $rem = $qtyNeeded; $piIds = [];
+                        while ($rem > 0 && !empty($fifo[$g])) {
+                            $layer = &$fifo[$g][0];
+                            $used  = min($layer['qty'], $rem);
+                            $cost += $used * (float)$layer['rate'];
 
-                    // 7️⃣ Process Events
+                            // mark sold to original source & collect PI ids
+                            switch ($layer['source_type']) {
+                                case 'purchase':
+                                    $piId = PurchaseInvoiceProductsModel::where('id', $layer['source_id'])->value('purchase_invoice_id');
+                                    if ($piId) $piIds[$piId] = true;
+                                    PurchaseInvoiceProductsModel::where('id', $layer['source_id'])->increment('sold', $used);
+                                    break;
+                                case 'opening':
+                                    OpeningStockModel::where('id', $layer['source_id'])->increment('sold', $used);
+                                    break;
+                                case 'assembly_product':
+                                    AssemblyOperationProductsModel::where('id', $layer['source_id'])->increment('sold', $used);
+                                    break;
+                                case 'assembly':
+                                    AssemblyOperationModel::where('id', $layer['source_id'])->increment('sold', $used);
+                                    break;
+                            }
+
+                            $layer['qty'] -= $used;
+                            $rem -= $used;
+                            if ($layer['qty'] <= 1e-9) array_shift($fifo[$g]);
+                        }
+                        return [$cost, array_keys($piIds), $rem];
+                    };
+
+                    $transferLayers = function (&$fifo, int $gFrom, int $gTo, float $qty) use ($pushLayer) {
+                        if ($qty <= 0) return 0.0;
+                        $moved = 0.0;
+                        $rem = $qty;
+                        while ($rem > 0 && !empty($fifo[$gFrom])) {
+                            $layer = &$fifo[$gFrom][0];
+                            $used  = min($layer['qty'], $rem);
+                            // move at same rate and source
+                            $pushLayer($fifo, $gTo, $used, (float)$layer['rate'], $layer['source_type'], $layer['source_id']);
+                            $layer['qty'] -= $used;
+                            $moved += $used;
+                            $rem -= $used;
+                            if ($layer['qty'] <= 1e-9) array_shift($fifo[$gFrom]);
+                        }
+                        return $moved; // quantity actually moved
+                    };
+
+                    // 5) Process events
                     foreach ($events as $e) {
-                        $q = $e['quantity']; $r = $e['rate'] ?? 0; $g = $e['godown_id'];
-                        switch ($e['type']) {
-                            case 'opening': case 'purchase': case 'assembly_product_in': case 'assembly_component_in': case 'transfer_in':
-                                $fifo[] = [
-                                    'qty' => $q, 'rate' => $r, 'source_id' => $e['source_id'], 'source_type' => $e['source_type'] ?? 'other'
-                                ];
-                                if ($g !== null) $godownStock[$g] = ($godownStock[$g] ?? 0) + $q;
+                        $type = $e['type'];
+                        if ($type === 'transfer') {
+                            $from = $e['godown_from'];
+                            $to   = $e['godown_to'];
+                            $qty  = (float)$e['quantity'];
+                            $moved = $transferLayers($fifo, $from, $to, $qty);
+                            $godownStock[$from] = ($godownStock[$from] ?? 0) - $moved;
+                            $godownStock[$to]   = ($godownStock[$to] ?? 0) + $moved;
+                            continue;
+                        }
+
+                        $g = $e['godown_id'] ?? null;
+                        $q = (float)$e['quantity'];
+                        $r = (float)($e['rate'] ?? 0);
+
+                        switch ($type) {
+                            // inflows
+                            case 'opening':
+                            case 'purchase':
+                            case 'assembly_product_in':
+                            case 'assembly_component_in':
+                                if ($g === null) break;
+                                $pushLayer($fifo, (int)$g, $q, $r, $e['source_type'] ?? 'other', (int)$e['source_id']);
+                                $godownStock[$g] = ($godownStock[$g] ?? 0) + $q;
                                 break;
 
+                            // outflows that impact profit (sales)
                             case 'sale':
+                                if ($g === null) break;
                                 $sale = SalesInvoiceProductsModel::find($e['source_id']);
                                 if ($sale) {
-                                    $purchaseDetails = [];
-                                    $rem = $q;
-                                    $cost = 0;
-                                    $firstPurchaseInvoiceId = null;
-
-                                    while ($rem > 0 && $fifo) {
-                                        $layer = &$fifo[0];
-                                        $used = min($layer['qty'], $rem);
-                                        $cost += $used * $layer['rate'];
-
-                                        // Determine purchase_invoice_id if the layer is from a purchase
-                                        if ($layer['source_type'] === 'purchase' && !$firstPurchaseInvoiceId) {
-                                            $firstPurchaseInvoiceId = PurchaseInvoiceProductsModel::where('id', $layer['source_id'])
-                                                ->value('purchase_invoice_id');
-                                        }
-
-                                        $purchaseDetails[] = [
-                                            'id'       => $layer['source_id'],
-                                            'type'     => $layer['source_type'],
-                                            'quantity' => $used
-                                        ];
-
-                                        // Mark sold in the source
-                                        switch ($layer['source_type']) {
-                                            case 'purchase':
-                                                PurchaseInvoiceProductsModel::where('id', $layer['source_id'])->increment('sold', $used);
-                                                break;
-                                            case 'opening':
-                                                OpeningStockModel::where('id', $layer['source_id'])->increment('sold', $used);
-                                                break;
-                                            case 'assembly_product':
-                                                AssemblyOperationProductsModel::where('id', $layer['source_id'])->increment('sold', $used);
-                                                break;
-                                            case 'assembly':
-                                                AssemblyOperationModel::where('id', $layer['source_id'])->increment('sold', $used);
-                                                break;
-                                        }
-
-                                        $layer['qty'] -= $used;
-                                        $rem -= $used;
-                                        if ($layer['qty'] == 0) array_shift($fifo);
-                                    }
-
-                                    // 🔹 Save the proper purchase_invoice_id and FIFO trace JSON
-                                    $sale->profit = ($sale->amount ?? 0)
-                                        - ($sale->cgst ?: 0)
-                                        - ($sale->sgst ?: 0)
-                                        - ($sale->igst ?: 0)
-                                        - $cost;
+                                    [$cost, $piIds, $rem] = $consumeFrom($fifo, (int)$g, $q);
+                                    // (optional) if $rem > 0, shortage occurred – handle/log
 
                                     $sale->purchase_rate = $cost;
-                                    $sale->purchase_invoice_id = $firstPurchaseInvoiceId; // ✅ actual parent invoice ID
+                                    $sale->purchase_invoice_id = $piIds[0] ?? null; // first PI used (FIFO)
+                                    $sale->profit = ($sale->amount ?? 0)
+                                        - ($sale->cgst ?: 0) - ($sale->sgst ?: 0) - ($sale->igst ?: 0)
+                                        - $cost;
                                     $sale->save();
+
+                                    $godownStock[$g] = ($godownStock[$g] ?? 0) - $q;
                                 }
                                 break;
 
-                            case 'assembly_product_out': case 'assembly_component_out': case 'transfer_out':
-                                $rem = $q;
-                                while ($rem > 0 && $fifo) {
-                                    $layer = &$fifo[0];
-                                    $used = min($layer['qty'], $rem);
-                                    switch ($layer['source_type']) {
-                                        case 'purchase':
-                                            PurchaseInvoiceProductsModel::where('id', $layer['source_id'])->increment('sold', $used);
-                                            break;
-                                        case 'opening':
-                                            OpeningStockModel::where('id', $layer['source_id'])->increment('sold', $used);
-                                            break;
-                                        case 'assembly_product':
-                                            AssemblyOperationProductsModel::where('id', $layer['source_id'])->increment('sold', $used);
-                                            break;
-                                        case 'assembly':
-                                            AssemblyOperationModel::where('id', $layer['source_id'])->increment('sold', $used);
-                                            break;
-                                    }
-                                    $layer['qty'] -= $used; $rem -= $used;
-                                    if ($layer['qty'] == 0) array_shift($fifo);
-                                }
-                                if ($g !== null) $godownStock[$g] = ($godownStock[$g] ?? 0) - $q;
+                            // other outflows (no profit calc)
+                            case 'assembly_product_out':
+                            case 'assembly_component_out':
+                                if ($g === null) break;
+                                [, , $rem] = $consumeFrom($fifo, (int)$g, $q);
+                                // (optional) handle $rem > 0
+                                $godownStock[$g] = ($godownStock[$g] ?? 0) - $q;
                                 break;
                         }
                     }
 
-                    // 8️⃣ Update Closing Stock
+                    // 6) Write Closing Stock (per godown, with valuation)
                     ClosingStockModel::where('company_id', $company_id)
                         ->where('year', $get_year)
-                        ->where('product_id', $id)->delete();
+                        ->where('product_id', $id)
+                        ->delete();
+
                     foreach ($godownStock as $g => $qty) {
-                        if ($qty > 0) {
-                            ClosingStockModel::create([
-                                'company_id' => $company_id, 'year' => $get_year,
-                                'godown_id' => $g, 'product_id' => $id,
-                                'quantity' => round($qty,2), 'value' => 0
-                            ]);
+                        if ($qty <= 0) continue;
+
+                        $value = 0.0;
+                        if (!empty($fifo[$g])) {
+                            foreach ($fifo[$g] as $layer) {
+                                $lqty = (float)($layer['qty'] ?? 0);
+                                if ($lqty > 0) {
+                                    $value += $lqty * (float)($layer['rate'] ?? 0);
+                                }
+                            }
                         }
+
+                        ClosingStockModel::create([
+                            'company_id' => $company_id,
+                            'year'       => $get_year,
+                            'godown_id'  => (int)$g,
+                            'product_id' => $id,
+                            'quantity'   => round((float)$qty, 2),
+                            'value'      => round($value, 2),
+                        ]);
                     }
 
-                    // After stock calculation, update t_reset_queue status to 1
+                    // 7) Mark queue row done
                     DB::table('t_reset_queue')
                         ->where('product_id', $id)
                         ->update(['status' => '1', 'updated_at' => now()]);
                 });
             }
-            // 🔹 Move to next batch
+
+            // next page
             $offset += $batchSize;
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Stock reset for all products completed successfully!'
-            ]);
+            // IMPORTANT: do not return here (keep looping)
         } while (true);
 
         return response()->json([
             'success' => true,
-            'message' => 'Stock reset for all products in reset queue completed!'
+            'message' => 'Stock reset and closing stock recomputed for all products in reset queue.',
         ]);
     }
 
