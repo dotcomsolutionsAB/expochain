@@ -385,7 +385,7 @@ class ResetController extends Controller
                     })
                     ->with(['products' => function($q) use ($productId) {
                         $q->where('product_id', $productId)
-                        ->select('id','assembly_operation_id','product_id','godown','quantity');
+                        ->select('id','assembly_operations_id','product_id','godown','quantity');
                     }])
                     ->get(['id','type','assembly_operations_date','product_id','godown','quantity','rate','amount']);
 
