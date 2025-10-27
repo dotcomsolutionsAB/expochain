@@ -26,6 +26,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Illuminate\Support\Facades\Storage;
+use App\Exports\DashboardStockExport;
 use DB;
 use Auth;
 use App\Exports\ClientWiseYearlySalesSummaryExport;
@@ -305,6 +306,24 @@ class HelperController extends Controller
                     'records'           => $productsTransformed,
                 ]
             ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code'    => 500,
+                'success' => false,
+                'message' => 'Something went wrong: ' . $e->getMessage(),
+                'data'    => []
+            ], 500);
+        }
+    }
+
+    public function exportDashboardExcel(Request $request)
+    {
+        try {
+            // Optional: Validate incoming params (types, enums, etc.) if you want.
+
+            $fileName = 'Stock_Dashboard_' . now()->format('Ymd_His') . '.xlsx';
+            return Excel::download(new DashboardStockExport($request->all()), $fileName);
 
         } catch (\Throwable $e) {
             return response()->json([
