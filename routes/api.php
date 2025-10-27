@@ -373,7 +373,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // routes/api.php
     
     Route::prefix('report')->group(function () {
-        Route::get('/dashboard/export', [HelperController::class, 'exportDashboardExcel']);
+        Route::post('/dashboard/export', [HelperController::class, 'exportDashboardExcel']);
 
         Route::post('/dashboard', [HelperController::class, 'dashboard']);
 
