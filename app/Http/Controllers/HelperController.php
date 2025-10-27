@@ -447,164 +447,208 @@ class HelperController extends Controller
 
     public function fyWisePurchaseTotals(Request $request)
     {
-        $companyId = auth()->user()->company_id;
-    
-        // Get start and end date from request
-        $startDate = Carbon::parse($request->start_date)->startOfDay();
-        $endDate = Carbon::parse($request->end_date)->endOfDay();
+        try {
+            $auth = auth()->user();
+            if (!$auth) {
+                return response()->json([
+                    'code' => 401,
+                    'success' => false,
+                    'message' => 'Unauthorized.',
+                    'data' => []
+                ], 401);
+            }
 
-        // Get all products with group, category, sub-category
-        $products = ProductsModel::with([
-            'groupRelation:id,name',
-            'categoryRelation:id,name',
-            'subCategoryRelation:id,name'
-        ])->where('company_id', $companyId)->get()->keyBy('id');
+            $companyId = $auth->company_id;
 
-        // Fetch purchase data
-        $purchaseData = PurchaseInvoiceProductsModel::with('purchaseInvoice')
-            ->whereHas('purchaseInvoice', function ($q) use ($companyId, $startDate, $endDate) {
-                $q->where('company_id', $companyId)
-                ->whereBetween('purchase_invoice_date', [$startDate, $endDate]);
-            })->get();
+            // Parse dates
+            $startDate = Carbon::parse($request->start_date)->startOfDay();
+            $endDate   = Carbon::parse($request->end_date)->endOfDay();
 
-        // Fetch sales data
-        $salesData = SalesInvoiceProductsModel::with('salesInvoice')
-            ->whereHas('salesInvoice', function ($q) use ($companyId, $startDate, $endDate) {
-                $q->where('company_id', $companyId)
-                ->whereBetween('sales_invoice_date', [$startDate, $endDate]);
-            })->get();
+            // Preload ordered lists (✅ ensures consistent ordering later)
+            $groups = GroupModel::where('company_id', $companyId)
+                ->orderBy('order_by', 'asc')
+                ->get(['id', 'name', 'order_by'])
+                ->keyBy('id');
 
-        // Build structure
-        $result = [];
+            $categories = CategoryModel::where('company_id', $companyId)
+                ->orderBy('order_by', 'asc')
+                ->get(['id', 'name', 'order_by'])
+                ->keyBy('id');
 
-        foreach ($products as $productId => $product) {
-            $groupId = $product->group;
-            $categoryId = $product->category;
-            $subCategoryId = $product->sub_category;
+            $subCategories = SubCategoryModel::where('company_id', $companyId)
+                ->orderBy('order_by', 'asc')
+                ->get(['id', 'name', 'order_by'])
+                ->keyBy('id');
 
-            $groupName = $product->groupRelation->name ?? 'Unknown';
-            $categoryName = $product->categoryRelation->name ?? 'Unknown';
-            $subCategoryName = $product->subCategoryRelation->name ?? 'Unknown';
+            // All products
+            $products = ProductsModel::where('company_id', $companyId)
+                ->select('id','group','category','sub_category')
+                ->get()
+                ->keyBy('id');
 
-            // Initialize
-            if (!isset($result[$groupId])) {
+            // Precompute stock quantities
+            $stockQtyByProduct = ClosingStockModel::where('company_id', $companyId)
+                ->select('product_id', DB::raw('SUM(quantity) as total_qty'))
+                ->groupBy('product_id')
+                ->pluck('total_qty', 'product_id');
+
+            // Purchase data
+            $purchaseData = PurchaseInvoiceProductsModel::with('purchaseInvoice')
+                ->whereHas('purchaseInvoice', function ($q) use ($companyId, $startDate, $endDate) {
+                    $q->where('company_id', $companyId)
+                    ->whereBetween('purchase_invoice_date', [$startDate, $endDate]);
+                })
+                ->get();
+
+            // Sales data
+            $salesData = SalesInvoiceProductsModel::with('salesInvoice')
+                ->whereHas('salesInvoice', function ($q) use ($companyId, $startDate, $endDate) {
+                    $q->where('company_id', $companyId)
+                    ->whereBetween('sales_invoice_date', [$startDate, $endDate]);
+                })
+                ->get();
+
+            // Initialize structure (ordered by group->category->sub_category)
+            $result = [];
+
+            foreach ($groups as $groupId => $group) {
                 $result[$groupId] = [
-                    'group_id' => $groupId,
-                    'group_name' => $groupName,
-                    'total_sales' => 0,
+                    'group_id'       => $groupId,
+                    'group_name'     => $group->name,
+                    'total_sales'    => 0,
                     'total_purchase' => 0,
-                    'total_profit' => 0,
-                    'categories' => []
+                    'total_profit'   => 0,
+                    'total_stock'    => 0,
+                    'categories'     => []
                 ];
+
+                // All categories under this group (filter from product map)
+                $catIds = $products->where('group', $groupId)->pluck('category')->unique()->filter();
+                $catsOrdered = $categories->only($catIds->toArray())->sortBy('order_by');
+
+                foreach ($catsOrdered as $categoryId => $category) {
+                    $result[$groupId]['categories'][$categoryId] = [
+                        'category_id'    => $categoryId,
+                        'category_name'  => $category->name,
+                        'total_sales'    => 0,
+                        'total_purchase' => 0,
+                        'total_profit'   => 0,
+                        'total_stock'    => 0,
+                        'sub_categories' => []
+                    ];
+
+                    // Sub-categories under this category (from products)
+                    $subIds = $products->where('category', $categoryId)->pluck('sub_category')->unique()->filter();
+                    $subsOrdered = $subCategories->only($subIds->toArray())->sortBy('order_by');
+
+                    foreach ($subsOrdered as $subId => $sub) {
+                        $result[$groupId]['categories'][$categoryId]['sub_categories'][$subId] = [
+                            'sub_category_id'   => $subId,
+                            'sub_category_name' => $sub->name,
+                            'total_sales'       => 0,
+                            'total_purchase'    => 0,
+                            'total_profit'      => 0,
+                            'total_stock'       => 0
+                        ];
+                    }
+                }
             }
 
-            if (!isset($result[$groupId]['categories'][$categoryId])) {
-                $result[$groupId]['categories'][$categoryId] = [
-                    'category_id' => $categoryId,
-                    'category_name' => $categoryName,
-                    'total_sales' => 0,
-                    'total_purchase' => 0,
-                    'total_profit' => 0,
-                    'sub_categories' => []
-                ];
+            // Accumulate PURCHASE totals
+            foreach ($purchaseData as $item) {
+                $product = $products[$item->product_id] ?? null;
+                if (!$product) continue;
+
+                $groupId       = $product->group;
+                $categoryId    = $product->category;
+                $subCategoryId = $product->sub_category;
+                $amount        = (float) ($item->amount ?? 0);
+
+                if (!isset($result[$groupId])) continue;
+
+                $result[$groupId]['total_purchase'] += $amount;
+                $result[$groupId]['categories'][$categoryId]['total_purchase'] += $amount;
+                $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId]['total_purchase'] += $amount;
             }
 
-            if (!isset($result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId])) {
-                $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId] = [
-                    'sub_category_id' => $subCategoryId,
-                    'sub_category_name' => $subCategoryName,
-                    'total_sales' => 0,
-                    'total_purchase' => 0,
-                    'total_profit' => 0
-                ];
+            // Accumulate SALES & PROFIT
+            foreach ($salesData as $item) {
+                $product = $products[$item->product_id] ?? null;
+                if (!$product) continue;
+
+                $groupId       = $product->group;
+                $categoryId    = $product->category;
+                $subCategoryId = $product->sub_category;
+                $amount        = (float) ($item->amount ?? 0);
+                $profit        = (float) ($item->profit ?? 0);
+
+                if (!isset($result[$groupId])) continue;
+
+                $result[$groupId]['total_sales'] += $amount;
+                $result[$groupId]['total_profit'] += $profit;
+
+                $result[$groupId]['categories'][$categoryId]['total_sales'] += $amount;
+                $result[$groupId]['categories'][$categoryId]['total_profit'] += $profit;
+
+                $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId]['total_sales'] += $amount;
+                $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId]['total_profit'] += $profit;
             }
-        }
 
-        // Loop and add purchase values
-        foreach ($purchaseData as $item) {
-            $product = $products[$item->product_id] ?? null;
-            if (!$product) continue;
+            // STOCK quantities
+            foreach ($products as $productId => $product) {
+                $qty = (float) ($stockQtyByProduct[$productId] ?? 0);
+                $groupId       = $product->group;
+                $categoryId    = $product->category;
+                $subCategoryId = $product->sub_category;
 
-            $groupId = $product->group;
-            $categoryId = $product->category;
-            $subCategoryId = $product->sub_category;
+                if (!isset($result[$groupId])) continue;
 
-            $amount = $item->amount ?? 0;
+                $result[$groupId]['total_stock'] += $qty;
+                $result[$groupId]['categories'][$categoryId]['total_stock'] += $qty;
+                $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId]['total_stock'] += $qty;
+            }
 
-            $result[$groupId]['total_purchase'] += $amount;
-            $result[$groupId]['categories'][$categoryId]['total_purchase'] += $amount;
-            $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId]['total_purchase'] += $amount;
-        }
-
-        // Loop and add sales values
-        foreach ($salesData as $item) {
-            $product = $products[$item->product_id] ?? null;
-            if (!$product) continue;
-
-            $groupId = $product->group;
-            $categoryId = $product->category;
-            $subCategoryId = $product->sub_category;
-
-            $amount = $item->amount ?? 0;
-            $profit = $item->profit ?? 0;
-
-            $result[$groupId]['total_sales'] += $amount;
-            $result[$groupId]['total_profit'] += $profit;
-
-            $result[$groupId]['categories'][$categoryId]['total_sales'] += $amount;
-            $result[$groupId]['categories'][$categoryId]['total_profit'] += $profit;
-
-            $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId]['total_sales'] += $amount;
-            $result[$groupId]['categories'][$categoryId]['sub_categories'][$subCategoryId]['total_profit'] += $profit;
-        }
-
-        // Re-index data for clean structure
-        $final = [
-            'start_date' => $startDate->toDateString(),
-            'end_date' => $endDate->toDateString(),
-            'data' => array_values(array_map(function ($group) {
+            // Round & reindex structure
+            $data = array_values(array_map(function ($group) {
                 $group['categories'] = array_values(array_map(function ($cat) {
-                    $cat['sub_categories'] = array_values($cat['sub_categories']);
-                    return $cat;
-                }, $group['categories']));
-                return $group;
-            }, $result))
-        ];
-    
-        // return response()->json([
-        //     'success' => true,
-        //     'data' => $result
-        // ]);
+                    $cat['sub_categories'] = array_values(array_map(function ($sub) {
+                        foreach (['total_sales','total_purchase','total_profit','total_stock'] as $key) {
+                            $sub[$key] = round($sub[$key]);
+                        }
+                        return $sub;
+                    }, $cat['sub_categories']));
 
-        return response()->json([
-            'code' => 200,
-            'success' => true,
-            'start_date' => $startDate->toDateString(),
-            'end_date' => $endDate->toDateString(),
-            'data' => array_values(array_map(function ($group) {
-                $group['categories'] = array_values(array_map(function ($cat) {
-                    $cat['sub_categories'] = array_values($cat['sub_categories']);
-                    // Round off category totals
-                    $cat['total_sales'] = round($cat['total_sales']);
-                    $cat['total_purchase'] = round($cat['total_purchase']);
-                    $cat['total_profit'] = round($cat['total_profit']);
-                    foreach ($cat['sub_categories'] as &$sub) {
-                        $sub['total_sales'] = round($sub['total_sales']);
-                        $sub['total_purchase'] = round($sub['total_purchase']);
-                        $sub['total_profit'] = round($sub['total_profit']);
+                    foreach (['total_sales','total_purchase','total_profit','total_stock'] as $key) {
+                        $cat[$key] = round($cat[$key]);
                     }
                     return $cat;
                 }, $group['categories']));
-        
-                // Round off group totals
-                $group['total_sales'] = round($group['total_sales']);
-                $group['total_purchase'] = round($group['total_purchase']);
-                $group['total_profit'] = round($group['total_profit']);
-        
+
+                foreach (['total_sales','total_purchase','total_profit','total_stock'] as $key) {
+                    $group[$key] = round($group[$key]);
+                }
                 return $group;
-            }, $result))
-        ]);
-        
+            }, $result));
+
+            return response()->json([
+                'code'    => 200,
+                'success' => true,
+                'message' => 'FY-wise purchase totals fetched successfully.',
+                'data'    => [
+                    'start_date' => $startDate->toDateString(),
+                    'end_date'   => $endDate->toDateString(),
+                    'groups'     => $data
+                ]
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code'    => 500,
+                'success' => false,
+                'message' => 'Something went wrong: ' . $e->getMessage(),
+                'data'    => []
+            ], 500);
+        }
     }
 
     //purchase vs sales barchart

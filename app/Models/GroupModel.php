@@ -12,6 +12,7 @@ class GroupModel extends Model
     protected $fillable = [
         'serial_number',
         'company_id',
+        'order_by',
         'name',
         'logo',
     ];
