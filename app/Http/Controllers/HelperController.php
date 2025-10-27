@@ -40,148 +40,157 @@ class HelperController extends Controller
             $companyId = Auth::user()->company_id;
 
             // Extract filters from request
-            $limit = $request->input('limit', 50);
-            $offset = $request->input('offset', 0);
-            $filterGroup = $request->input('group');
+            $limit          = (int) $request->input('limit', 50);
+            $offset         = (int) $request->input('offset', 0);
+            $filterGroup    = $request->input('group');
             $filterCategory = $request->input('category');
-            $filterSubCategory = $request->input('sub_category');
-            $search = $request->input('search');
+            $filterSubCat   = $request->input('sub_category');
+            $search         = $request->input('search');
 
-            $sortBy = $request->input('sort_by', 'name'); // name, group, category, sub_category, godown
+            $sortBy    = $request->input('sort_by', 'name');   // name, group, category, sub_category, alias
             $sortOrder = $request->input('sort_order', 'asc'); // asc or desc
 
-            // Base product query
-            $productQuery = ProductsModel::with([
-                'groupRelation:id,name',
-                'categoryRelation:id,name',
-                'subCategoryRelation:id,name'
-            ])->where('company_id', $companyId);
+            // Base product query (used multiple times; always clone before mutating)
+            $baseQuery = ProductsModel::with([
+                    'groupRelation:id,name',
+                    'categoryRelation:id,name',
+                    'subCategoryRelation:id,name'
+                ])
+                ->where('company_id', $companyId);
 
-            // Apply search filter (for both product name and alias)
+            // Search
             if (!empty($search)) {
-                $productQuery->where(function ($query) use ($search) {
-                    $query->where('name', 'like', '%' . $search . '%')
-                        ->orWhere('alias', 'like', '%' . $search . '%');
+                $baseQuery->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('alias', 'like', "%{$search}%");
                 });
             }
 
-            // Apply filters (for group, category, sub_category)
+            // Filters
             if ($filterGroup) {
-                $groupIds = explode(',', $filterGroup);
-                $productQuery->whereIn('group', $groupIds);
+                $groupIds = array_filter(explode(',', $filterGroup));
+                $baseQuery->whereIn('group', $groupIds);
             }
             if ($filterCategory) {
-                $catIds = explode(',', $filterCategory);
-                $productQuery->whereIn('category', $catIds);
+                $catIds = array_filter(explode(',', $filterCategory));
+                $baseQuery->whereIn('category', $catIds);
             }
-            if ($filterSubCategory) {
-                $subCatIds = explode(',', $filterSubCategory);
-                $productQuery->whereIn('sub_category', $subCatIds);
-            }
-
-            switch ($sortBy) {
-                case 'group':
-                    $productQuery->orderBy('group', $sortOrder);
-                    break;
-                case 'category':
-                    $productQuery->orderBy('category', $sortOrder);
-                    break;
-                case 'sub_category':
-                    $productQuery->orderBy('sub_category', $sortOrder);
-                    break;
-                case 'alias':
-                    $productQuery->orderBy('alias', $sortOrder);
-                    break;
-                default:
-                    $productQuery->orderBy('name', $sortOrder); // default to name
+            if ($filterSubCat) {
+                $subCatIds = array_filter(explode(',', $filterSubCat));
+                $baseQuery->whereIn('sub_category', $subCatIds);
             }
 
-            // Get total count before pagination
-            $totalProducts = $productQuery->count();
+            // Sorting
+            $sortable = ['name','group','category','sub_category','alias'];
+            $sortCol  = in_array($sortBy, $sortable, true) ? $sortBy : 'name';
+            $sortDir  = strtolower($sortOrder) === 'desc' ? 'desc' : 'asc';
 
-            // Apply pagination
-            $products = $productQuery
-                ->select('id', 'name', 'alias', 'group', 'category', 'sub_category', 'unit')
+            $countQuery = (clone $baseQuery);
+            $totalProducts = $countQuery->count();
+
+            // Pagination
+            $pageQuery = (clone $baseQuery)
+                ->select('id','name','alias','group','category','sub_category','unit')
+                ->orderBy($sortCol, $sortDir)
                 ->offset($offset)
-                ->limit($limit)
-                ->get();
+                ->limit($limit);
 
-            // Fetch all godowns
-            $godowns = GodownModel::where('company_id', $companyId)->select('id', 'name')->get();
+            $products = $pageQuery->get();
 
-            // Fetch stock data
-            $closingStock = ClosingStockModel::where('company_id', $companyId)
+            // Godowns
+            $godowns = GodownModel::where('company_id', $companyId)->select('id','name')->get();
+
+            // Product IDs on this page (for efficient stock lookups)
+            $pageProductIds = $products->pluck('id');
+
+            // Closing stock for products on this page (for per-row stock_by_godown and stock_value)
+            $closingStockPage = ClosingStockModel::where('company_id', $companyId)
+                ->whereIn('product_id', $pageProductIds)
                 ->get()
-                ->groupBy('product_id');
+                ->groupBy('product_id'); // product_id => collection of rows (each godown)
 
-            // Pending purchase orders
+            // Precompute sum(value) per product for this page
+            $stockValueByProduct = ClosingStockModel::where('company_id', $companyId)
+                ->whereIn('product_id', $pageProductIds)
+                ->select('product_id', DB::raw('SUM(value) as total_value'))
+                ->groupBy('product_id')
+                ->pluck('total_value', 'product_id');
+
+            // Pending purchase orders (counts per product_id)
             $pendingPurchase = PurchaseOrderModel::where('company_id', $companyId)
                 ->where('status', 'pending')
-                ->with('products')
+                ->with('products:id') // keep lean
                 ->get()
-                ->flatMap(fn ($order) => $order->products->pluck('product_id'))
+                ->flatMap(fn ($order) => $order->products->pluck('id')) // adjust if relation key differs
                 ->countBy();
 
-            // Pending sales orders
+            // Pending sales orders (counts per product_id)
             $pendingSales = SalesOrderModel::where('company_id', $companyId)
                 ->where('status', 'pending')
-                ->with('products')
+                ->with('products:id')
                 ->get()
-                ->flatMap(fn ($order) => $order->products->pluck('product_id'))
+                ->flatMap(fn ($order) => $order->products->pluck('id'))
                 ->countBy();
 
-            // Format product data
-            $productsTransformed = $products->map(function ($product) use ($closingStock, $godowns, $pendingPurchase, $pendingSales) {
+            // Transform page rows
+            $productsTransformed = $products->map(function ($product) use ($closingStockPage, $godowns, $pendingPurchase, $pendingSales, $stockValueByProduct) {
                 $stockData = [];
                 $totalQuantity = 0;
 
                 // Index stock by godown_id for easy lookup
-                $productStock = isset($closingStock[$product->id])
-                    ? $closingStock[$product->id]->keyBy('godown_id')
-                    : collect();
+                $rows = $closingStockPage->get($product->id, collect())->keyBy('godown_id');
 
                 foreach ($godowns as $godown) {
-                    $qty = $productStock[$godown->id]->quantity ?? 0;
+                    $qty = (float) ($rows->get($godown->id)->quantity ?? 0);
                     $stockData[] = [
-                        'godown_id' => $godown->id,
+                        'godown_id'   => $godown->id,
                         'godown_name' => $godown->name,
-                        'quantity' => $qty,
+                        'quantity'    => $qty,
                     ];
                     $totalQuantity += $qty;
                 }
 
                 return [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'alias' => $product->alias,
-                    'group' => optional($product->groupRelation)->name,
-                    'category' => optional($product->categoryRelation)->name,
-                    'sub_category' => optional($product->subCategoryRelation)->name,
-                    'unit' => $product->unit,
+                    'id'              => $product->id,
+                    'name'            => $product->name,
+                    'alias'           => $product->alias,
+                    'group'           => optional($product->groupRelation)->name,
+                    'category'        => optional($product->categoryRelation)->name,
+                    'sub_category'    => optional($product->subCategoryRelation)->name,
+                    'unit'            => $product->unit,
                     'stock_by_godown' => $stockData,
-                    'total_quantity' => $totalQuantity,
-                    'stock_value' => 0,
-                    'pending_po' => $pendingPurchase[$product->id] ?? 0,
-                    'pending_so' => $pendingSales[$product->id] ?? 0,
+                    'total_quantity'  => $totalQuantity,
+                    'stock_value'     => (float) ($stockValueByProduct[$product->id] ?? 0.0), // ✅ per-product stock value
+                    'pending_po'      => (int) ($pendingPurchase[$product->id] ?? 0),
+                    'pending_so'      => (int) ($pendingSales[$product->id] ?? 0),
                 ];
             });
 
+            // ---- Grand total stock value across ALL filtered products (not just page) ----
+            // Build a subquery of filtered product IDs without pagination:
+            $filteredIdsSub = (clone $baseQuery)->select('id');
+
+            $totalStockValue = (float) ClosingStockModel::where('company_id', $companyId)
+                ->whereIn('product_id', $filteredIdsSub)
+                ->sum('value');
+
             return response()->json([
-                'code' => 200,
+                'code'    => 200,
                 'success' => true,
                 'message' => "Fetched successfully",
-                'data' => [
-                    'count' => $products->count(),          
-                    'total_records' => $totalProducts,    
-                    'limit' => $limit,
-                    'offset' => $offset,
-                    'records' => $productsTransformed,
+                'data'    => [
+                    'count'          => $products->count(),
+                    'total_records'  => $totalProducts,
+                    'total_stock_value' => round($totalStockValue, 2), // ✅ new key
+                    'limit'          => $limit,
+                    'offset'         => $offset,
+                    'records'        => $productsTransformed,
                 ]
             ], 200);
 
         } catch (\Throwable $e) {
             return response()->json([
-                'code' => 500,
+                'code'    => 500,
                 'success' => false,
                 'message' => 'Something went wrong: ' . $e->getMessage(),
             ], 500);
