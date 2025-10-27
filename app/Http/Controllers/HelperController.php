@@ -461,12 +461,17 @@ class HelperController extends Controller
                 ], 401);
             }
 
+            // --- Validate dates (required, Y-m-d) ---
+            $validated = $request->validate([
+                'start_date' => 'required|date_format:Y-m-d',
+                'end_date'   => 'required|date_format:Y-m-d|after_or_equal:start_date',
+            ]);
+
             $companyId = $auth->company_id;
+            $startDate = Carbon::parse($validated['start_date'])->startOfDay();
+            $endDate   = Carbon::parse($validated['end_date'])->endOfDay();
 
-            $startDate = Carbon::parse($request->start_date)->startOfDay();
-            $endDate   = Carbon::parse($request->end_date)->endOfDay();
-
-            // Ordered masters
+            // Masters ordered by order_by
             $groups = GroupModel::where('company_id', $companyId)
                 ->orderBy('order_by', 'asc')
                 ->get(['id','name','order_by'])
@@ -482,26 +487,31 @@ class HelperController extends Controller
                 ->get(['id','name','order_by'])
                 ->keyBy('id');
 
-            // Products (minimal)
+            // Products (minimal) for this company
             $products = ProductsModel::where('company_id', $companyId)
                 ->select('id','group','category','sub_category')
                 ->get()
                 ->keyBy('id');
 
-            // Precompute stock qty
+            $productIds = $products->keys(); // used to scope stock query tightly
+
+            // Precompute stock qty (scoped to product IDs for this company)
             $stockQtyByProduct = ClosingStockModel::where('company_id', $companyId)
+                ->whereIn('product_id', $productIds)
                 ->select('product_id', DB::raw('SUM(quantity) as total_qty'))
                 ->groupBy('product_id')
                 ->pluck('total_qty', 'product_id');
 
-            // Invoices data
+            // Invoices data in range
             $purchaseData = PurchaseInvoiceProductsModel::with('purchaseInvoice')
+                ->whereIn('product_id', $productIds)
                 ->whereHas('purchaseInvoice', function ($q) use ($companyId, $startDate, $endDate) {
                     $q->where('company_id', $companyId)
                     ->whereBetween('purchase_invoice_date', [$startDate, $endDate]);
                 })->get();
 
             $salesData = SalesInvoiceProductsModel::with('salesInvoice')
+                ->whereIn('product_id', $productIds)
                 ->whereHas('salesInvoice', function ($q) use ($companyId, $startDate, $endDate) {
                     $q->where('company_id', $companyId)
                     ->whereBetween('sales_invoice_date', [$startDate, $endDate]);
@@ -520,7 +530,7 @@ class HelperController extends Controller
                     $result[$gid] = [
                         'group_id'       => $gid,
                         'group_name'     => $groups[$gid]->name ?? 'Unknown',
-                        'total_stock'    => 0,  // ⬆️ moved above
+                        'total_stock'    => 0,  // stock first
                         'total_sales'    => 0,
                         'total_purchase' => 0,
                         'total_profit'   => 0,
@@ -532,7 +542,7 @@ class HelperController extends Controller
                     $result[$gid]['categories'][$cid] = [
                         'category_id'    => $cid,
                         'category_name'  => $categories[$cid]->name ?? 'Unknown',
-                        'total_stock'    => 0,  // ⬆️ moved above
+                        'total_stock'    => 0,  // stock first
                         'total_sales'    => 0,
                         'total_purchase' => 0,
                         'total_profit'   => 0,
@@ -544,7 +554,7 @@ class HelperController extends Controller
                     $result[$gid]['categories'][$cid]['sub_categories'][$sid] = [
                         'sub_category_id'   => $sid,
                         'sub_category_name' => $subCategories[$sid]->name ?? 'Unknown',
-                        'total_stock'       => 0,  // ⬆️ moved above
+                        'total_stock'       => 0,  // stock first
                         'total_sales'       => 0,
                         'total_purchase'    => 0,
                         'total_profit'      => 0
@@ -675,6 +685,13 @@ class HelperController extends Controller
                 ]
             ], 200);
 
+        } catch (\Illuminate\Validation\ValidationException $ve) {
+            return response()->json([
+                'code'    => 422,
+                'success' => false,
+                'message' => $ve->errors(),
+                'data'    => []
+            ], 422);
         } catch (\Throwable $e) {
             return response()->json([
                 'code'    => 500,
