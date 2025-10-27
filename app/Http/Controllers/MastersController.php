@@ -869,7 +869,7 @@ class MastersController extends Controller
                     $index = array_search($godownName, $stockData['place']);
                     if ($index !== false) {
                         $quantity = (float) $stockData['quantity'][$index];
-                        if ($quantity > 0) {
+                        // if ($quantity > 0) {
                             $batchData[] = [
                                 'company_id' => $companyId,
                                 'year' => $year,
@@ -881,7 +881,7 @@ class MastersController extends Controller
                                 'created_at' => now(),
                                 'updated_at' => now(),
                             ];
-                        }
+                        // }
                     }
                 }
 
