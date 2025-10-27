@@ -39,18 +39,32 @@ class HelperController extends Controller
         try {
             $companyId = Auth::user()->company_id;
 
-            // Extract filters from request
+            // ---- Inputs ----
             $limit          = (int) $request->input('limit', 50);
             $offset         = (int) $request->input('offset', 0);
             $filterGroup    = $request->input('group');
             $filterCategory = $request->input('category');
             $filterSubCat   = $request->input('sub_category');
+            $filterAlias    = $request->input('alias'); // ✅ new
             $search         = $request->input('search');
+            $sortBy         = $request->input('sort_by', 'name');   // name, group, category, sub_category, alias
+            $sortOrder      = $request->input('sort_order', 'asc'); // asc or desc
+            $stockLevelReq  = $request->input('stock_level');       // critical | sufficient | excessive | null
 
-            $sortBy    = $request->input('sort_by', 'name');   // name, group, category, sub_category, alias
-            $sortOrder = $request->input('sort_order', 'asc'); // asc or desc
+            // Normalize stock level param
+            $validLevels = ['critical','sufficient','excessive'];
+            $stockLevel  = in_array(strtolower((string) $stockLevelReq), $validLevels, true)
+                ? strtolower($stockLevelReq)
+                : null; // null => no stock-level filter
 
-            // Base product query (used multiple times; always clone before mutating)
+            // Mapping for hex codes
+            $levelHex = [
+                'critical'   => 'FFCDD2',
+                'sufficient' => 'B3E5FC',
+                'excessive'  => 'C8E6C9',
+            ];
+
+            // ---- Base products query (no pagination) ----
             $baseQuery = ProductsModel::with([
                     'groupRelation:id,name',
                     'categoryRelation:id,name',
@@ -67,17 +81,21 @@ class HelperController extends Controller
             }
 
             // Filters
-            if ($filterGroup) {
+            if (!empty($filterGroup)) {
                 $groupIds = array_filter(explode(',', $filterGroup));
                 $baseQuery->whereIn('group', $groupIds);
             }
-            if ($filterCategory) {
+            if (!empty($filterCategory)) {
                 $catIds = array_filter(explode(',', $filterCategory));
                 $baseQuery->whereIn('category', $catIds);
             }
-            if ($filterSubCat) {
+            if (!empty($filterSubCat)) {
                 $subCatIds = array_filter(explode(',', $filterSubCat));
                 $baseQuery->whereIn('sub_category', $subCatIds);
+            }
+            if (!empty($filterAlias)) { // ✅ alias filter
+                $aliasValues = array_filter(explode(',', $filterAlias));
+                $baseQuery->whereIn('alias', $aliasValues);
             }
 
             // Sorting
@@ -85,46 +103,86 @@ class HelperController extends Controller
             $sortCol  = in_array($sortBy, $sortable, true) ? $sortBy : 'name';
             $sortDir  = strtolower($sortOrder) === 'desc' ? 'desc' : 'asc';
 
+            // --- Build subquery of filtered product IDs (no pagination yet) ---
+            $filteredIdsSub = (clone $baseQuery)->select('id');
+
+            // --- Precompute TOTAL QUANTITY per product across ALL godowns ---
+            $totalQtyByProduct = ClosingStockModel::where('company_id', $companyId)
+                ->whereIn('product_id', $filteredIdsSub)
+                ->select('product_id', DB::raw('SUM(quantity) as total_qty'))
+                ->groupBy('product_id')
+                ->pluck('total_qty', 'product_id');
+
+            // Fetch si1/si2 for the same filtered set
+            $siMap = ProductsModel::where('company_id', $companyId)
+                ->whereIn('id', $filteredIdsSub)
+                ->select('id','si1','si2')
+                ->get()
+                ->keyBy('id');
+
+            // Decide stock level per product
+            $levelByProduct = [];
+            foreach ($siMap as $pid => $row) {
+                $qty = (float) ($totalQtyByProduct[$pid] ?? 0);
+                $si1 = (float) ($row->si1 ?? 0);
+                $si2 = (float) ($row->si2 ?? 0);
+
+                if ($qty < $si1) {
+                    $levelByProduct[$pid] = 'critical';
+                } elseif ($qty <= $si2) {
+                    $levelByProduct[$pid] = 'sufficient';
+                } else {
+                    $levelByProduct[$pid] = 'excessive';
+                }
+            }
+
+            // If a stock_level filter was requested, restrict to those product IDs
+            if ($stockLevel !== null) {
+                $idsByLevel = array_keys(array_filter($levelByProduct, fn ($lvl) => $lvl === $stockLevel));
+                $baseQuery->whereIn('id', $idsByLevel ?: [-1]);
+            }
+
+            // ----- Counts after all filters -----
             $countQuery = (clone $baseQuery);
             $totalProducts = $countQuery->count();
 
-            // Pagination
+            // ----- Pagination query (include si1 & si2 for row-level output) -----
             $pageQuery = (clone $baseQuery)
-                ->select('id','name','alias','group','category','sub_category','unit')
+                ->select('id','name','alias','group','category','sub_category','unit','si1','si2')
                 ->orderBy($sortCol, $sortDir)
                 ->offset($offset)
                 ->limit($limit);
 
             $products = $pageQuery->get();
 
-            // Godowns
+            // Godowns (for stock_by_godown)
             $godowns = GodownModel::where('company_id', $companyId)->select('id','name')->get();
 
-            // Product IDs on this page (for efficient stock lookups)
+            // Product IDs on this page
             $pageProductIds = $products->pluck('id');
 
-            // Closing stock for products on this page (for per-row stock_by_godown and stock_value)
+            // Closing stock grouped (for stock_by_godown on page)
             $closingStockPage = ClosingStockModel::where('company_id', $companyId)
                 ->whereIn('product_id', $pageProductIds)
                 ->get()
-                ->groupBy('product_id'); // product_id => collection of rows (each godown)
+                ->groupBy('product_id');
 
-            // Precompute sum(value) per product for this page
+            // Precompute sum(value) per product for the page
             $stockValueByProduct = ClosingStockModel::where('company_id', $companyId)
                 ->whereIn('product_id', $pageProductIds)
                 ->select('product_id', DB::raw('SUM(value) as total_value'))
                 ->groupBy('product_id')
                 ->pluck('total_value', 'product_id');
 
-            // Pending purchase orders (counts per product_id)
+            // Pending purchase orders
             $pendingPurchase = PurchaseOrderModel::where('company_id', $companyId)
                 ->where('status', 'pending')
-                ->with('products:id') // keep lean
+                ->with('products:id')
                 ->get()
-                ->flatMap(fn ($order) => $order->products->pluck('id')) // adjust if relation key differs
+                ->flatMap(fn ($order) => $order->products->pluck('id'))
                 ->countBy();
 
-            // Pending sales orders (counts per product_id)
+            // Pending sales orders
             $pendingSales = SalesOrderModel::where('company_id', $companyId)
                 ->where('status', 'pending')
                 ->with('products:id')
@@ -133,11 +191,10 @@ class HelperController extends Controller
                 ->countBy();
 
             // Transform page rows
-            $productsTransformed = $products->map(function ($product) use ($closingStockPage, $godowns, $pendingPurchase, $pendingSales, $stockValueByProduct) {
+            $productsTransformed = $products->map(function ($product) use ($closingStockPage, $godowns, $pendingPurchase, $pendingSales, $stockValueByProduct, $levelHex) {
                 $stockData = [];
                 $totalQuantity = 0;
 
-                // Index stock by godown_id for easy lookup
                 $rows = $closingStockPage->get($product->id, collect())->keyBy('godown_id');
 
                 foreach ($godowns as $godown) {
@@ -150,41 +207,58 @@ class HelperController extends Controller
                     $totalQuantity += $qty;
                 }
 
+                // Determine stock level
+                $si1 = (float) ($product->si1 ?? 0);
+                $si2 = (float) ($product->si2 ?? 0);
+                if ($totalQuantity < $si1) {
+                    $level = 'critical';
+                } elseif ($totalQuantity <= $si2) {
+                    $level = 'sufficient';
+                } else {
+                    $level = 'excessive';
+                }
+
                 return [
-                    'id'              => $product->id,
-                    'name'            => $product->name,
-                    'alias'           => $product->alias,
-                    'group'           => optional($product->groupRelation)->name,
-                    'category'        => optional($product->categoryRelation)->name,
-                    'sub_category'    => optional($product->subCategoryRelation)->name,
-                    'unit'            => $product->unit,
-                    'stock_by_godown' => $stockData,
-                    'total_quantity'  => $totalQuantity,
-                    'stock_value'     => (float) ($stockValueByProduct[$product->id] ?? 0.0), // ✅ per-product stock value
-                    'pending_po'      => (int) ($pendingPurchase[$product->id] ?? 0),
-                    'pending_so'      => (int) ($pendingSales[$product->id] ?? 0),
+                    'id'                => $product->id,
+                    'name'              => $product->name,
+                    'alias'             => $product->alias,
+                    'group'             => optional($product->groupRelation)->name,
+                    'category'          => optional($product->categoryRelation)->name,
+                    'sub_category'      => optional($product->subCategoryRelation)->name,
+                    'unit'              => $product->unit,
+                    'si1'               => $si1,
+                    'si2'               => $si2,
+                    'stock_level'       => $level,
+                    'stock_level_hex'   => $levelHex[$level] ?? null,
+                    'stock_by_godown'   => $stockData,
+                    'total_quantity'    => $totalQuantity,
+                    'stock_value'       => (float) ($stockValueByProduct[$product->id] ?? 0.0),
+                    'pending_po'        => (int) ($pendingPurchase[$product->id] ?? 0),
+                    'pending_so'        => (int) ($pendingSales[$product->id] ?? 0),
                 ];
             });
 
-            // ---- Grand total stock value across ALL filtered products (not just page) ----
-            // Build a subquery of filtered product IDs without pagination:
-            $filteredIdsSub = (clone $baseQuery)->select('id');
-
-            $totalStockValue = (float) ClosingStockModel::where('company_id', $companyId)
-                ->whereIn('product_id', $filteredIdsSub)
-                ->sum('value');
+            // ---- Grand total stock value ----
+            $filteredIds = (clone $baseQuery)->pluck('id');
+            $totalStockValue = $filteredIds->isNotEmpty()
+                ? (float) ClosingStockModel::where('company_id', $companyId)
+                    ->whereIn('product_id', $filteredIds)
+                    ->sum('value')
+                : 0.0;
 
             return response()->json([
                 'code'    => 200,
                 'success' => true,
-                'message' => "Fetched successfully",
+                'message' => 'Fetched successfully',
                 'data'    => [
-                    'count'          => $products->count(),
-                    'total_records'  => $totalProducts,
-                    'total_stock_value' => round($totalStockValue), // ✅ new key
-                    'limit'          => $limit,
-                    'offset'         => $offset,
-                    'records'        => $productsTransformed,
+                    'count'             => $products->count(),
+                    'total_records'     => $totalProducts,
+                    'total_stock_value' => round($totalStockValue),
+                    'limit'             => $limit,
+                    'offset'            => $offset,
+                    'stock_level'       => $stockLevel ?? null,
+                    'alias_filter'      => $filterAlias ?? null,
+                    'records'           => $productsTransformed,
                 ]
             ], 200);
 
@@ -193,6 +267,7 @@ class HelperController extends Controller
                 'code'    => 500,
                 'success' => false,
                 'message' => 'Something went wrong: ' . $e->getMessage(),
+                'data'    => []
             ], 500);
         }
     }
