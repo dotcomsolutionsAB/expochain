@@ -2029,6 +2029,46 @@ class HelperController extends Controller
                 ");
             };
 
+            // Ex-tax from qty * price minus discount (no taxes involved).
+            // Works for tables that may NOT have `amount`.
+            // discount_type: 'percentage' => percentage of (qty*price); otherwise value.
+            $exTaxFromQtyPrice = function (string $alias = '') {
+                $p = $alias ? $alias.'.' : '';
+                return DB::raw("
+                    SUM(
+                        GREATEST(
+                            (
+                                COALESCE({$p}quantity,0) * COALESCE({$p}price,0)
+                            ) - (
+                                CASE
+                                    WHEN LOWER(COALESCE({$p}discount_type, 'value')) IN ('percent','percentage','%')
+                                        THEN (COALESCE({$p}quantity,0) * COALESCE({$p}price,0)) * (COALESCE({$p}discount,0) / 100)
+                                    ELSE COALESCE({$p}discount,0)
+                                END
+                            ),
+                            0
+                        )
+                    )
+                ");
+            };
+
+            // Prefer using `amount - tax` when the column exists (Sales/Purchase line items).
+            // If you prefer, you can keep your current $exTaxExpr for those tables.
+            $exTaxFromAmount = function (string $alias = '') {
+                $p = $alias ? $alias.'.' : '';
+                return DB::raw("
+                    SUM(
+                        CASE
+                            WHEN COALESCE({$p}cgst,0)+COALESCE({$p}sgst,0)+COALESCE({$p}igst,0) > 0
+                                THEN COALESCE({$p}amount,0) - (COALESCE({$p}cgst,0)+COALESCE({$p}sgst,0)+COALESCE({$p}igst,0))
+                            WHEN COALESCE({$p}tax,0) > 0
+                                THEN COALESCE({$p}amount,0) / (1 + (COALESCE({$p}tax,0) / 100))
+                            ELSE COALESCE({$p}amount,0)
+                        END
+                    )
+                ");
+            };
+
             $formatInr = function ($n): string {
                 $n = (float)$n;
                 $neg = $n < 0 ? '-' : '';
@@ -2046,18 +2086,20 @@ class HelperController extends Controller
                 ->whereBetween('sales_invoice_date', [$start, $end])
                 ->pluck('id');
 
+            // SALES (ex-tax)
             $salesExTax = (float) SalesInvoiceProductsModel::where('company_id', $companyId)
                 ->whereIn('sales_invoice_id', $salesInvoiceIds)
-                ->value($exTaxExpr()) ?? 0.0;
+                ->value($exTaxFromAmount()) ?? 0.0;
 
             // ---------- PURCHASE (ex-tax) ----------
             $purchaseInvoiceIds = PurchaseInvoiceModel::where('company_id', $companyId)
                 ->whereBetween('purchase_invoice_date', [$start, $end])
                 ->pluck('id');
 
+            // PURCHASE (ex-tax)
             $purchaseExTax = (float) PurchaseInvoiceProductsModel::where('company_id', $companyId)
                 ->whereIn('purchase_invoice_id', $purchaseInvoiceIds)
-                ->value($exTaxExpr()) ?? 0.0;
+                ->value($exTaxFromAmount()) ?? 0.0;
 
             // ---------- DEBIT NOTE (Purchase returns) (ex-tax) ----------
             // Join products to header to filter by debit_note_date
@@ -2065,14 +2107,14 @@ class HelperController extends Controller
                 ->join('t_debit_note as dn', 'dn.id', '=', 'dnp.debit_note_number')
                 ->where('dnp.company_id', $companyId)
                 ->whereBetween('dn.debit_note_date', [$start, $end])
-                ->value($exTaxExpr('dnp')) ?? 0.0;
+                ->value($exTaxFromQtyPrice('dnp')) ?? 0.0;
 
             // ---------- CREDIT NOTE (Sales returns) (ex-tax) ----------
             $creditNote = (float) DB::table('t_credit_note_products as cnp')
                 ->join('t_credit_note as cn', 'cn.id', '=', 'cnp.credit_note_id')
                 ->where('cnp.company_id', $companyId)
                 ->whereBetween('cn.credit_note_date', [$start, $end])
-                ->value($exTaxExpr('cnp')) ?? 0.0;
+                ->value($exTaxFromQtyPrice('cnp')) ?? 0.0;
 
             // ---------- OPENING & CLOSING STOCK (valuations, ex-tax by definition) ----------
             // Your stock tables key by `year`. Accept either numeric Y or "YYYY-YYYY".
