@@ -1093,6 +1093,129 @@ class HelperController extends Controller
         }
     }
 
+    public function getCommissionReport(Request $request)
+    {
+        try {
+            $companyId = auth()->user()->company_id;
+
+            // Parse date range
+            $startDate = $request->start_date
+                ? Carbon::parse($request->start_date)->startOfDay()
+                : Carbon::minValue();
+            $endDate = $request->end_date
+                ? Carbon::parse($request->end_date)->endOfDay()
+                : Carbon::now()->endOfDay();
+
+            // Pagination
+            $limit  = (int) $request->input('limit', 10);
+            $offset = (int) $request->input('offset', 0);
+
+            // Sorting
+            $sortBy  = strtolower($request->input('sort_by', 'date')); // date | invoice | client | amount | commission
+            $sortDir = strtolower($request->input('sort_dir', 'desc'));
+            $sortDir = in_array($sortDir, ['asc', 'desc']) ? $sortDir : 'desc';
+
+            // Fetch all invoices with client info
+            $query = SalesInvoiceModel::with('client:id,name')
+                ->where('company_id', $companyId)
+                ->whereBetween('sales_invoice_date', [$startDate, $endDate])
+                ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'client_id', 'total', 'commission');
+
+            // Apply sorting
+            switch ($sortBy) {
+                case 'invoice':
+                    $query->orderBy('sales_invoice_no', $sortDir);
+                    break;
+                case 'client':
+                    $query->join('t_clients as c', 'c.id', '=', 't_sales_invoice.client_id')
+                        ->orderBy('c.name', $sortDir)
+                        ->select('t_sales_invoice.*');
+                    break;
+                case 'amount':
+                    $query->orderBy('total', $sortDir);
+                    break;
+                case 'commission':
+                    $query->orderBy('commission', $sortDir);
+                    break;
+                case 'date':
+                default:
+                    $query->orderBy('sales_invoice_date', $sortDir);
+                    break;
+            }
+
+            // Clone query for totals before pagination
+            $allData = (clone $query)->get();
+
+            // Grand totals (before pagination)
+            $grandTotalAmt = round($allData->sum('total'));
+            $grandTotalComm = round($allData->sum('commission'));
+
+            // Apply pagination
+            $rows = $query->offset($offset)->limit($limit)->get();
+            $count = $rows->count();
+            $totalRecords = $allData->count();
+
+            // Subtotals (paginated)
+            $subTotalAmt = round($rows->sum('total'));
+            $subTotalComm = round($rows->sum('commission'));
+
+            // Transform for output
+            $data = [];
+            foreach ($rows as $row) {
+                $data[] = [
+                    'id'          => $row->id,
+                    'date'        => Carbon::parse($row->sales_invoice_date)->format('d-m-Y'),
+                    'invoice_no'  => $row->sales_invoice_no,
+                    'client_name' => $row->client->name ?? 'Unknown',
+                    'amount'      => round($row->total),
+                    'commission'  => round($row->commission),
+                ];
+            }
+
+            // Add subtotal and total rows
+            $data[] = [
+                'id'          => '',
+                'date'        => '',
+                'invoice_no'  => '',
+                'client_name' => 'Sub-total - ',
+                'amount'      => $subTotalAmt,
+                'commission'  => $subTotalComm,
+            ];
+            $data[] = [
+                'id'          => '',
+                'date'        => '',
+                'invoice_no'  => '',
+                'client_name' => 'Total - ',
+                'amount'      => $grandTotalAmt,
+                'commission'  => $grandTotalComm,
+            ];
+
+            return response()->json([
+                'code'          => 200,
+                'success'       => true,
+                'message'       => 'Commission report fetched successfully!',
+                'data'          => $data,
+                'count'         => $count,
+                'total_records' => $totalRecords,
+                'limit'         => $limit,
+                'offset'        => $offset,
+                'sorted_by'     => $sortBy,
+                'sort_dir'      => $sortDir,
+                'period'        => [
+                    'from' => $startDate->toDateString(),
+                    'to'   => $endDate->toDateString(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'code'    => 500,
+                'success' => false,
+                'message' => 'Something went wrong while fetching commission report.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function getProductWiseYearlySalesSummary(Request $request)
     {
         try {
