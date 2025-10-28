@@ -3500,7 +3500,6 @@ class HelperController extends Controller
                 ], 404);
             }
 
-            // Normalize to datetimes
             $startDate = Carbon::parse($financialYear->start_date)->startOfDay();
             $endDate   = Carbon::parse($financialYear->end_date)->endOfDay();
 
@@ -3510,36 +3509,56 @@ class HelperController extends Controller
                 ->where('si.company_id', $companyId)
                 ->whereBetween('si.sales_invoice_date', [$startDate, $endDate]);
 
-            // 3) Optional group filter (auto-detect column)
+            // 3) Optional group filter with auto-detection
             if (!empty($groupFilter)) {
                 $query->join('t_products as p', 'p.id', '=', 'sip.product_id');
 
-                // try p.group_id (numeric id), else p.group (text), else p.group_name (text)
                 if (Schema::hasColumn('t_products', 'group_id')) {
                     $query->where('p.group_id', $groupFilter);
                 } elseif (Schema::hasColumn('t_products', 'group')) {
-                    // `group` is reserved keyword; keep backticks via whereRaw
                     $query->whereRaw('TRIM(`p`.`group`) = ?', [trim((string)$groupFilter)]);
                 } elseif (Schema::hasColumn('t_products', 'group_name')) {
                     $query->whereRaw('TRIM(p.group_name) = ?', [trim((string)$groupFilter)]);
                 }
             }
 
-            // 4) Aggregation
+            // 4) Aggregation (robust channel mapping + SQL rounding to 2 decimals)
             $billing = $query->selectRaw("
                     MONTH(si.sales_invoice_date) as month,
                     YEAR(si.sales_invoice_date)  as year,
-                    SUM(sip.amount) as total,
-                    SUM(CASE WHEN CAST(sip.channel AS UNSIGNED) = 1 THEN sip.amount ELSE 0 END) as standard_billing,
-                    SUM(CASE WHEN CAST(sip.channel AS UNSIGNED) = 2 THEN sip.amount ELSE 0 END) as non_standard_billing,
-                    SUM(CASE WHEN CAST(sip.channel AS UNSIGNED) = 3 THEN sip.amount ELSE 0 END) as customer_support_billing
+
+                    CAST(SUM(sip.amount) AS DECIMAL(18,2)) as total,
+
+                    /* Standard */
+                    CAST(SUM(
+                        CASE
+                            WHEN CAST(NULLIF(COALESCE(sip.channel, si.channel, ''), '') AS UNSIGNED) = 1
+                            OR LOWER(TRIM(COALESCE(sip.channel, si.channel))) IN ('standard','std')
+                            THEN sip.amount ELSE 0 END
+                    ) AS DECIMAL(18,2)) as standard_billing,
+
+                    /* Non-Standard */
+                    CAST(SUM(
+                        CASE
+                            WHEN CAST(NULLIF(COALESCE(sip.channel, si.channel, ''), '') AS UNSIGNED) = 2
+                            OR LOWER(TRIM(COALESCE(sip.channel, si.channel))) IN ('non_standard','non standard','ns','non-standard')
+                            THEN sip.amount ELSE 0 END
+                    ) AS DECIMAL(18,2)) as non_standard_billing,
+
+                    /* Customer Support */
+                    CAST(SUM(
+                        CASE
+                            WHEN CAST(NULLIF(COALESCE(sip.channel, si.channel, ''), '') AS UNSIGNED) = 3
+                            OR LOWER(TRIM(COALESCE(sip.channel, si.channel))) IN ('customer_support','customer support','cs')
+                            THEN sip.amount ELSE 0 END
+                    ) AS DECIMAL(18,2)) as customer_support_billing
                 ")
                 ->groupBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)'))
                 ->orderBy(DB::raw('YEAR(si.sales_invoice_date)'))
                 ->orderBy(DB::raw('MONTH(si.sales_invoice_date)'))
                 ->get();
 
-            // 5) Format rows (use each row’s actual year for label)
+            // 5) Format rows with month labels and clean rounding
             $data = $billing->map(function ($row) {
                 $label = Carbon::create($row->year, $row->month, 1)->format('F Y');
                 return [
@@ -3551,7 +3570,7 @@ class HelperController extends Controller
                 ];
             });
 
-            // 6) Totals
+            // 6) Totals (2 decimals)
             $total = [
                 'standard_billing'         => round((float)$billing->sum('standard_billing'), 2),
                 'non_standard_billing'     => round((float)$billing->sum('non_standard_billing'), 2),
