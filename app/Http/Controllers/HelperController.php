@@ -2537,7 +2537,7 @@ class HelperController extends Controller
             }
             $companyId = $auth->company_id;
 
-            // Resolve current FY (today between start_date & end_date)
+            // 1️⃣ Find current financial year for this company
             $today = Carbon::today();
             $currentFY = FinancialYearModel::where('company_id', $companyId)
                 ->whereDate('start_date', '<=', $today)
@@ -2553,55 +2553,59 @@ class HelperController extends Controller
                 ], 200);
             }
 
+            // 2️⃣ Table names
             $csTable = (new ClosingStockModel)->getTable(); // t_closing_stock
             $pTable  = (new ProductsModel)->getTable();     // t_products
-            $gTable  = (new GroupModel)->getTable();        // e.g., t_group / t_groups
+            $gTable  = (new GroupModel)->getTable();        // t_group or t_groups
 
+            // 3️⃣ Detect group reference type
             $hasGroupId   = Schema::hasColumn($pTable, 'group_id');
             $hasGroupText = Schema::hasColumn($pTable, 'group');
             $hasGroupName = Schema::hasColumn($pTable, 'group_name');
 
+            // 4️⃣ Build query based on structure
             if ($hasGroupId) {
-                // Join via group_id -> g.name
+                // Join to group table to get group name
                 $rows = DB::table("$csTable as cs")
                     ->join("$pTable as p", 'p.id', '=', 'cs.product_id')
                     ->leftJoin("$gTable as g", 'g.id', '=', 'p.group_id')
                     ->where('cs.company_id', $companyId)
                     ->where('cs.year', $currentFY->id)
-                    ->selectRaw("COALESCE(g.name, 'Uncategorized') as group_name, SUM(cs.value) as total_value")
+                    ->selectRaw("COALESCE(g.name, 'Not Mapped') as group_name, SUM(cs.value) as total_value")
                     ->groupBy('group_name')
                     ->orderByDesc('total_value')
                     ->get();
             } elseif ($hasGroupText) {
-                // Use text column `group` (note: backticks since GROUP is reserved)
+                // Use text column "group"
                 $rows = DB::table("$csTable as cs")
                     ->join("$pTable as p", 'p.id', '=', 'cs.product_id')
                     ->where('cs.company_id', $companyId)
                     ->where('cs.year', $currentFY->id)
-                    ->selectRaw("COALESCE(NULLIF(TRIM(`p`.`group`), ''), 'Uncategorized') as group_name, SUM(cs.value) as total_value")
+                    ->selectRaw("COALESCE(NULLIF(TRIM(`p`.`group`), ''), 'Not Mapped') as group_name, SUM(cs.value) as total_value")
                     ->groupBy('group_name')
                     ->orderByDesc('total_value')
                     ->get();
             } elseif ($hasGroupName) {
-                // Use text column group_name
+                // Use text column "group_name"
                 $rows = DB::table("$csTable as cs")
                     ->join("$pTable as p", 'p.id', '=', 'cs.product_id')
                     ->where('cs.company_id', $companyId)
                     ->where('cs.year', $currentFY->id)
-                    ->selectRaw("COALESCE(NULLIF(TRIM(p.group_name), ''), 'Uncategorized') as group_name, SUM(cs.value) as total_value")
+                    ->selectRaw("COALESCE(NULLIF(TRIM(p.group_name), ''), 'Not Mapped') as group_name, SUM(cs.value) as total_value")
                     ->groupBy('group_name')
                     ->orderByDesc('total_value')
                     ->get();
             } else {
-                // No group fields available — return single bucket
+                // No group info at all — single bucket
                 $total = DB::table("$csTable as cs")
                     ->where('cs.company_id', $companyId)
                     ->where('cs.year', $currentFY->id)
                     ->sum('cs.value');
 
-                $rows = collect([(object)['group_name' => 'Uncategorized', 'total_value' => $total]]);
+                $rows = collect([(object)['group_name' => 'Not Mapped', 'total_value' => $total]]);
             }
 
+            // 5️⃣ Format for response
             $groups = [];
             $stock  = [];
             foreach ($rows as $r) {
@@ -2609,6 +2613,7 @@ class HelperController extends Controller
                 $stock[]  = (int) round($r->total_value);
             }
 
+            // 6️⃣ Final response
             return response()->json([
                 'code'    => 200,
                 'success' => true,
@@ -2628,6 +2633,7 @@ class HelperController extends Controller
             ], 500);
         }
     }
+
     // profit distribution
     public function getDailyProfitDistribution(Request $request)
     {
