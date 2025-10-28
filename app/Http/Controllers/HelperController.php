@@ -1115,13 +1115,15 @@ class HelperController extends Controller
             $sortDir = strtolower($request->input('sort_dir', 'desc'));
             $sortDir = in_array($sortDir, ['asc', 'desc']) ? $sortDir : 'desc';
 
-            // Fetch all invoices with client info
+            // Base query
             $query = SalesInvoiceModel::with('client:id,name')
                 ->where('company_id', $companyId)
                 ->whereBetween('sales_invoice_date', [$startDate, $endDate])
+                ->whereNotNull('commission')
+                ->where('commission', '>', 0)
                 ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'client_id', 'total', 'commission');
 
-            // Apply sorting
+            // Sorting logic
             switch ($sortBy) {
                 case 'invoice':
                     $query->orderBy('sales_invoice_no', $sortDir);
@@ -1143,14 +1145,14 @@ class HelperController extends Controller
                     break;
             }
 
-            // Clone query for totals before pagination
+            // Clone for totals
             $allData = (clone $query)->get();
 
             // Grand totals (before pagination)
             $grandTotalAmt = round($allData->sum('total'));
             $grandTotalComm = round($allData->sum('commission'));
 
-            // Apply pagination
+            // Pagination
             $rows = $query->offset($offset)->limit($limit)->get();
             $count = $rows->count();
             $totalRecords = $allData->count();
@@ -1159,7 +1161,7 @@ class HelperController extends Controller
             $subTotalAmt = round($rows->sum('total'));
             $subTotalComm = round($rows->sum('commission'));
 
-            // Transform for output
+            // Transform output
             $data = [];
             foreach ($rows as $row) {
                 $data[] = [
@@ -1172,7 +1174,7 @@ class HelperController extends Controller
                 ];
             }
 
-            // Add subtotal and total rows
+            // Add subtotal + total rows
             $data[] = [
                 'id'          => '',
                 'date'        => '',
