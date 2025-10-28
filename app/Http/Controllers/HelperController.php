@@ -3485,7 +3485,7 @@ class HelperController extends Controller
         try {
             $companyId        = Auth::user()->company_id;
             $financialYearId  = $request->input('financial_year_id');
-            $groupFilter      = $request->input('group_id');   // can be numeric id or a string name
+            $groupFilter      = $request->input('group_id'); // can be numeric id or a string name
 
             // 1) Resolve FY
             $financialYear = $financialYearId
@@ -3500,98 +3500,155 @@ class HelperController extends Controller
                 ], 404);
             }
 
-            $startDate = Carbon::parse($financialYear->start_date)->startOfDay();
-            $endDate   = Carbon::parse($financialYear->end_date)->endOfDay();
+            $startDate = \Carbon\Carbon::parse($financialYear->start_date)->startOfDay();
+            $endDate   = \Carbon\Carbon::parse($financialYear->end_date)->endOfDay();
 
-            // 2) Base query
+            // 2) Prepare safe group filter (resolve to a product column + value)
+            $mustJoinProducts = false;
+            $groupCol = null;
+            $groupVal = null;
+
+            if (!empty($groupFilter)) {
+                $mustJoinProducts = true;
+
+                if (\Schema::hasColumn('t_products', 'group_id')) {
+                    // FK exists; allow numeric or text (if text, try map to id by name)
+                    if (is_numeric($groupFilter)) {
+                        $groupCol = 'p.group_id';
+                        $groupVal = (int)$groupFilter;
+                    } else {
+                        // map name to id
+                        $gTable = (new \App\Models\GroupModel)->getTable();
+                        $gid = DB::table($gTable)->where('name', trim((string)$groupFilter))->value('id');
+                        if ($gid) {
+                            $groupCol = 'p.group_id';
+                            $groupVal = (int)$gid;
+                        } else {
+                            // If no match, set impossible condition to yield empty aggregation gracefully
+                            $groupCol = 'p.group_id';
+                            $groupVal = -1;
+                        }
+                    }
+                } elseif (\Schema::hasColumn('t_products', 'group')) {
+                    // Text column
+                    if (is_numeric($groupFilter)) {
+                        // numeric passed ⇒ map id→name
+                        $gTable = (new \App\Models\GroupModel)->getTable();
+                        $gname = DB::table($gTable)->where('id', (int)$groupFilter)->value('name');
+                        $groupCol = '`p`.`group`';
+                        $groupVal = $gname ? trim($gname) : '__no_match__';
+                    } else {
+                        $groupCol = '`p`.`group`';
+                        $groupVal = trim((string)$groupFilter);
+                    }
+                } elseif (\Schema::hasColumn('t_products', 'group_name')) {
+                    // Text column group_name
+                    if (is_numeric($groupFilter)) {
+                        $gTable = (new \App\Models\GroupModel)->getTable();
+                        $gname = DB::table($gTable)->where('id', (int)$groupFilter)->value('name');
+                        $groupCol = 'p.group_name';
+                        $groupVal = $gname ? trim($gname) : '__no_match__';
+                    } else {
+                        $groupCol = 'p.group_name';
+                        $groupVal = trim((string)$groupFilter);
+                    }
+                }
+            }
+
+            // 3) Base query
             $query = DB::table('t_sales_invoice_products as sip')
                 ->join('t_sales_invoice as si', 'sip.sales_invoice_id', '=', 'si.id')
                 ->where('si.company_id', $companyId)
                 ->whereBetween('si.sales_invoice_date', [$startDate, $endDate]);
 
-            // 3) Optional group filter with auto-detection
-            if (!empty($groupFilter)) {
+            if ($mustJoinProducts) {
                 $query->join('t_products as p', 'p.id', '=', 'sip.product_id');
-
-                if (Schema::hasColumn('t_products', 'group_id')) {
-                    // FK exists → filter directly by id
-                    $query->where('p.group_id', $groupFilter);
-                } elseif (Schema::hasColumn('t_products', 'group')) {
-                    // Text column "group"
-                    if (is_numeric($groupFilter)) {
-                        // user gave a group_id; join t_group to map id -> name then match p.group=name
-                        $gTable = (new GroupModel)->getTable(); // e.g., t_group
-                        $query->leftJoin("$gTable as g", DB::raw('1'), DB::raw('1')) // dummy join to allow whereRaw subselect
-                            ->whereRaw('TRIM(`p`.`group`) = (SELECT name FROM '.$gTable.' WHERE id = ? LIMIT 1)', [intval($groupFilter)]);
+                if ($groupCol && $groupVal !== null) {
+                    // Use whereRaw for backticked `p`.`group`
+                    if ($groupCol === '`p`.`group`') {
+                        $query->whereRaw('TRIM(`p`.`group`) = ?', [$groupVal]);
                     } else {
-                        $query->whereRaw('TRIM(`p`.`group`) = ?', [trim((string)$groupFilter)]);
-                    }
-                } elseif (Schema::hasColumn('t_products', 'group_name')) {
-                    if (is_numeric($groupFilter)) {
-                        $gTable = (new GroupModel)->getTable();
-                        $query->leftJoin("$gTable as g", DB::raw('1'), DB::raw('1'))
-                            ->whereRaw('TRIM(p.group_name) = (SELECT name FROM '.$gTable.' WHERE id = ? LIMIT 1)', [intval($groupFilter)]);
-                    } else {
-                        $query->whereRaw('TRIM(p.group_name) = ?', [trim((string)$groupFilter)]);
+                        $query->whereRaw('TRIM('.$groupCol.') = ?', [$groupVal]);
                     }
                 }
             }
 
-            // 4) Aggregation
-            // NOTE: no si.channel usage. Only sip.channel (text or numeric).
-            $billing = $query->selectRaw("
-                    MONTH(si.sales_invoice_date) as month,
-                    YEAR(si.sales_invoice_date)  as year,
+            // 4) Aggregate – total independent of channel; buckets from sip.channel (numeric or text)
+            $rows = $query->selectRaw("
+                    MONTH(si.sales_invoice_date) as m,
+                    YEAR(si.sales_invoice_date)  as y,
 
-                    CAST(SUM(sip.amount) AS DECIMAL(18,2)) as total,
+                    SUM(sip.amount) as total,
 
-                    /* Standard */
-                    CAST(SUM(
+                    SUM(
                         CASE
                             WHEN CAST(NULLIF(sip.channel, '') AS UNSIGNED) = 1
                             OR LOWER(TRIM(sip.channel)) IN ('standard','std')
                             THEN sip.amount ELSE 0 END
-                    ) AS DECIMAL(18,2)) as standard_billing,
+                    ) as standard_billing,
 
-                    /* Non-Standard */
-                    CAST(SUM(
+                    SUM(
                         CASE
                             WHEN CAST(NULLIF(sip.channel, '') AS UNSIGNED) = 2
                             OR LOWER(TRIM(sip.channel)) IN ('non_standard','non standard','ns','non-standard')
                             THEN sip.amount ELSE 0 END
-                    ) AS DECIMAL(18,2)) as non_standard_billing,
+                    ) as non_standard_billing,
 
-                    /* Customer Support */
-                    CAST(SUM(
+                    SUM(
                         CASE
                             WHEN CAST(NULLIF(sip.channel, '') AS UNSIGNED) = 3
                             OR LOWER(TRIM(sip.channel)) IN ('customer_support','customer support','cs')
                             THEN sip.amount ELSE 0 END
-                    ) AS DECIMAL(18,2)) as customer_support_billing
+                    ) as customer_support_billing
                 ")
                 ->groupBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)'))
                 ->orderBy(DB::raw('YEAR(si.sales_invoice_date)'))
                 ->orderBy(DB::raw('MONTH(si.sales_invoice_date)'))
                 ->get();
 
-            // 5) Format rows with proper month-year and clean rounding
-            $data = $billing->map(function ($row) {
-                $label = Carbon::create($row->year, $row->month, 1)->format('F Y');
-                return [
-                    'month'                     => $label,
-                    'standard_billing'          => round((float)$row->standard_billing, 2),
-                    'non_standard_billing'      => round((float)$row->non_standard_billing, 2),
-                    'customer_support_billing'  => round((float)$row->customer_support_billing, 2),
-                    'total'                     => round((float)$row->total, 2),
+            // 5) Put into a map: key = "YYYY-MM"
+            $agg = [];
+            foreach ($rows as $r) {
+                $key = sprintf('%04d-%02d', (int)$r->y, (int)$r->m);
+                $agg[$key] = [
+                    'standard_billing'         => (float)$r->standard_billing,
+                    'non_standard_billing'     => (float)$r->non_standard_billing,
+                    'customer_support_billing' => (float)$r->customer_support_billing,
+                    'total'                    => (float)$r->total,
                 ];
-            });
+            }
 
-            // 6) Totals
+            // 6) Generate ALL months in FY with zero fill
+            $cursor = $startDate->copy()->startOfMonth();
+            $endEdge = $endDate->copy()->endOfMonth();
+
+            $data = collect();
+            while ($cursor <= $endEdge) {
+                $key = $cursor->format('Y-m');
+                $label = $cursor->format('F Y');
+
+                $std = $agg[$key]['standard_billing']         ?? 0.0;
+                $non = $agg[$key]['non_standard_billing']     ?? 0.0;
+                $sup = $agg[$key]['customer_support_billing'] ?? 0.0;
+                $tot = $agg[$key]['total']                    ?? 0.0;
+
+                $data->push([
+                    'month'                    => $label,
+                    'standard_billing'         => round($std, 2),
+                    'non_standard_billing'     => round($non, 2),
+                    'customer_support_billing' => round($sup, 2),
+                    'total'                    => round($tot, 2),
+                ]);
+
+                $cursor->addMonth();
+            }
+
+            // 7) Totals (over all months)
             $total = [
-                'standard_billing'         => round((float)$billing->sum('standard_billing'), 2),
-                'non_standard_billing'     => round((float)$billing->sum('non_standard_billing'), 2),
-                'customer_support_billing' => round((float)$billing->sum('customer_support_billing'), 2),
-                'total'                    => round((float)$billing->sum('total'), 2),
+                'standard_billing'         => round($data->sum('standard_billing'), 2),
+                'non_standard_billing'     => round($data->sum('non_standard_billing'), 2),
+                'customer_support_billing' => round($data->sum('customer_support_billing'), 2),
+                'total'                    => round($data->sum('total'), 2),
             ];
 
             return response()->json([
