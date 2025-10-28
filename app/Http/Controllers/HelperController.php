@@ -3483,11 +3483,11 @@ class HelperController extends Controller
     public function getMonthlyBillingSummary(Request $request)
     {
         try {
-            $companyId = Auth::user()->company_id;
-            $financialYearId = $request->input('financial_year_id');
-            $groupId = $request->input('group_id');
+            $companyId        = Auth::user()->company_id;
+            $financialYearId  = $request->input('financial_year_id');
+            $groupFilter      = $request->input('group_id'); // can be id or name depending on schema
 
-            // 1. Get financial year range
+            // 1) Resolve FY
             $financialYear = $financialYearId
                 ? FinancialYearModel::where('company_id', $companyId)->find($financialYearId)
                 : FinancialYearModel::where('company_id', $companyId)->latest('id')->first();
@@ -3500,68 +3500,80 @@ class HelperController extends Controller
                 ], 404);
             }
 
-            $startDate = $financialYear->start_date;
-            $endDate = $financialYear->end_date;
-            $yearSuffix = Carbon::parse($startDate)->format('Y');
+            // Normalize to datetimes
+            $startDate = Carbon::parse($financialYear->start_date)->startOfDay();
+            $endDate   = Carbon::parse($financialYear->end_date)->endOfDay();
 
-            // 2. Build base query
+            // 2) Base query
             $query = DB::table('t_sales_invoice_products as sip')
                 ->join('t_sales_invoice as si', 'sip.sales_invoice_id', '=', 'si.id')
                 ->where('si.company_id', $companyId)
                 ->whereBetween('si.sales_invoice_date', [$startDate, $endDate]);
 
-            // 3. Optional group filter
-            if ($groupId) {
-                $query->join('t_products as p', 'p.id', '=', 'sip.product_id')
-                    ->where('p.group', $groupId);
+            // 3) Optional group filter (auto-detect column)
+            if (!empty($groupFilter)) {
+                $query->join('t_products as p', 'p.id', '=', 'sip.product_id');
+
+                // try p.group_id (numeric id), else p.group (text), else p.group_name (text)
+                if (Schema::hasColumn('t_products', 'group_id')) {
+                    $query->where('p.group_id', $groupFilter);
+                } elseif (Schema::hasColumn('t_products', 'group')) {
+                    // `group` is reserved keyword; keep backticks via whereRaw
+                    $query->whereRaw('TRIM(`p`.`group`) = ?', [trim((string)$groupFilter)]);
+                } elseif (Schema::hasColumn('t_products', 'group_name')) {
+                    $query->whereRaw('TRIM(p.group_name) = ?', [trim((string)$groupFilter)]);
+                }
             }
 
-            // 4. Billing aggregation
+            // 4) Aggregation
             $billing = $query->selectRaw("
                     MONTH(si.sales_invoice_date) as month,
-                    SUM(CASE WHEN sip.channel = 1 THEN sip.amount ELSE 0 END) as standard_billing,
-                    SUM(CASE WHEN sip.channel = 2 THEN sip.amount ELSE 0 END) as non_standard_billing,
-                    SUM(CASE WHEN sip.channel = 3 THEN sip.amount ELSE 0 END) as customer_support_billing,
-                    SUM(CASE WHEN sip.channel IN (1, 2, 3) THEN sip.amount ELSE 0 END) as total
+                    YEAR(si.sales_invoice_date)  as year,
+                    SUM(sip.amount) as total,
+                    SUM(CASE WHEN CAST(sip.channel AS UNSIGNED) = 1 THEN sip.amount ELSE 0 END) as standard_billing,
+                    SUM(CASE WHEN CAST(sip.channel AS UNSIGNED) = 2 THEN sip.amount ELSE 0 END) as non_standard_billing,
+                    SUM(CASE WHEN CAST(sip.channel AS UNSIGNED) = 3 THEN sip.amount ELSE 0 END) as customer_support_billing
                 ")
-                ->groupBy(DB::raw('MONTH(si.sales_invoice_date)'))
+                ->groupBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)'))
+                ->orderBy(DB::raw('YEAR(si.sales_invoice_date)'))
                 ->orderBy(DB::raw('MONTH(si.sales_invoice_date)'))
                 ->get();
 
-            // 5. Format rows
-            $data = $billing->map(function ($row) use ($yearSuffix) {
+            // 5) Format rows (use each row’s actual year for label)
+            $data = $billing->map(function ($row) {
+                $label = Carbon::create($row->year, $row->month, 1)->format('F Y');
                 return [
-                    'month' => Carbon::create()->month($row->month)->format('F') . " " . $yearSuffix,
-                    'standard_billing' => round($row->standard_billing, 2),
-                    'non_standard_billing' => round($row->non_standard_billing, 2),
-                    'customer_support_billing' => round($row->customer_support_billing, 2),
-                    'total' => round($row->total, 2),
+                    'month'                     => $label,
+                    'standard_billing'          => round((float)$row->standard_billing, 2),
+                    'non_standard_billing'      => round((float)$row->non_standard_billing, 2),
+                    'customer_support_billing'  => round((float)$row->customer_support_billing, 2),
+                    'total'                     => round((float)$row->total, 2),
                 ];
             });
 
-            // 6. Totals
+            // 6) Totals
             $total = [
-                'standard_billing' => round($billing->sum('standard_billing'), 2),
-                'non_standard_billing' => round($billing->sum('non_standard_billing'), 2),
-                'customer_support_billing' => round($billing->sum('customer_support_billing'), 2),
-                'total' => round($billing->sum('total'), 2),
+                'standard_billing'         => round((float)$billing->sum('standard_billing'), 2),
+                'non_standard_billing'     => round((float)$billing->sum('non_standard_billing'), 2),
+                'customer_support_billing' => round((float)$billing->sum('customer_support_billing'), 2),
+                'total'                    => round((float)$billing->sum('total'), 2),
             ];
 
             return response()->json([
-                'code' => 200,
+                'code'    => 200,
                 'success' => true,
                 'message' => 'Monthly billing summary fetched successfully.',
-                'data' => $data,
-                'count' => $data->count(),
-                'total' => $total
+                'data'    => $data,
+                'count'   => $data->count(),
+                'total'   => $total
             ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
-                'code' => 500,
+                'code'    => 500,
                 'success' => false,
                 'message' => 'Failed to fetch summary.',
-                'error' => $e->getMessage()
+                'error'   => $e->getMessage()
             ], 500);
         }
     }
