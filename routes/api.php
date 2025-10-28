@@ -393,6 +393,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
         Route::post('/purchase_graph', [HelperController::class, 'getMonthlyCumulativePurchaseSummary']);
 
+        Route::post('/group_wise_stock', [HelperController::class, 'getGroupWiseStockForPie']);
+
         Route::post('/profit_distribution', [HelperController::class, 'getDailyProfitDistribution']);
 
         Route::post('/quotaion_statistic', [HelperController::class, 'getMonthlyQuotationStatusReport']);

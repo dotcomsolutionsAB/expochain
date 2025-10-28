@@ -2527,6 +2527,75 @@ class HelperController extends Controller
         }
     }
 
+    public function getGroupWiseStockForPie(Request $request)
+    {
+        try {
+            $auth = Auth::user();
+            if (!$auth) {
+                return response()->json(['code'=>401,'success'=>false,'message'=>'Unauthorized'], 401);
+            }
+            $companyId = $auth->company_id;
+
+            // 1) Resolve the "current" financial year for this company (today within start & end)
+            $today = Carbon::today();
+            $currentFY = FinancialYearModel::where('company_id', $companyId)
+                ->whereDate('start_date', '<=', $today)
+                ->whereDate('end_date', '>=', $today)
+                ->first();
+
+            if (!$currentFY) {
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'No active financial year found for today.',
+                    'data' => ['group' => [], 'stock' => []]
+                ], 200);
+            }
+
+            // 2) Build table names safely from models to avoid guessing
+            $csTable = (new ClosingStockModel)->getTable();    // e.g., t_closing_stock
+            $pTable  = (new ProductsModel)->getTable();        // e.g., t_products
+            $gTable  = (new GroupModel)->getTable();           // e.g., t_group or t_groups
+
+            // 3) Sum closing stock VALUE per group for the current FY
+            //    Note: If you prefer quantity * purchase_rate, adjust the SUM accordingly.
+            $rows = DB::table("$csTable as cs")
+                ->join("$pTable as p", 'p.id', '=', 'cs.product_id')
+                ->leftJoin("$gTable as g", 'g.id', '=', 'p.group_id')
+                ->where('cs.company_id', $companyId)
+                ->where('cs.year', $currentFY->id) // year column stores financial_year_id per your schema memory
+                ->selectRaw("COALESCE(g.name, 'Uncategorized') as group_name, SUM(cs.value) as total_value")
+                ->groupBy('group_name')
+                ->orderByDesc('total_value')
+                ->get();
+
+            // 4) Shape data for the piechart
+            $groups = [];
+            $stock  = [];
+            foreach ($rows as $r) {
+                $groups[] = $r->group_name;
+                $stock[]  = (int) round($r->total_value); // integers for chart
+            }
+
+            return response()->json([
+                'code'    => 200,
+                'success' => true,
+                'message' => 'Group wise Stock Details fetched successfully.',
+                'data'    => [
+                    'group' => $groups,
+                    'stock' => $stock,
+                ],
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
     // profit distribution
     public function getDailyProfitDistribution(Request $request)
     {
