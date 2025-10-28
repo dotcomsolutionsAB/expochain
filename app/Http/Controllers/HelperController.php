@@ -3485,9 +3485,9 @@ class HelperController extends Controller
         try {
             $companyId        = Auth::user()->company_id;
             $financialYearId  = $request->input('financial_year_id');
-            $groupFilter      = $request->input('group_id'); // can be numeric id or a string name
+            $groupFilter      = $request->input('group_id'); // can be id or name depending on schema
 
-            // 1) Resolve FY
+            // 1) Resolve FY (start/end at full days to be safe)
             $financialYear = $financialYearId
                 ? FinancialYearModel::where('company_id', $companyId)->find($financialYearId)
                 : FinancialYearModel::where('company_id', $companyId)->latest('id')->first();
@@ -3503,7 +3503,13 @@ class HelperController extends Controller
             $startDate = \Carbon\Carbon::parse($financialYear->start_date)->startOfDay();
             $endDate   = \Carbon\Carbon::parse($financialYear->end_date)->endOfDay();
 
-            // 2) Prepare safe group filter (resolve to a product column + value)
+            // 2) Base query (no CASE here; just group by raw channel)
+            $q = DB::table('t_sales_invoice_products as sip')
+                ->join('t_sales_invoice as si', 'sip.sales_invoice_id', '=', 'si.id')
+                ->where('si.company_id', $companyId)
+                ->whereBetween('si.sales_invoice_date', [$startDate, $endDate]);
+
+            // 3) Optional GROUP filter (auto-detect the correct column)
             $mustJoinProducts = false;
             $groupCol = null;
             $groupVal = null;
@@ -3512,28 +3518,19 @@ class HelperController extends Controller
                 $mustJoinProducts = true;
 
                 if (\Schema::hasColumn('t_products', 'group_id')) {
-                    // FK exists; allow numeric or text (if text, try map to id by name)
                     if (is_numeric($groupFilter)) {
                         $groupCol = 'p.group_id';
                         $groupVal = (int)$groupFilter;
                     } else {
-                        // map name to id
+                        // name -> id
                         $gTable = (new \App\Models\GroupModel)->getTable();
                         $gid = DB::table($gTable)->where('name', trim((string)$groupFilter))->value('id');
-                        if ($gid) {
-                            $groupCol = 'p.group_id';
-                            $groupVal = (int)$gid;
-                        } else {
-                            // If no match, set impossible condition to yield empty aggregation gracefully
-                            $groupCol = 'p.group_id';
-                            $groupVal = -1;
-                        }
+                        $groupCol = 'p.group_id';
+                        $groupVal = $gid ?: -1;
                     }
                 } elseif (\Schema::hasColumn('t_products', 'group')) {
-                    // Text column
+                    $gTable = (new \App\Models\GroupModel)->getTable();
                     if (is_numeric($groupFilter)) {
-                        // numeric passed ⇒ map id→name
-                        $gTable = (new \App\Models\GroupModel)->getTable();
                         $gname = DB::table($gTable)->where('id', (int)$groupFilter)->value('name');
                         $groupCol = '`p`.`group`';
                         $groupVal = $gname ? trim($gname) : '__no_match__';
@@ -3542,9 +3539,8 @@ class HelperController extends Controller
                         $groupVal = trim((string)$groupFilter);
                     }
                 } elseif (\Schema::hasColumn('t_products', 'group_name')) {
-                    // Text column group_name
+                    $gTable = (new \App\Models\GroupModel)->getTable();
                     if (is_numeric($groupFilter)) {
-                        $gTable = (new \App\Models\GroupModel)->getTable();
                         $gname = DB::table($gTable)->where('id', (int)$groupFilter)->value('name');
                         $groupCol = 'p.group_name';
                         $groupVal = $gname ? trim($gname) : '__no_match__';
@@ -3553,102 +3549,97 @@ class HelperController extends Controller
                         $groupVal = trim((string)$groupFilter);
                     }
                 }
-            }
 
-            // 3) Base query
-            $query = DB::table('t_sales_invoice_products as sip')
-                ->join('t_sales_invoice as si', 'sip.sales_invoice_id', '=', 'si.id')
-                ->where('si.company_id', $companyId)
-                ->whereBetween('si.sales_invoice_date', [$startDate, $endDate]);
-
-            if ($mustJoinProducts) {
-                $query->join('t_products as p', 'p.id', '=', 'sip.product_id');
+                $q->join('t_products as p', 'p.id', '=', 'sip.product_id');
                 if ($groupCol && $groupVal !== null) {
-                    // Use whereRaw for backticked `p`.`group`
                     if ($groupCol === '`p`.`group`') {
-                        $query->whereRaw('TRIM(`p`.`group`) = ?', [$groupVal]);
+                        $q->whereRaw('TRIM(`p`.`group`) = ?', [$groupVal]);
                     } else {
-                        $query->whereRaw('TRIM('.$groupCol.') = ?', [$groupVal]);
+                        $q->whereRaw('TRIM('.$groupCol.') = ?', [$groupVal]);
                     }
                 }
             }
 
-            // 4) Aggregate – total independent of channel; buckets from sip.channel (numeric or text)
-            $rows = $query->selectRaw("
-                    MONTH(si.sales_invoice_date) as m,
-                    YEAR(si.sales_invoice_date)  as y,
+            // 4) Aggregate by month + RAW channel (no mapping yet)
+            $rows = $q->selectRaw("
+                        YEAR(si.sales_invoice_date)  as y,
+                        MONTH(si.sales_invoice_date) as m,
+                        LOWER(TRIM(COALESCE(sip.channel, ''))) as ch,
+                        SUM(sip.amount) as amt
+                    ")
+                    ->groupBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date), LOWER(TRIM(COALESCE(sip.channel, "")))'))
+                    ->orderBy(DB::raw('YEAR(si.sales_invoice_date)'))
+                    ->orderBy(DB::raw('MONTH(si.sales_invoice_date)'))
+                    ->get();
 
-                    SUM(sip.amount) as total,
-
-                    SUM(
-                        CASE
-                            WHEN CAST(NULLIF(sip.channel, '') AS UNSIGNED) = 1
-                            OR LOWER(TRIM(sip.channel)) IN ('standard','std')
-                            THEN sip.amount ELSE 0 END
-                    ) as standard_billing,
-
-                    SUM(
-                        CASE
-                            WHEN CAST(NULLIF(sip.channel, '') AS UNSIGNED) = 2
-                            OR LOWER(TRIM(sip.channel)) IN ('non_standard','non standard','ns','non-standard')
-                            THEN sip.amount ELSE 0 END
-                    ) as non_standard_billing,
-
-                    SUM(
-                        CASE
-                            WHEN CAST(NULLIF(sip.channel, '') AS UNSIGNED) = 3
-                            OR LOWER(TRIM(sip.channel)) IN ('customer_support','customer support','cs')
-                            THEN sip.amount ELSE 0 END
-                    ) as customer_support_billing
-                ")
-                ->groupBy(DB::raw('YEAR(si.sales_invoice_date), MONTH(si.sales_invoice_date)'))
-                ->orderBy(DB::raw('YEAR(si.sales_invoice_date)'))
-                ->orderBy(DB::raw('MONTH(si.sales_invoice_date)'))
-                ->get();
-
-            // 5) Put into a map: key = "YYYY-MM"
-            $agg = [];
-            foreach ($rows as $r) {
-                $key = sprintf('%04d-%02d', (int)$r->y, (int)$r->m);
-                $agg[$key] = [
-                    'standard_billing'         => (float)$r->standard_billing,
-                    'non_standard_billing'     => (float)$r->non_standard_billing,
-                    'customer_support_billing' => (float)$r->customer_support_billing,
-                    'total'                    => (float)$r->total,
-                ];
-            }
-
-            // 6) Generate ALL months in FY with zero fill
+            // 5) Prepare month buckets for the entire FY
+            $months = [];
             $cursor = $startDate->copy()->startOfMonth();
             $endEdge = $endDate->copy()->endOfMonth();
-
-            $data = collect();
             while ($cursor <= $endEdge) {
                 $key = $cursor->format('Y-m');
-                $label = $cursor->format('F Y');
-
-                $std = $agg[$key]['standard_billing']         ?? 0.0;
-                $non = $agg[$key]['non_standard_billing']     ?? 0.0;
-                $sup = $agg[$key]['customer_support_billing'] ?? 0.0;
-                $tot = $agg[$key]['total']                    ?? 0.0;
-
-                $data->push([
-                    'month'                    => $label,
-                    'standard_billing'         => round($std, 2),
-                    'non_standard_billing'     => round($non, 2),
-                    'customer_support_billing' => round($sup, 2),
-                    'total'                    => round($tot, 2),
-                ]);
-
+                $months[$key] = [
+                    'label'                    => $cursor->format('F Y'),
+                    'standard_billing'         => 0.0,
+                    'non_standard_billing'     => 0.0,
+                    'customer_support_billing' => 0.0,
+                    'other_billing'            => 0.0, // safety net
+                    'total'                    => 0.0,
+                ];
                 $cursor->addMonth();
             }
 
-            // 7) Totals (over all months)
+            // 6) Channel mapping in PHP (handles numeric or text, any mix)
+            $mapToBucket = function ($raw) {
+                $val = strtolower(trim((string)$raw));
+
+                // numeric variants
+                if (is_numeric($val)) {
+                    if ((int)$val === 1) return 'standard_billing';
+                    if ((int)$val === 2) return 'non_standard_billing';
+                    if ((int)$val === 3) return 'customer_support_billing';
+                }
+
+                // text variants (extend as needed)
+                if (in_array($val, ['standard', 'std'])) return 'standard_billing';
+                if (in_array($val, ['non_standard', 'non standard', 'ns', 'non-standard'])) return 'non_standard_billing';
+                if (in_array($val, ['customer_support', 'customer support', 'cs'])) return 'customer_support_billing';
+
+                return 'other_billing'; // unknowns won't be lost
+            };
+
+            // 7) Fold SQL rows into month buckets
+            foreach ($rows as $r) {
+                $key = sprintf('%04d-%02d', (int)$r->y, (int)$r->m);
+                if (!isset($months[$key])) continue; // outside FY (shouldn’t happen, but safe)
+
+                $bucket = $mapToBucket($r->ch);
+                $amt = (float)$r->amt;
+                $months[$key][$bucket] += $amt;
+                $months[$key]['total'] += $amt;
+            }
+
+            // 8) Build final data with rounding (2 decimals)
+            $data = collect();
+            foreach ($months as $m) {
+                $data->push([
+                    'month'                     => $m['label'],
+                    'standard_billing'          => round($m['standard_billing'], 2),
+                    'non_standard_billing'      => round($m['non_standard_billing'], 2),
+                    'customer_support_billing'  => round($m['customer_support_billing'], 2),
+                    'total'                     => round($m['total'], 2),
+                    // If you don't want to expose "other", comment the next line:
+                    // 'other_billing'          => round($m['other_billing'], 2),
+                ]);
+            }
+
+            // 9) Totals
             $total = [
                 'standard_billing'         => round($data->sum('standard_billing'), 2),
                 'non_standard_billing'     => round($data->sum('non_standard_billing'), 2),
                 'customer_support_billing' => round($data->sum('customer_support_billing'), 2),
                 'total'                    => round($data->sum('total'), 2),
+                // 'other_billing'          => round($data->sum('other_billing'), 2),
             ];
 
             return response()->json([
