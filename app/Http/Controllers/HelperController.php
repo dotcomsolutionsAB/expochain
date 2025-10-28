@@ -1218,6 +1218,130 @@ class HelperController extends Controller
         }
     }
 
+    public function getCashSalesDetails(Request $request)
+    {
+        try {
+            $companyId = auth()->user()->company_id;
+
+            // Date range
+            $startDate = $request->start_date
+                ? Carbon::parse($request->start_date)->startOfDay()
+                : Carbon::minValue();
+            $endDate = $request->end_date
+                ? Carbon::parse($request->end_date)->endOfDay()
+                : Carbon::now()->endOfDay();
+
+            // Pagination
+            $limit  = (int) $request->input('limit', 10);
+            $offset = (int) $request->input('offset', 0);
+
+            // Sorting
+            $sortBy  = strtolower($request->input('sort_by', 'date')); // date | invoice | client | amount
+            $sortDir = strtolower($request->input('sort_dir', 'desc')); // asc | desc
+            $sortDir = in_array($sortDir, ['asc','desc']) ? $sortDir : 'desc';
+
+            // Base query: only cash invoices
+            $table = (new SalesInvoiceModel)->getTable(); // t_sales_invoice
+
+            $query = SalesInvoiceModel::with('client:id,name')
+                ->where("$table.company_id", $companyId)
+                ->whereBetween("$table.sales_invoice_date", [$startDate, $endDate])
+                ->where("$table.cash", 1)
+                ->select("$table.id", "$table.sales_invoice_no", "$table.sales_invoice_date", "$table.client_id", "$table.total");
+
+            // Sorting logic
+            switch ($sortBy) {
+                case 'invoice':
+                    $query->orderBy("$table.sales_invoice_no", $sortDir);
+                    break;
+                case 'client':
+                    // Join clients for sorting by name
+                    $query->leftJoin('t_clients as c', "c.id", '=', "$table.client_id")
+                        ->orderBy('c.name', $sortDir)
+                        ->select("$table.*");
+                    break;
+                case 'amount':
+                    $query->orderBy("$table.total", $sortDir);
+                    break;
+                case 'date':
+                default:
+                    $query->orderBy("$table.sales_invoice_date", $sortDir);
+                    break;
+            }
+
+            // Clone for full totals (before pagination)
+            $allData = (clone $query)->get();
+
+            $grandTotalAmount = round($allData->sum('total'), 2);
+            $totalRecords     = $allData->count();
+
+            // Apply pagination
+            $rows  = $query->offset($offset)->limit($limit)->get();
+            $count = $rows->count();
+
+            // Page subtotal
+            $subTotalAmount = round($rows->sum('total'), 2);
+
+            // Transform rows
+            $data = [];
+            foreach ($rows as $row) {
+                $clientName = $row->client->name ?? null;
+                if (!$clientName || trim($clientName) === '') {
+                    $clientName = 'CASH';
+                }
+
+                $data[] = [
+                    'id'          => $row->id,
+                    'date'        => Carbon::parse($row->sales_invoice_date)->format('d-m-Y'),
+                    'invoice_no'  => $row->sales_invoice_no,
+                    'client_name' => $clientName,
+                    'amount'      => round((float)$row->total, 2),
+                ];
+            }
+
+            // Append Sub-total and Total rows
+            $data[] = [
+                'id'          => '',
+                'date'        => '',
+                'invoice_no'  => '',
+                'client_name' => 'Sub-total - ',
+                'amount'      => $subTotalAmount,
+            ];
+            $data[] = [
+                'id'          => '',
+                'date'        => '',
+                'invoice_no'  => '',
+                'client_name' => 'Total - ',
+                'amount'      => $grandTotalAmount,
+            ];
+
+            return response()->json([
+                'code'          => 200,
+                'success'       => true,
+                'message'       => 'Cash details fetched successfully!',
+                'data'          => $data,
+                'count'         => $count,
+                'total_records' => $totalRecords,
+                'limit'         => $limit,
+                'offset'        => $offset,
+                'sorted_by'     => $sortBy,
+                'sort_dir'      => $sortDir,
+                'period'        => [
+                    'from' => $startDate->toDateString(),
+                    'to'   => $endDate->toDateString(),
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code'    => 500,
+                'success' => false,
+                'message' => 'Something went wrong while fetching cash details.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function getProductWiseYearlySalesSummary(Request $request)
     {
         try {

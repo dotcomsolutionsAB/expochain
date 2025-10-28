@@ -413,6 +413,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
         Route::post('/commission', [HelperController::class, 'getCommissionReport']);
 
+        Route::post('/cash', [HelperController::class, 'getCashSalesDetails']);
+
         Route::get('/product_profit_fy', [HelperController::class, 'getProductWiseYearlySalesSummary']);
 
         Route::get('/product_profit_fy_export', [HelperController::class, 'exportProductWiseYearlySalesSummaryExcel']);
