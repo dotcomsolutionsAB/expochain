@@ -33,6 +33,7 @@ use App\Exports\DashboardStockExport;
 use App\Models\OpeningStockModel;
 use DB;
 use Auth;
+use Illuminate\Support\Facades\Schema;
 use App\Exports\ClientWiseYearlySalesSummaryExport;
 
 class HelperController extends Controller
