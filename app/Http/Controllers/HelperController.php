@@ -2356,6 +2356,177 @@ class HelperController extends Controller
         }
     }
 
+    // purchase vs purchase barchart
+    public function getMonthlyPurchaseSummary(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            // Parse start and end dates from the request
+            $startDate = Carbon::parse($request->start_date)->startOfMonth();
+            $endDate   = Carbon::parse($request->end_date)->endOfMonth();
+
+            // Initialize arrays to store results
+            $months = [];
+            $purchaseTotals = [];
+            $previousPurchaseTotals = [];
+
+            // Generate months between start and end dates
+            $current = $startDate->copy();
+
+            while ($current <= $endDate) {
+                $monthStart = $current->copy()->startOfMonth();
+                $monthEnd   = $current->copy()->endOfMonth();
+                $monthName  = $current->format('F'); // e.g., "January"
+
+                // Query purchases for this month
+                $purchaseStats = DB::table('t_purchase_invoice as pi')
+                    ->join('t_purchase_invoice_products as pip', 'pi.id', '=', 'pip.purchase_invoice_id')
+                    ->where('pi.company_id', $companyId)
+                    ->whereBetween('pi.purchase_invoice_date', [$monthStart, $monthEnd])
+                    ->selectRaw('SUM(pip.amount) as total, COUNT(DISTINCT pi.id) as invoice_count')
+                    ->first();
+
+                $purchaseTotal = $purchaseStats->total ?? 0;
+
+                // Previous year same month range
+                $prevMonthStart = $monthStart->copy()->subYear();
+                $prevMonthEnd   = $monthEnd->copy()->subYear();
+
+                $prevPurchaseStats = DB::table('t_purchase_invoice as pi')
+                    ->join('t_purchase_invoice_products as pip', 'pi.id', '=', 'pip.purchase_invoice_id')
+                    ->where('pi.company_id', $companyId)
+                    ->whereBetween('pi.purchase_invoice_date', [$prevMonthStart, $prevMonthEnd])
+                    ->selectRaw('SUM(pip.amount) as total')
+                    ->first();
+
+                $prevPurchaseTotal = $prevPurchaseStats->total ?? 0;
+
+                // Populate results
+                $months[] = $monthName;
+                $purchaseTotals[] = round($purchaseTotal);
+                $previousPurchaseTotals[] = round($prevPurchaseTotal);
+
+                $current->addMonth();
+            }
+
+            // Return the monthly purchase data
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Monthly purchase summary fetched successfully!',
+                'data' => [
+                    'month' => $months,
+                    'purchase_total' => $purchaseTotals,
+                    'previous_purchase_total' => $previousPurchaseTotals,
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Error occurred while processing data: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // purchase cumulative vs previous cumulative
+    public function getMonthlyCumulativePurchaseSummary(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            // Parse range
+            $startDate = Carbon::parse($request->input('start_date'))->startOfMonth();
+            $endDate   = Carbon::parse($request->input('end_date'))->endOfMonth();
+
+            // Current period monthly totals
+            $purchases = PurchaseInvoiceModel::join('t_purchase_invoice_products as pip', 'pi.id', '=', 'pip.purchase_invoice_id')
+                ->where('pi.company_id', $companyId)
+                ->whereBetween('pi.purchase_invoice_date', [$startDate, $endDate])
+                ->selectRaw('
+                    MONTH(pi.purchase_invoice_date) as month,
+                    YEAR(pi.purchase_invoice_date) as year,
+                    SUM(pip.amount) as monthly_purchase_amount
+                ')
+                ->from('t_purchase_invoice as pi')
+                ->groupBy(DB::raw('YEAR(pi.purchase_invoice_date), MONTH(pi.purchase_invoice_date)'))
+                ->orderBy(DB::raw('YEAR(pi.purchase_invoice_date), MONTH(pi.purchase_invoice_date)'))
+                ->get();
+
+            // Previous year same months
+            $prevStart = $startDate->copy()->subYear();
+            $prevEnd   = $endDate->copy()->subYear();
+
+            $prevPurchases = PurchaseInvoiceModel::join('t_purchase_invoice_products as pip', 'pi.id', '=', 'pip.purchase_invoice_id')
+                ->where('pi.company_id', $companyId)
+                ->whereBetween('pi.purchase_invoice_date', [$prevStart, $prevEnd])
+                ->selectRaw('
+                    MONTH(pi.purchase_invoice_date) as month,
+                    YEAR(pi.purchase_invoice_date) as year,
+                    SUM(pip.amount) as monthly_purchase_amount
+                ')
+                ->from('t_purchase_invoice as pi')
+                ->groupBy(DB::raw('YEAR(pi.purchase_invoice_date), MONTH(pi.purchase_invoice_date)'))
+                ->orderBy(DB::raw('YEAR(pi.purchase_invoice_date), MONTH(pi.purchase_invoice_date)'))
+                ->get();
+
+            // Map to month => amount
+            $purchaseByMonth = [];
+            foreach ($purchases as $row) {
+                $purchaseByMonth[$row->month] = $row->monthly_purchase_amount;
+            }
+            $prevPurchaseByMonth = [];
+            foreach ($prevPurchases as $row) {
+                $prevPurchaseByMonth[$row->month] = $row->monthly_purchase_amount;
+            }
+
+            // Build cumulative arrays
+            $months = [];
+            $cumulativePurchase = [];
+            $previousCumulativePurchase = [];
+
+            $cum = 0;
+            $prevCum = 0;
+
+            $period = Carbon::parse($startDate)->monthsUntil($endDate->copy()->endOfMonth());
+
+            foreach ($period as $dt) {
+                $m = $dt->month;
+                $months[] = $dt->format('F');
+
+                $curr = $purchaseByMonth[$m] ?? 0;
+                $prev = $prevPurchaseByMonth[$m] ?? 0;
+
+                $cum     += $curr;
+                $prevCum += $prev;
+
+                $cumulativePurchase[] = round($cum);
+                $previousCumulativePurchase[] = round($prevCum);
+            }
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Monthly cumulative purchases fetched successfully.',
+                'data' => [
+                    'month' => $months,
+                    'cumulative_purchase_amount' => $cumulativePurchase,
+                    'previous_cumulative_purchase_amount' => $previousCumulativePurchase,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Error occurred while processing data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
     // profit distribution
     public function getDailyProfitDistribution(Request $request)
     {
