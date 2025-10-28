@@ -3485,7 +3485,7 @@ class HelperController extends Controller
         try {
             $companyId        = Auth::user()->company_id;
             $financialYearId  = $request->input('financial_year_id');
-            $groupFilter      = $request->input('group_id'); // can be id or name depending on schema
+            $groupFilter      = $request->input('group_id');   // can be numeric id or a string name
 
             // 1) Resolve FY
             $financialYear = $financialYearId
@@ -3514,15 +3514,31 @@ class HelperController extends Controller
                 $query->join('t_products as p', 'p.id', '=', 'sip.product_id');
 
                 if (Schema::hasColumn('t_products', 'group_id')) {
+                    // FK exists → filter directly by id
                     $query->where('p.group_id', $groupFilter);
                 } elseif (Schema::hasColumn('t_products', 'group')) {
-                    $query->whereRaw('TRIM(`p`.`group`) = ?', [trim((string)$groupFilter)]);
+                    // Text column "group"
+                    if (is_numeric($groupFilter)) {
+                        // user gave a group_id; join t_group to map id -> name then match p.group=name
+                        $gTable = (new GroupModel)->getTable(); // e.g., t_group
+                        $query->leftJoin("$gTable as g", DB::raw('1'), DB::raw('1')) // dummy join to allow whereRaw subselect
+                            ->whereRaw('TRIM(`p`.`group`) = (SELECT name FROM '.$gTable.' WHERE id = ? LIMIT 1)', [intval($groupFilter)]);
+                    } else {
+                        $query->whereRaw('TRIM(`p`.`group`) = ?', [trim((string)$groupFilter)]);
+                    }
                 } elseif (Schema::hasColumn('t_products', 'group_name')) {
-                    $query->whereRaw('TRIM(p.group_name) = ?', [trim((string)$groupFilter)]);
+                    if (is_numeric($groupFilter)) {
+                        $gTable = (new GroupModel)->getTable();
+                        $query->leftJoin("$gTable as g", DB::raw('1'), DB::raw('1'))
+                            ->whereRaw('TRIM(p.group_name) = (SELECT name FROM '.$gTable.' WHERE id = ? LIMIT 1)', [intval($groupFilter)]);
+                    } else {
+                        $query->whereRaw('TRIM(p.group_name) = ?', [trim((string)$groupFilter)]);
+                    }
                 }
             }
 
-            // 4) Aggregation (robust channel mapping + SQL rounding to 2 decimals)
+            // 4) Aggregation
+            // NOTE: no si.channel usage. Only sip.channel (text or numeric).
             $billing = $query->selectRaw("
                     MONTH(si.sales_invoice_date) as month,
                     YEAR(si.sales_invoice_date)  as year,
@@ -3532,24 +3548,24 @@ class HelperController extends Controller
                     /* Standard */
                     CAST(SUM(
                         CASE
-                            WHEN CAST(NULLIF(COALESCE(sip.channel, si.channel, ''), '') AS UNSIGNED) = 1
-                            OR LOWER(TRIM(COALESCE(sip.channel, si.channel))) IN ('standard','std')
+                            WHEN CAST(NULLIF(sip.channel, '') AS UNSIGNED) = 1
+                            OR LOWER(TRIM(sip.channel)) IN ('standard','std')
                             THEN sip.amount ELSE 0 END
                     ) AS DECIMAL(18,2)) as standard_billing,
 
                     /* Non-Standard */
                     CAST(SUM(
                         CASE
-                            WHEN CAST(NULLIF(COALESCE(sip.channel, si.channel, ''), '') AS UNSIGNED) = 2
-                            OR LOWER(TRIM(COALESCE(sip.channel, si.channel))) IN ('non_standard','non standard','ns','non-standard')
+                            WHEN CAST(NULLIF(sip.channel, '') AS UNSIGNED) = 2
+                            OR LOWER(TRIM(sip.channel)) IN ('non_standard','non standard','ns','non-standard')
                             THEN sip.amount ELSE 0 END
                     ) AS DECIMAL(18,2)) as non_standard_billing,
 
                     /* Customer Support */
                     CAST(SUM(
                         CASE
-                            WHEN CAST(NULLIF(COALESCE(sip.channel, si.channel, ''), '') AS UNSIGNED) = 3
-                            OR LOWER(TRIM(COALESCE(sip.channel, si.channel))) IN ('customer_support','customer support','cs')
+                            WHEN CAST(NULLIF(sip.channel, '') AS UNSIGNED) = 3
+                            OR LOWER(TRIM(sip.channel)) IN ('customer_support','customer support','cs')
                             THEN sip.amount ELSE 0 END
                     ) AS DECIMAL(18,2)) as customer_support_billing
                 ")
@@ -3558,7 +3574,7 @@ class HelperController extends Controller
                 ->orderBy(DB::raw('MONTH(si.sales_invoice_date)'))
                 ->get();
 
-            // 5) Format rows with month labels and clean rounding
+            // 5) Format rows with proper month-year and clean rounding
             $data = $billing->map(function ($row) {
                 $label = Carbon::create($row->year, $row->month, 1)->format('F Y');
                 return [
@@ -3570,7 +3586,7 @@ class HelperController extends Controller
                 ];
             });
 
-            // 6) Totals (2 decimals)
+            // 6) Totals
             $total = [
                 'standard_billing'         => round((float)$billing->sum('standard_billing'), 2),
                 'non_standard_billing'     => round((float)$billing->sum('non_standard_billing'), 2),
