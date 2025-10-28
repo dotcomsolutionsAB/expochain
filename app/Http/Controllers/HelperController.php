@@ -921,21 +921,30 @@ class HelperController extends Controller
             $companyId = auth()->user()->company_id;
 
             // Parse dates
-            $startDate = $request->start_date ? Carbon::parse($request->start_date)->startOfDay() : Carbon::minValue();
-            $endDate = $request->end_date ? Carbon::parse($request->end_date)->endOfDay() : Carbon::now()->endOfDay();
+            $startDate = $request->start_date
+                ? Carbon::parse($request->start_date)->startOfDay()
+                : Carbon::minValue();
+            $endDate = $request->end_date
+                ? Carbon::parse($request->end_date)->endOfDay()
+                : Carbon::now()->endOfDay();
 
             // Pagination
-            $limit = intval($request->input('limit', 10));
-            $offset = intval($request->input('offset', 0));
+            $limit  = (int) $request->input('limit', 10);
+            $offset = (int) $request->input('offset', 0);
 
-            // Get all sales invoices (for this period/company)
+            // Sorting
+            $sortBy  = strtolower($request->input('sort_by', 'amount')); // name | profit | amount
+            $sortDir = strtolower($request->input('sort_dir', 'desc'));  // asc | desc
+            $sortDir = in_array($sortDir, ['asc','desc']) ? $sortDir : 'desc';
+
+            // Get invoices + relations
             $invoices = SalesInvoiceModel::with('products:id,sales_invoice_id,profit,amount', 'client:id,name')
-                ->select('id', 'client_id')
+                ->select('id', 'client_id', 'sales_invoice_date')
                 ->where('company_id', $companyId)
                 ->whereBetween('sales_invoice_date', [$startDate, $endDate])
                 ->get();
 
-            // Aggregate totals by client
+            // Aggregate by client
             $result = [];
             foreach ($invoices as $invoice) {
                 $clientId = $invoice->client_id;
@@ -947,66 +956,102 @@ class HelperController extends Controller
 
                 if (!isset($result[$clientId])) {
                     $result[$clientId] = [
-                        'client_id' => $clientId,
-                        'client_name' => $clientName,
-                        'total_profit' => 0,
-                        'total_amount' => 0
+                        'client_id'    => $clientId,
+                        'client_name'  => $clientName,
+                        'total_profit' => 0.0,
+                        'total_amount' => 0.0,
                     ];
                 }
-                $result[$clientId]['total_profit'] += $profitSum;
-                $result[$clientId]['total_amount'] += $amountSum;
+                $result[$clientId]['total_profit'] += (float) $profitSum;
+                $result[$clientId]['total_amount'] += (float) $amountSum;
             }
 
-            // Convert to flat array, round, and sort by total_amount (optional: you can sort as needed)
-            $flatResult = array_map(function ($item) {
+            // Flatten, round
+            $flatResult = array_values(array_map(function ($item) {
                 return [
-                    'client_id' => $item['client_id'],
-                    'client_name' => $item['client_name'],
-                    'total_profit' => round($item['total_profit'], 2),
-                    'total_amount' => round($item['total_amount'], 2)
+                    'client_id'    => $item['client_id'],
+                    'client_name'  => $item['client_name'],
+                    'total_profit' => round((float)$item['total_profit'], 2),
+                    'total_amount' => round((float)$item['total_amount'], 2),
                 ];
-            }, $result);
+            }, $result));
 
-            // Calculate grand totals (for all results, before pagination)
+            // Sort logic
+            switch ($sortBy) {
+                case 'name':
+                    usort($flatResult, function ($a, $b) use ($sortDir) {
+                        $cmp = strcasecmp($a['client_name'], $b['client_name']);
+                        return $sortDir === 'asc' ? $cmp : -$cmp;
+                    });
+                    break;
+                case 'profit':
+                    usort($flatResult, function ($a, $b) use ($sortDir) {
+                        if ($a['total_profit'] == $b['total_profit']) return 0;
+                        $cmp = ($a['total_profit'] < $b['total_profit']) ? -1 : 1;
+                        return $sortDir === 'asc' ? $cmp : -$cmp;
+                    });
+                    break;
+                case 'amount':
+                default:
+                    usort($flatResult, function ($a, $b) use ($sortDir) {
+                        if ($a['total_amount'] == $b['total_amount']) return 0;
+                        $cmp = ($a['total_amount'] < $b['total_amount']) ? -1 : 1;
+                        return $sortDir === 'asc' ? $cmp : -$cmp;
+                    });
+                    break;
+            }
+
+            // Totals (before pagination)
             $totalProfit = array_sum(array_column($flatResult, 'total_profit'));
             $totalAmount = array_sum(array_column($flatResult, 'total_amount'));
+            $totalRecords = count($flatResult);
 
-            // Paginate the results
-            $paginated = array_slice($flatResult, $offset, $limit);
+            // Pagination
+            $pageRows = array_slice($flatResult, $offset, $limit);
+            $count = count($pageRows); // number of data rows in this page (without subtotal/total)
 
-            // Calculate sub-totals for paginated results
-            $subTotalProfit = array_sum(array_column($paginated, 'total_profit'));
-            $subTotalAmount = array_sum(array_column($paginated, 'total_amount'));
+            // Subtotals for the page
+            $subTotalProfit = array_sum(array_column($pageRows, 'total_profit'));
+            $subTotalAmount = array_sum(array_column($pageRows, 'total_amount'));
 
-            // Append sub-total and total rows
-            $paginated[] = [
-                'client_id'   => '',
-                'client_name' => 'Sub-total - ',
-                'total_profit'=> round($subTotalProfit, 2),
-                'total_amount'=> round($subTotalAmount, 2),
+            // Append subtotal and total rows
+            $pageRows[] = [
+                'client_id'    => '',
+                'client_name'  => 'Sub-total - ',
+                'total_profit' => round($subTotalProfit, 2),
+                'total_amount' => round($subTotalAmount, 2),
             ];
-            $paginated[] = [
-                'client_id'   => '',
-                'client_name' => 'Total - ',
-                'total_profit'=> round($totalProfit, 2),
-                'total_amount'=> round($totalAmount, 2),
+            $pageRows[] = [
+                'client_id'    => '',
+                'client_name'  => 'Total - ',
+                'total_profit' => round($totalProfit, 2),
+                'total_amount' => round($totalAmount, 2),
             ];
 
-            // Return response
+            // Response
             return response()->json([
-                'code' => 200,
-                'success' => true,
-                'message' => 'Client wise profit fetched successfully!',
-                'data' => $paginated,
-                'total_records' => count($flatResult), // before pagination
-                'limit' => $limit,
-                'offset' => $offset
+                'code'          => 200,
+                'success'       => true,
+                'message'       => 'Client wise profit fetched successfully!',
+                'data'          => $pageRows,
+                'count'         => $count,          // 👈 added, before total_records
+                'total_records' => $totalRecords,   // total rows before pagination
+                'limit'         => $limit,
+                'offset'        => $offset,
+                'sorted_by'     => $sortBy,
+                'sort_dir'      => $sortDir,
+                'period'        => [
+                    'from' => $startDate->toDateTimeString(),
+                    'to'   => $endDate->toDateTimeString(),
+                ],
             ]);
+
         } catch (\Exception $e) {
             return response()->json([
+                'code'    => 500,
                 'success' => false,
                 'message' => 'Something went wrong while calculating client-wise sales summary.',
-                'error' => $e->getMessage()
+                'error'   => $e->getMessage()
             ], 500);
         }
     }
