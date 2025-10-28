@@ -932,19 +932,19 @@ class HelperController extends Controller
             $limit  = (int) $request->input('limit', 10);
             $offset = (int) $request->input('offset', 0);
 
-            // Sorting
+            // Sorting parameters
             $sortBy  = strtolower($request->input('sort_by', 'amount')); // name | profit | amount
             $sortDir = strtolower($request->input('sort_dir', 'desc'));  // asc | desc
             $sortDir = in_array($sortDir, ['asc','desc']) ? $sortDir : 'desc';
 
-            // Get invoices + relations
+            // Fetch all invoices within the date range
             $invoices = SalesInvoiceModel::with('products:id,sales_invoice_id,profit,amount', 'client:id,name')
                 ->select('id', 'client_id', 'sales_invoice_date')
                 ->where('company_id', $companyId)
                 ->whereBetween('sales_invoice_date', [$startDate, $endDate])
                 ->get();
 
-            // Aggregate by client
+            // Aggregate totals by client
             $result = [];
             foreach ($invoices as $invoice) {
                 $clientId = $invoice->client_id;
@@ -958,21 +958,22 @@ class HelperController extends Controller
                     $result[$clientId] = [
                         'client_id'    => $clientId,
                         'client_name'  => $clientName,
-                        'total_profit' => 0.0,
-                        'total_amount' => 0.0,
+                        'total_profit' => 0,
+                        'total_amount' => 0,
                     ];
                 }
-                $result[$clientId]['total_profit'] += (float) $profitSum;
-                $result[$clientId]['total_amount'] += (float) $amountSum;
+
+                $result[$clientId]['total_profit'] += $profitSum;
+                $result[$clientId]['total_amount'] += $amountSum;
             }
 
-            // Flatten, round
+            // Flatten and round
             $flatResult = array_values(array_map(function ($item) {
                 return [
                     'client_id'    => $item['client_id'],
                     'client_name'  => $item['client_name'],
-                    'total_profit' => round((float)$item['total_profit'], 2),
-                    'total_amount' => round((float)$item['total_amount'], 2),
+                    'total_profit' => round($item['total_profit']),
+                    'total_amount' => round($item['total_amount']),
                 ];
             }, $result));
 
@@ -984,58 +985,58 @@ class HelperController extends Controller
                         return $sortDir === 'asc' ? $cmp : -$cmp;
                     });
                     break;
+
                 case 'profit':
                     usort($flatResult, function ($a, $b) use ($sortDir) {
-                        if ($a['total_profit'] == $b['total_profit']) return 0;
-                        $cmp = ($a['total_profit'] < $b['total_profit']) ? -1 : 1;
+                        $cmp = $a['total_profit'] <=> $b['total_profit'];
                         return $sortDir === 'asc' ? $cmp : -$cmp;
                     });
                     break;
+
                 case 'amount':
                 default:
                     usort($flatResult, function ($a, $b) use ($sortDir) {
-                        if ($a['total_amount'] == $b['total_amount']) return 0;
-                        $cmp = ($a['total_amount'] < $b['total_amount']) ? -1 : 1;
+                        $cmp = $a['total_amount'] <=> $b['total_amount'];
                         return $sortDir === 'asc' ? $cmp : -$cmp;
                     });
                     break;
             }
 
-            // Totals (before pagination)
-            $totalProfit = array_sum(array_column($flatResult, 'total_profit'));
-            $totalAmount = array_sum(array_column($flatResult, 'total_amount'));
+            // Grand totals before pagination
+            $totalProfit = round(array_sum(array_column($flatResult, 'total_profit')));
+            $totalAmount = round(array_sum(array_column($flatResult, 'total_amount')));
             $totalRecords = count($flatResult);
 
             // Pagination
             $pageRows = array_slice($flatResult, $offset, $limit);
-            $count = count($pageRows); // number of data rows in this page (without subtotal/total)
+            $count = count($pageRows);
 
-            // Subtotals for the page
-            $subTotalProfit = array_sum(array_column($pageRows, 'total_profit'));
-            $subTotalAmount = array_sum(array_column($pageRows, 'total_amount'));
+            // Subtotals for current page
+            $subTotalProfit = round(array_sum(array_column($pageRows, 'total_profit')));
+            $subTotalAmount = round(array_sum(array_column($pageRows, 'total_amount')));
 
             // Append subtotal and total rows
             $pageRows[] = [
                 'client_id'    => '',
                 'client_name'  => 'Sub-total - ',
-                'total_profit' => round($subTotalProfit, 2),
-                'total_amount' => round($subTotalAmount, 2),
+                'total_profit' => $subTotalProfit,
+                'total_amount' => $subTotalAmount,
             ];
             $pageRows[] = [
                 'client_id'    => '',
                 'client_name'  => 'Total - ',
-                'total_profit' => round($totalProfit, 2),
-                'total_amount' => round($totalAmount, 2),
+                'total_profit' => $totalProfit,
+                'total_amount' => $totalAmount,
             ];
 
-            // Response
+            // Final response
             return response()->json([
                 'code'          => 200,
                 'success'       => true,
                 'message'       => 'Client wise profit fetched successfully!',
                 'data'          => $pageRows,
-                'count'         => $count,          // 👈 added, before total_records
-                'total_records' => $totalRecords,   // total rows before pagination
+                'count'         => $count,          // number of data rows on this page
+                'total_records' => $totalRecords,   // total unique clients
                 'limit'         => $limit,
                 'offset'        => $offset,
                 'sorted_by'     => $sortBy,
