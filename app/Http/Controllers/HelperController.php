@@ -832,20 +832,29 @@ class HelperController extends Controller
         try {
             $companyId = auth()->user()->company_id;
 
-            // Get date range
-            $startDate = Carbon::parse($request->start_date)->startOfDay();
-            $endDate = Carbon::parse($request->end_date)->endOfDay();
+            // Dates
+            $startDate = $request->start_date
+                ? Carbon::parse($request->start_date)->startOfDay()
+                : Carbon::minValue();
+            $endDate = $request->end_date
+                ? Carbon::parse($request->end_date)->endOfDay()
+                : Carbon::now()->endOfDay();
 
-            // Pagination parameters (with defaults)
-            $limit = intval($request->input('limit', 10));
-            $offset = intval($request->input('offset', 0));
+            // Pagination
+            $limit  = (int) $request->input('limit', 10);
+            $offset = (int) $request->input('offset', 0);
 
-            // Step 1: Filtered sales invoice IDs for the company and date range
+            // Sorting
+            $sortBy  = strtolower($request->input('sort_by', 'amount')); // name | profit | amount
+            $sortDir = strtolower($request->input('sort_dir', 'desc'));  // asc | desc
+            $sortDir = in_array($sortDir, ['asc','desc']) ? $sortDir : 'desc';
+
+            // 1) Filtered sales invoice IDs
             $salesInvoiceIds = SalesInvoiceModel::where('company_id', $companyId)
                 ->whereBetween('sales_invoice_date', [$startDate, $endDate])
                 ->pluck('id');
 
-            // Step 2: Total sum (before pagination)
+            // 2) Aggregate totals per product (no pagination yet)
             $allProducts = SalesInvoiceProductsModel::select('product_id', 'product_name')
                 ->where('company_id', $companyId)
                 ->whereIn('sales_invoice_id', $salesInvoiceIds)
@@ -853,63 +862,90 @@ class HelperController extends Controller
                 ->groupBy('product_id', 'product_name')
                 ->get();
 
-            $grandTotal = $allProducts->sum('total_amount');
-
-            // Step 3: Get paginated results
-            $products = SalesInvoiceProductsModel::select('product_id', 'product_name')
-                ->where('company_id', $companyId)
-                ->whereIn('sales_invoice_id', $salesInvoiceIds)
-                ->selectRaw('SUM(amount) as total_amount, SUM(profit) as total_profit')
-                ->groupBy('product_id', 'product_name')
-                ->offset($offset)
-                ->limit($limit)
-                ->get();
-
-            // Sub-total: sum of total_amount for the **paginated products**
-            $subTotal = $products->sum('total_amount');
-
-            // Transform for output
-            $result = $products->map(function ($product) {
+            // Flatten and round
+            $flat = $allProducts->map(function ($p) {
                 return [
-                    'product_id'   => $product->product_id,
-                    'product_name' => $product->product_name,
-                    'total_amount' => round($product->total_amount, 2),
-                    'total_profit' => round($product->total_profit, 2),
+                    'product_id'   => $p->product_id,
+                    'product_name' => $p->product_name ?: 'Unknown',
+                    'total_amount' => round((float)$p->total_amount),
+                    'total_profit' => round((float)$p->total_profit),
                 ];
-            })->toArray();
+            })->values()->toArray();
 
-            // Append Sub-total Row
-            $result[] = [
+            // 3) Sort
+            switch ($sortBy) {
+                case 'name':
+                    usort($flat, function ($a, $b) use ($sortDir) {
+                        $cmp = strcasecmp($a['product_name'], $b['product_name']);
+                        return $sortDir === 'asc' ? $cmp : -$cmp;
+                    });
+                    break;
+                case 'profit':
+                    usort($flat, function ($a, $b) use ($sortDir) {
+                        $cmp = $a['total_profit'] <=> $b['total_profit'];
+                        return $sortDir === 'asc' ? $cmp : -$cmp;
+                    });
+                    break;
+                case 'amount':
+                default:
+                    usort($flat, function ($a, $b) use ($sortDir) {
+                        $cmp = $a['total_amount'] <=> $b['total_amount'];
+                        return $sortDir === 'asc' ? $cmp : -$cmp;
+                    });
+                    break;
+            }
+
+            // 4) Totals before pagination
+            $grandTotalAmount = round(array_sum(array_column($flat, 'total_amount')));
+            $grandTotalProfit = round(array_sum(array_column($flat, 'total_profit')));
+            $totalRecords     = count($flat);
+
+            // 5) Pagination AFTER sorting
+            $pageRows = array_slice($flat, $offset, $limit);
+            $count    = count($pageRows);
+
+            // 6) Subtotals for current page
+            $subTotalAmount = round(array_sum(array_column($pageRows, 'total_amount')));
+            $subTotalProfit = round(array_sum(array_column($pageRows, 'total_profit')));
+
+            // 7) Append Sub-total and Total rows
+            $pageRows[] = [
                 'product_id'   => '',
                 'product_name' => 'Sub-total - ',
-                'total_amount' => round($subTotal, 2),
-                'total_profit' => '',
+                'total_amount' => $subTotalAmount,
+                'total_profit' => $subTotalProfit,
             ];
-
-            // Append Total Row
-            $result[] = [
+            $pageRows[] = [
                 'product_id'   => '',
                 'product_name' => 'Total - ',
-                'total_amount' => round($grandTotal, 2),
-                'total_profit' => '',
+                'total_amount' => $grandTotalAmount,
+                'total_profit' => $grandTotalProfit,
             ];
 
+            // 8) Response
             return response()->json([
-                'code' => 200,
-                'success' => true,
-                'message' => 'Product-wise sales summary fetched successfully!',
-                'data' => $result,
-                'total_records' => $allProducts->count(), // total records before pagination
-                'limit' => $limit,
-                'offset' => $offset,
+                'code'          => 200,
+                'success'       => true,
+                'message'       => 'Product-wise sales summary fetched successfully!',
+                'data'          => $pageRows,
+                'count'         => $count,          // 👈 number of rows in this page (before summary rows)
+                'total_records' => $totalRecords,   // total unique products before pagination
+                'limit'         => $limit,
+                'offset'        => $offset,
+                'sorted_by'     => $sortBy,
+                'sort_dir'      => $sortDir,
+                'period'        => [
+                    'from' => $startDate->toDateTimeString(),
+                    'to'   => $endDate->toDateTimeString(),
+                ],
             ]);
+
         } catch (\Exception $e) {
-            // Error handling
             return response()->json([
-                'code' => 500,
+                'code'    => 500,
                 'success' => false,
                 'message' => 'Something went wrong while fetching product-wise sales summary.',
-                'error' => $e->getMessage()
+                'error'   => $e->getMessage()
             ], 500);
         }
     }
