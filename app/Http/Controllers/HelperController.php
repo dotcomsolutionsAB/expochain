@@ -30,6 +30,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Illuminate\Support\Facades\Storage;
 use App\Exports\DashboardStockExport;
+use App\Models\OpeningStockModel;
 use DB;
 use Auth;
 use App\Exports\ClientWiseYearlySalesSummaryExport;
@@ -1971,6 +1972,269 @@ class HelperController extends Controller
                 'code' => 500,
                 'success' => false,
                 'message' => 'Something went wrong while exporting Excel.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function getTradingSummary(Request $request)
+    {
+        $auth = Auth::user();
+        if (!$auth) {
+            return response()->json(['code'=>401,'success'=>false,'message'=>'Unauthorized','data'=>[]], 401);
+        }
+
+        try {
+            $companyId = $auth->company_id;
+
+            // ---------------------------
+            // Resolve date range
+            // Inputs (optional):
+            // - financial_year_id (int)
+            // - date_from (Y-m-d)
+            // - date_to   (Y-m-d)
+            // Default: current FY (Apr 1 -> Mar 31)
+            // ---------------------------
+            $tz = 'Asia/Kolkata';
+            $now = \Carbon\Carbon::now($tz);
+
+            $dateFrom = $request->input('date_from');
+            $dateTo   = $request->input('date_to');
+            $fyId     = $request->input('financial_year_id');
+
+            if ($fyId) {
+                // Expect FinancialYearModel to have start_date, end_date
+                $fy = FinancialYearModel::where('company_id', $companyId)
+                    ->where('id', $fyId)
+                    ->firstOrFail();
+
+                $start = \Carbon\Carbon::parse($fy->start_date, $tz)->startOfDay();
+                $end   = \Carbon\Carbon::parse($fy->end_date, $tz)->endOfDay();
+            } elseif ($dateFrom && $dateTo) {
+                $start = \Carbon\Carbon::parse($dateFrom, $tz)->startOfDay();
+                $end   = \Carbon\Carbon::parse($dateTo, $tz)->endOfDay();
+            } else {
+                // Current FY (Apr 1 -> Mar 31)
+                $fyYear = (int)$now->format('Y');
+                if ((int)$now->format('m') < 4) { // Jan/Feb/Mar belong to previous FY start
+                    $fyYear -= 1;
+                }
+                $start = \Carbon\Carbon::create($fyYear, 4, 1, 0, 0, 0, $tz);
+                $end   = \Carbon\Carbon::create($fyYear + 1, 3, 31, 23, 59, 59, $tz);
+            }
+
+            // Helper to coalesce possible amount columns (WITHOUT TAX)
+            $coalesceLineExTax = function(string $prefix = '') {
+                $p = $prefix ? $prefix.'.' : '';
+                // Tries: net_amount, (amount - tax_amount), subtotal, (total - tax_amount)
+                return DB::raw("COALESCE({$p}net_amount,
+                                    ({$p}amount - {$p}tax_amount),
+                                    {$p}subtotal,
+                                    ({$p}total - {$p}tax_amount),
+                                    0)");
+            };
+
+            // ---------------------------
+            // SALES (without tax)
+            // ---------------------------
+            $salesInvoiceIds = SalesInvoiceModel::where('company_id', $companyId)
+                ->whereBetween('sales_invoice_date', [$start, $end])
+                ->pluck('id');
+
+            $salesExTax = (float) SalesInvoiceProductsModel::where('company_id', $companyId)
+                ->whereIn('sales_invoice_id', $salesInvoiceIds)
+                ->sum($coalesceLineExTax());
+
+            // ---------------------------
+            // PURCHASE (without tax)
+            // ---------------------------
+            $purchaseInvoiceIds = PurchaseInvoiceModel::where('company_id', $companyId)
+                ->whereBetween('purchase_invoice_date', [$start, $end])
+                ->pluck('id');
+
+            $purchaseExTax = (float) PurchaseInvoiceProductsModel::where('company_id', $companyId)
+                ->whereIn('purchase_invoice_id', $purchaseInvoiceIds)
+                ->sum($coalesceLineExTax());
+
+            // ---------------------------
+            // DEBIT NOTE (Purchase Returns) (without tax)
+            // ---------------------------
+            $debitNote = 0.0;
+            if (class_exists(\App\Models\PurchaseReturnProductsModel::class)) {
+                // Try common columns for PR header date: purchase_return_date / return_date / created_at
+                $pr = PurchaseReturnProductsModel::query()
+                    ->where('company_id', $companyId);
+
+                // If there is a header table with dates, you can join it. Otherwise, fallback to products' created_at.
+                // Generic fallback on products created_at within range:
+                $debitNote = (float) $pr
+                    ->whereBetween('created_at', [$start, $end])
+                    ->sum($coalesceLineExTax());
+            }
+
+            // ---------------------------
+            // CREDIT NOTE (Sales Returns) (without tax)
+            // Strategy:
+            // 1) If SalesReturnProductsModel exists, use that (ideal).
+            // 2) Else fallback: detect negative/return rows inside SalesInvoiceProductsModel.
+            // ---------------------------
+            $creditNote = 0.0;
+            if (class_exists(\App\Models\SalesReturnProductsModel::class)) {
+                $srpClass = \App\Models\SalesReturnProductsModel::class;
+                $creditNote = (float) $srpClass::where('company_id', $companyId)
+                    ->whereBetween('created_at', [$start, $end])
+                    ->sum($coalesceLineExTax());
+            } else {
+                // Fallback heuristic: negative totals / quantities / flagged returns within SIPM
+                $creditNote = (float) SalesInvoiceProductsModel::where('company_id', $companyId)
+                    ->whereIn('sales_invoice_id', $salesInvoiceIds)
+                    ->where(function($q) {
+                        $q->whereRaw("COALESCE(net_amount, (amount - tax_amount), subtotal, (total - tax_amount), 0) < 0")
+                        ->orWhere('qty', '<', 0)
+                        ->orWhere('is_return', 1);
+                    })
+                    ->sum(DB::raw("ABS(" . $coalesceLineExTax()->getValue(DB::connection()->getQueryGrammar()) . ")"));
+            }
+
+            // ---------------------------
+            // OPENING & CLOSING STOCK (valuation) (without tax)
+            // Opening = valuation at start-of-period
+            // Closing = valuation at end-of-period
+            // Prefers OpeningStockModel for opening; falls back to latest ClosingStock <= start.
+            // ---------------------------
+            $openingStock = 0.0;
+            if (class_exists(\App\Models\OpeningStockModel::class)) {
+                $openingStock = (float) \App\Models\OpeningStockModel::where('company_id', $companyId)
+                    ->whereDate('created_at', $start->copy()->toDateString())
+                    ->sum(DB::raw("COALESCE(amount, value, total_value, 0)"));
+            }
+            if ($openingStock == 0.0) {
+                // Fallback to latest closing snapshot on/before start date
+                $latestBefore = ClosingStockModel::where('company_id', $companyId)
+                    ->whereDate(DB::raw("COALESCE(as_on, created_at)"), '<=', $start->copy()->toDateString())
+                    ->orderBy(DB::raw("COALESCE(as_on, created_at)"), 'desc')
+                    ->first();
+                if ($latestBefore) {
+                    $openingStock = (float) ClosingStockModel::where('company_id', $companyId)
+                        ->where(DB::raw("COALESCE(batch_id, snapshot_id, 0)"),
+                            DB::raw("COALESCE(" . (isset($latestBefore->batch_id) ? $latestBefore->batch_id : 0) . ", " . (isset($latestBefore->snapshot_id) ? $latestBefore->snapshot_id : 0) . ", 0)"))
+                        ->sum(DB::raw("COALESCE(amount, value, total_value, 0)"));
+                    // If the above batching is not applicable in your schema, simply use the single record's summed column:
+                    if ($openingStock == 0.0) {
+                        $openingStock = (float) ($latestBefore->amount ?? $latestBefore->value ?? $latestBefore->total_value ?? 0);
+                    }
+                }
+            }
+
+            // Closing = latest snapshot on/before end date
+            $closingLatest = ClosingStockModel::where('company_id', $companyId)
+                ->whereDate(DB::raw("COALESCE(as_on, created_at)"), '<=', $end->copy()->toDateString())
+                ->orderBy(DB::raw("COALESCE(as_on, created_at)"), 'desc')
+                ->first();
+
+            $closingStock = 0.0;
+            if ($closingLatest) {
+                $closingStock = (float) ClosingStockModel::where('company_id', $companyId)
+                    ->where(DB::raw("COALESCE(batch_id, snapshot_id, 0)"),
+                        DB::raw("COALESCE(" . (isset($closingLatest->batch_id) ? $closingLatest->batch_id : 0) . ", " . (isset($closingLatest->snapshot_id) ? $closingLatest->snapshot_id : 0) . ", 0)"))
+                    ->sum(DB::raw("COALESCE(amount, value, total_value, 0)"));
+
+                if ($closingStock == 0.0) {
+                    $closingStock = (float) ($closingLatest->amount ?? $closingLatest->value ?? $closingLatest->total_value ?? 0);
+                }
+            }
+
+            // ---------------------------
+            // SALES-INVOICE-WISE PROFIT (sum of line 'profit')
+            // ---------------------------
+            $salesInvoiceWiseProfit = (float) SalesInvoiceProductsModel::where('company_id', $companyId)
+                ->whereIn('sales_invoice_id', $salesInvoiceIds)
+                ->sum(DB::raw("COALESCE(profit, 0)"));
+
+            // ---------------------------
+            // TRADING PROFIT (your formula; all without tax)
+            // ---------------------------
+            $tradingProfit = $closingStock + $salesExTax - $openingStock - $purchaseExTax + $debitNote - $creditNote;
+
+            // Formatting helper for IN number system (no symbol)
+            $formatInr = function ($n): string {
+                $n = (float)$n;
+                $neg = $n < 0 ? '-' : '';
+                $n = abs($n);
+                $s = number_format($n, 2, '.', '');
+                $parts = explode('.', $s);
+                $int = $parts[0];
+                $dec = $parts[1] ?? '00';
+                if (strlen($int) > 3) {
+                    $int_end = substr($int, -3);
+                    $int_start = substr($int, 0, -3);
+                    $int_start = preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', $int_start);
+                    $int = $int_start . ',' . $int_end;
+                }
+                return $neg . $int . '.' . $dec;
+            };
+
+            $data = [
+                'period' => [
+                    'from' => $start->toDateTimeString(),
+                    'to'   => $end->toDateTimeString(),
+                ],
+                'figures_without_tax' => [
+                    'closing_stock' => [
+                        'value' => round($closingStock, 2),
+                        'pretty' => 'Rs. ' . $formatInr($closingStock),
+                    ],
+                    'sales' => [
+                        'value' => round($salesExTax, 2),
+                        'pretty' => 'Rs. ' . $formatInr($salesExTax),
+                    ],
+                    'opening_stock' => [
+                        'value' => round($openingStock, 2),
+                        'pretty' => 'Rs. ' . $formatInr($openingStock),
+                    ],
+                    'purchase' => [
+                        'value' => round($purchaseExTax, 2),
+                        'pretty' => 'Rs. ' . $formatInr($purchaseExTax),
+                    ],
+                    'debit_note' => [
+                        'value' => round($debitNote, 2),
+                        'pretty' => 'Rs. ' . $formatInr($debitNote),
+                    ],
+                    'credit_note' => [
+                        'value' => round($creditNote, 2),
+                        'pretty' => 'Rs. ' . $formatInr($creditNote),
+                    ],
+                ],
+                'profit' => [
+                    'trading_formula' => [
+                        'value' => round($tradingProfit, 2),
+                        'pretty' => 'Rs. ' . $formatInr($tradingProfit),
+                        'formula' => 'Closing + Sales − Opening − Purchase + Debit Note − Credit Note',
+                    ],
+                    'sales_invoice_wise' => [
+                        'value' => round($salesInvoiceWiseProfit, 2),
+                        'pretty' => 'Rs. ' . $formatInr($salesInvoiceWiseProfit),
+                        'definition' => 'SUM(profit) from sales_invoice_products',
+                    ],
+                    'difference' => [
+                        'value' => round(($tradingProfit - $salesInvoiceWiseProfit), 2),
+                        'pretty' => 'Rs. ' . $formatInr($tradingProfit - $salesInvoiceWiseProfit),
+                    ],
+                ],
+            ];
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Trading summary generated successfully.',
+                'data' => $data,
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Failed to compute trading summary.',
                 'error' => $e->getMessage(),
             ], 500);
         }
