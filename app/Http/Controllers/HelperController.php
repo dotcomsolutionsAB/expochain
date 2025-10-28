@@ -1989,42 +1989,44 @@ class HelperController extends Controller
             $tz = 'Asia/Kolkata';
             $now = \Carbon\Carbon::now($tz);
 
-            // ----- Resolve period -----
+            // -------- Inputs --------
             $dateFrom = $request->input('date_from');
             $dateTo   = $request->input('date_to');
-            $fyId     = $request->input('financial_year_id');
+            $fyId     = $request->input('financial_year_id'); // used for dates and for stock-year
 
+            // -------- Resolve period --------
             if ($fyId) {
-                // FinancialYearModel should hold start_date/end_date
-                $fy = FinancialYearModel::where('company_id', $companyId)->where('id', $fyId)->firstOrFail();
+                $fy = FinancialYearModel::where('company_id', $companyId)
+                    ->where('id', $fyId)
+                    ->firstOrFail();
+
                 $start = \Carbon\Carbon::parse($fy->start_date, $tz)->startOfDay();
                 $end   = \Carbon\Carbon::parse($fy->end_date, $tz)->endOfDay();
             } elseif ($dateFrom && $dateTo) {
                 $start = \Carbon\Carbon::parse($dateFrom, $tz)->startOfDay();
                 $end   = \Carbon\Carbon::parse($dateTo, $tz)->endOfDay();
+                $fy    = null; // no FY row in this path
             } else {
                 // Default: current FY (Apr 1 -> Mar 31)
                 $fyYear = (int)$now->format('Y');
                 if ((int)$now->format('m') < 4) $fyYear -= 1;
                 $start = \Carbon\Carbon::create($fyYear, 4, 1, 0, 0, 0, $tz);
                 $end   = \Carbon\Carbon::create($fyYear + 1, 3, 31, 23, 59, 59, $tz);
+                $fy    = null;
             }
 
-            // ----- Helpers -----
-            // INR format (no symbol)
-            $formatInr = function ($n): string {
-                $n = (float)$n;
+            // -------- Helpers --------
+            $formatInr0 = function ($n): string {
+                $n = (int) round((float)$n);
                 $neg = $n < 0 ? '-' : '';
                 $n = abs($n);
-                $s = number_format($n, 2, '.', '');
-                [$int,$dec] = array_pad(explode('.', $s), 2, '00');
-                if (strlen($int) > 3) {
-                    $int = preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', substr($int, 0, -3)) . ',' . substr($int, -3);
+                $s = (string)$n;
+                if (strlen($s) > 3) {
+                    $s = preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', substr($s, 0, -3)) . ',' . substr($s, -3);
                 }
-                return $neg.$int.'.'.$dec;
+                return $neg.$s;
             };
 
-            // Sum helper with alias
             $sumExpr = function (\Illuminate\Database\Query\Builder $qb, string $expr, string $alias = 's'): float {
                 $val = $qb->selectRaw("$expr AS $alias")->value($alias);
                 return $val ? (float)$val : 0.0;
@@ -2041,7 +2043,7 @@ class HelperController extends Controller
                 ";
             };
 
-            // ----- SALES (header-based, ex-tax) -----
+            // -------- SALES (header-based, ex-tax) --------
             $salesExTax = $sumExpr(
                 DB::table('t_sales_invoice')
                     ->where('company_id', $companyId)
@@ -2049,7 +2051,7 @@ class HelperController extends Controller
                 $headerExTaxExpr()
             );
 
-            // ----- PURCHASE (header-based, ex-tax) -----
+            // -------- PURCHASE (header-based, ex-tax) --------
             $purchaseExTax = $sumExpr(
                 DB::table('t_purchase_invoice')
                     ->where('company_id', $companyId)
@@ -2057,7 +2059,7 @@ class HelperController extends Controller
                 $headerExTaxExpr()
             );
 
-            // ----- DEBIT NOTE (purchase returns) (header-based, ex-tax) -----
+            // -------- DEBIT NOTE (header-based, ex-tax) --------
             $debitNote = $sumExpr(
                 DB::table('t_debit_note')
                     ->where('company_id', $companyId)
@@ -2065,7 +2067,7 @@ class HelperController extends Controller
                 $headerExTaxExpr()
             );
 
-            // ----- CREDIT NOTE (sales returns) (header-based, ex-tax) -----
+            // -------- CREDIT NOTE (header-based, ex-tax) --------
             $creditNote = $sumExpr(
                 DB::table('t_credit_note')
                     ->where('company_id', $companyId)
@@ -2073,44 +2075,37 @@ class HelperController extends Controller
                 $headerExTaxExpr()
             );
 
-            // ----- Opening & Closing Stock (t_opening_stock / t_closing_stock) -----
-            // Your schema has per-product rows: sum `value`
-            // Support multiple year formats: 2025, "2025-2026", "2025-26"
-            $fyStartY  = (int)$start->format('Y');
-            $fyEndY    = (int)$end->format('Y');
-            $yrLong    = $fyStartY . '-' . $fyEndY;                 // 2025-2026
-            $yrShort   = $fyStartY . '-' . substr((string)$fyEndY, -2); // 2025-26
+            // -------- Opening & Closing Stock (from FY table; fallback for closing) --------
+            $openingStock = 0.0;
+            $closingStock = 0.0;
+            $stockSource  = ['opening' => 'n/a', 'closing' => 'n/a'];
 
-            $yearCandidatesOpening = [$fyStartY, $yrLong, $yrShort];
-            $yearCandidatesClosing = [$fyEndY, $yrLong, $yrShort];
+            if ($fyId) {
+                // Prefer values directly from the FY row
+                $openingStock = (float) ($fy->opening_stock ?? 0);
+                $stockSource['opening'] = 't_financial_year.opening_stock';
 
-            $openingStock = (float) DB::table('t_opening_stock')
-                ->where('company_id', $companyId)
-                ->whereIn('year', $yearCandidatesOpening)
-                ->sum(DB::raw('COALESCE(value,0)'));
-
-            // If no explicit opening stock stored, fallback to closing of FY start candidates
-            if ($openingStock == 0.0) {
-                $openingStock = (float) DB::table('t_closing_stock')
-                    ->where('company_id', $companyId)
-                    ->whereIn('year', $yearCandidatesOpening)
-                    ->sum(DB::raw('COALESCE(value,0)'));
+                $closingFromFY = $fy->closing_stock ?? null;
+                if ($closingFromFY === null || $closingFromFY === '') {
+                    // Fallback to sum of t_closing_stock.value for this FY id
+                    $closingStock = (float) DB::table('t_closing_stock')
+                        ->where('company_id', $companyId)
+                        ->where('year', $fyId) // year stores the financial_year_id
+                        ->sum(DB::raw('COALESCE(value,0)'));
+                    $stockSource['closing'] = 't_closing_stock(sum value by year=financial_year_id)';
+                } else {
+                    $closingStock = (float) $closingFromFY;
+                    $stockSource['closing'] = 't_financial_year.closing_stock';
+                }
+            } else {
+                // No FY id provided → leave both as 0 (or implement your old heuristics if needed)
+                $openingStock = 0.0;
+                $closingStock = 0.0;
+                $stockSource['opening'] = 'none';
+                $stockSource['closing'] = 'none';
             }
 
-            $closingStock = (float) DB::table('t_closing_stock')
-                ->where('company_id', $companyId)
-                ->whereIn('year', $yearCandidatesClosing)
-                ->sum(DB::raw('COALESCE(value,0)'));
-
-            // If no explicit closing stock for end FY, fallback to start FY (some stores keep one snapshot)
-            if ($closingStock == 0.0) {
-                $closingStock = (float) DB::table('t_closing_stock')
-                    ->where('company_id', $companyId)
-                    ->whereIn('year', $yearCandidatesOpening)
-                    ->sum(DB::raw('COALESCE(value,0)'));
-            }
-
-            // ----- Sales-Invoice-wise Profit (from line table) -----
+            // -------- Sales-Invoice-wise Profit (from line table) --------
             $salesInvoiceIds = DB::table('t_sales_invoice')
                 ->where('company_id', $companyId)
                 ->whereBetween('sales_invoice_date', [$start->toDateTimeString(), $end->toDateTimeString()])
@@ -2120,38 +2115,50 @@ class HelperController extends Controller
                 ->whereIn('sales_invoice_id', $salesInvoiceIds)
                 ->sum(DB::raw('COALESCE(profit,0)'));
 
-            // ----- Trading Profit (without tax) -----
+            // -------- Trading Profit (without tax) --------
             // Closing + Sales − Opening − Purchase + Debit Note − Credit Note
             $tradingProfit = $closingStock + $salesExTax - $openingStock - $purchaseExTax + $debitNote - $creditNote;
 
-            // ----- Payload -----
+            // -------- Round everything (no decimals) --------
+            $closingStockI  = (int) round($closingStock);
+            $salesExTaxI    = (int) round($salesExTax);
+            $openingStockI  = (int) round($openingStock);
+            $purchaseExTaxI = (int) round($purchaseExTax);
+            $debitNoteI     = (int) round($debitNote);
+            $creditNoteI    = (int) round($creditNote);
+            $tradingProfitI = (int) round($tradingProfit);
+            $siwProfitI     = (int) round($salesInvoiceWiseProfit);
+            $diffI          = (int) round($tradingProfitI - $siwProfitI);
+
             $payload = [
                 'period' => [
                     'from' => $start->toDateTimeString(),
                     'to'   => $end->toDateTimeString(),
                 ],
+                'stock_source' => $stockSource, // for transparency/debug
+                'stock_year_used' => $fyId ?? null,
                 'figures_without_tax' => [
-                    'closing_stock' => ['value' => round($closingStock,2), 'pretty' => 'Rs. '.$formatInr($closingStock)],
-                    'sales'         => ['value' => round($salesExTax,2),   'pretty' => 'Rs. '.$formatInr($salesExTax)],
-                    'opening_stock' => ['value' => round($openingStock,2), 'pretty' => 'Rs. '.$formatInr($openingStock)],
-                    'purchase'      => ['value' => round($purchaseExTax,2),'pretty' => 'Rs. '.$formatInr($purchaseExTax)],
-                    'debit_note'    => ['value' => round($debitNote,2),    'pretty' => 'Rs. '.$formatInr($debitNote)],
-                    'credit_note'   => ['value' => round($creditNote,2),   'pretty' => 'Rs. '.$formatInr($creditNote)],
+                    'closing_stock' => ['value' => $closingStockI,  'pretty' => 'Rs. '.$formatInr0($closingStockI)],
+                    'sales'         => ['value' => $salesExTaxI,    'pretty' => 'Rs. '.$formatInr0($salesExTaxI)],
+                    'opening_stock' => ['value' => $openingStockI,  'pretty' => 'Rs. '.$formatInr0($openingStockI)],
+                    'purchase'      => ['value' => $purchaseExTaxI, 'pretty' => 'Rs. '.$formatInr0($purchaseExTaxI)],
+                    'debit_note'    => ['value' => $debitNoteI,     'pretty' => 'Rs. '.$formatInr0($debitNoteI)],
+                    'credit_note'   => ['value' => $creditNoteI,    'pretty' => 'Rs. '.$formatInr0($creditNoteI)],
                 ],
                 'profit' => [
                     'trading_formula' => [
-                        'value'   => round($tradingProfit,2),
-                        'pretty'  => 'Rs. '.$formatInr($tradingProfit),
+                        'value'   => $tradingProfitI,
+                        'pretty'  => 'Rs. '.$formatInr0($tradingProfitI),
                         'formula' => 'Closing + Sales − Opening − Purchase + Debit Note − Credit Note',
                     ],
                     'sales_invoice_wise' => [
-                        'value'      => round($salesInvoiceWiseProfit,2),
-                        'pretty'     => 'Rs. '.$formatInr($salesInvoiceWiseProfit),
+                        'value'      => $siwProfitI,
+                        'pretty'     => 'Rs. '.$formatInr0($siwProfitI),
                         'definition' => 'SUM(profit) from t_sales_invoice_products',
                     ],
                     'difference' => [
-                        'value'  => round($tradingProfit - $salesInvoiceWiseProfit, 2),
-                        'pretty' => 'Rs. '.$formatInr($tradingProfit - $salesInvoiceWiseProfit),
+                        'value'  => $diffI,
+                        'pretty' => 'Rs. '.$formatInr0($diffI),
                     ],
                 ],
             ];
