@@ -134,7 +134,7 @@ class QuotationsController extends Controller
         // Check if record exists (your original logic)
         $exists = QuotationsModel::where('company_id', Auth::user()->company_id)
             ->where('quotation_no', $quotation_no)
-            ->first();
+            ->exists();
 
         // ==========================
         // DEBUG RESPONSE WHEN EXISTS
