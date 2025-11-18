@@ -60,6 +60,7 @@ class QuotationsController extends Controller
             'products.*.cgst' => 'nullable|numeric|min:0',
             'products.*.sgst' => 'nullable|numeric|min:0',
             'products.*.igst' => 'nullable|numeric|min:0',
+            'products.*.gross' => 'nullable|numeric|min:0',
             'products.*.amount' => 'required|numeric|min:0',
             'products.*.delivery' => 'nullable|string|max:255',
             'products.*.attachment' => 'nullable|string|max:255',
@@ -104,18 +105,51 @@ class QuotationsController extends Controller
             $quotation_no = $request->input('quotation_no');
         }
 
-        // \DB::enableQueryLog();
+        // // \DB::enableQueryLog();
+        // $exists = QuotationsModel::where('company_id', Auth::user()->company_id)
+        //     ->where('quotation_no', $quotation_no)
+        //     ->exists();
+        //     // dd(\DB::getQueryLog());
+        //     // dd($exists);
+
+        // if ($exists) {
+        //     return response()->json([
+        //         'code' => 422,
+        //         'success' => false,
+        //         'error' => 'The combination of company_id and quotation_no must be unique.',
+        //     ], 422);
+        // }
+
+        // ==========================
+        // DEBUG BLOCK – BEFORE EXIST CHECK
+        // ==========================
+        \Log::info('ADD_QUOTATION_DEBUG', [
+            'auth_user_id'            => Auth::user()->id,
+            'auth_company_id'         => Auth::user()->company_id,
+            'get_customer_type'       => $get_customer_type,
+            'quotation_no_from_request' => $request->input('quotation_no'),
+            'final_quotation_no_used'   => $quotation_no,
+        ]);
+
+        // Check if record exists (your original logic)
         $exists = QuotationsModel::where('company_id', Auth::user()->company_id)
             ->where('quotation_no', $quotation_no)
-            ->exists();
-            // dd(\DB::getQueryLog());
-            // dd($exists);
+            ->first();
 
+        // ==========================
+        // DEBUG RESPONSE WHEN EXISTS
+        // ==========================
         if ($exists) {
             return response()->json([
                 'code' => 422,
                 'success' => false,
                 'error' => 'The combination of company_id and quotation_no must be unique.',
+                'debug' => [
+                    'company_id'            => Auth::user()->company_id,
+                    'final_quotation_no'     => $quotation_no,
+                    'existing_row_id'        => $exists->id,
+                    'existing_quotation_no'  => $exists->quotation_no,
+                ]
             ], 422);
         }
 
@@ -165,6 +199,7 @@ class QuotationsController extends Controller
                 'cgst' => $product['cgst'],
                 'sgst' => $product['sgst'],
                 'igst' => $product['igst'],
+                'gross' => $product['gross'],
             ]);
         }
 
