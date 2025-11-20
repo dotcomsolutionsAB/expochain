@@ -1502,7 +1502,7 @@ class MastersController extends Controller
     //view
     public function pdf_template()
     {        
-        $get_pdf_template = PdfTemplateModel::select('name','phone_number','mobile','email','address_line_1', 'address_line_2','city','pincode','state','country', 'gstin', 'bank_number', 'bank_account_name', 'bank_account_number', 'bank_ifsc','header', 'footer')
+        $get_pdf_template = PdfTemplateModel::select('id','name','phone_number','mobile','email','address_line_1', 'address_line_2','city','pincode','state','country', 'gstin', 'bank_number', 'bank_account_name', 'bank_account_number', 'bank_ifsc','header', 'footer')
         ->where('company_id', Auth::user()->company_id)
         ->get();
 
