@@ -1,5 +1,3 @@
-
-text/x-generic pdf.blade.php ( HTML document, UTF-8 Unicode text )
 <!DOCTYPE html>
 <html>
   <head>
