@@ -244,7 +244,7 @@
       </div>
 
       <!-- Tax Summary Table -->
-      <h4 style="margin-top: 10px">Tax Summary:</h4>
+      <h4 style="margin-top: 5px">Tax Summary:</h4>
       <table>
         <thead>
           <tr>
@@ -286,6 +286,7 @@
                 vertical-align: top;
                 padding-right: 10px;
                 border-right: 1px dotted #000;
+                text-align:left;
               "
             >
               <strong>TERMS &amp; CONDITIONS:</strong><br />
