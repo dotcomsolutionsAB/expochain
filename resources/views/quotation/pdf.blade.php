@@ -230,17 +230,16 @@
 
       <!-- Summary Section -->
       <div class="summary right-align" style="margin-top: 5px">
-        <p>
-          <strong>Gross Total:</strong> ₹{{ number_format($gross_total, 2) }}
-        </p>
-        <p><strong>Add : CGST</strong> ₹{{ number_format($cgst, 2) }}</p>
-        <p><strong>Add : SGST</strong> ₹{{ number_format($sgst, 2) }}</p>
-        <p>
-          <strong>Less : Rounded Off</strong> (₹{{ number_format($roundoff, 2)
-          }})
-        </p>
+        
+        <strong>Gross Total:</strong> ₹{{ number_format($gross_total, 2) }}
+        <br>
+        <strong>Add : CGST</strong> ₹{{ number_format($cgst, 2) }}
+        <br><strong>Add : SGST</strong> ₹{{ number_format($sgst, 2) }}
+        <br>
+          <strong>Less : Rounded Off</strong> (₹{{ number_format($roundoff, 2) }})
+        <br>
         <h3>GRAND TOTAL: ₹{{ number_format($grand_total, 2) }}</h3>
-        <p><i>Rupees {{ $grand_total_words }} Only</i></p>
+        <br><i>Rupees {{ $grand_total_words }} Only</i>
       </div>
 
       <!-- Tax Summary Table -->
