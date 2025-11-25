@@ -12,7 +12,7 @@
       }
 
       .page-border {
-        border: 2px solid #000;
+        border: 1px solid #8b440c;
         padding: 15px;
         object-fit: contain;
         /* PDF background image */
