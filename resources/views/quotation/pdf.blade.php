@@ -79,8 +79,7 @@
 
       th,
       td {
-        border-left: 1px solid #8b440c;
-        border-right: 1px solid #8b440c;
+        border: 1px solid #8b440c;
         /* border-bottom:0px solid; */
         padding: 5px;
         text-align: center;
