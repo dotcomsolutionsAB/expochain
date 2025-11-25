@@ -271,10 +271,10 @@
       </table>
 
       <!-- Bank Details in a single line -->
-      <!-- <div class="bank-details">
+      <div class="bank-details">
         <strong>BANK NAME :</strong> HDFC BANK LTD, BRANCH : JARDINE HOUSE,
         CLIVE ROW, A/C NO : 10152320001963, IFSC : HDFC0001015
-      </div> -->
+      </div>
 
       <!-- Terms & Conditions -->
       <div class="terms" style="margin-top: 10px">
