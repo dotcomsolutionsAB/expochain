@@ -13,7 +13,7 @@
 
       .page-border {
         border: 1px solid #8b440c;
-        padding: 15px;
+        padding: 10px;
         object-fit: contain;
         /* PDF background image */
         background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
@@ -229,7 +229,7 @@
       </table>
 
       <!-- Summary Section -->
-      <div class="summary right-align" style="margin-top: 15px">
+      <div class="summary right-align" style="margin-top: 5px">
         <p>
           <strong>Gross Total:</strong> ₹{{ number_format($gross_total, 2) }}
         </p>
@@ -244,7 +244,7 @@
       </div>
 
       <!-- Tax Summary Table -->
-      <h4 style="margin-top: 20px">Tax Summary:</h4>
+      <h4 style="margin-top: 10px">Tax Summary:</h4>
       <table>
         <thead>
           <tr>
@@ -277,9 +277,9 @@
       </div>
 
       <!-- Terms & Conditions -->
-      <div class="terms" style="margin-top: 10px">
+      <div class="terms" style="margin-top: 5px">
         <table class="no-border" style="width: 100%; border-collapse: collapse">
-          <!-- <tr>
+          <tr>
             <td
               style="
                 width: 50%;
@@ -310,10 +310,10 @@
                 </tr>
               </table>
             </td>
-          </tr> -->
+          </tr>
 
           <tr>
-            <td colspan="2" style="text-align: center; padding-top: 10px">
+            <td colspan="2" style="text-align: center; padding-top: 5px">
               <img
                 src="{{ public_path('storage/uploads/pdf_template/footer.jpg') }}"
                 alt="Footer Logo"
