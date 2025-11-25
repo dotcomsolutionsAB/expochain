@@ -48,7 +48,8 @@ Route::post('/login/{otp?}', [AuthController::class, 'login']);
 Route::post('/get_otp', [AuthController::class, 'generate_otp']);
 
 // Route::get('/client_migrate', [ClientsController::class, 'importClientsData']);
-
+ Route::get('/get_pdf_template', [MastersController::class, 'pdf_template']);
+ 
 Route::get('/stats', [StatsController::class, 'index']);
 Route::get('/import-adjustment', [StatsController::class, 'importAdjustment']);
 Route::get('/import-fabrication', [StatsController::class, 'importFabrication']);
@@ -159,7 +160,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/add_pdf_template', [MastersController::class, 'add_pdf_template']);
 
-    Route::get('/get_pdf_template', [MastersController::class, 'pdf_template']);
+    // Route::get('/get_pdf_template', [MastersController::class, 'pdf_template']);
 
     Route::post('/update_pdf_template/{id}', [MastersController::class, 'edit_pdf_template']);
 
