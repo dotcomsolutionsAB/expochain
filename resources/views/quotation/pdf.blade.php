@@ -79,7 +79,9 @@
 
       th,
       td {
-        border: 1px solid #000;
+        border-left: 1px solid #8b440c;
+        border-right: 1px solid #8b440c;
+        /* border-bottom:0px solid; */
         padding: 5px;
         text-align: center;
         font-size: 11px;
@@ -130,9 +132,9 @@
           <tr>
             <!-- Company Info: Use all but 120px -->
             <td style="text-align: center; vertical-align: top; border: none">
-              <div style="font-size: 18px; font-weight: bold">QUOTATION</div>
+              <div style="font-weight: bold">QUOTATION</div>
               <div>
-                <strong>EXPO CHAIN & BEARING STORES</strong><br />
+                <strong style="color:#8b440c; font-size:18px">EXPO CHAIN & BEARING STORES</strong><br />
                 71/D N.S. ROAD, GROUND FLOOR, ROOM NO A-162<br />
                 KOLKATA - 700001, WEST BENGAL, India<br />
                 GST : 19AAAFE7147G1ZF<br />
@@ -170,6 +172,7 @@
               vertical-align: top;
               padding-right: 10px;
               border-right: 1px dotted #000;
+              text-align:left;
             "
           >
             <strong>Customer Details :</strong><br />
@@ -178,7 +181,7 @@
             KOLKATA - 700115, WEST BENGAL, INDIA<br />
             GSTIN / UIN : 19AAACE4975B1ZP
           </td>
-          <td style="width: 50%; vertical-align: top; padding-left: 20px">
+          <td style="width: 50%; vertical-align: top; padding-left: 20px; text-align:left;">
             Quotation No.: <strong>{{ $quotation_no }}</strong><br />
             Dated: <strong>{{ $quotation_date }}</strong><br />
             Enquiry No.: <strong>{{ $enquiry_no }}</strong><br />
@@ -269,15 +272,15 @@
       </table>
 
       <!-- Bank Details in a single line -->
-      <div class="bank-details">
+      <!-- <div class="bank-details">
         <strong>BANK NAME :</strong> HDFC BANK LTD, BRANCH : JARDINE HOUSE,
         CLIVE ROW, A/C NO : 10152320001963, IFSC : HDFC0001015
-      </div>
+      </div> -->
 
       <!-- Terms & Conditions -->
       <div class="terms" style="margin-top: 10px">
         <table class="no-border" style="width: 100%; border-collapse: collapse">
-          <tr>
+          <!-- <tr>
             <td
               style="
                 width: 50%;
@@ -308,9 +311,8 @@
                 </tr>
               </table>
             </td>
-          </tr>
+          </tr> -->
 
-          <!-- New row for footer image spanning both columns -->
           <tr>
             <td colspan="2" style="text-align: center; padding-top: 10px">
               <img
