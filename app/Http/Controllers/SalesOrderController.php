@@ -60,6 +60,7 @@ class SalesOrderController extends Controller
             'products.*.sgst' => 'nullable|numeric|min:0',
             'products.*.igst' => 'nullable|numeric|min:0',
             'products.*.amount' => 'nullable|numeric|min:0',
+            'products.*.gross' => 'required|numeric|min:0',
             'products.*.channel' => 'nullable|integer|exists:t_channels,id',
             
             // for add-ons 
@@ -151,6 +152,7 @@ class SalesOrderController extends Controller
                 'cgst' =>$product['cgst'],
                 'sgst' => $product['sgst'],
                 'igst' => $product['igst'],
+                'gross' => $product['gross'],   // 👈 ADD THIS
                 'amount' => $product['amount'],
                 'channel' => $product['channel'],
             ]);
