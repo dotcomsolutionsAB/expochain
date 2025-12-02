@@ -168,7 +168,7 @@ class SalesOrderController extends Controller
                 'name' => $addon['name'],
                 'amount' => $addon['amount'],
                 'tax' => $addon['tax'],
-                'hsn' =>  '99',
+                'hsn' =>  $addon['hsn'],
                 'cgst' => $addon['cgst'],
                 'sgst' => $addon['sgst'],
                 'igst' => $addon['igst'],
@@ -396,6 +396,7 @@ class SalesOrderController extends Controller
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
             'products.*.amount' => 'nullable|numeric|min:0',
+            'products.*.gross' => 'required|numeric|min:0',
             'products.*.channel' => 'nullable|integer|exists:t_channels,id',
 
             // for addons 
@@ -469,6 +470,7 @@ class SalesOrderController extends Controller
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
                     'amount' => $productData['amount'],
+                    'gross' => $productData['gross'],
                     'channel' => $productData['channel']
                 ]);
             } else {
@@ -489,6 +491,7 @@ class SalesOrderController extends Controller
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
                     'amount' => $productData['amount'],
+                    'gross' => $productData['gross'],
                     'channel' => $productData['channel']
                 ]);
             }
