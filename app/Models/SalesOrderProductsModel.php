@@ -25,6 +25,7 @@ class SalesOrderProductsModel extends Model
         'cgst',
         'sgst',
         'igst',
+        'gross',
         'amount',
         'channel',
         'sent',
