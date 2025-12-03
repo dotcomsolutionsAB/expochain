@@ -1379,20 +1379,14 @@ class QuotationsController extends Controller
         // ---------- 6. PDF ----------
         $pdf = new \Mpdf\Mpdf([
             'format'        => 'A4',
-            'margin_top'    => 40, // space for header
-            'margin_bottom' => 45, // space for footer
-            'margin_left'   => 5,
-            'margin_right'  => 5,
+            'margin_top'    => 0,  // @page handles margins
+            'margin_bottom' => 0,
+            'margin_left'   => 0,
+            'margin_right'  => 0,
         ]);
 
-        $headerHtml = view('quotation.pdf_header', $data)->render();
-        $footerHtml = view('quotation.pdf_footer', $data)->render();
-        $bodyHtml   = view('quotation.pdf', $data)->render(); // <- pdf.blade is the BODY
-
-        $pdf->SetHTMLHeader($headerHtml);
-        $pdf->SetHTMLFooter($footerHtml);
-
-        $pdf->WriteHTML($bodyHtml);
+        $html = view('quotation.pdf', $data)->render();
+        $pdf->WriteHTML($html);
 
         return $pdf->Output('quotation.pdf', 'I');
     }

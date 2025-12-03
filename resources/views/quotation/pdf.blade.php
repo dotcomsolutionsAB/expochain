@@ -4,11 +4,20 @@
     <meta charset="utf-8" />
     <title>Quotation</title>
     <style>
+      @page {
+        header: qHeader;
+        footer: qFooter;
+        margin-top: 50mm;   /* space for header */
+        margin-bottom: 60mm;/* space for footer */
+        margin-left: 10mm;
+        margin-right: 10mm;
+      }
+
       body {
         font-family: sans-serif;
         font-size: 12px;
         padding: 0;
-        margin: 0px;
+        margin: 0;
       }
 
       .page-border {
@@ -21,15 +30,13 @@
         background-size: cover;
         background-position: center center;
         background-repeat: no-repeat;
+        box-sizing: border-box;
+        min-height: 100%;
       }
 
       /* Center alignment */
-      .center {
-        text-align: center;
-      }
-      .left {
-        text-align: end;
-      }
+      .center { text-align: center; }
+      .left { text-align: end; }
 
       /* Dashed line separator */
       .dash-line {
@@ -37,17 +44,14 @@
         margin: 10px 0;
       }
 
-      /* Header styling */
+      /* Header styling (used inside header partial) */
       .header-container {
-        position: relative; /* Allow absolute positioning of image within this container */
+        position: relative;
         margin-bottom: 20px;
       }
 
-      .header {
-        text-align: center;
-      }
+      .header { text-align: center; }
 
-      /* Image styling for top right corner */
       .header-container img {
         position: absolute;
         top: 10px;
@@ -64,13 +68,9 @@
       }
 
       .info-grid .left,
-      .info-grid .right {
-        width: 48%;
-      }
+      .info-grid .right { width: 48%; }
 
-      .info-grid .right {
-        text-align: right;
-      }
+      .info-grid .right { text-align: right; }
 
       table {
         width: 100%;
@@ -81,15 +81,12 @@
       th,
       td {
         border: 1px solid #8b440c;
-        /* border-bottom:0px solid; */
         padding: 5px;
         text-align: center;
         font-size: 11px;
       }
 
-      .no-border td {
-        border: none;
-      }
+      .no-border td { border: none; }
 
       .title {
         font-size: 18px;
@@ -103,16 +100,10 @@
         align-items: center;
         display: flex;
       }
-      .left-align {
-        text-align: left;
-      }
+      .left-align { text-align: left; }
 
-      /* Avoid page-breaks within table rows */
-      tr {
-        page-break-inside: avoid;
-      }
+      tr { page-break-inside: avoid; }
 
-      /* Bank details in one line */
       .bank-details {
         text-align: center;
         font-size: 11px;
@@ -123,15 +114,23 @@
         padding-top: 5px;
         padding-bottom: 5px;
       }
+
       th, td { border: 1px solid #8b440c; }
     </style>
   </head>
   <body>
-    <div class="page-border">
-      {{-- HEADER WILL BE ADDED BY mPDF, NOT HERE --}}
 
-      <!-- Dashed separator -->
-      <div class="dash-line"></div>
+    {{-- ===== Named header/footer for mPDF (repeats every page) ===== --}}
+    <htmlpageheader name="qHeader">
+      @include('quotation.pdf_header')
+    </htmlpageheader>
+
+    <htmlpagefooter name="qFooter">
+      @include('quotation.pdf_footer')
+    </htmlpagefooter>
+
+    {{-- ========= PAGE CONTENT (inside border + background) ========= --}}
+    <div class="page-border">
 
       <!-- Customer and Quotation Info -->
       <table class="no-border">
@@ -215,10 +214,8 @@
             <td>{{ $item['disc'] }}%</td>
 
             @if($show_igst)
-              {{-- ONLY IGST column --}}
               <td>{{ $item['igst'] ?: 0 }}%</td>
             @else
-              {{-- ONLY CGST + SGST columns --}}
               <td>{{ $item['cgst'] ?: 0 }}%</td>
               <td>{{ $item['sgst'] ?: 0 }}%</td>
             @endif
@@ -233,13 +230,9 @@
       <div class="summary" style="margin-top: 5px; text-align: right;">
         <table class="no-border" style="width: 100%; border-collapse: collapse; margin-top: 5px;">
           <tr>
-            <!-- Left empty space -->
             <td style="width: 60%;"></td>
-
-            <!-- Right block with totals -->
             <td style="width: 40%; text-align: right;">
-              <table class="no-border" style="width: 100%; border-collapse: collapse;">          
-                <!-- Gross Total -->
+              <table class="no-border" style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 2px 8px; text-align: right;">
                     <strong>Gross Total:</strong>
@@ -249,7 +242,6 @@
                   </td>
                 </tr>
 
-                <!-- PF (Packaging & Forwarding) - only if > 0 -->
                 @if(!empty($pf_amount) && $pf_amount > 0)
                 <tr>
                   <td style="padding: 2px 8px; text-align: right;">
@@ -261,7 +253,6 @@
                 </tr>
                 @endif
 
-                <!-- Freight - only if > 0 -->
                 @if(!empty($freight_amount) && $freight_amount > 0)
                 <tr>
                   <td style="padding: 2px 8px; text-align: right;">
@@ -273,7 +264,6 @@
                 </tr>
                 @endif
 
-                <!-- Tax rows: IF IGST show only IGST, else show CGST + SGST -->
                 @if($show_igst)
                   <tr>
                     <td style="padding: 2px 8px; text-align: right;">
@@ -302,7 +292,6 @@
                   </tr>
                 @endif
 
-                <!-- Round off -->
                 <tr>
                   <td style="padding: 2px 8px; text-align: right;">
                     <strong>Less : Rounded Off</strong>
@@ -312,7 +301,6 @@
                   </td>
                 </tr>
 
-                <!-- Grand Total -->
                 <tr>
                   <td style="padding: 2px 8px; text-align: right;">
                     <h3 style="margin-top: 4px; text-align: right;">
@@ -325,7 +313,7 @@
                     </h3>
                   </td>
                 </tr>
-              </table>              
+              </table>
             </td>
           </tr>
         </table>
@@ -335,13 +323,11 @@
         </div>
       </div>
 
-
       <!-- Tax Summary Table -->
       <h4 style="margin-top: 5px">Tax Summary:</h4>
 
       <table style="width: 100%; border-collapse: collapse; margin-top: 3px; border: none;">
         <tr>
-          <!-- left side tax table -->
           <td style="width: 40%; border: none;">
             <table style="width: 100%; border-collapse: collapse;">
               <thead>
@@ -390,7 +376,6 @@
         CLIVE ROW, A/C NO : 10152320001963, IFSC : HDFC0001015
       </div>
 
-      {{-- FOOTER (T&C + footer image) WILL BE ADDED BY mPDF, NOT HERE --}}
-    </div>
+    </div> {{-- /.page-border --}}
   </body>
 </html>

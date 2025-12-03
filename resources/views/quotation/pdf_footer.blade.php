@@ -1,4 +1,3 @@
-<!-- Terms & Conditions -->
 <div class="terms" style="margin-top: 5px">
     <table class="no-border" style="width: 100%; border-collapse: collapse">
         <tr>
