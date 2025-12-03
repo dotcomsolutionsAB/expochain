@@ -342,7 +342,7 @@
       <div class="terms" style="margin-top: 5px">
         <table class="no-border" style="width: 100%; border-collapse: collapse">
           <tr>
-            <td style="width: 70%; vertical-align: top; padding-right: 10px; border-right: 1px dotted #000; text-align:left;">
+            <td style="width: 60%; vertical-align: top; padding-right: 10px; border-right: 1px dotted #000; text-align:left;">
               <strong>TERMS &amp; CONDITIONS:</strong><br />
               <table class="no-border" style="width: 100%; border-collapse: collapse; margin-top:5px;">
                 <tr>
@@ -371,10 +371,10 @@
                 </tr>
               </table>
             </td>
-            <td style="width: 30%; vertical-align: middle; padding-left: 10px">
+            <td style="width: 40%; vertical-align: middle; padding-left: 10px">
               <table class="no-border" style="width: 100%; border-collapse: collapse">
                 <tr>
-                  <td style="width: 50%; text-align: left">
+                  <td style="width: 60%; text-align: left">
                     <strong>for EXPO CHAIN &amp; BEARING STORES</strong><br />
                     <strong>Authorised Signatory</strong>
                   </td>
