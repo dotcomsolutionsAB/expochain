@@ -20,17 +20,35 @@
         font-size: 12px;
         margin: 0;
         padding: 0;
-        /* FULL-PAGE BG (for every page) */
+      }
+
+      /* ✅ Full-page background (all pages) */
+      .page-bg {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 210mm;   /* A4 width */
+        height: 297mm;  /* A4 height */
         background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
         background-size: cover;
         background-position: center center;
         background-repeat: no-repeat;
+        z-index: -20;   /* behind everything */
+      }
+
+      /* ✅ Inner border on all pages */
+      .page-border {
+        position: fixed;
+        top: 5mm;
+        left: 5mm;
+        right: 5mm;
+        bottom: 5mm;
+        border: 1px solid #8b440c;
+        z-index: -10;
       }
 
       /* Main content box inside the page margins */
       .content-area {
-        /* optional: if you want a soft inner border, uncomment: */
-        /* border: 1px solid #8b440c; */
         padding: 5px;
         box-sizing: border-box;
       }
@@ -92,58 +110,13 @@
       .terms {
         border-bottom: 1px dashed #000;
       }
-          @page {
-      header: qHeader;
-      footer: qFooter;
-      margin-top: 55mm;
-      margin-bottom: 65mm;
-      margin-left: 10mm;
-      margin-right: 10mm;
-    }
-
-    body {
-      font-family: sans-serif;
-      font-size: 12px;
-      margin: 0;
-      padding: 0;
-    }
-
-    /* ✅ Full-page background (all pages) */
-    .page-bg {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 210mm;   /* A4 width */
-      height: 297mm;  /* A4 height */
-      background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
-      background-size: cover;
-      background-position: center center;
-      background-repeat: no-repeat;
-      z-index: -20;   /* behind everything */
-    }
-
-    /* ✅ Inner border on all pages */
-    .page-border {
-      position: fixed;
-      top: 5mm;
-      left: 5mm;
-      right: 5mm;
-      bottom: 5mm;
-      border: 1px solid #8b440c;
-      z-index: -10;
-    }
-
-    .content-area {
-      padding: 5px;
-      box-sizing: border-box;
-    }
-
     </style>
   </head>
   <body>
     {{-- Global background & border layers (repeat on every page) --}}
     <div class="page-bg"></div>
     <div class="page-border"></div>
+
     {{-- ================== HEADER (REPEATS EVERY PAGE) ================== --}}
     <htmlpageheader name="qHeader">
       <div class="header-container">
