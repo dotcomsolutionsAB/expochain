@@ -113,9 +113,7 @@
     </style>
   </head>
   <body>
-    {{-- Global background & border layers (repeat on every page) --}}
-    <div class="page-bg"></div>
-    <div class="page-border"></div>
+    
 
     {{-- ================== HEADER (REPEATS EVERY PAGE) ================== --}}
     <htmlpageheader name="qHeader">
@@ -237,7 +235,9 @@
         </table>
       </div>
     </htmlpagefooter>
-
+      {{-- Global background & border layers (repeat on every page) --}}
+    <div class="page-bg"></div>
+    <div class="page-border"></div>
     {{-- ================== MAIN CONTENT (AUTO FLOWS TO NEXT PAGES) ================== --}}
     <div class="content-area">
       {{-- Customer + Quotation info --}}
