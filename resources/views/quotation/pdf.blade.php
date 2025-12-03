@@ -243,7 +243,7 @@
       </table>
 
       <!-- Summary Section -->
-      <div class="summary" style="margin-top: 5px;">
+      <div class="summary" style="margin-top: 5px; width: 40%;">
         <table class="no-border" style="margin-left: auto; border-collapse: collapse;">
           <tr>
             <td style="padding: 2px 8px; text-align: left;"><strong>Gross Total:</strong></td>
