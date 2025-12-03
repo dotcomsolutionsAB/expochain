@@ -5,18 +5,23 @@
   <title>Quotation</title>
   <style>
   @page {
-    margin-top: 55mm;         /* was 80mm */
-    margin-bottom: 70mm;      /* adjust as you like */
+    header: pageHeader;
+    footer: pageFooter;
+
+    /* reduce blank space */
+    margin-top: 45mm;      
+    header-margin: 3mm;    
+
+    margin-bottom: 70mm;
     margin-left: 10mm;
     margin-right: 10mm;
 
-    header: pageHeader;
-    footer: pageFooter;
     border: 4px solid #8b440c;
 
     background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
     background-image-resize: 6;
-  }
+}
+
 
   body {
     font-family: sans-serif;
