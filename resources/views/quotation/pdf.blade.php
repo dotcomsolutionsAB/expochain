@@ -217,9 +217,16 @@
             <th>RATE</th>
             <th>DELIVERY</th>
             <th>DISC%</th>
-            <th>CGST</th>
-            <th>SGST</th>
-            <th>IGST</th> <!-- NEW -->
+
+            @if($show_igst)
+              {{-- IGST case: only one tax column --}}
+              <th>IGST</th>
+            @else
+              {{-- Local case: CGST + SGST --}}
+              <th>CGST</th>
+              <th>SGST</th>
+            @endif
+
             <th>AMOUNT</th>
           </tr>
         </thead>
@@ -238,15 +245,13 @@
             <td>{{ $item['delivery'] ?: '-' }}</td>
             <td>{{ $item['disc'] }}%</td>
 
-            {{-- TAX: If IGST present, hide CGST & SGST --}}
-            @if($item['igst'] > 0)
-              <td>-</td>
-              <td>-</td>
-              <td>{{ $item['igst'] }} ({{ $item['cgst'] ?: '-' }}%)</td>
+            @if($show_igst)
+              {{-- ONLY IGST column --}}
+              <td>{{ $item['igst'] ?: 0 }}%</td>
             @else
-              <td>{{ $item['cgst'] ?: '-' }} ({{ $item['tax'] ?: '-' }}%)</td>
-              <td>{{ $item['sgst'] ?: '-' }} ({{ $item['tax'] ?: '-' }}%)</td>
-              <td>-</td>
+              {{-- ONLY CGST + SGST columns --}}
+              <td>{{ $item['cgst'] ?: 0 }}%</td>
+              <td>{{ $item['sgst'] ?: 0 }}%</td>
             @endif
 
             <td>{{ number_format($item['amount'], 2) }}</td>
@@ -375,9 +380,14 @@
                   <th>HSN/SAC</th>
                   <th>Tax Rate</th>
                   <th>Taxable Amt.</th>
-                  <th>CGST</th>
-                  <th>SGST</th>
-                  <th>IGST</th>
+
+                  @if($show_igst)
+                    <th>IGST</th>
+                  @else
+                    <th>CGST</th>
+                    <th>SGST</th>
+                  @endif
+
                   <th>Total Tax</th>
                 </tr>
               </thead>
@@ -387,9 +397,14 @@
                   <td>{{ $tax['hsn'] }}</td>
                   <td>{{ $tax['rate'] }}%</td>
                   <td>{{ number_format($tax['taxable'], 2) }}</td>
-                  <td>{{ $tax['cgst'] > 0 ? number_format($tax['cgst'], 2) : '-' }}</td>
-                  <td>{{ $tax['sgst'] > 0 ? number_format($tax['sgst'], 2) : '-' }}</td>
-                  <td>{{ $tax['igst'] > 0 ? number_format($tax['igst'], 2) : '-' }}</td>
+
+                  @if($show_igst)
+                    <td>{{ number_format($tax['igst'], 2) }}</td>
+                  @else
+                    <td>{{ number_format($tax['cgst'], 2) }}</td>
+                    <td>{{ number_format($tax['sgst'], 2) }}</td>
+                  @endif
+
                   <td>{{ number_format($tax['total_tax'], 2) }}</td>
                 </tr>
                 @endforeach

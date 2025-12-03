@@ -1325,9 +1325,19 @@ class QuotationsController extends Controller
         // ---------- 3. ADD-ONS: PF & FREIGHT from t_quotation_addons ----------
         $addons = $quotation->addons; // collection of QuotationAddonsModel
 
-        // Assuming names are "Packaging & Forwarding" and "Freight" (like your Postman payload)
-        $pfAmount = $addons->where('name', 'Packaging & Forwarding')->sum('amount');
-        $freightAmount = $addons->where('name', 'Freight')->sum('amount');
+        // Match 'pf' and 'freight' (case-insensitive, trims spaces)
+        $pfAmount = $addons
+            ->filter(function ($addon) {
+                return strtolower(trim($addon->name)) === 'pf';
+            })
+            ->sum('amount');
+
+        $freightAmount = $addons
+            ->filter(function ($addon) {
+                return strtolower(trim($addon->name)) === 'freight';
+            })
+            ->sum('amount');
+
 
         // ---------- 4. Decide which tax style to show (IGST vs CGST+SGST) ----------
         $igstTotal = $quotation->igst ?? 0;
