@@ -2,7 +2,7 @@
 
 @section('content')
 
-  {{-- Customer + Quotation info --}}
+  <!-- Customer and Quotation Info -->
   <table class="no-border">
     <tr>
       <td
@@ -20,45 +20,30 @@
         KOLKATA - 700115, WEST BENGAL, INDIA<br />
         GSTIN / UIN : 19AAACE4975B1ZP
       </td>
-      <td
-        style="
-          width: 40%;
-          vertical-align: top;
-          padding-left: 20px;
-          text-align:left;
-        "
-      >
+      <td style="width: 40%; vertical-align: top; padding-left: 20px; text-align:left;">
         <table class="no-border" style="width: 100%; border-collapse: collapse;">
           <tr>
             <td style="width: 40%; padding: 2px 0; text-align: left;">Quotation No.:</td>
-            <td style="padding: 2px 0; text-align: left;">
-              <strong>{{ $quotation_no }}</strong>
-            </td>
+            <td style="padding: 2px 0; text-align: left;"><strong>{{ $quotation_no }}</strong></td>
           </tr>
           <tr>
             <td style="padding: 2px 0; text-align: left;">Dated:</td>
-            <td style="padding: 2px 0; text-align: left;">
-              <strong>{{ $quotation_date }}</strong>
-            </td>
+            <td style="padding: 2px 0; text-align: left;"><strong>{{ $quotation_date }}</strong></td>
           </tr>
           <tr>
             <td style="padding: 2px 0; text-align: left;">Enquiry No.:</td>
-            <td style="padding: 2px 0; text-align: left;">
-              <strong>{{ $enquiry_no }}</strong>
-            </td>
+            <td style="padding: 2px 0; text-align: left;"><strong>{{ $enquiry_no }}</strong></td>
           </tr>
           <tr>
             <td style="padding: 2px 0; text-align: left;">Enquiry Date:</td>
-            <td style="padding: 2px 0; text-align: left;">
-              <strong>{{ $enquiry_date }}</strong>
-            </td>
+            <td style="padding: 2px 0; text-align: left;"><strong>{{ $enquiry_date }}</strong></td>
           </tr>
         </table>
       </td>
     </tr>
   </table>
 
-  {{-- ITEMS TABLE --}}
+  <!-- Items Table -->
   <table>
     <thead>
       <tr>
@@ -72,8 +57,10 @@
         <th>DISC%</th>
 
         @if($show_igst)
+          {{-- IGST case: only one tax column --}}
           <th>IGST</th>
         @else
+          {{-- Local case: CGST + SGST --}}
           <th>CGST</th>
           <th>SGST</th>
         @endif
@@ -85,25 +72,27 @@
       @foreach($items as $i => $item)
       <tr>
         <td>{{ $i + 1 }}</td>
-        <td class="left-align">
+        <td>
           {{ $item['desc'] }}<br />
           <small>MAKE {{ $item['make'] }}</small>
         </td>
         <td>{{ $item['hsn'] }}</td>
         <td>{{ $item['qty'] }}</td>
         <td>{{ $item['unit'] }}</td>
-        <td class="right-align">{{ number_format($item['rate'], 2) }}</td>
+        <td>{{ $item['rate'] }}</td>
         <td>{{ $item['delivery'] ?: '-' }}</td>
         <td>{{ $item['disc'] }}%</td>
 
         @if($show_igst)
-          <td class="right-align">{{ $item['igst'] ?: 0 }}</td>
+          {{-- ONLY IGST column --}}
+          <td>{{ $item['igst'] ?: 0 }}%</td>
         @else
-          <td class="right-align">{{ $item['cgst'] ?: 0 }}</td>
-          <td class="right-align">{{ $item['sgst'] ?: 0 }}</td>
+          {{-- ONLY CGST + SGST columns --}}
+          <td>{{ $item['cgst'] ?: 0 }}%</td>
+          <td>{{ $item['sgst'] ?: 0 }}%</td>
         @endif
 
-        <td class="right-align">{{ number_format($item['amount'], 2) }}</td>
+        <td>{{ number_format($item['amount'], 2) }}</td>
       </tr>
       @endforeach
     </tbody>
