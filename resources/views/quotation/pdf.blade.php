@@ -309,7 +309,7 @@
       <!-- Tax Summary Table -->
       <h4 style="margin-top: 5px">Tax Summary:</h4>
 
-      <table style="width: 100%; border-collapse: collapse; margin-top: 3px;">
+      <table class="no-border" style="width: 100%; border-collapse: collapse; margin-top: 3px;">
         <tr>
           <!-- left side compact tax table -->
           <td style="width: 50%; text-align: right;">
