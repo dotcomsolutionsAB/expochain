@@ -9,9 +9,9 @@
       footer: pageFooter;
 
       /* reduce blank space */
-      margin-top: 45mm;      
-      header-margin: 3mm;    
-      margin-bottom: 70mm;
+      margin-top: 30mm;      
+      header-margin: 1mm;    
+      margin-bottom: 30mm;
       margin-left: 10mm;
       margin-right: 10mm;
 
@@ -39,7 +39,7 @@
     .content {
       position: relative;
       z-index: 5;
-      margin-top: 3mm;  /* small, nice gap under header */
+      margin-top: 1mm;  /* small, nice gap under header */
     }
 
     table { width: 100%; border-collapse: collapse; }

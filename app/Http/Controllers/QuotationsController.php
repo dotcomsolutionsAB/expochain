@@ -13,6 +13,10 @@ use App\Models\DiscountModel;
 use App\Models\ProductsModel;
 use App\Models\ClientAddressModel;
 use App\Models\CounterModel;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\WithHeadings;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Auth;
@@ -1222,6 +1226,247 @@ class QuotationsController extends Controller
         ], 200);
     }
 
+    // Excel Export
+    public function exportQuotationReport(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+
+            // === Base query (same structure as view_quotations) ===
+            $query = QuotationsModel::with([
+                'get_user:id,name',
+                'get_template:id,name',
+                'salesPerson:id,name',
+                'client' => function ($q) {
+                    $q->select('id', 'customer_id')
+                    ->with(['addresses' => function ($query) {
+                        $query->select('customer_id', 'state');
+                    }]);
+                },
+            ])
+            ->select(
+                'id',
+                'client_id',
+                'name',
+                'quotation_no',
+                'quotation_date',
+                DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date_formatted'),
+                'enquiry_no',
+                DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date_formatted'),
+                'template',
+                'contact_person',
+                'sales_person',
+                'status',
+                'user',
+                'cgst',
+                'sgst',
+                'igst',
+                'total',
+                'currency',
+                'gross',
+                'round_off',
+                'created_at'
+            )
+            ->where('company_id', $companyId);
+
+
+            // ========================================================
+            //           READ ALL FILTERS FROM POST BODY
+            // ========================================================
+
+            $clientId      = $request->input('client_id');
+            $name          = $request->input('name');
+            $quotationNo   = $request->input('quotation_no');
+            $quotationDate = $request->input('quotation_date');
+            $dateFrom      = $request->input('date_from');
+            $dateTo        = $request->input('date_to');
+            $enquiryNo     = $request->input('enquiry_no');
+            $enquiryDate   = $request->input('enquiry_date');
+            $user          = $request->input('user');
+            $status        = $request->input('status');
+            $productIds    = $request->input('product_ids');
+
+
+            // ========================================================
+            //                  APPLY FILTERS
+            // ========================================================
+
+            if ($clientId) {
+                $query->where('client_id', $clientId);
+            }
+
+            if ($name) {
+                $query->where('name', 'LIKE', '%' . $name . '%');
+            }
+
+            if ($quotationNo) {
+                $query->where('quotation_no', 'LIKE', '%' . $quotationNo . '%');
+            }
+
+            if ($quotationDate) {
+                $query->whereDate('quotation_date', $quotationDate);
+            }
+
+            if ($enquiryNo) {
+                $query->where('enquiry_no', 'LIKE', '%' . $enquiryNo . '%');
+            }
+
+            if ($enquiryDate) {
+                $query->whereDate('enquiry_date', $enquiryDate);
+            }
+
+            if ($dateFrom && $dateTo) {
+                $query->whereBetween('quotation_date', [$dateFrom, $dateTo]);
+            } elseif ($dateFrom) {
+                $query->whereDate('quotation_date', '>=', $dateFrom);
+            } elseif ($dateTo) {
+                $query->whereDate('quotation_date', '<=', $dateTo);
+            }
+
+            if ($user) {
+                $query->where('user', $user);
+            }
+
+            if (!empty($status)) {
+                $query->whereIn('status', explode(',', $status));
+            }
+
+            if (!empty($productIds)) {
+                $productIdArray = explode(',', $productIds);
+                $query->whereHas('products', function ($q) use ($productIdArray) {
+                    $q->whereIn('product_id', $productIdArray);
+                });
+            }
+
+            // Sort same as view
+            $query->orderBy('quotation_date', 'desc');
+
+
+            // Fetch filtered data
+            $quotations = $query->get();
+
+            if ($quotations->isEmpty()) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'No quotations found for export!'
+                ]);
+            }
+
+
+            // ========================================================
+            //             BUILD EXPORT DATA (HEADER LEVEL)
+            // ========================================================
+
+            $exportData = [];
+            $sn = 1;
+
+            foreach ($quotations as $q) {
+                $state = optional($q->client->addresses->first())->state;
+
+                $exportData[] = [
+                    'SN'              => $sn++,
+                    'Quotation No'    => $q->quotation_no,
+                    'Quotation Date'  => $q->quotation_date_formatted,
+                    'Enquiry No'      => $q->enquiry_no,
+                    'Enquiry Date'    => $q->enquiry_date_formatted,
+                    'Client Name'     => $q->name,
+                    'Client State'    => $state,
+                    'Currency'        => $q->currency,
+                    'Gross'           => $q->gross,
+                    'CGST'            => $q->cgst,
+                    'SGST'            => $q->sgst,
+                    'IGST'            => $q->igst,
+                    'Total'           => $q->total,
+                    'Amount In Words' => $this->convertNumberToWords($q->total),
+                    'Status'          => $q->status,
+                    'User'            => $q->get_user->name      ?? 'Unknown',
+                    'Sales Person'    => $q->salesPerson->name   ?? 'Unknown',
+                    'Template'        => $q->get_template->name  ?? 'Unknown',
+                    'Created At'      => $q->created_at
+                                            ? Carbon::parse($q->created_at)->format('d-m-Y H:i')
+                                            : null,
+                ];
+            }
+
+
+            // ========================================================
+            //                EXPORT TO EXCEL FILE
+            // ========================================================
+
+            $timestamp    = now()->format('Ymd_His');
+            $fileName     = "quotations_export_{$timestamp}.xlsx";
+            $relativePath = "uploads/quotation_report/{$fileName}";
+
+            Excel::store(
+                new class($exportData) implements FromCollection, WithHeadings {
+                    private $data;
+
+                    public function __construct($data)
+                    {
+                        $this->data = $data;
+                    }
+
+                    public function collection()
+                    {
+                        return collect($this->data);
+                    }
+
+                    public function headings(): array
+                    {
+                        return [
+                            'SN',
+                            'Quotation No',
+                            'Quotation Date',
+                            'Enquiry No',
+                            'Enquiry Date',
+                            'Client Name',
+                            'Client State',
+                            'Currency',
+                            'Gross',
+                            'CGST',
+                            'SGST',
+                            'IGST',
+                            'Total',
+                            'Amount In Words',
+                            'Status',
+                            'User',
+                            'Sales Person',
+                            'Template',
+                            'Created At'
+                        ];
+                    }
+                },
+                $relativePath,
+                'public'
+            );
+
+
+            // ========================================================
+            //                SUCCESS RESPONSE
+            // ========================================================
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Quotation report generated successfully!',
+                'data' => [
+                    'file_url'     => asset("storage/{$relativePath}"),
+                    'file_name'    => $fileName,
+                    'file_size'    => Storage::disk('public')->size($relativePath),
+                    'content_type' => 'Excel'
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Error exporting quotations.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 
     // update quotation status
     public function updateQuotationStatus(Request $request, $id)
@@ -1378,10 +1623,10 @@ class QuotationsController extends Controller
         // ---------- 6. Generate PDF ----------
         $pdf = new \Mpdf\Mpdf([
             'format'        => 'A4',
-            'margin_top'    => 0,
-            'margin_bottom' => 0,
-            'margin_left'   => 0,
-            'margin_right'  => 0,
+            'margin_top'    => 5,
+            'margin_bottom' => 5,
+            'margin_left'   => 5,
+            'margin_right'  => 5,
         ]);
 
         $html = view('quotation.pdf', $data)->render();
