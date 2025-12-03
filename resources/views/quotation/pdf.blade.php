@@ -243,33 +243,35 @@
       </table>
 
       <!-- Summary Section -->
-      <div class="summary" style="margin-top: 5px; width: 40%;">
-        <table class="no-border" style="width: 40%; margin-left: auto; border-collapse: collapse;">
-          <tr>
-            <td style="padding: 2px 8px; text-align: left;"><strong>Gross Total:</strong></td>
-            <td style="padding: 2px 0; text-align: right;">₹{{ number_format($gross_total, 2) }}</td>
-          </tr>
-          <tr>
-            <td style="padding: 2px 8px; text-align: left;"><strong>Add : CGST</strong></td>
-            <td style="padding: 2px 0; text-align: right;">₹{{ number_format($cgst, 2) }}</td>
-          </tr>
-          <tr>
-            <td style="padding: 2px 8px; text-align: left;"><strong>Add : SGST</strong></td>
-            <td style="padding: 2px 0; text-align: right;">₹{{ number_format($sgst, 2) }}</td>
-          </tr>
-          <tr>
-            <td style="padding: 2px 8px; text-align: left;"><strong>Less : Rounded Off</strong></td>
-            <td style="padding: 2px 0; text-align: right;">₹{{ number_format($roundoff, 2) }}</td>
-          </tr>
-        </table>
+      <div class="summary" style="margin-top: 5px; width: 100%; text-align: right;">
+        <div style="display: inline-block; text-align: left;">
+          <table class="no-border" style="border-collapse: collapse;">
+            <tr>
+              <td style="padding: 2px 8px; text-align: left;"><strong>Gross Total:</strong></td>
+              <td style="padding: 2px 0; text-align: right;">₹{{ number_format($gross_total, 2) }}</td>
+            </tr>
+            <tr>
+              <td style="padding: 2px 8px; text-align: left;"><strong>Add : CGST</strong></td>
+              <td style="padding: 2px 0; text-align: right;">₹{{ number_format($cgst, 2) }}</td>
+            </tr>
+            <tr>
+              <td style="padding: 2px 8px; text-align: left;"><strong>Add : SGST</strong></td>
+              <td style="padding: 2px 0; text-align: right;">₹{{ number_format($sgst, 2) }}</td>
+            </tr>
+            <tr>
+              <td style="padding: 2px 8px; text-align: left;"><strong>Less : Rounded Off</strong></td>
+              <td style="padding: 2px 0; text-align: right;">₹{{ number_format($roundoff, 2) }}</td>
+            </tr>
+          </table>
 
-        <h3 style="text-align: right; margin-top: 4px;">
-          GRAND TOTAL: ₹{{ number_format($grand_total, 2) }}
-        </h3>
-        <div style="text-align: right;">
-          <i>Rupees {{ $grand_total_words }} Only</i>
-        </div>
-      </div>
+          <h3 style="margin-top: 4px; text-align: right;">
+            GRAND TOTAL: ₹{{ number_format($grand_total, 2) }}
+          </h3>
+          <div style="text-align: right;">
+            <i>Rupees {{ $grand_total_words }} Only</i>
+          </div>
+        </div> <!-- inline-block -->
+      </div> <!-- summary -->
 
 
       <!-- Tax Summary Table -->
