@@ -21,13 +21,14 @@
 
     .page-border {
       position: fixed;
-      top: 5mm;
-      left: 5mm;
-      right: 5mm;
-      bottom: 5mm;
-      border: 1px solid #8b440c;   /* or 4px if you want thicker */
-      z-index: 1;                   /* below content, above bg */
+      top: 10mm;     /* same as left/right margin so it looks even */
+      left: 10mm;
+      right: 10mm;
+      bottom: 10mm;
+      border: 1px solid #8b440c;  /* use 2px / 4px if you want thicker */
+      z-index: 0;                  /* 🔑 keep it behind everything */
     }
+
     body {
       font-family: sans-serif;
       font-size: 12px;
