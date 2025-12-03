@@ -307,8 +307,17 @@
       </div>
 
       <!-- Tax Summary Table -->
-      <h4 style="margin-top: 5px">Tax Summary:</h4>
-      <table style="width:60%">
+      <!-- Tax Summary Table -->
+<h4 style="margin-top: 5px">Tax Summary:</h4>
+
+<table class="no-border" style="width: 100%; border-collapse: collapse; margin-top: 3px;">
+  <tr>
+    <!-- left empty space -->
+    <td style="width: 60%;"></td>
+
+    <!-- right side compact tax table -->
+    <td style="width: 40%; text-align: right;">
+      <table style="width: 100%; border-collapse: collapse;">
         <thead>
           <tr>
             <th>HSN/SAC</th>
@@ -332,6 +341,10 @@
           @endforeach
         </tbody>
       </table>
+    </td>
+  </tr>
+</table>
+
 
       <!-- Bank Details in a single line -->
       <div class="bank-details">
