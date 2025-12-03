@@ -1621,12 +1621,18 @@ class QuotationsController extends Controller
         ];
 
         // ---------- 6. Generate PDF ----------
-        $pdf = new \Mpdf\Mpdf([
-            'format'        => 'A4',
-            'margin_top'    => 5,
-            'margin_bottom' => 5,
-            'margin_left'   => 5,
-            'margin_right'  => 5,
+        // $pdf = new \Mpdf\Mpdf([
+        //     'format'        => 'A4',
+        //     'margin_top'    => 5,
+        //     'margin_bottom' => 5,
+        //     'margin_left'   => 5,
+        //     'margin_right'  => 5,
+        // ]);
+        $mpdf = new \Mpdf\Mpdf([
+            'margin_top'    => 45,
+            'margin_bottom' => 70,
+            'margin_left'   => 10,
+            'margin_right'  => 10,
         ]);
 
         $html = view('quotation.pdf', $data)->render();

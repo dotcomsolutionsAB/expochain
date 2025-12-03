@@ -15,6 +15,9 @@
       margin-left: 10mm;
       margin-right: 10mm;
 
+      /* 🔶 FULL PAGE BORDER DRAWN BY MPDF */
+      border: 1px solid #8b440c;
+
       /* background image for whole page */
       background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
       background-image-resize: 6;
@@ -25,20 +28,6 @@
       font-size: 12px;
       margin: 0;
       padding: 0;
-    }
-
-    /* 🔶 ONE BIG BORDER AROUND THE PAGE (inside edges) */
-    .page-frame {
-        position: fixed;
-        top: 5mm;      /* distance from physical page top */
-        left: 5mm;     /* distance from physical page left */
-        right: 5mm;    /* distance from physical page right */
-        bottom: 5mm;   /* distance from physical page bottom */
-
-        border: 1px solid #8b440c;
-
-        z-index: 99999;        /* on top of bg + content + header/footer */
-        pointer-events: none;  /* doesn’t block anything */
     }
 
     .content {
@@ -67,8 +56,7 @@
 
 <body>
 
-  <!-- 🔶 FULL-PAGE BORDER OVER BACKGROUND & CONTENT -->
-  <div class="page-frame"></div>
+  <!-- ❌ NO .page-frame HERE ANYMORE -->
 
   <!-- ============================================================
       ✔ FIXED HEADER (htmlpageheader)
@@ -77,7 +65,6 @@
       <div class="header-container" style="margin-bottom: 10px">
         <table style="width: 100%; border-collapse: collapse">
           <tr>
-            <!-- Company Info -->
             <td style="text-align: center; vertical-align: top; border: none">
               <div style="font-weight: bold">QUOTATION</div>
               <div>
@@ -88,7 +75,6 @@
                 +9133-40064388 | 22431939 , amit@expochain.com, 7059502488
               </div>
             </td>
-            <!-- Logo on the Top Right -->
             <td
               style="
                 width: 1%;
@@ -116,13 +102,11 @@
   ============================================================ -->
   <htmlpagefooter name="pageFooter">
 
-      <!-- Bank Details in a single line -->
       <div class="bank-details">
         <strong>BANK NAME :</strong> HDFC BANK LTD, BRANCH : JARDINE HOUSE,
         CLIVE ROW, A/C NO : 10152320001963, IFSC : HDFC0001015
       </div>
 
-      <!-- Terms & Conditions -->
       <div class="terms" style="margin-top: 5px">
         <table class="no-border" style="width: 100%; border-collapse: collapse">
           <tr>
@@ -182,7 +166,7 @@
   </htmlpagefooter>
 
   <!-- ============================================================
-      ✔ MAIN CONTENT (between header & footer)
+      ✔ MAIN CONTENT
   ============================================================ -->
   <div class="content">
       @yield('content')
