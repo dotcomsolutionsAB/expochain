@@ -6,29 +6,29 @@
 
   <style>
     @page {
-        margin-top: 60mm;
-        margin-bottom: 70mm;
-        margin-left: 10mm;
-        margin-right: 10mm;
+      margin-top: 60mm;
+      margin-bottom: 70mm;
+      margin-left: 10mm;
+      margin-right: 10mm;
 
-        header: pageHeader;
-        footer: pageFooter;
+      header: pageHeader;
+      footer: pageFooter;
 
-        /* 🔥 mPDF page background image */
-        background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
-        background-image-resize: 6; /* scale to full page */
+      /* 🔥 mPDF page background image */
+      background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
+      background-image-resize: 6; /* scale to full page */
     }
 
     body {
-        font-family: sans-serif;
-        font-size: 12px;
-        margin: 10px;
-        padding: 0;
-        border: 1px solid #8b440c;
+      font-family: sans-serif;
+      font-size: 12px;
+      margin: 10px;
+      padding: 0;
+      border: 4px solid #8b440c;
     }
 
     /* Only BORDER now, NO background here */
-    .page-border {
+    /* .page-border {
         position: fixed;
         top: 0;
         left: 0;
@@ -36,7 +36,7 @@
         bottom: 0;
         border: 1px solid #8b440c;
         z-index: -1;
-    }
+    } */
 
     table { width: 100%; border-collapse: collapse; }
     th, td { border: 1px solid #8b440c; padding: 5px; font-size: 11px; text-align: center; }
@@ -44,13 +44,13 @@
     .no-border td { border: none !important; }
 
     .bank-details {
-        text-align: center;
-        font-size: 11px;
-        margin-top: 15px;
-        margin-bottom: 15px;
-        border-top: 1px dashed #000;
-        border-bottom: 1px dashed #000;
-        padding: 5px 0;
+      text-align: center;
+      font-size: 11px;
+      margin-top: 15px;
+      margin-bottom: 15px;
+      border-top: 1px dashed #000;
+      border-bottom: 1px dashed #000;
+      padding: 5px 0;
     }
 </style>
 
@@ -59,7 +59,7 @@
 <body>
 
   <!-- ✔ Background & Border -->
-  <div class="page-border"></div>
+  <!-- <div class="page-border"></div> -->
 
   <!-- ============================================================
       ✔ FIXED HEADER (htmlpageheader)
