@@ -291,7 +291,9 @@
                     </h3>
                   </td>
                   <td style="padding: 2px 0; text-align: right;">
-                    ₹{{ number_format($grand_total, 2) }}
+                    <h3 style="margin-top: 4px; text-align: right;">
+                      ₹{{ number_format($grand_total, 2) }}
+                    </h3>
                   </td>
                 </tr>
               </table>              
@@ -340,29 +342,37 @@
       <div class="terms" style="margin-top: 5px">
         <table class="no-border" style="width: 100%; border-collapse: collapse">
           <tr>
-            <td
-              style="
-                width: 50%;
-                vertical-align: top;
-                padding-right: 10px;
-                border-right: 1px dotted #000;
-                text-align:left;
-              "
-            >
+            <td style="width: 70%; vertical-align: top; padding-right: 10px; border-right: 1px dotted #000; text-align:left;">
               <strong>TERMS &amp; CONDITIONS:</strong><br />
-              <strong>F.O.R.</strong> : Kolkata<br />
-              <strong>P &amp; F</strong> : Nil<br />
-              <strong>Freight</strong> : Your Account<br />
-              <strong>Delivery</strong> : REady Stock subject to prior sale
-              balance 3 weeks<br />
-              <strong>Payment</strong> : 30 days - msme<br />
-              <strong>Validity</strong> : 30 DAYS<br />
+              <table class="no-border" style="width: 100%; border-collapse: collapse; margin-top:5px;">
+                <tr>
+                  <td style="width: 35%; padding: 2px 0; text-align: left;"><strong>F.O.R. :</strong></td>
+                  <td style="padding: 2px 0; text-align: left;">Kolkata</td>
+                </tr>
+                <tr>
+                  <td style="padding: 2px 0; text-align: left;"><strong>P &amp; F :</strong></td>
+                  <td style="padding: 2px 0; text-align: left;">Nil</td>
+                </tr>
+                <tr>
+                  <td style="padding: 2px 0; text-align: left;"><strong>Freight :</strong></td>
+                  <td style="padding: 2px 0; text-align: left;">Your Account</td>
+                </tr>
+                <tr>
+                  <td style="padding: 2px 0; text-align: left;"><strong>Delivery :</strong></td>
+                  <td style="padding: 2px 0; text-align: left;">Ready Stock subject to prior sale balance 3 weeks</td>
+                </tr>
+                <tr>
+                  <td style="padding: 2px 0; text-align: left;"><strong>Payment :</strong></td>
+                  <td style="padding: 2px 0; text-align: left;">30 days - msme</td>
+                </tr>
+                <tr>
+                  <td style="padding: 2px 0; text-align: left;"><strong>Validity :</strong></td>
+                  <td style="padding: 2px 0; text-align: left;">30 DAYS</td>
+                </tr>
+              </table>
             </td>
-            <td style="width: 50%; vertical-align: middle; padding-left: 10px">
-              <table
-                class="no-border"
-                style="width: 100%; border-collapse: collapse"
-              >
+            <td style="width: 30%; vertical-align: middle; padding-left: 10px">
+              <table class="no-border" style="width: 100%; border-collapse: collapse">
                 <tr>
                   <td style="width: 50%; text-align: left">
                     <strong>for EXPO CHAIN &amp; BEARING STORES</strong><br />
