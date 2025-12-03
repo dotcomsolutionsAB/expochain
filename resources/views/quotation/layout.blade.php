@@ -32,6 +32,7 @@
 
     /* Top part of the frame: around header + dashed line */
     .frame-top {
+      height:100%;
       border: 1px solid #8b440c;
       border-bottom: none;          /* middle will close it */
       padding: 4mm 4mm 0 4mm;       /* top + sides, no bottom padding */
@@ -47,6 +48,7 @@
 
     /* Bottom part of the frame: around footer */
     .frame-bottom {
+      height:100%;
       border: 1px solid #8b440c;
       border-top: none;             /* middle will close it */
       padding: 0 4mm 4mm 4mm;       /* bottom padding */
