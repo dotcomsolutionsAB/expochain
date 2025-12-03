@@ -123,6 +123,7 @@
         padding-top: 5px;
         padding-bottom: 5px;
       }
+      
     </style>
   </head>
   <body>
@@ -309,10 +310,13 @@
       <!-- Tax Summary Table -->
       <h4 style="margin-top: 5px">Tax Summary:</h4>
 
-      <table class="no-border" style="width: 100%; border-collapse: collapse; margin-top: 3px;">
+      <table style="width: 100%; border-collapse: collapse; margin-top: 3px; border: none;">
         <tr>
-          <!-- left side compact tax table -->
-          <td style="width: 50%; text-align: right;">
+          <!-- left empty space to keep it compact/right-ish -->
+          <td style="width: 60%; border: none;"></td>
+
+          <!-- right side tax table -->
+          <td style="width: 40%; border: none;">
             <table style="width: 100%; border-collapse: collapse;">
               <thead>
                 <tr>
@@ -338,12 +342,9 @@
               </tbody>
             </table>
           </td>
-          <!-- right empty space -->
-          <td style="width: 50%;"></td>
         </tr>
       </table>
-
-
+      
       <!-- Bank Details in a single line -->
       <div class="bank-details">
         <strong>BANK NAME :</strong> HDFC BANK LTD, BRANCH : JARDINE HOUSE,
