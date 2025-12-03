@@ -4,55 +4,58 @@
   <meta charset="utf-8" />
   <title>Quotation</title>
   <style>
-  @page {
-    header: pageHeader;
-    footer: pageFooter;
+    @page {
+      header: pageHeader;
+      footer: pageFooter;
 
-    /* reduce blank space */
-    margin-top: 45mm;      
-    header-margin: 3mm;    
+      /* reduce blank space */
+      margin-top: 45mm;      
+      header-margin: 3mm;    
+      margin-bottom: 70mm;
+      margin-left: 10mm;
+      margin-right: 10mm;
 
-    margin-bottom: 70mm;
-    margin-left: 10mm;
-    margin-right: 10mm;
+      background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
+      background-image-resize: 6;
+    }
 
-    border: 4px solid #8b440c;
+    .page-border {
+      position: fixed;
+      top: 5mm;
+      left: 5mm;
+      right: 5mm;
+      bottom: 5mm;
+      border: 1px solid #8b440c;   /* or 4px if you want thicker */
+      z-index: 1;                   /* below content, above bg */
+    }
+    body {
+      font-family: sans-serif;
+      font-size: 12px;
+      margin: 0;        /* 🔴 remove extra top space */
+      padding: 0;
+    }
 
-    background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
-    background-image-resize: 6;
-}
+    .content {
+      position: relative;
+      z-index: 5;
+      margin-top: 3mm;  /* small, nice gap under header */
+    }
 
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #8b440c; padding: 5px; font-size: 11px; text-align: center; }
 
-  body {
-    font-family: sans-serif;
-    font-size: 12px;
-    margin: 0;        /* 🔴 remove extra top space */
-    padding: 0;
-  }
+    .no-border td { border: none !important; }
 
-  .content {
-    position: relative;
-    z-index: 5;
-    margin-top: 3mm;  /* small, nice gap under header */
-  }
-
-  table { width: 100%; border-collapse: collapse; }
-  th, td { border: 1px solid #8b440c; padding: 5px; font-size: 11px; text-align: center; }
-
-  .no-border td { border: none !important; }
-
-  .bank-details {
-    text-align: center;
-    font-size: 11px;
-    margin-top: 15px;
-    margin-bottom: 15px;
-    border-top: 1px dashed #000;
-    border-bottom: 1px dashed #000;
-    padding: 5px 0;
-  }
-</style>
-
-
+    .bank-details {
+      text-align: center;
+      font-size: 11px;
+      margin-top: 15px;
+      margin-bottom: 15px;
+      border-top: 1px dashed #000;
+      border-bottom: 1px dashed #000;
+      padding: 5px 0;
+    }
+  </style>
 </head>
 
 <body>
@@ -171,6 +174,8 @@
 
   </htmlpagefooter>
 
+  <!-- 🔲 Border that repeats on every page -->
+  <div class="page-border"></div>
   <!-- ============================================================
       ✔ MAIN CONTENT (COMES BETWEEN HEADER & FOOTER)
   ============================================================ -->
