@@ -25,6 +25,7 @@
       margin: 10;        /* 🔴 remove extra top space */
       padding: 5;
       background-color: #cdbcafe8;
+      z-index: 99;
     }
 
     .content {
@@ -51,6 +52,7 @@
 </head>
 
 <body style="padding:10px; border:2px solid #000; z-index: 9;">
+
 
   <!-- ============================================================
       ✔ FIXED HEADER (htmlpageheader)
