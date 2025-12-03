@@ -1334,7 +1334,14 @@ class QuotationsController extends Controller
         ];
 
         // Create a new mPDF instance, render the view with the data, and output the PDF.
-        $pdf = new \Mpdf\Mpdf();
+        $pdf = new \Mpdf\Mpdf([
+            'format'       => 'A4',
+            'margin_top'    => 5,
+            'margin_bottom' => 5,
+            'margin_left'   => 5,
+            'margin_right'  => 5,
+        ]);
+
         $html = view('quotation.pdf', $data)->render();
         $pdf->WriteHTML($html);
         return $pdf->Output('quotation.pdf', 'I'); // "I" for inline display

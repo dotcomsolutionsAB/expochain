@@ -7,13 +7,14 @@
       body {
         font-family: sans-serif;
         font-size: 12px;
-        margin: 5px;
-        padding: 5px;
+        padding: 0;
+        margin: 0px;
       }
 
       .page-border {
         border: 1px solid #8b440c;
-        padding: 10px;
+        margin: 5px;
+        padding: 5px;
         object-fit: contain;
         /* PDF background image */
         background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
