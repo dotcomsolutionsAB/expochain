@@ -181,10 +181,32 @@
             GSTIN / UIN : 19AAACE4975B1ZP
           </td>
           <td style="width: 50%; vertical-align: top; padding-left: 20px; text-align:left;">
-            Quotation No.: <strong>{{ $quotation_no }}</strong><br />
-            Dated: <strong>{{ $quotation_date }}</strong><br />
-            Enquiry No.: <strong>{{ $enquiry_no }}</strong><br />
-            Enquiry Date: <strong>{{ $enquiry_date }}</strong>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="border: none; padding: 2px 8px 2px 0;">Quotation No.:</td>
+                <td style="border: none; padding: 2px 0;">
+                  <strong>{{ $quotation_no }}</strong>
+                </td>
+              </tr>
+              <tr>
+                <td style="border: none; padding: 2px 8px 2px 0;">Dated:</td>
+                <td style="border: none; padding: 2px 0;">
+                  <strong>{{ $quotation_date }}</strong>
+                </td>
+              </tr>
+              <tr>
+                <td style="border: none; padding: 2px 8px 2px 0;">Enquiry No.:</td>
+                <td style="border: none; padding: 2px 0;">
+                  <strong>{{ $enquiry_no }}</strong>
+                </td>
+              </tr>
+              <tr>
+                <td style="border: none; padding: 2px 8px 0 0;">Enquiry Date:</td>
+                <td style="border: none; padding: 2px 0 0 0;">
+                  <strong>{{ $enquiry_date }}</strong>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
       </table>
@@ -229,17 +251,47 @@
       </table>
 
       <!-- Summary Section -->
-      <div class="summary right-align" style="margin-top: 5px">
-        
-        <strong>Gross Total:</strong> ₹{{ number_format($gross_total, 2) }}
+      <div class="summary" style="margin-top: 5px; text-align: right;">
+        <table style="margin-left: auto; border-collapse: collapse;">
+          <tr>
+            <td style="border: none; padding: 2px 20px 2px 0;">
+              <strong>Gross Total:</strong>
+            </td>
+            <td style="border: none; padding: 2px 0; text-align: right;">
+              ₹{{ number_format($gross_total, 2) }}
+            </td>
+          </tr>
+          <tr>
+            <td style="border: none; padding: 2px 20px 2px 0;">
+              <strong>Add : CGST</strong>
+            </td>
+            <td style="border: none; padding: 2px 0; text-align: right;">
+              ₹{{ number_format($cgst, 2) }}
+            </td>
+          </tr>
+          <tr>
+            <td style="border: none; padding: 2px 20px 2px 0;">
+              <strong>Add : SGST</strong>
+            </td>
+            <td style="border: none; padding: 2px 0; text-align: right;">
+              ₹{{ number_format($sgst, 2) }}
+            </td>
+          </tr>
+          <tr>
+            <td style="border: none; padding: 2px 20px 2px 0;">
+              <strong>Less : Rounded Off</strong>
+            </td>
+            <td style="border: none; padding: 2px 0; text-align: right;">
+              ₹{{ number_format($roundoff, 2) }}
+            </td>
+          </tr>
+        </table>
+
+        <h3 style="margin-top: 5px;">
+          GRAND TOTAL: ₹{{ number_format($grand_total, 2) }}
+        </h3>
         <br>
-        <strong>Add : CGST</strong> ₹{{ number_format($cgst, 2) }}
-        <br><strong>Add : SGST</strong> ₹{{ number_format($sgst, 2) }}
-        <br>
-          <strong>Less : Rounded Off</strong> (₹{{ number_format($roundoff, 2) }})
-        <br>
-        <h3>GRAND TOTAL: ₹{{ number_format($grand_total, 2) }}</h3>
-        <br><i>Rupees {{ $grand_total_words }} Only</i>
+        <i>Rupees {{ $grand_total_words }} Only</i>
       </div>
 
       <!-- Tax Summary Table -->
