@@ -17,7 +17,7 @@
 
       /* background image for whole page */
       background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
-      background-image-resize: 6;
+      background-image-resize: 4;
     }
 
     /* 🔶 ONE BIG BORDER AROUND THE WHOLE PAGE AREA */
