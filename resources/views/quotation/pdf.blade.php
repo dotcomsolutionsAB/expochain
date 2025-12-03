@@ -123,7 +123,7 @@
         padding-top: 5px;
         padding-bottom: 5px;
       }
-      
+      th, td { border: 1px solid #8b440c; }
     </style>
   </head>
   <body>
@@ -344,7 +344,7 @@
           </td>
         </tr>
       </table>
-      
+
       <!-- Bank Details in a single line -->
       <div class="bank-details">
         <strong>BANK NAME :</strong> HDFC BANK LTD, BRANCH : JARDINE HOUSE,
