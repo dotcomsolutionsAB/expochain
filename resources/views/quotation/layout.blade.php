@@ -134,7 +134,7 @@
 ============================================================ -->
 
 <div class="content">
-    {{-- YOUR PRODUCT TABLE / CUSTOMER DETAILS GO HERE --}}
+    @yield('content')
 </div>
 
 </body>
