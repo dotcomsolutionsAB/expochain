@@ -6,8 +6,6 @@
 
     <style>
       @page {
-        header: qHeader;
-        footer: qFooter;
         /* space reserved for header/footer */
         margin-top: 55mm;
         margin-bottom: 65mm;
@@ -22,21 +20,21 @@
         padding: 0;
       }
 
-      /* ✅ Full-page background (all pages) */
+      /* Full-page background (all pages) */
       .page-bg {
         position: fixed;
         top: 0;
         left: 0;
-        width: 210mm;   /* A4 width */
-        height: 297mm;  /* A4 height */
+        width: 210mm;   /* A4 */
+        height: 297mm;
         background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
         background-size: cover;
         background-position: center center;
         background-repeat: no-repeat;
-        z-index: -20;   /* behind everything */
+        z-index: 0;
       }
 
-      /* ✅ Inner border on all pages */
+      /* Page border on all pages */
       .page-border {
         position: fixed;
         top: 5mm;
@@ -44,13 +42,33 @@
         right: 5mm;
         bottom: 5mm;
         border: 1px solid #8b440c;
-        z-index: -10;
+        z-index: 1;
       }
 
-      /* Main content box inside the page margins */
+      /* Fixed header (repeats every page) */
+      #header {
+        position: fixed;
+        top: 10mm;
+        left: 10mm;
+        right: 10mm;
+        z-index: 5;
+      }
+
+      /* Fixed footer (repeats every page) */
+      #footer {
+        position: fixed;
+        bottom: 10mm;
+        left: 10mm;
+        right: 10mm;
+        z-index: 5;
+      }
+
+      /* Main content area between header & footer */
       .content-area {
         padding: 5px;
         box-sizing: border-box;
+        position: relative;
+        z-index: 10; /* above bg, border, header/footer boxes */
       }
 
       .header-table {
@@ -109,54 +127,54 @@
     </style>
   </head>
   <body>
-    {{-- ================== HEADER (REPEATS EVERY PAGE) ================== --}}
-    <htmlpageheader name="qHeader">
-      <div class="header-container">
-        <table class="header-table">
-          <tr>
-            <td style="text-align: center; vertical-align: top; border: none">
-              <div style="font-weight: bold">QUOTATION</div>
-              <div>
-                <strong style="color:#8b440c; font-size:18px">
-                  EXPO CHAIN &amp; BEARING STORES
-                </strong><br />
-                71/D N.S. ROAD, GROUND FLOOR, ROOM NO A-162<br />
-                KOLKATA - 700001, WEST BENGAL, India<br />
-                GST : 19AAAFE7147G1ZF<br />
-                +9133-40064388 | 22431939 , amit@expochain.com, 7059502488
-              </div>
-            </td>
+    {{-- Background + border (all pages) --}}
+    <div class="page-bg"></div>
+    <div class="page-border"></div>
 
-            <td
-              style="
-                width: 1%;
-                text-align: right;
-                vertical-align: top;
-                border: none;
-              "
-            >
-              <img
-                src="{{ public_path('storage/uploads/pdf_template/logo.png') }}"
-                alt="Logo"
-                style="width: 100px; height: auto; display: block"
-              />
-            </td>
-          </tr>
-        </table>
+    {{-- HEADER (fixed, all pages) --}}
+    <div id="header">
+      <table class="header-table">
+        <tr>
+          <td style="text-align: center; vertical-align: top; border: none">
+            <div style="font-weight: bold">QUOTATION</div>
+            <div>
+              <strong style="color:#8b440c; font-size:18px">
+                EXPO CHAIN &amp; BEARING STORES
+              </strong><br />
+              71/D N.S. ROAD, GROUND FLOOR, ROOM NO A-162<br />
+              KOLKATA - 700001, WEST BENGAL, India<br />
+              GST : 19AAAFE7147G1ZF<br />
+              +9133-40064388 | 22431939 , amit@expochain.com, 7059502488
+            </div>
+          </td>
 
-        <div class="dash-line"></div>
-      </div>
-    </htmlpageheader>
+          <td
+            style="
+              width: 1%;
+              text-align: right;
+              vertical-align: top;
+              border: none;
+            "
+          >
+            <img
+              src="{{ public_path('storage/uploads/pdf_template/logo.png') }}"
+              alt="Logo"
+              style="width: 100px; height: auto; display: block"
+            />
+          </td>
+        </tr>
+      </table>
 
-    {{-- ================== FOOTER (REPEATS EVERY PAGE) ================== --}}
-    <htmlpagefooter name="qFooter">
-      {{-- Bank Details in a single line --}}
+      <div class="dash-line"></div>
+    </div>
+
+    {{-- FOOTER (fixed, all pages) --}}
+    <div id="footer">
       <div class="bank-details">
         <strong>BANK NAME :</strong> HDFC BANK LTD, BRANCH : JARDINE HOUSE,
         CLIVE ROW, A/C NO : 10152320001963, IFSC : HDFC0001015
       </div>
 
-      {{-- Terms + Footer image --}}
       <div class="terms">
         <table class="no-border" style="width: 100%; border-collapse: collapse">
           <tr>
@@ -228,13 +246,9 @@
           </tr>
         </table>
       </div>
-    </htmlpagefooter>
+    </div>
 
-    {{-- ✅ Global background & border layers (after header/footer definitions) --}}
-    <div class="page-bg"></div>
-    <div class="page-border"></div>
-
-    {{-- ================== MAIN CONTENT (AUTO FLOWS TO NEXT PAGES) ================== --}}
+    {{-- MAIN CONTENT (flows, uses @page margins, auto-pagebreaks) --}}
     <div class="content-area">
       {{-- Customer + Quotation info --}}
       <table class="no-border">
@@ -343,7 +357,7 @@
         </tbody>
       </table>
 
-      {{-- SUMMARY BLOCK (RIGHT SIDE) --}}
+      {{-- SUMMARY BLOCK --}}
       <table class="no-border" style="width: 100%; margin-top: 5px;">
         <tr>
           <td style="width: 60%;"></td>
