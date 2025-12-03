@@ -219,6 +219,7 @@
             <th>DISC%</th>
             <th>CGST</th>
             <th>SGST</th>
+            <th>IGST</th> <!-- NEW -->
             <th>AMOUNT</th>
           </tr>
         </thead>
@@ -236,13 +237,24 @@
             <td>{{ $item['rate'] }}</td>
             <td>{{ $item['delivery'] }}</td>
             <td>{{ $item['disc'] }}%</td>
-            <td>{{ $item['cgst'] }}%</td>
-            <td>{{ $item['sgst'] }}%</td>
+
+            {{-- TAX: If IGST present, hide CGST & SGST --}}
+            @if($item['igst'] > 0)
+              <td>-</td>
+              <td>-</td>
+              <td>{{ $item['igst'] }}%</td>
+            @else
+              <td>{{ $item['cgst'] ?: '-' }}%</td>
+              <td>{{ $item['sgst'] ?: '-' }}%</td>
+              <td>-</td>
+            @endif
+
             <td>{{ number_format($item['amount'], 2) }}</td>
           </tr>
           @endforeach
         </tbody>
       </table>
+
 
       <!-- Summary Section -->
       <div class="summary" style="margin-top: 5px; text-align: right;">
@@ -253,7 +265,8 @@
 
             <!-- Right block with totals -->
             <td style="width: 40%; text-align: right;">
-              <table class="no-border" style="width: 100%; border-collapse: collapse;">
+              <table class="no-border" style="width: 100%; border-collapse: collapse;">          
+                <!-- Gross Total -->
                 <tr>
                   <td style="padding: 2px 8px; text-align: right;">
                     <strong>Gross Total:</strong>
@@ -262,22 +275,61 @@
                     ₹{{ number_format($gross_total, 2) }}
                   </td>
                 </tr>
+
+                <!-- PF (Packaging & Forwarding) - only if > 0 -->
+                @if(!empty($pf_amount) && $pf_amount > 0)
                 <tr>
                   <td style="padding: 2px 8px; text-align: right;">
-                    <strong>Add : CGST</strong>
+                    <strong>Add : Packaging &amp; Forwarding</strong>
                   </td>
                   <td style="padding: 2px 0; text-align: right;">
-                    ₹{{ number_format($cgst, 2) }}
+                    ₹{{ number_format($pf_amount, 2) }}
                   </td>
                 </tr>
+                @endif
+
+                <!-- Freight - only if > 0 -->
+                @if(!empty($freight_amount) && $freight_amount > 0)
                 <tr>
                   <td style="padding: 2px 8px; text-align: right;">
-                    <strong>Add : SGST</strong>
+                    <strong>Add : Freight</strong>
                   </td>
                   <td style="padding: 2px 0; text-align: right;">
-                    ₹{{ number_format($sgst, 2) }}
+                    ₹{{ number_format($freight_amount, 2) }}
                   </td>
                 </tr>
+                @endif
+
+                <!-- Tax rows: IF IGST show only IGST, else show CGST + SGST -->
+                @if($show_igst)
+                  <tr>
+                    <td style="padding: 2px 8px; text-align: right;">
+                      <strong>Add : IGST</strong>
+                    </td>
+                    <td style="padding: 2px 0; text-align: right;">
+                      ₹{{ number_format($igst, 2) }}
+                    </td>
+                  </tr>
+                @else
+                  <tr>
+                    <td style="padding: 2px 8px; text-align: right;">
+                      <strong>Add : CGST</strong>
+                    </td>
+                    <td style="padding: 2px 0; text-align: right;">
+                      ₹{{ number_format($cgst, 2) }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 2px 8px; text-align: right;">
+                      <strong>Add : SGST</strong>
+                    </td>
+                    <td style="padding: 2px 0; text-align: right;">
+                      ₹{{ number_format($sgst, 2) }}
+                    </td>
+                  </tr>
+                @endif
+
+                <!-- Round off -->
                 <tr>
                   <td style="padding: 2px 8px; text-align: right;">
                     <strong>Less : Rounded Off</strong>
@@ -286,10 +338,12 @@
                     ₹{{ number_format($roundoff, 2) }}
                   </td>
                 </tr>
+
+                <!-- Grand Total -->
                 <tr>
                   <td style="padding: 2px 8px; text-align: right;">
                     <h3 style="margin-top: 4px; text-align: right;">
-                      GRAND TOTAL: 
+                      GRAND TOTAL:
                     </h3>
                   </td>
                   <td style="padding: 2px 0; text-align: right;">
@@ -302,20 +356,19 @@
             </td>
           </tr>
         </table>
+
         <div style="text-align: right;">
           <i>Rupees {{ $grand_total_words }} Only</i>
         </div>
       </div>
+
 
       <!-- Tax Summary Table -->
       <h4 style="margin-top: 5px">Tax Summary:</h4>
 
       <table style="width: 100%; border-collapse: collapse; margin-top: 3px; border: none;">
         <tr>
-          <!-- left empty space to keep it compact/right-ish -->
-          <td style="width: 60%; border: none;"></td>
-
-          <!-- right side tax table -->
+          <!-- left side tax table -->
           <td style="width: 40%; border: none;">
             <table style="width: 100%; border-collapse: collapse;">
               <thead>
@@ -325,6 +378,7 @@
                   <th>Taxable Amt.</th>
                   <th>CGST</th>
                   <th>SGST</th>
+                  <th>IGST</th>
                   <th>Total Tax</th>
                 </tr>
               </thead>
@@ -334,14 +388,16 @@
                   <td>{{ $tax['hsn'] }}</td>
                   <td>{{ $tax['rate'] }}%</td>
                   <td>{{ number_format($tax['taxable'], 2) }}</td>
-                  <td>{{ number_format($tax['cgst'], 2) }}</td>
-                  <td>{{ number_format($tax['sgst'], 2) }}</td>
+                  <td>{{ $tax['cgst'] > 0 ? number_format($tax['cgst'], 2) : '-' }}</td>
+                  <td>{{ $tax['sgst'] > 0 ? number_format($tax['sgst'], 2) : '-' }}</td>
+                  <td>{{ $tax['igst'] > 0 ? number_format($tax['igst'], 2) : '-' }}</td>
                   <td>{{ number_format($tax['total_tax'], 2) }}</td>
                 </tr>
                 @endforeach
               </tbody>
             </table>
           </td>
+          <td style="width: 60%; border: none;"></td>
         </tr>
       </table>
 

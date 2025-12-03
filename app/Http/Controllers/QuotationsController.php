@@ -1263,13 +1263,12 @@ class QuotationsController extends Controller
     // generate pdf
     public function generateQuotationPDF($id)
     {
-       // Retrieve the quotation record by its ID; abort with 404 if not found.
-        $quotation = QuotationsModel::findOrFail($id);
+        // Retrieve the quotation with its relations
+        $quotation = QuotationsModel::with(['products', 'addons'])->findOrFail($id);
 
-        // Retrieve all the associated products using Eloquent.
-        $products = QuotationProductsModel::where('quotation_id', $id)->get();
+        // ---------- 1. ITEMS: from t_quotation_products ----------
+        $products = $quotation->products; // Eloquent collection
 
-        // Transform each product into the format required by the view.
         $items = [];
         foreach ($products as $product) {
             $items[] = [
@@ -1278,20 +1277,18 @@ class QuotationsController extends Controller
                 'hsn'      => $product->hsn ?? '',
                 'qty'      => $product->quantity ?? 0,
                 'unit'     => $product->unit ?? '',
-                'rate'     => isset($product->igst) ? ($product->igst / 2) : 0,
+                'rate'     => $product->price ?? 0,
                 'delivery' => $product->delivery ?? '',
                 'disc'     => $product->discount ?? 0,
                 'cgst'     => $product->cgst ?? 0,
                 'sgst'     => $product->sgst ?? 0,
+                'igst'     => $product->igst ?? 0,   // <--- add igst here
                 'amount'   => $product->amount ?? 0,
             ];
         }
 
-        // Retrieve and transform tax summary data.
-        $taxSummaryRecords = QuotationTermsModel::where('quotation_id', $id)->get();
-
+        // ---------- 2. TAX SUMMARY: grouped by HSN from products ----------
         $tax_summary = [];
-
         $grouped = $products->groupBy('hsn');
 
         foreach ($grouped as $hsn => $groupItems) {
@@ -1301,8 +1298,14 @@ class QuotationsController extends Controller
 
             $totalTax = $cgstSum + $sgstSum + $igstSum;
 
+            // taxable = line amount - all taxes
             $taxableSum = $groupItems->sum(function ($item) {
-                return ($item->amount ?? 0) - ($item->cgst ?? 0) - ($item->sgst ?? 0) - ($item->igst ?? 0);
+                $amount = $item->amount ?? 0;
+                $cgst   = $item->cgst ?? 0;
+                $sgst   = $item->sgst ?? 0;
+                $igst   = $item->igst ?? 0;
+
+                return $amount - $cgst - $sgst - $igst;
             });
 
             $avgTaxRate = $groupItems->avg('tax') ?? 0;
@@ -1313,29 +1316,58 @@ class QuotationsController extends Controller
                 'taxable'    => round($taxableSum, 2),
                 'cgst'       => round($cgstSum, 2),
                 'sgst'       => round($sgstSum, 2),
+                'igst'       => round($igstSum, 2),     // <--- keep igst separately
                 'total_tax'  => round($totalTax, 2),
             ];
         }
 
-        // Build the data array for the view.
+        // ---------- 3. ADD-ONS: PF & FREIGHT from t_quotation_addons ----------
+        $addons = $quotation->addons; // collection of QuotationAddonsModel
+
+        // Assuming names are "Packaging & Forwarding" and "Freight" (like your Postman payload)
+        $pfAmount = $addons->where('name', 'Packaging & Forwarding')->sum('amount');
+        $freightAmount = $addons->where('name', 'Freight')->sum('amount');
+
+        // ---------- 4. Decide which tax style to show (IGST vs CGST+SGST) ----------
+        $igstTotal = $quotation->igst ?? 0;
+        $cgstTotal = $quotation->cgst ?? 0;
+        $sgstTotal = $quotation->sgst ?? 0;
+
+        $showIgst      = $igstTotal > 0;            // if IGST present, don't show CGST/SGST block
+        $showCgstSgst  = !$showIgst;                // otherwise use CGST+SGST
+
+        // ---------- 5. Build data array for the view ----------
         $data = [
             'quotation_no'      => $quotation->quotation_no ?? '',
             'quotation_date'    => $quotation->quotation_date ?? '',
             'enquiry_no'        => $quotation->enquiry_no ?? '',
             'enquiry_date'      => $quotation->enquiry_date ?? '',
+
             'gross_total'       => $quotation->gross ?? 0,
-            'cgst'              => $quotation->cgst ?? 0,
-            'sgst'              => $quotation->sgst ?? 0,
-            'roundoff'          => $quotation->roundoff ?? 0,
+            'cgst'              => $cgstTotal,
+            'sgst'              => $sgstTotal,
+            'igst'              => $igstTotal,
+            'roundoff'          => $quotation->round_off ?? 0, // <--- matches DB column
+
             'grand_total'       => $quotation->total ?? 0,
-            'grand_total_words' => $this->convertNumberToWords($quotation->total),
+            'grand_total_words' => $this->convertNumberToWords($quotation->total ?? 0),
+
+            // Items and tax summary
             'items'             => $items,
             'tax_summary'       => $tax_summary,
+
+            // Add-ons
+            'pf_amount'         => $pfAmount,
+            'freight_amount'    => $freightAmount,
+
+            // Tax style flags
+            'show_igst'         => $showIgst,
+            'show_cgst_sgst'    => $showCgstSgst,
         ];
 
-        // Create a new mPDF instance, render the view with the data, and output the PDF.
+        // ---------- 6. Generate PDF ----------
         $pdf = new \Mpdf\Mpdf([
-            'format'       => 'A4',
+            'format'        => 'A4',
             'margin_top'    => 5,
             'margin_bottom' => 5,
             'margin_left'   => 5,
@@ -1344,8 +1376,96 @@ class QuotationsController extends Controller
 
         $html = view('quotation.pdf', $data)->render();
         $pdf->WriteHTML($html);
-        return $pdf->Output('quotation.pdf', 'I'); // "I" for inline display
+
+        return $pdf->Output('quotation.pdf', 'I');
     }
+
+    // public function generateQuotationPDF($id)
+    // {
+    //    // Retrieve the quotation record by its ID; abort with 404 if not found.
+    //     $quotation = QuotationsModel::findOrFail($id);
+
+    //     // Retrieve all the associated products using Eloquent.
+    //     $products = QuotationProductsModel::where('quotation_id', $id)->get();
+
+    //     // Transform each product into the format required by the view.
+    //     $items = [];
+    //     foreach ($products as $product) {
+    //         $items[] = [
+    //             'desc'     => $product->description ?? '',
+    //             'make'     => $product->product_name ?? '',
+    //             'hsn'      => $product->hsn ?? '',
+    //             'qty'      => $product->quantity ?? 0,
+    //             'unit'     => $product->unit ?? '',
+    //             'rate'     => $product->price ?? 0,
+    //             // 'rate'     => isset($product->igst) ? ($product->igst / 2) : 0,
+    //             'delivery' => $product->delivery ?? '',
+    //             'disc'     => $product->discount ?? 0,
+    //             'cgst'     => $product->cgst ?? 0,
+    //             'sgst'     => $product->sgst ?? 0,
+    //             'amount'   => $product->amount ?? 0,
+    //         ];
+    //     }
+
+    //     // Retrieve and transform tax summary data.
+    //     $taxSummaryRecords = QuotationTermsModel::where('quotation_id', $id)->get();
+
+    //     $tax_summary = [];
+
+    //     $grouped = $products->groupBy('hsn');
+
+    //     foreach ($grouped as $hsn => $groupItems) {
+    //         $cgstSum = $groupItems->sum('cgst');
+    //         $sgstSum = $groupItems->sum('sgst');
+    //         $igstSum = $groupItems->sum('igst');
+
+    //         $totalTax = $cgstSum + $sgstSum + $igstSum;
+
+    //         $taxableSum = $groupItems->sum(function ($item) {
+    //             return ($item->amount ?? 0) - ($item->cgst ?? 0) - ($item->sgst ?? 0) - ($item->igst ?? 0);
+    //         });
+
+    //         $avgTaxRate = $groupItems->avg('tax') ?? 0;
+
+    //         $tax_summary[] = [
+    //             'hsn'        => $hsn,
+    //             'rate'       => round($avgTaxRate, 2),
+    //             'taxable'    => round($taxableSum, 2),
+    //             'cgst'       => round($cgstSum, 2),
+    //             'sgst'       => round($sgstSum, 2),
+    //             'total_tax'  => round($totalTax, 2),
+    //         ];
+    //     }
+
+    //     // Build the data array for the view.
+    //     $data = [
+    //         'quotation_no'      => $quotation->quotation_no ?? '',
+    //         'quotation_date'    => $quotation->quotation_date ?? '',
+    //         'enquiry_no'        => $quotation->enquiry_no ?? '',
+    //         'enquiry_date'      => $quotation->enquiry_date ?? '',
+    //         'gross_total'       => $quotation->gross ?? 0,
+    //         'cgst'              => $quotation->cgst ?? 0,
+    //         'sgst'              => $quotation->sgst ?? 0,
+    //         'roundoff'          => $quotation->roundoff ?? 0,
+    //         'grand_total'       => $quotation->total ?? 0,
+    //         'grand_total_words' => $this->convertNumberToWords($quotation->total),
+    //         'items'             => $items,
+    //         'tax_summary'       => $tax_summary,
+    //     ];
+
+    //     // Create a new mPDF instance, render the view with the data, and output the PDF.
+    //     $pdf = new \Mpdf\Mpdf([
+    //         'format'       => 'A4',
+    //         'margin_top'    => 5,
+    //         'margin_bottom' => 5,
+    //         'margin_left'   => 5,
+    //         'margin_right'  => 5,
+    //     ]);
+
+    //     $html = view('quotation.pdf', $data)->render();
+    //     $pdf->WriteHTML($html);
+    //     return $pdf->Output('quotation.pdf', 'I'); // "I" for inline display
+    // }
 
     public function fetchQuotationsAllProducts(Request $request)
     {
