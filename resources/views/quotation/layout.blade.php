@@ -8,14 +8,14 @@
       header: pageHeader;
       footer: pageFooter;
 
-      /* page margins (space for header/footer) */
-      margin-top: 45mm;      
-      header-margin: 1mm;    
+      /* space for header/footer */
+      margin-top: 45mm;
+      header-margin: 1mm;
       margin-bottom: 70mm;
       margin-left: 10mm;
       margin-right: 10mm;
 
-      /* background image for every page (mPDF) */
+      /* background image for whole page */
       background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
       background-image-resize: 6;
     }
@@ -23,29 +23,28 @@
     body {
       font-family: sans-serif;
       font-size: 12px;
-      margin: 0;      /* ✅ no extra space */
-      padding: 0;     /* ✅ no extra space */
+      margin: 0;
+      padding: 0;
     }
 
-    /* FULL-PAGE BORDER OVERLAY */
+    /* 🔶 ONE BIG BORDER AROUND THE PAGE (inside edges) */
     .page-frame {
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
+        top: 5mm;      /* distance from physical page top */
+        left: 5mm;     /* distance from physical page left */
+        right: 5mm;    /* distance from physical page right */
+        bottom: 5mm;   /* distance from physical page bottom */
 
-        /* ❌ removed margin:5mm; so it aligns with the @page area */
         border: 1px solid #8b440c;
 
-        z-index: 99999;        /* always on top */
-        pointer-events: none;  /* doesn't block text */
+        z-index: 99999;        /* on top of bg + content + header/footer */
+        pointer-events: none;  /* doesn’t block anything */
     }
 
     .content {
       position: relative;
       z-index: 5;
-      margin-top: 1mm;  /* small gap under header */
+      margin-top: 3mm;  /* small gap under dashed line */
     }
 
     table { width: 100%; border-collapse: collapse; }
@@ -68,21 +67,21 @@
 
 <body>
 
-  <!-- ✅ Full Page Border -->
+  <!-- 🔶 FULL-PAGE BORDER OVER BACKGROUND & CONTENT -->
   <div class="page-frame"></div>
 
   <!-- ============================================================
       ✔ FIXED HEADER (htmlpageheader)
   ============================================================ -->
   <htmlpageheader name="pageHeader">
-      <div class="header-container" style="margin-bottom: 20px">
+      <div class="header-container" style="margin-bottom: 10px">
         <table style="width: 100%; border-collapse: collapse">
           <tr>
             <!-- Company Info -->
             <td style="text-align: center; vertical-align: top; border: none">
               <div style="font-weight: bold">QUOTATION</div>
               <div>
-                <strong style="color:#8b440c; font-size:18px">EXPO CHAIN & BEARING STORES</strong><br />
+                <strong style="color:#8b440c; font-size:18px">EXPO CHAIN &amp; BEARING STORES</strong><br />
                 71/D N.S. ROAD, GROUND FLOOR, ROOM NO A-162<br />
                 KOLKATA - 700001, WEST BENGAL, India<br />
                 GST : 19AAAFE7147G1ZF<br />
@@ -183,7 +182,7 @@
   </htmlpagefooter>
 
   <!-- ============================================================
-      ✔ MAIN CONTENT (COMES BETWEEN HEADER & FOOTER)
+      ✔ MAIN CONTENT (between header & footer)
   ============================================================ -->
   <div class="content">
       @yield('content')
