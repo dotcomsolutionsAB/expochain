@@ -1260,7 +1260,6 @@ class QuotationsController extends Controller
         ], 200);
     }
 
-    // generate pdf
     public function generateQuotationPDF($id)
     {
         // Retrieve the quotation with its relations
@@ -1376,27 +1375,14 @@ class QuotationsController extends Controller
             'show_cgst_sgst'    => $showCgstSgst,
         ];
 
-        // ---------- 6. PDF ----------
+        // ---------- 6. Generate PDF ----------
         $pdf = new \Mpdf\Mpdf([
             'format'        => 'A4',
-            'margin_top'    => 40,  // space for header
-            'margin_bottom' => 60,  // space for footer
-            'margin_left'   => 10,
-            'margin_right'  => 10,
+            'margin_top'    => 5,
+            'margin_bottom' => 5,
+            'margin_left'   => 5,
+            'margin_right'  => 5,
         ]);
-
-        // 1) HEADER & FOOTER from partials (repeated on every page)
-        $pdf->SetHTMLHeader(view('quotation.pdf_header', $data)->render());
-        $pdf->SetHTMLFooter(view('quotation.pdf_footer', $data)->render());
-
-        // 2) FULL-PAGE BACKGROUND IMAGE on EVERY PAGE
-        $bgPath = public_path('storage/uploads/pdf_template/pdf_bg.jpg');
-
-        // Option A: as "body background"
-        $pdf->SetDefaultBodyCSS('background', "url('".$bgPath."')");
-        $pdf->SetDefaultBodyCSS('background-image-resize', 6); // stretch to full page
-
-        // (Alternative Option: use SetWatermarkImage if you prefer that style)
 
         $html = view('quotation.pdf', $data)->render();
         $pdf->WriteHTML($html);
