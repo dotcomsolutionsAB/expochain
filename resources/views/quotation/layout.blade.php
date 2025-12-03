@@ -5,14 +5,14 @@
   <title>Quotation</title>
   <style>
       @page {
-        margin-top: 60mm;
-        margin-bottom: 70mm;
+        margin-top: 80mm;
+        margin-bottom: 80mm;
         margin-left: 10mm;
         margin-right: 10mm;
 
         header: pageHeader;
-        footer: pageFooter;
-
+        footer: pageFooter;        
+        border: 4px solid #8b440c;
         /* 🔥 mPDF page background image */
         background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
         background-image-resize: 6; /* scale to full page */
@@ -23,7 +23,6 @@
         font-size: 12px;
         margin: 10px;
         padding: 0;
-        border: 4px solid #8b440c;
       }
 
       /* Only BORDER now, NO background here */
