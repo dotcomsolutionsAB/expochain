@@ -1628,7 +1628,7 @@ class QuotationsController extends Controller
         //     'margin_left'   => 5,
         //     'margin_right'  => 5,
         // ]);
-        $mpdf = new \Mpdf\Mpdf([
+        $pdf = new \Mpdf\Mpdf([
             'margin_top'    => 45,
             'margin_bottom' => 70,
             'margin_left'   => 10,
