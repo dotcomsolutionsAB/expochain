@@ -14,10 +14,10 @@
       margin-bottom: 70mm;
       margin-left: 10mm;
       margin-right: 10mm;
-
+      border: 1px solid #8b440c; /* 🔥 the frame */
       /* background image for whole page */
-      background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
-      background-image-resize: 4;
+      /* background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
+      background-image-resize: 6; */
     }
 
     /* 🔶 ONE BIG BORDER AROUND THE WHOLE PAGE AREA */
@@ -27,8 +27,6 @@
 
       margin: 0;              /* no extra page margin */
       padding: 0;
-
-      border: 1px solid #8b440c; /* 🔥 the frame */
       /* move it slightly inside the page margins */
       box-sizing: border-box;
     }
