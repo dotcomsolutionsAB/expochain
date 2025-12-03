@@ -102,18 +102,9 @@
   </head>
   <body>
 
-    {{-- BACKGROUND & BORDER (fixed => shown on every page) --}}
-    <img src="{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}" class="bg-img" alt="">
-    <div class="page-border"></div>
-
-    {{-- REPEATING HEADER & FOOTER --}}
-    <htmlpageheader name="qHeader">
-      @include('quotation.pdf_header')
-    </htmlpageheader>
-
-    <htmlpagefooter name="qFooter">
-      @include('quotation.pdf_footer')
-    </htmlpagefooter>
+    {{-- HEADER is now in pdf_header.blade.php via SetHTMLHeader() --}}
+    {{-- FOOTER is now in pdf_footer.blade.php via SetHTMLFooter() --}}
+    {{-- BACKGROUND IMAGE & BORDER are from pdf_bg.jpg set in controller --}}
 
     {{-- MAIN PAGE CONTENT --}}
     <div class="content">
