@@ -4,57 +4,55 @@
     <meta charset="utf-8" />
     <title>Quotation</title>
 
-    <style>
-        @page {
-            margin-top: 60mm;    /* space for header */
-            margin-bottom: 70mm; /* space for footer */
-            margin-left: 10mm;
-            margin-right: 10mm;
-            header: pageHeader;
-            footer: pageFooter;
-        }
+  <style>
+    @page {
+        margin-top: 60mm;
+        margin-bottom: 70mm;
+        margin-left: 10mm;
+        margin-right: 10mm;
 
-        body {
-            font-family: sans-serif;
-            font-size: 12px;
-            margin: 0;
-            padding: 0;
-        }
+        header: pageHeader;
+        footer: pageFooter;
 
-        /* FULL-PAGE BACKGROUND + BORDER */
-        .page-border {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border: 1px solid #8b440c;
-            background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
-            background-size: cover;
-            background-position: center;
-            z-index: -1;
-        }
+        /* 🔥 mPDF page background image */
+        background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
+        background-image-resize: 6; /* scale to full page */
+    }
 
-        /* MAIN CONTENT AREA */
-        .content {
-            margin-top: 5px;
-        }
+    body {
+        font-family: sans-serif;
+        font-size: 12px;
+        margin: 0;
+        padding: 0;
+    }
 
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #8b440c; padding: 5px; font-size: 11px; text-align: center; }
+    /* Only BORDER now, NO background here */
+    .page-border {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border: 1px solid #8b440c;
+        z-index: -1;
+    }
 
-        .no-border td { border: none !important; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #8b440c; padding: 5px; font-size: 11px; text-align: center; }
 
-        .bank-details {
-            text-align: center;
-            font-size: 11px;
-            margin-top: 15px;
-            margin-bottom: 15px;
-            border-top: 1px dashed #000;
-            border-bottom: 1px dashed #000;
-            padding: 5px 0;
-        }
-    </style>
+    .no-border td { border: none !important; }
+
+    .bank-details {
+        text-align: center;
+        font-size: 11px;
+        margin-top: 15px;
+        margin-bottom: 15px;
+        border-top: 1px dashed #000;
+        border-bottom: 1px dashed #000;
+        padding: 5px 0;
+    }
+</style>
+
 </head>
 
 <body>
