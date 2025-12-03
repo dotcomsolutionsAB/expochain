@@ -3,12 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <title>Quotation</title>
+
     <style>
       @page {
         header: qHeader;
         footer: qFooter;
-        margin-top: 50mm;   /* space for header */
-        margin-bottom: 60mm;/* space for footer */
+        margin-top: 50mm;    /* space for header */
+        margin-bottom: 60mm; /* space for footer */
         margin-left: 10mm;
         margin-right: 10mm;
       }
@@ -16,27 +17,35 @@
       body {
         font-family: sans-serif;
         font-size: 12px;
-        padding: 0;
         margin: 0;
+        padding: 0;
       }
 
+      /* === FULL-PAGE BACKGROUND IMAGE (repeats every page) === */
+      .bg-img {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 210mm;      /* A4 width */
+        height: 297mm;     /* A4 height */
+        z-index: -20;
+      }
+
+      /* === FULL-PAGE BORDER (repeats every page) === */
       .page-border {
+        position: fixed;
+        top: 5mm;
+        left: 5mm;
+        right: 5mm;
+        bottom: 5mm;
         border: 1px solid #8b440c;
-        margin: 10px;
-        padding: 5px;
-        object-fit: contain;
-        /* PDF background image */
-        background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
-        background-size: cover;
-        background-position: center center;
-        background-repeat: no-repeat;
-        box-sizing: border-box;
-        min-height: 100%;
+        z-index: -10;
       }
 
-      /* Center alignment */
-      .center { text-align: center; }
-      .left { text-align: end; }
+      /* MAIN FLOWING CONTENT (inside margins, inside border) */
+      .content {
+        /* keep inside @page margins, and give a bit of padding */
+      }
 
       /* Dashed line separator */
       .dash-line {
@@ -44,7 +53,6 @@
         margin: 10px 0;
       }
 
-      /* Header styling (used inside header partial) */
       .header-container {
         position: relative;
         margin-bottom: 20px;
@@ -59,18 +67,6 @@
         width: 140px;
         height: auto;
       }
-
-      /* Two-column layout for info */
-      .info-grid {
-        display: flex;
-        justify-content: space-between;
-        page-break-inside: avoid;
-      }
-
-      .info-grid .left,
-      .info-grid .right { width: 48%; }
-
-      .info-grid .right { text-align: right; }
 
       table {
         width: 100%;
@@ -87,20 +83,6 @@
       }
 
       .no-border td { border: none; }
-
-      .title {
-        font-size: 18px;
-        text-align: center;
-        font-weight: bold;
-        margin-bottom: 15px;
-      }
-
-      .right-align {
-        text-align: right;
-        align-items: center;
-        display: flex;
-      }
-      .left-align { text-align: left; }
 
       tr { page-break-inside: avoid; }
 
@@ -120,17 +102,21 @@
   </head>
   <body>
 
-    {{-- ===== Named header/footer for mPDF (repeats every page) ===== --}}
+    {{-- BACKGROUND & BORDER (fixed => shown on every page) --}}
+    <img src="{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}" class="bg-img" alt="">
+    <div class="page-border"></div>
+
+    {{-- REPEATING HEADER & FOOTER --}}
     <htmlpageheader name="qHeader">
-      @include('quotation.pdf_header')
+      @include('quotation.partials.header')
     </htmlpageheader>
 
     <htmlpagefooter name="qFooter">
-      @include('quotation.pdf_footer')
+      @include('quotation.partials.footer')
     </htmlpagefooter>
 
-    {{-- ========= PAGE CONTENT (inside border + background) ========= --}}
-    <div class="page-border">
+    {{-- MAIN PAGE CONTENT --}}
+    <div class="content">
 
       <!-- Customer and Quotation Info -->
       <table class="no-border">
@@ -187,10 +173,8 @@
             <th>DISC%</th>
 
             @if($show_igst)
-              {{-- IGST case: only one tax column --}}
               <th>IGST</th>
             @else
-              {{-- Local case: CGST + SGST --}}
               <th>CGST</th>
               <th>SGST</th>
             @endif
@@ -376,6 +360,6 @@
         CLIVE ROW, A/C NO : 10152320001963, IFSC : HDFC0001015
       </div>
 
-    </div> {{-- /.page-border --}}
+    </div> {{-- /content --}}
   </body>
 </html>
