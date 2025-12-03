@@ -26,11 +26,22 @@
       padding: 5;
     }
 
+    .page-frame {
+      position: fixed;
+      top: 5mm;
+      left: 5mm;
+      right: 5mm;
+      bottom: 5mm;
+      border: 1px solid #8b440c;
+      z-index: 9999;   /* 🔥 always on top of all content */
+      pointer-events: none; /* so it does not block text selection */
+    }
+
+
     .content {
       position: relative;
       z-index: 5;
       margin-top: 1mm;  /* small, nice gap under header */
-      border: 1px dashed #000;
     }
 
     table { width: 100%; border-collapse: collapse; }
@@ -52,7 +63,9 @@
 
 <body style="padding:10px;">
 
-
+  <!-- Full Page Border -->
+  <div class="page-frame"></div>
+  
   <!-- ============================================================
       ✔ FIXED HEADER (htmlpageheader)
   ============================================================ -->
