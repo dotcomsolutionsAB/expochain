@@ -3,12 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <title>Quotation</title>
-
     <style>
       @page {
-        header: qHeader;
-        footer: qFooter;
-        margin-top: 50mm;    /* space for header */
+        margin-top: 40mm;    /* space for header */
         margin-bottom: 60mm; /* space for footer */
         margin-left: 10mm;
         margin-right: 10mm;
@@ -19,53 +16,6 @@
         font-size: 12px;
         margin: 0;
         padding: 0;
-      }
-
-      /* === FULL-PAGE BACKGROUND IMAGE (repeats every page) === */
-      .bg-img {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 210mm;      /* A4 width */
-        height: 297mm;     /* A4 height */
-        z-index: -20;
-      }
-
-      /* === FULL-PAGE BORDER (repeats every page) === */
-      .page-border {
-        position: fixed;
-        top: 5mm;
-        left: 5mm;
-        right: 5mm;
-        bottom: 5mm;
-        border: 1px solid #8b440c;
-        z-index: -10;
-      }
-
-      /* MAIN FLOWING CONTENT (inside margins, inside border) */
-      .content {
-        /* keep inside @page margins, and give a bit of padding */
-      }
-
-      /* Dashed line separator */
-      .dash-line {
-        border-top: 1px dashed #000;
-        margin: 10px 0;
-      }
-
-      .header-container {
-        position: relative;
-        margin-bottom: 20px;
-      }
-
-      .header { text-align: center; }
-
-      .header-container img {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        width: 140px;
-        height: auto;
       }
 
       table {
@@ -99,6 +49,7 @@
 
       th, td { border: 1px solid #8b440c; }
     </style>
+
   </head>
   <body>
 
@@ -351,6 +302,6 @@
         CLIVE ROW, A/C NO : 10152320001963, IFSC : HDFC0001015
       </div>
 
-    </div> {{-- /content --}}
+    </div> 
   </body>
 </html>
