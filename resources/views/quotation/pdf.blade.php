@@ -13,7 +13,7 @@
 
       .page-border {
         border: 1px solid #8b440c;
-        margin: 5px;
+        margin: 10px;
         padding: 5px;
         object-fit: contain;
         /* PDF background image */
@@ -307,31 +307,35 @@
       </div>
 
       <!-- Tax Summary Table -->
+      <!-- Tax Summary Table (compact, right side) -->
       <h4 style="margin-top: 5px">Tax Summary:</h4>
-      <table>
-        <thead>
-          <tr>
-            <th>HSN/SAC</th>
-            <th>Tax Rate</th>
-            <th>Taxable Amt.</th>
-            <th>CGST</th>
-            <th>SGST</th>
-            <th>Total Tax</th>
-          </tr>
-        </thead>
-        <tbody>
-          @foreach($tax_summary as $tax)
-          <tr>
-            <td>{{ $tax['hsn'] }}</td>
-            <td>{{ $tax['rate'] }}%</td>
-            <td>{{ number_format($tax['taxable'], 2) }}</td>
-            <td>{{ number_format($tax['cgst'], 2) }}</td>
-            <td>{{ number_format($tax['sgst'], 2) }}</td>
-            <td>{{ number_format($tax['total_tax'], 2) }}</td>
-          </tr>
-          @endforeach
-        </tbody>
-      </table>
+      <div style="text-align: right;">
+        <table style="border-collapse: collapse; width: auto; margin-left: auto; margin-right: 0;">
+          <thead>
+            <tr>
+              <th>HSN/SAC</th>
+              <th>Tax Rate</th>
+              <th>Taxable Amt.</th>
+              <th>CGST</th>
+              <th>SGST</th>
+              <th>Total Tax</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach($tax_summary as $tax)
+            <tr>
+              <td>{{ $tax['hsn'] }}</td>
+              <td>{{ $tax['rate'] }}%</td>
+              <td>{{ number_format($tax['taxable'], 2) }}</td>
+              <td>{{ number_format($tax['cgst'], 2) }}</td>
+              <td>{{ number_format($tax['sgst'], 2) }}</td>
+              <td>{{ number_format($tax['total_tax'], 2) }}</td>
+            </tr>
+            @endforeach
+          </tbody>
+        </table>
+      </div>
+
 
       <!-- Bank Details in a single line -->
       <div class="bank-details">
