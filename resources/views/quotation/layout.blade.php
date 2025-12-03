@@ -24,7 +24,8 @@
     body {
       font-family: sans-serif;
       font-size: 12px;
-
+      
+      border: 2px solid #8b440c; /* 🔥 the frame */
       margin: 0;              /* no extra page margin */
       padding: 0;
       /* move it slightly inside the page margins */
