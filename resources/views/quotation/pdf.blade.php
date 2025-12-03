@@ -270,9 +270,8 @@
           <div style="text-align: right;">
             <i>Rupees {{ $grand_total_words }} Only</i>
           </div>
-        </div> <!-- inline-block -->
-      </div> <!-- summary -->
-
+        </div>
+      </div>
 
       <!-- Tax Summary Table -->
       <h4 style="margin-top: 5px">Tax Summary:</h4>
