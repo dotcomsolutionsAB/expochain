@@ -108,11 +108,11 @@
 
     {{-- REPEATING HEADER & FOOTER --}}
     <htmlpageheader name="qHeader">
-      @include('quotation.partials.header')
+      @include('quotation.pdf_header')
     </htmlpageheader>
 
     <htmlpagefooter name="qFooter">
-      @include('quotation.partials.footer')
+      @include('quotation.pdf_footer')
     </htmlpagefooter>
 
     {{-- MAIN PAGE CONTENT --}}
