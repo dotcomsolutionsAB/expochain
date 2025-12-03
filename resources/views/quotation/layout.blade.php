@@ -8,13 +8,14 @@
       header: pageHeader;
       footer: pageFooter;
 
-      /* reduce blank space */
+      /* page margins (space for header/footer) */
       margin-top: 45mm;      
       header-margin: 1mm;    
       margin-bottom: 70mm;
       margin-left: 10mm;
       margin-right: 10mm;
 
+      /* background image for every page (mPDF) */
       background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
       background-image-resize: 6;
     }
@@ -22,10 +23,11 @@
     body {
       font-family: sans-serif;
       font-size: 12px;
-      margin: 10;        /* 🔴 remove extra top space */
-      padding: 5;
+      margin: 0;      /* ✅ no extra space */
+      padding: 0;     /* ✅ no extra space */
     }
 
+    /* FULL-PAGE BORDER OVERLAY */
     .page-frame {
         position: fixed;
         top: 0;
@@ -33,19 +35,17 @@
         right: 0;
         bottom: 0;
 
-        margin: 5mm;                /* perfect inner spacing */
-        border: 1px solid #8b440c;  /* your brown border */
+        /* ❌ removed margin:5mm; so it aligns with the @page area */
+        border: 1px solid #8b440c;
 
-        z-index: 99999;             /* 🔥 ALWAYS on top */
-        pointer-events: none;       /* allows clicking text */
+        z-index: 99999;        /* always on top */
+        pointer-events: none;  /* doesn't block text */
     }
-
-
 
     .content {
       position: relative;
       z-index: 5;
-      margin-top: 1mm;  /* small, nice gap under header */
+      margin-top: 1mm;  /* small gap under header */
     }
 
     table { width: 100%; border-collapse: collapse; }
@@ -53,6 +53,7 @@
 
     .no-border td { border: none !important; }
     .dash-line{ border-top: 1px dashed #000; }
+
     .bank-details {
       text-align: center;
       font-size: 11px;
@@ -65,9 +66,9 @@
   </style>
 </head>
 
-<body style="padding:10px;">
+<body>
 
-  <!-- Full Page Border -->
+  <!-- ✅ Full Page Border -->
   <div class="page-frame"></div>
 
   <!-- ============================================================
@@ -77,7 +78,7 @@
       <div class="header-container" style="margin-bottom: 20px">
         <table style="width: 100%; border-collapse: collapse">
           <tr>
-            <!-- Company Info: Use all but 120px -->
+            <!-- Company Info -->
             <td style="text-align: center; vertical-align: top; border: none">
               <div style="font-weight: bold">QUOTATION</div>
               <div>
