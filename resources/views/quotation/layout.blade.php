@@ -24,21 +24,20 @@
       font-size: 12px;
       margin: 10;        /* 🔴 remove extra top space */
       padding: 5;
-      background-color: #cdbcafe8;
-      z-index: 99;
     }
 
     .content {
       position: relative;
       z-index: 5;
       margin-top: 1mm;  /* small, nice gap under header */
+      border: 1px dashed #000;
     }
 
     table { width: 100%; border-collapse: collapse; }
     th, td { border: 1px solid #8b440c; padding: 5px; font-size: 11px; text-align: center; }
 
     .no-border td { border: none !important; }
-
+    .dash-line{ border-top: 1px dashed #000; }
     .bank-details {
       text-align: center;
       font-size: 11px;
@@ -51,7 +50,7 @@
   </style>
 </head>
 
-<body style="padding:10px; border:2px solid #000; z-index: 9;">
+<body style="padding:10px;">
 
 
   <!-- ============================================================
