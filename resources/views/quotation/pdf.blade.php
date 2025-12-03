@@ -63,10 +63,6 @@
         margin-top: 5px;
       }
 
-      .center {
-        text-align: center;
-      }
-
       table {
         width: 100%;
         border-collapse: collapse;
@@ -113,8 +109,6 @@
     </style>
   </head>
   <body>
-    
-
     {{-- ================== HEADER (REPEATS EVERY PAGE) ================== --}}
     <htmlpageheader name="qHeader">
       <div class="header-container">
@@ -235,9 +229,11 @@
         </table>
       </div>
     </htmlpagefooter>
-      {{-- Global background & border layers (repeat on every page) --}}
+
+    {{-- ✅ Global background & border layers (after header/footer definitions) --}}
     <div class="page-bg"></div>
     <div class="page-border"></div>
+
     {{-- ================== MAIN CONTENT (AUTO FLOWS TO NEXT PAGES) ================== --}}
     <div class="content-area">
       {{-- Customer + Quotation info --}}
