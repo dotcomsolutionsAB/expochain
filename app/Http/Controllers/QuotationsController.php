@@ -1385,8 +1385,8 @@ class QuotationsController extends Controller
             'margin_right'  => 5,
         ]);
 
-        $headerHtml = view('quotation.header', $data)->render();
-        $footerHtml = view('quotation.footer', $data)->render();
+        $headerHtml = view('quotation.pdf_header', $data)->render();
+        $footerHtml = view('quotation.pdf_footer', $data)->render();
         $bodyHtml   = view('quotation.pdf', $data)->render(); // <- pdf.blade is the BODY
 
         $pdf->SetHTMLHeader($headerHtml);
