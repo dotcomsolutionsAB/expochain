@@ -15,25 +15,29 @@
       margin-left: 10mm;
       margin-right: 10mm;
 
-      /* 🔶 FULL PAGE BORDER DRAWN BY MPDF */
-      border: 1px solid #8b440c;
-
       /* background image for whole page */
       background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
       background-image-resize: 6;
     }
 
+    /* 🔶 ONE BIG BORDER AROUND THE WHOLE PAGE AREA */
     body {
       font-family: sans-serif;
       font-size: 12px;
-      margin: 0;
+
+      margin: 0;              /* no extra page margin */
       padding: 0;
+
+      border: 1px solid #8b440c; /* 🔥 the frame */
+      /* move it slightly inside the page margins */
+      box-sizing: border-box;
     }
 
     .content {
       position: relative;
       z-index: 5;
       margin-top: 3mm;  /* small gap under dashed line */
+      padding: 0 5mm 5mm 5mm;  /* inner padding so text doesn't touch border */
     }
 
     table { width: 100%; border-collapse: collapse; }
@@ -56,15 +60,14 @@
 
 <body>
 
-  <!-- ❌ NO .page-frame HERE ANYMORE -->
-
   <!-- ============================================================
       ✔ FIXED HEADER (htmlpageheader)
   ============================================================ -->
   <htmlpageheader name="pageHeader">
-      <div class="header-container" style="margin-bottom: 10px">
+      <div class="header-container" style="margin: 5mm 5mm 10px 5mm;">
         <table style="width: 100%; border-collapse: collapse">
           <tr>
+            <!-- Company Info -->
             <td style="text-align: center; vertical-align: top; border: none">
               <div style="font-weight: bold">QUOTATION</div>
               <div>
@@ -75,6 +78,7 @@
                 +9133-40064388 | 22431939 , amit@expochain.com, 7059502488
               </div>
             </td>
+            <!-- Logo on the Top Right -->
             <td
               style="
                 width: 1%;
@@ -94,7 +98,7 @@
       </div>
 
       <!-- Dashed separator -->
-      <div class="dash-line"></div>
+      <div class="dash-line" style="margin: 0 5mm;"></div>
   </htmlpageheader>
 
   <!-- ============================================================
@@ -102,12 +106,12 @@
   ============================================================ -->
   <htmlpagefooter name="pageFooter">
 
-      <div class="bank-details">
+      <div class="bank-details" style="margin: 10px 5mm 5px 5mm;">
         <strong>BANK NAME :</strong> HDFC BANK LTD, BRANCH : JARDINE HOUSE,
         CLIVE ROW, A/C NO : 10152320001963, IFSC : HDFC0001015
       </div>
 
-      <div class="terms" style="margin-top: 5px">
+      <div class="terms" style="margin: 5px 5mm 5mm 5mm;">
         <table class="no-border" style="width: 100%; border-collapse: collapse">
           <tr>
             <td style="width: 60%; vertical-align: top; padding-right: 10px; border-right: 1px dotted #000; text-align:left;">
