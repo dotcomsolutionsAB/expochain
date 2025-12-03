@@ -1384,10 +1384,10 @@ class QuotationsController extends Controller
             'margin_right'  => 0,
         ]);
 
-        $html = view('quotation.pdf', $data)->render();
+        $html = view('quotation.layout', $data)->render();
         $pdf->WriteHTML($html);
 
-        return $pdf->Output('quotation.pdf', 'I');
+        return $pdf->Output('quotation.layout', 'I');
     }
 
     // public function generateQuotationPDF($id)

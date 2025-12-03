@@ -3,82 +3,73 @@
   <head>
     <meta charset="utf-8" />
     <title>Quotation</title>
-
     <style>
-      @page {
-        /* space reserved for header/footer */
-        margin-top: 80mm;
-        margin-bottom: 80mm;
-        margin-left: 10mm;
-        margin-right: 10mm;
-      }
-
       body {
         font-family: sans-serif;
         font-size: 12px;
-        margin: 0;
         padding: 0;
+        margin: 0px;
       }
 
-      /* Full-page background (all pages) */
-      .page-bg {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 210mm;   /* A4 */
-        height: 297mm;
+      .page-border {
+        border: 1px solid #8b440c;
+        margin: 10px;
+        padding: 5px;
+        object-fit: contain;
+        /* PDF background image */
         background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
         background-size: cover;
         background-position: center center;
         background-repeat: no-repeat;
-        z-index: 0;
       }
 
-      /* Page border on all pages */
-      .page-border {
-        position: fixed;
-        top: 5mm;
-        left: 5mm;
-        right: 5mm;
-        bottom: 5mm;
-        border: 1px solid #8b440c;
-        z-index: 1;
+      /* Center alignment */
+      .center {
+        text-align: center;
+      }
+      .left {
+        text-align: end;
       }
 
-      /* Fixed header (repeats every page) */
-      #header {
-        position: fixed;
-        top: 10mm;
-        left: 10mm;
-        right: 10mm;
-        z-index: 5;
-      }
-
-      /* Fixed footer (repeats every page) */
-      #footer {
-        position: fixed;
-        bottom: 10mm;
-        left: 10mm;
-        right: 10mm;
-        z-index: 5;
-      }
-
-      /* Main content area between header & footer */
-      .content-area {
-        padding: 5px;
-        box-sizing: border-box;
-        position: relative;
-        z-index: 10; /* above bg, border, header/footer boxes */
-      }
-
-      .header-table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-
+      /* Dashed line separator */
       .dash-line {
         border-top: 1px dashed #000;
-        margin-top: 5px;
+        margin: 10px 0;
+      }
+
+      /* Header styling */
+      .header-container {
+        position: relative; /* Allow absolute positioning of image within this container */
+        margin-bottom: 20px;
+      }
+
+      .header {
+        text-align: center;
+      }
+
+      /* Image styling for top right corner */
+      .header-container img {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 140px;
+        height: auto;
+      }
+
+      /* Two-column layout for info */
+      .info-grid {
+        display: flex;
+        justify-content: space-between;
+        page-break-inside: avoid;
+      }
+
+      .info-grid .left,
+      .info-grid .right {
+        width: 48%;
+      }
+
+      .info-grid .right {
+        text-align: right;
       }
 
       table {
@@ -90,167 +81,92 @@
       th,
       td {
         border: 1px solid #8b440c;
+        /* border-bottom:0px solid; */
         padding: 5px;
         text-align: center;
         font-size: 11px;
       }
 
-      .no-border td,
-      .no-border th {
-        border: none !important;
+      .no-border td {
+        border: none;
       }
 
+      .title {
+        font-size: 18px;
+        text-align: center;
+        font-weight: bold;
+        margin-bottom: 15px;
+      }
+
+      .right-align {
+        text-align: right;
+        align-items: center;
+        display: flex;
+      }
       .left-align {
         text-align: left;
       }
-      .right-align {
-        text-align: right;
-      }
 
+      /* Avoid page-breaks within table rows */
       tr {
         page-break-inside: avoid;
       }
 
+      /* Bank details in one line */
       .bank-details {
         text-align: center;
         font-size: 11px;
-        margin-top: 5px;
-        margin-bottom: 5px;
-        border-top: 1px dashed #000;
-        padding-top: 3px;
-        padding-bottom: 3px;
+        margin-top: 15px;
+        margin-bottom: 15px;
+        border-top: 1px dashed #000;        
+        padding-top: 5px;
+        padding-bottom: 5px;
       }
-
-      .terms {
+      .terms{
         border-bottom: 1px dashed #000;
       }
+      th, td { border: 1px solid #8b440c; }
     </style>
   </head>
   <body>
-    {{-- Background + border (all pages) --}}
-    <div class="page-bg"></div>
-    <div class="page-border"></div>
-
-    {{-- HEADER (fixed, all pages) --}}
-    <div id="header">
-      <table class="header-table">
-        <tr>
-          <td style="text-align: center; vertical-align: top; border: none">
-            <div style="font-weight: bold">QUOTATION</div>
-            <div>
-              <strong style="color:#8b440c; font-size:18px">
-                EXPO CHAIN &amp; BEARING STORES
-              </strong><br />
-              71/D N.S. ROAD, GROUND FLOOR, ROOM NO A-162<br />
-              KOLKATA - 700001, WEST BENGAL, India<br />
-              GST : 19AAAFE7147G1ZF<br />
-              +9133-40064388 | 22431939 , amit@expochain.com, 7059502488
-            </div>
-          </td>
-
-          <td
-            style="
-              width: 1%;
-              text-align: right;
-              vertical-align: top;
-              border: none;
-            "
-          >
-            <img
-              src="{{ public_path('storage/uploads/pdf_template/logo.png') }}"
-              alt="Logo"
-              style="width: 100px; height: auto; display: block"
-            />
-          </td>
-        </tr>
-      </table>
-
-      <div class="dash-line"></div>
-    </div>
-
-    {{-- FOOTER (fixed, all pages) --}}
-    <div id="footer">
-      <div class="bank-details">
-        <strong>BANK NAME :</strong> HDFC BANK LTD, BRANCH : JARDINE HOUSE,
-        CLIVE ROW, A/C NO : 10152320001963, IFSC : HDFC0001015
-      </div>
-
-      <div class="terms">
-        <table class="no-border" style="width: 100%; border-collapse: collapse">
+    <div class="page-border">
+      <div class="header-container" style="margin-bottom: 20px">
+        <table style="width: 100%; border-collapse: collapse">
           <tr>
+            <!-- Company Info: Use all but 120px -->
+            <td style="text-align: center; vertical-align: top; border: none">
+              <div style="font-weight: bold">QUOTATION</div>
+              <div>
+                <strong style="color:#8b440c; font-size:18px">EXPO CHAIN & BEARING STORES</strong><br />
+                71/D N.S. ROAD, GROUND FLOOR, ROOM NO A-162<br />
+                KOLKATA - 700001, WEST BENGAL, India<br />
+                GST : 19AAAFE7147G1ZF<br />
+                +9133-40064388 | 22431939 , amit@expochain.com, 7059502488
+              </div>
+            </td>
+            <!-- Logo on the Top Right -->
             <td
               style="
-                width: 60%;
+                width: 1%;
+                text-align: right;
                 vertical-align: top;
-                padding-right: 10px;
-                border-right: 1px dotted #000;
-                text-align:left;
+                border: none;
               "
             >
-              <strong>TERMS &amp; CONDITIONS:</strong><br />
-              <table
-                class="no-border"
-                style="width: 100%; border-collapse: collapse; margin-top:5px;"
-              >
-                <tr>
-                  <td
-                    style="width: 35%; padding: 2px 0; text-align: left;"
-                  ><strong>F.O.R. :</strong></td>
-                  <td style="padding: 2px 0; text-align: left;">Kolkata</td>
-                </tr>
-                <tr>
-                  <td style="padding: 2px 0; text-align: left;"><strong>P &amp; F :</strong></td>
-                  <td style="padding: 2px 0; text-align: left;">Nil</td>
-                </tr>
-                <tr>
-                  <td style="padding: 2px 0; text-align: left;"><strong>Freight :</strong></td>
-                  <td style="padding: 2px 0; text-align: left;">Your Account</td>
-                </tr>
-                <tr>
-                  <td style="padding: 2px 0; text-align: left;"><strong>Delivery :</strong></td>
-                  <td style="padding: 2px 0; text-align: left;">
-                    Ready Stock subject to prior sale balance 3 weeks
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding: 2px 0; text-align: left;"><strong>Payment :</strong></td>
-                  <td style="padding: 2px 0; text-align: left;">30 days - msme</td>
-                </tr>
-                <tr>
-                  <td style="padding: 2px 0; text-align: left;"><strong>Validity :</strong></td>
-                  <td style="padding: 2px 0; text-align: left;">30 DAYS</td>
-                </tr>
-              </table>
-            </td>
-
-            <td style="width: 40%; vertical-align: middle; padding-left: 10px">
-              <table class="no-border" style="width: 100%; border-collapse: collapse">
-                <tr>
-                  <td style="width: 60%; text-align: left">
-                    <strong>for EXPO CHAIN &amp; BEARING STORES</strong><br /><br />
-                    <strong>Authorised Signatory</strong>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <tr>
-            <td colspan="2" style="text-align: center; padding-top: 5px">
               <img
-                src="{{ public_path('storage/uploads/pdf_template/footer.jpg') }}"
-                alt="Footer Logo"
-                style="width: 100%; height: auto"
+                src="{{ public_path('storage/uploads/pdf_template/logo.png') }}"
+                alt="Logo"
+                style="width: 100px; height: auto; display: block"
               />
             </td>
           </tr>
         </table>
       </div>
-    </div>
 
-    {{-- MAIN CONTENT (flows, uses @page margins, auto-pagebreaks) --}}
-    <div class="content-area">
-      {{-- Customer + Quotation info --}}
+      <!-- Dashed separator -->
+      <div class="dash-line"></div>
+
+      <!-- Customer and Quotation Info -->
       <table class="no-border">
         <tr>
           <td
@@ -268,45 +184,30 @@
             KOLKATA - 700115, WEST BENGAL, INDIA<br />
             GSTIN / UIN : 19AAACE4975B1ZP
           </td>
-          <td
-            style="
-              width: 40%;
-              vertical-align: top;
-              padding-left: 20px;
-              text-align:left;
-            "
-          >
+          <td style="width: 40%; vertical-align: top; padding-left: 20px; text-align:left;">
             <table class="no-border" style="width: 100%; border-collapse: collapse;">
               <tr>
                 <td style="width: 40%; padding: 2px 0; text-align: left;">Quotation No.:</td>
-                <td style="padding: 2px 0; text-align: left;">
-                  <strong>{{ $quotation_no }}</strong>
-                </td>
+                <td style="padding: 2px 0; text-align: left;"><strong>{{ $quotation_no }}</strong></td>
               </tr>
               <tr>
                 <td style="padding: 2px 0; text-align: left;">Dated:</td>
-                <td style="padding: 2px 0; text-align: left;">
-                  <strong>{{ $quotation_date }}</strong>
-                </td>
+                <td style="padding: 2px 0; text-align: left;"><strong>{{ $quotation_date }}</strong></td>
               </tr>
               <tr>
                 <td style="padding: 2px 0; text-align: left;">Enquiry No.:</td>
-                <td style="padding: 2px 0; text-align: left;">
-                  <strong>{{ $enquiry_no }}</strong>
-                </td>
+                <td style="padding: 2px 0; text-align: left;"><strong>{{ $enquiry_no }}</strong></td>
               </tr>
               <tr>
                 <td style="padding: 2px 0; text-align: left;">Enquiry Date:</td>
-                <td style="padding: 2px 0; text-align: left;">
-                  <strong>{{ $enquiry_date }}</strong>
-                </td>
+                <td style="padding: 2px 0; text-align: left;"><strong>{{ $enquiry_date }}</strong></td>
               </tr>
             </table>
           </td>
         </tr>
       </table>
 
-      {{-- ITEMS TABLE --}}
+      <!-- Items Table -->
       <table>
         <thead>
           <tr>
@@ -320,8 +221,10 @@
             <th>DISC%</th>
 
             @if($show_igst)
+              {{-- IGST case: only one tax column --}}
               <th>IGST</th>
             @else
+              {{-- Local case: CGST + SGST --}}
               <th>CGST</th>
               <th>SGST</th>
             @endif
@@ -333,136 +236,146 @@
           @foreach($items as $i => $item)
           <tr>
             <td>{{ $i + 1 }}</td>
-            <td class="left-align">
+            <td>
               {{ $item['desc'] }}<br />
               <small>MAKE {{ $item['make'] }}</small>
             </td>
             <td>{{ $item['hsn'] }}</td>
             <td>{{ $item['qty'] }}</td>
             <td>{{ $item['unit'] }}</td>
-            <td class="right-align">{{ number_format($item['rate'], 2) }}</td>
+            <td>{{ $item['rate'] }}</td>
             <td>{{ $item['delivery'] ?: '-' }}</td>
             <td>{{ $item['disc'] }}%</td>
 
             @if($show_igst)
-              <td class="right-align">{{ $item['igst'] ?: 0 }}</td>
+              {{-- ONLY IGST column --}}
+              <td>{{ $item['igst'] ?: 0 }}%</td>
             @else
-              <td class="right-align">{{ $item['cgst'] ?: 0 }}</td>
-              <td class="right-align">{{ $item['sgst'] ?: 0 }}</td>
+              {{-- ONLY CGST + SGST columns --}}
+              <td>{{ $item['cgst'] ?: 0 }}%</td>
+              <td>{{ $item['sgst'] ?: 0 }}%</td>
             @endif
 
-            <td class="right-align">{{ number_format($item['amount'], 2) }}</td>
+            <td>{{ number_format($item['amount'], 2) }}</td>
           </tr>
           @endforeach
         </tbody>
       </table>
 
-      {{-- SUMMARY BLOCK --}}
-      <table class="no-border" style="width: 100%; margin-top: 5px;">
-        <tr>
-          <td style="width: 60%;"></td>
-          <td style="width: 40%; text-align: right;">
-            <table class="no-border" style="width: 100%;">
-              <tr>
-                <td class="right-align" style="padding: 2px 8px;">
-                  <strong>Gross Total:</strong>
-                </td>
-                <td class="right-align">
-                  ₹{{ number_format($gross_total, 2) }}
-                </td>
-              </tr>
+      <!-- Summary Section -->
+      <div class="summary" style="margin-top: 5px; text-align: right;">
+        <table class="no-border" style="width: 100%; border-collapse: collapse; margin-top: 5px;">
+          <tr>
+            <!-- Left empty space -->
+            <td style="width: 60%;"></td>
 
-              @if(!empty($pf_amount) && $pf_amount > 0)
-              <tr>
-                <td class="right-align" style="padding: 2px 8px;">
-                  <strong>Add : Packaging &amp; Forwarding</strong>
-                </td>
-                <td class="right-align">
-                  ₹{{ number_format($pf_amount, 2) }}
-                </td>
-              </tr>
-              @endif
-
-              @if(!empty($freight_amount) && $freight_amount > 0)
-              <tr>
-                <td class="right-align" style="padding: 2px 8px;">
-                  <strong>Add : Freight</strong>
-                </td>
-                <td class="right-align">
-                  ₹{{ number_format($freight_amount, 2) }}
-                </td>
-              </tr>
-              @endif
-
-              @if($show_igst)
+            <!-- Right block with totals -->
+            <td style="width: 40%; text-align: right;">
+              <table class="no-border" style="width: 100%; border-collapse: collapse;">          
+                <!-- Gross Total -->
                 <tr>
-                  <td class="right-align" style="padding: 2px 8px;">
-                    <strong>Add : IGST</strong>
+                  <td style="padding: 2px 8px; text-align: right;">
+                    <strong>Gross Total:</strong>
                   </td>
-                  <td class="right-align">
-                    ₹{{ number_format($igst, 2) }}
+                  <td style="padding: 2px 0; text-align: right;">
+                    ₹{{ number_format($gross_total, 2) }}
                   </td>
                 </tr>
-              @else
+
+                <!-- PF (Packaging & Forwarding) - only if > 0 -->
+                @if(!empty($pf_amount) && $pf_amount > 0)
                 <tr>
-                  <td class="right-align" style="padding: 2px 8px;">
-                    <strong>Add : CGST</strong>
+                  <td style="padding: 2px 8px; text-align: right;">
+                    <strong>Add : Packaging &amp; Forwarding</strong>
                   </td>
-                  <td class="right-align">
-                    ₹{{ number_format($cgst, 2) }}
+                  <td style="padding: 2px 0; text-align: right;">
+                    ₹{{ number_format($pf_amount, 2) }}
                   </td>
                 </tr>
+                @endif
+
+                <!-- Freight - only if > 0 -->
+                @if(!empty($freight_amount) && $freight_amount > 0)
                 <tr>
-                  <td class="right-align" style="padding: 2px 8px;">
-                    <strong>Add : SGST</strong>
+                  <td style="padding: 2px 8px; text-align: right;">
+                    <strong>Add : Freight</strong>
                   </td>
-                  <td class="right-align">
-                    ₹{{ number_format($sgst, 2) }}
+                  <td style="padding: 2px 0; text-align: right;">
+                    ₹{{ number_format($freight_amount, 2) }}
                   </td>
                 </tr>
-              @endif
+                @endif
 
-              <tr>
-                <td class="right-align" style="padding: 2px 8px;">
-                  <strong>Less : Rounded Off</strong>
-                </td>
-                <td class="right-align">
-                  ₹{{ number_format($roundoff, 2) }}
-                </td>
-              </tr>
+                <!-- Tax rows: IF IGST show only IGST, else show CGST + SGST -->
+                @if($show_igst)
+                  <tr>
+                    <td style="padding: 2px 8px; text-align: right;">
+                      <strong>Add : IGST</strong>
+                    </td>
+                    <td style="padding: 2px 0; text-align: right;">
+                      ₹{{ number_format($igst, 2) }}
+                    </td>
+                  </tr>
+                @else
+                  <tr>
+                    <td style="padding: 2px 8px; text-align: right;">
+                      <strong>Add : CGST</strong>
+                    </td>
+                    <td style="padding: 2px 0; text-align: right;">
+                      ₹{{ number_format($cgst, 2) }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 2px 8px; text-align: right;">
+                      <strong>Add : SGST</strong>
+                    </td>
+                    <td style="padding: 2px 0; text-align: right;">
+                      ₹{{ number_format($sgst, 2) }}
+                    </td>
+                  </tr>
+                @endif
 
-              <tr>
-                <td class="right-align" style="padding: 2px 8px;">
-                  <h3 style="margin-top: 4px;">GRAND TOTAL:</h3>
-                </td>
-                <td class="right-align">
-                  <h3 style="margin-top: 4px;">
-                    ₹{{ number_format($grand_total, 2) }}
-                  </h3>
-                </td>
-              </tr>
-            </table>
+                <!-- Round off -->
+                <tr>
+                  <td style="padding: 2px 8px; text-align: right;">
+                    <strong>Less : Rounded Off</strong>
+                  </td>
+                  <td style="padding: 2px 0; text-align: right;">
+                    ₹{{ number_format($roundoff, 2) }}
+                  </td>
+                </tr>
 
-            <div class="right-align">
-              <i>Rupees {{ $grand_total_words }} Only</i>
-            </div>
-          </td>
-        </tr>
-      </table>
+                <!-- Grand Total -->
+                <tr>
+                  <td style="padding: 2px 8px; text-align: right;">
+                    <h3 style="margin-top: 4px; text-align: right;">
+                      GRAND TOTAL:
+                    </h3>
+                  </td>
+                  <td style="padding: 2px 0; text-align: right;">
+                    <h3 style="margin-top: 4px; text-align: right;">
+                      ₹{{ number_format($grand_total, 2) }}
+                    </h3>
+                  </td>
+                </tr>
+              </table>              
+            </td>
+          </tr>
+        </table>
 
-      {{-- TAX SUMMARY --}}
+        <div style="text-align: right;">
+          <i>Rupees {{ $grand_total_words }} Only</i>
+        </div>
+      </div>
+
+
+      <!-- Tax Summary Table -->
       <h4 style="margin-top: 5px">Tax Summary:</h4>
 
-      <table
-        style="
-          width: 100%;
-          border-collapse: collapse;
-          margin-top: 3px;
-          border: none;
-        "
-      >
+      <table style="width: 100%; border-collapse: collapse; margin-top: 3px; border: none;">
         <tr>
-          <td style="width: 40%; border: none; vertical-align: top;">
+          <!-- left side tax table -->
+          <td style="width: 40%; border: none;">
             <table style="width: 100%; border-collapse: collapse;">
               <thead>
                 <tr>
@@ -485,26 +398,16 @@
                 <tr>
                   <td>{{ $tax['hsn'] }}</td>
                   <td>{{ $tax['rate'] }}%</td>
-                  <td class="right-align">
-                    {{ number_format($tax['taxable'], 2) }}
-                  </td>
+                  <td>{{ number_format($tax['taxable'], 2) }}</td>
 
                   @if($show_igst)
-                    <td class="right-align">
-                      {{ number_format($tax['igst'], 2) }}
-                    </td>
+                    <td>{{ number_format($tax['igst'], 2) }}</td>
                   @else
-                    <td class="right-align">
-                      {{ number_format($tax['cgst'], 2) }}
-                    </td>
-                    <td class="right-align">
-                      {{ number_format($tax['sgst'], 2) }}
-                    </td>
+                    <td>{{ number_format($tax['cgst'], 2) }}</td>
+                    <td>{{ number_format($tax['sgst'], 2) }}</td>
                   @endif
 
-                  <td class="right-align">
-                    {{ number_format($tax['total_tax'], 2) }}
-                  </td>
+                  <td>{{ number_format($tax['total_tax'], 2) }}</td>
                 </tr>
                 @endforeach
               </tbody>
@@ -513,6 +416,69 @@
           <td style="width: 60%; border: none;"></td>
         </tr>
       </table>
+
+      <!-- Bank Details in a single line -->
+      <div class="bank-details">
+        <strong>BANK NAME :</strong> HDFC BANK LTD, BRANCH : JARDINE HOUSE,
+        CLIVE ROW, A/C NO : 10152320001963, IFSC : HDFC0001015
+      </div>
+
+      <!-- Terms & Conditions -->
+      <div class="terms" style="margin-top: 5px">
+        <table class="no-border" style="width: 100%; border-collapse: collapse">
+          <tr>
+            <td style="width: 60%; vertical-align: top; padding-right: 10px; border-right: 1px dotted #000; text-align:left;">
+              <strong>TERMS &amp; CONDITIONS:</strong><br />
+              <table class="no-border" style="width: 100%; border-collapse: collapse; margin-top:5px;">
+                <tr>
+                  <td style="width: 35%; padding: 2px 0; text-align: left;"><strong>F.O.R. :</strong></td>
+                  <td style="padding: 2px 0; text-align: left;">Kolkata</td>
+                </tr>
+                <tr>
+                  <td style="padding: 2px 0; text-align: left;"><strong>P &amp; F :</strong></td>
+                  <td style="padding: 2px 0; text-align: left;">Nil</td>
+                </tr>
+                <tr>
+                  <td style="padding: 2px 0; text-align: left;"><strong>Freight :</strong></td>
+                  <td style="padding: 2px 0; text-align: left;">Your Account</td>
+                </tr>
+                <tr>
+                  <td style="padding: 2px 0; text-align: left;"><strong>Delivery :</strong></td>
+                  <td style="padding: 2px 0; text-align: left;">Ready Stock subject to prior sale balance 3 weeks</td>
+                </tr>
+                <tr>
+                  <td style="padding: 2px 0; text-align: left;"><strong>Payment :</strong></td>
+                  <td style="padding: 2px 0; text-align: left;">30 days - msme</td>
+                </tr>
+                <tr>
+                  <td style="padding: 2px 0; text-align: left;"><strong>Validity :</strong></td>
+                  <td style="padding: 2px 0; text-align: left;">30 DAYS</td>
+                </tr>
+              </table>
+            </td>
+            <td style="width: 40%; vertical-align: middle; padding-left: 10px">
+              <table class="no-border" style="width: 100%; border-collapse: collapse">
+                <tr>
+                  <td style="width: 60%; text-align: left">
+                    <strong>for EXPO CHAIN &amp; BEARING STORES</strong><br />
+                    <strong>Authorised Signatory</strong>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td colspan="2" style="text-align: center; padding-top: 5px">
+              <img
+                src="{{ public_path('storage/uploads/pdf_template/footer.jpg') }}"
+                alt="Footer Logo"
+                style="width: 100%; height: auto"
+              />
+            </td>
+          </tr>
+        </table>
+      </div>
     </div>
   </body>
 </html>
