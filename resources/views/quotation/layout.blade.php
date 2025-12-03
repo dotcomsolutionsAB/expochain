@@ -9,9 +9,9 @@
       footer: pageFooter;
 
       /* reduce blank space */
-      margin-top: 30mm;      
+      margin-top: 45mm;      
       header-margin: 1mm;    
-      margin-bottom: 30mm;
+      margin-bottom: 70mm;
       margin-left: 10mm;
       margin-right: 10mm;
 
@@ -19,21 +19,12 @@
       background-image-resize: 6;
     }
 
-    .page-border {
-      position: fixed;
-      top: 10mm;     /* same as left/right margin so it looks even */
-      left: 10mm;
-      right: 10mm;
-      bottom: 10mm;
-      border: 1px solid #8b440c;  /* use 2px / 4px if you want thicker */
-      z-index: 0;                  /* 🔑 keep it behind everything */
-    }
-
     body {
       font-family: sans-serif;
       font-size: 12px;
-      margin: 0;        /* 🔴 remove extra top space */
-      padding: 0;
+      margin: 10;        /* 🔴 remove extra top space */
+      padding: 5;
+      background-color: #cdbcafe8;
     }
 
     .content {
@@ -59,7 +50,7 @@
   </style>
 </head>
 
-<body style="padding:10px; border:2px solid #000">
+<body style="padding:10px; border:2px solid #000; z-index: 9;">
 
   <!-- ============================================================
       ✔ FIXED HEADER (htmlpageheader)
@@ -172,8 +163,6 @@
 
   </htmlpagefooter>
 
-  <!-- 🔲 Border that repeats on every page -->
-  <div class="page-border"></div>
   <!-- ============================================================
       ✔ MAIN CONTENT (COMES BETWEEN HEADER & FOOTER)
   ============================================================ -->

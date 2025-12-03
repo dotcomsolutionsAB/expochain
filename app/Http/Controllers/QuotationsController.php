@@ -1378,14 +1378,14 @@ class QuotationsController extends Controller
                     'SGST'            => $q->sgst,
                     'IGST'            => $q->igst,
                     'Total'           => $q->total,
-                    'Amount In Words' => $this->convertNumberToWords($q->total),
+                    // 'Amount In Words' => $this->convertNumberToWords($q->total),
                     'Status'          => $q->status,
                     'User'            => $q->get_user->name      ?? 'Unknown',
                     'Sales Person'    => $q->salesPerson->name   ?? 'Unknown',
                     'Template'        => $q->get_template->name  ?? 'Unknown',
-                    'Created At'      => $q->created_at
-                                            ? Carbon::parse($q->created_at)->format('d-m-Y H:i')
-                                            : null,
+                    // 'Created At'      => $q->created_at
+                    //                         ? Carbon::parse($q->created_at)->format('d-m-Y H:i')
+                    //                         : null,
                 ];
             }
 
