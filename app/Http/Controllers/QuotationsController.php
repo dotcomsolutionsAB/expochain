@@ -1280,6 +1280,7 @@ class QuotationsController extends Controller
                 'rate'     => $product->price ?? 0,
                 'delivery' => $product->delivery ?? '',
                 'disc'     => $product->discount ?? 0,
+                'tax'      => $product->tax ?? 0,
                 'cgst'     => $product->cgst ?? 0,
                 'sgst'     => $product->sgst ?? 0,
                 'igst'     => $product->igst ?? 0,   // <--- add igst here

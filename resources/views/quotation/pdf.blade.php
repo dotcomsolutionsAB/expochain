@@ -242,10 +242,10 @@
             @if($item['igst'] > 0)
               <td>-</td>
               <td>-</td>
-              <td>{{ $item['igst'] }}%</td>
+              <td>{{ $item['igst'] }} ({{ $item['cgst'] ?: '-' }}%)</td>
             @else
-              <td>{{ $item['cgst'] ?: '-' }}%</td>
-              <td>{{ $item['sgst'] ?: '-' }}%</td>
+              <td>{{ $item['cgst'] ?: '-' }} ({{ $item['tax'] ?: '-' }}%)</td>
+              <td>{{ $item['sgst'] ?: '-' }} ({{ $item['tax'] ?: '-' }}%)</td>
               <td>-</td>
             @endif
 
