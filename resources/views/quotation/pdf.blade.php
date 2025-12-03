@@ -7,8 +7,8 @@
     <style>
       @page {
         /* space reserved for header/footer */
-        margin-top: 55mm;
-        margin-bottom: 65mm;
+        margin-top: 80mm;
+        margin-bottom: 80mm;
         margin-left: 10mm;
         margin-right: 10mm;
       }
