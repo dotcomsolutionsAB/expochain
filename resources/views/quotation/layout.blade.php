@@ -27,15 +27,19 @@
     }
 
     .page-frame {
-      position: fixed;
-      top: 5mm;
-      left: 5mm;
-      right: 5mm;
-      bottom: 5mm;
-      border: 1px solid #8b440c;
-      z-index: 9999;   /* 🔥 always on top of all content */
-      pointer-events: none; /* so it does not block text selection */
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+
+        margin: 5mm;                /* perfect inner spacing */
+        border: 1px solid #8b440c;  /* your brown border */
+
+        z-index: 99999;             /* 🔥 ALWAYS on top */
+        pointer-events: none;       /* allows clicking text */
     }
+
 
 
     .content {
@@ -65,7 +69,7 @@
 
   <!-- Full Page Border -->
   <div class="page-frame"></div>
-  
+
   <!-- ============================================================
       ✔ FIXED HEADER (htmlpageheader)
   ============================================================ -->
