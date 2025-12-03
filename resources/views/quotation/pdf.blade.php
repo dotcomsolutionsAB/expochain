@@ -307,43 +307,41 @@
       </div>
 
       <!-- Tax Summary Table -->
-      <!-- Tax Summary Table -->
-<h4 style="margin-top: 5px">Tax Summary:</h4>
+      <h4 style="margin-top: 5px">Tax Summary:</h4>
 
-<table class="no-border" style="width: 100%; border-collapse: collapse; margin-top: 3px;">
-  <tr>
-    <!-- left empty space -->
-    <td style="width: 60%;"></td>
-
-    <!-- right side compact tax table -->
-    <td style="width: 40%; text-align: right;">
-      <table style="width: 100%; border-collapse: collapse;">
-        <thead>
-          <tr>
-            <th>HSN/SAC</th>
-            <th>Tax Rate</th>
-            <th>Taxable Amt.</th>
-            <th>CGST</th>
-            <th>SGST</th>
-            <th>Total Tax</th>
-          </tr>
-        </thead>
-        <tbody>
-          @foreach($tax_summary as $tax)
-          <tr>
-            <td>{{ $tax['hsn'] }}</td>
-            <td>{{ $tax['rate'] }}%</td>
-            <td>{{ number_format($tax['taxable'], 2) }}</td>
-            <td>{{ number_format($tax['cgst'], 2) }}</td>
-            <td>{{ number_format($tax['sgst'], 2) }}</td>
-            <td>{{ number_format($tax['total_tax'], 2) }}</td>
-          </tr>
-          @endforeach
-        </tbody>
+      <table style="width: 100%; border-collapse: collapse; margin-top: 3px;">
+        <tr>
+          <!-- left side compact tax table -->
+          <td style="width: 50%; text-align: right;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th>HSN/SAC</th>
+                  <th>Tax Rate</th>
+                  <th>Taxable Amt.</th>
+                  <th>CGST</th>
+                  <th>SGST</th>
+                  <th>Total Tax</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach($tax_summary as $tax)
+                <tr>
+                  <td>{{ $tax['hsn'] }}</td>
+                  <td>{{ $tax['rate'] }}%</td>
+                  <td>{{ number_format($tax['taxable'], 2) }}</td>
+                  <td>{{ number_format($tax['cgst'], 2) }}</td>
+                  <td>{{ number_format($tax['sgst'], 2) }}</td>
+                  <td>{{ number_format($tax['total_tax'], 2) }}</td>
+                </tr>
+                @endforeach
+              </tbody>
+            </table>
+          </td>
+          <!-- right empty space -->
+          <td style="width: 50%;"></td>
+        </tr>
       </table>
-    </td>
-  </tr>
-</table>
 
 
       <!-- Bank Details in a single line -->
