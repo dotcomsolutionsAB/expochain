@@ -59,10 +59,7 @@
   </style>
 </head>
 
-<body>
-
-  <!-- ✔ Background & Border -->
-  <!-- <div class="page-border"></div> -->
+<body style="padding:10px; border:2px solid #000">
 
   <!-- ============================================================
       ✔ FIXED HEADER (htmlpageheader)
