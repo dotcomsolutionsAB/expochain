@@ -137,7 +137,6 @@
 
 <div class="content">
     {{-- YOUR PRODUCT TABLE / CUSTOMER DETAILS GO HERE --}}
-    {!! $html_table !!}
 </div>
 
 </body>
