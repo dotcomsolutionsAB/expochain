@@ -32,7 +32,6 @@
 
     /* Top part of the frame: around header + dashed line */
     .frame-top {
-      height:100%;
       border: 1px solid #8b440c;
       border-bottom: none;          /* middle will close it */
       padding: 4mm 4mm 0 4mm;       /* top + sides, no bottom padding */
@@ -40,7 +39,6 @@
 
     /* Middle part of the frame: around main content */
     .frame-middle {
-      height:100%;
       border-left: 1px solid #8b440c;
       border-right: 1px solid #8b440c;
       padding: 2mm 4mm 2mm 4mm;     /* space from side borders */
@@ -48,7 +46,6 @@
 
     /* Bottom part of the frame: around footer */
     .frame-bottom {
-      height:100%;
       border: 1px solid #8b440c;
       border-top: none;             /* middle will close it */
       padding: 0 4mm 4mm 4mm;       /* bottom padding */
