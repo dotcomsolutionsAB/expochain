@@ -167,7 +167,7 @@
         <tr>
           <td
             style="
-              width: 50%;
+              width: 60%;
               vertical-align: top;
               padding-right: 10px;
               border-right: 1px dotted #000;
@@ -180,7 +180,7 @@
             KOLKATA - 700115, WEST BENGAL, INDIA<br />
             GSTIN / UIN : 19AAACE4975B1ZP
           </td>
-          <td style="width: 50%; vertical-align: top; padding-left: 20px; text-align:left;">
+          <td style="width: 40%; vertical-align: top; padding-left: 20px; text-align:left;">
             <table class="no-border" style="width: 100%; border-collapse: collapse;">
               <tr>
                 <td style="width: 40%; padding: 2px 0; text-align: left;">Quotation No.:</td>
@@ -245,7 +245,7 @@
       <!-- Summary Section -->
       <div class="summary" style="margin-top: 5px; width: 100%; text-align: right;">
         <div style="display: inline-block; text-align: left;">
-          <table class="no-border" style="border-collapse: collapse;">
+          <table class="no-border" style="border-collapse: collapse; width: auto; margin-left: auto;">
             <tr>
               <td style="padding: 2px 8px; text-align: left;"><strong>Gross Total:</strong></td>
               <td style="padding: 2px 0; text-align: right;">₹{{ number_format($gross_total, 2) }}</td>
