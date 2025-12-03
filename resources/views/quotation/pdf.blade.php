@@ -235,7 +235,7 @@
             <td>{{ $item['qty'] }}</td>
             <td>{{ $item['unit'] }}</td>
             <td>{{ $item['rate'] }}</td>
-            <td>{{ $item['delivery'] }}</td>
+            <td>{{ $item['delivery'] ?: '-' }}</td>
             <td>{{ $item['disc'] }}%</td>
 
             {{-- TAX: If IGST present, hide CGST & SGST --}}
@@ -254,7 +254,6 @@
           @endforeach
         </tbody>
       </table>
-
 
       <!-- Summary Section -->
       <div class="summary" style="margin-top: 5px; text-align: right;">
