@@ -1240,40 +1240,42 @@ class QuotationsController extends Controller
 
             // === Base query (aligned with view_quotations) ===
             $query = QuotationsModel::with([
-                'get_user:id,name',
-                'get_template:id,name',
-                'salesPerson:id,name',
-                'client' => function ($q) {
-                    $q->select('id', 'customer_id')
-                    ->with(['addresses' => function ($query) {
-                        $query->select('customer_id', 'state');
-                    }]);
-                },
-            ])
-            ->select(
-                'id',
-                'client_id',
-                'name',
-                'quotation_no',
-                'quotation_date',
-                DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date_formatted'),
-                'enquiry_no',
-                DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date_formatted'),
-                'template',
-                'contact_person',
-                'sales_person',
-                'status',
-                'user',
-                'cgst',
-                'sgst',
-                'igst',
-                'total',
-                'currency',
-                'gross',
-                'round_off',
-                'created_at'
-            )
-            ->where('company_id', $companyId);
+                    'get_user:id,name',
+                    'get_template:id,name',
+                    'salesPerson:id,name',
+                    'client' => function ($q) {
+                        $q->select('id', 'customer_id')
+                        ->with(['addresses' => function ($query) {
+                            $query->select('customer_id', 'state');
+                        }]);
+                    },
+                    // OPTIONAL: if you have this relationship on QuotationsModel
+                    // 'contactPerson:id,name',
+                ])
+                ->select(
+                    'id',
+                    'client_id',
+                    'name',
+                    'quotation_no',
+                    'quotation_date',
+                    DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date_formatted'),
+                    'enquiry_no',
+                    DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date_formatted'),
+                    'template',
+                    'contact_person',
+                    'sales_person',
+                    'status',
+                    'user',
+                    'cgst',
+                    'sgst',
+                    'igst',
+                    'total',
+                    'currency',
+                    'gross',
+                    'round_off',
+                    'created_at'
+                )
+                ->where('company_id', $companyId);
 
             // ================= MULTI-VALUE + SINGLE FILTER PARSING ==================
 
@@ -1306,17 +1308,14 @@ class QuotationsController extends Controller
 
             // ================= APPLY FILTERS ==================
 
-            // Multi client_id
             if ($clientIds) {
                 $query->whereIn('client_id', $clientIds);
             }
 
-            // Name (party/client name) - LIKE search
             if (!empty($name)) {
                 $query->where('name', 'LIKE', '%' . $name . '%');
             }
 
-            // Multi quotation_no (LIKE for each)
             if ($quotationNos) {
                 $query->where(function ($q) use ($quotationNos) {
                     foreach ($quotationNos as $no) {
@@ -1326,7 +1325,6 @@ class QuotationsController extends Controller
                 });
             }
 
-            // Multi enquiry_no (LIKE for each)
             if ($enquiryNos) {
                 $query->where(function ($q) use ($enquiryNos) {
                     foreach ($enquiryNos as $no) {
@@ -1336,12 +1334,10 @@ class QuotationsController extends Controller
                 });
             }
 
-            // Multi client contact person ID (based on contact_person column)
             if ($contactPersonIds) {
                 $query->whereIn('contact_person', $contactPersonIds);
             }
 
-            // Date filters on quotation_date
             if ($dateFrom && $dateTo) {
                 $query->whereBetween('quotation_date', [$dateFrom, $dateTo]);
             } elseif ($dateFrom) {
@@ -1350,25 +1346,24 @@ class QuotationsController extends Controller
                 $query->whereDate('quotation_date', '<=', $dateTo);
             }
 
-            // Single exact quotation date
             if ($quotationDate) {
                 $query->whereDate('quotation_date', $quotationDate);
             }
 
-            // Single exact enquiry date
             if ($enquiryDate) {
                 $query->whereDate('enquiry_date', $enquiryDate);
             }
 
-            // User
             if ($userId) {
                 $query->where('user', $userId);
             }
 
-            // Status
             if (!empty($status)) {
                 $query->where('status', $status);
             }
+
+            // 👉 Get total_records BEFORE limit/offset
+            $totalRecords = $query->count();
 
             // Order & pagination (limit/offset)
             $query->orderBy('quotation_date', 'desc');
@@ -1383,12 +1378,16 @@ class QuotationsController extends Controller
             // Fetch filtered data
             $quotations = $query->get();
 
+            // 👉 Empty result: return 200 with empty data
             if ($quotations->isEmpty()) {
                 return response()->json([
-                    'code'    => 404,
-                    'success' => false,
-                    'message' => 'No quotations found for export!'
-                ]);
+                    'code'          => 200,
+                    'success'       => true,
+                    'message'       => 'No quotations available for export',
+                    'data'          => [],
+                    'count'         => 0,
+                    'total_records' => $totalRecords, // will be 0
+                ], 200);
             }
 
             // ========================================================
@@ -1401,6 +1400,15 @@ class QuotationsController extends Controller
             foreach ($quotations as $q) {
                 $state = optional($q->client->addresses->first())->state;
 
+                // ⚠️ FIX: contact_person is an ID, not an object.
+                // Option 1: just export the ID:
+                // $contactPersonName = $q->contact_person;
+
+                // Option 2 (better): if you add contactPerson() relation & eager load it above:
+                // $contactPersonName = optional($q->contactPerson)->name ?? 'Unknown';
+
+                $contactPersonName = $q->contact_person; // keep ID for now to avoid error
+
                 $exportData[] = [
                     'SN'              => $sn++,
                     'Quotation No'    => $q->quotation_no,
@@ -1409,19 +1417,16 @@ class QuotationsController extends Controller
                     'Enquiry Date'    => $q->enquiry_date_formatted,
                     'Client Name'     => $q->name,
                     'Client State'    => $state,
-                    // 'Currency'        => $q->currency,
                     'Gross'           => $q->gross,
                     'CGST'            => $q->cgst,
                     'SGST'            => $q->sgst,
                     'IGST'            => $q->igst,
                     'Total'           => $q->total,
-                    // 'Amount In Words' => $this->convertNumberToWords($q->total),
                     'Status'          => $q->status,
-                    'User'            => $q->get_user->name        ?? 'Unknown',
-                    'Sales Person'    => $q->salesPerson->name     ?? 'Unknown',
-                    'Contact Person'  => $q->contact_person->name  ?? 'Unknown', // ID only
-                    'Template'        => $q->get_template->name    ?? 'Unknown',
-                    // 'Created At'      => $q->created_at ? Carbon::parse($q->created_at)->format('d-m-Y H:i') : null,
+                    'User'            => $q->get_user->name     ?? 'Unknown',
+                    'Sales Person'    => $q->salesPerson->name  ?? 'Unknown',
+                    'Contact Person'  => $contactPersonName,
+                    'Template'        => $q->get_template->name ?? 'Unknown',
                 ];
             }
 
@@ -1457,19 +1462,16 @@ class QuotationsController extends Controller
                             'Enquiry Date',
                             'Client Name',
                             'Client State',
-                            // 'Currency',
                             'Gross',
                             'CGST',
                             'SGST',
                             'IGST',
                             'Total',
-                            // 'Amount In Words',
                             'Status',
                             'User',
                             'Sales Person',
-                            'Contact Person', // (name)
-                            'Template'
-                            // 'Created At'
+                            'Contact Person',
+                            'Template',
                         ];
                     }
                 },
@@ -1478,16 +1480,18 @@ class QuotationsController extends Controller
             );
 
             return response()->json([
-                'code'    => 200,
-                'success' => true,
-                'message' => 'Quotation report generated successfully!',
-                'data'    => [
+                'code'          => 200,
+                'success'       => true,
+                'message'       => 'Quotation report generated successfully!',
+                'data'          => [
                     'file_url'     => asset("storage/{$relativePath}"),
                     'file_name'    => $fileName,
                     'file_size'    => Storage::disk('public')->size($relativePath),
                     'content_type' => 'Excel'
-                ]
-            ]);
+                ],
+                'count'         => $quotations->count(),
+                'total_records' => $totalRecords,
+            ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
@@ -1498,6 +1502,272 @@ class QuotationsController extends Controller
             ], 500);
         }
     }
+
+    // public function exportQuotationReport(Request $request)
+    // {
+    //     try {
+    //         $companyId = Auth::user()->company_id;
+
+    //         // === Base query (aligned with view_quotations) ===
+    //         $query = QuotationsModel::with([
+    //             'get_user:id,name',
+    //             'get_template:id,name',
+    //             'salesPerson:id,name',
+    //             'client' => function ($q) {
+    //                 $q->select('id', 'customer_id')
+    //                 ->with(['addresses' => function ($query) {
+    //                     $query->select('customer_id', 'state');
+    //                 }]);
+    //             },
+    //         ])
+    //         ->select(
+    //             'id',
+    //             'client_id',
+    //             'name',
+    //             'quotation_no',
+    //             'quotation_date',
+    //             DB::raw('DATE_FORMAT(quotation_date, "%d-%m-%Y") as quotation_date_formatted'),
+    //             'enquiry_no',
+    //             DB::raw('DATE_FORMAT(enquiry_date, "%d-%m-%Y") as enquiry_date_formatted'),
+    //             'template',
+    //             'contact_person',
+    //             'sales_person',
+    //             'status',
+    //             'user',
+    //             'cgst',
+    //             'sgst',
+    //             'igst',
+    //             'total',
+    //             'currency',
+    //             'gross',
+    //             'round_off',
+    //             'created_at'
+    //         )
+    //         ->where('company_id', $companyId);
+
+    //         // ================= MULTI-VALUE + SINGLE FILTER PARSING ==================
+
+    //         $clientIds        = $request->filled('client_id') 
+    //                             ? array_map('intval', explode(',', $request->client_id)) 
+    //                             : null;
+
+    //         $quotationNos     = $request->filled('quotation_no') 
+    //                             ? array_map('trim', explode(',', $request->quotation_no)) 
+    //                             : null;
+
+    //         $enquiryNos       = $request->filled('enquiry_no') 
+    //                             ? array_map('trim', explode(',', $request->enquiry_no)) 
+    //                             : null;
+
+    //         $contactPersonIds = $request->filled('client_contact_id') 
+    //                             ? array_map('intval', explode(',', $request->client_contact_id)) 
+    //                             : null;
+
+    //         // single-value filters
+    //         $name            = $request->input('name');          // party/client name
+    //         $userId          = $request->input('user');
+    //         $status          = $request->input('status');        // pending/completed/rejected
+    //         $dateFrom        = $request->input('date_from');
+    //         $dateTo          = $request->input('date_to');
+    //         $quotationDate   = $request->input('quotation_date');
+    //         $enquiryDate     = $request->input('enquiry_date');
+    //         $limit           = (int) $request->input('limit', 0);
+    //         $offset          = (int) $request->input('offset', 0);
+
+    //         // ================= APPLY FILTERS ==================
+
+    //         // Multi client_id
+    //         if ($clientIds) {
+    //             $query->whereIn('client_id', $clientIds);
+    //         }
+
+    //         // Name (party/client name) - LIKE search
+    //         if (!empty($name)) {
+    //             $query->where('name', 'LIKE', '%' . $name . '%');
+    //         }
+
+    //         // Multi quotation_no (LIKE for each)
+    //         if ($quotationNos) {
+    //             $query->where(function ($q) use ($quotationNos) {
+    //                 foreach ($quotationNos as $no) {
+    //                     if ($no === '') continue;
+    //                     $q->orWhere('quotation_no', 'LIKE', '%' . $no . '%');
+    //                 }
+    //             });
+    //         }
+
+    //         // Multi enquiry_no (LIKE for each)
+    //         if ($enquiryNos) {
+    //             $query->where(function ($q) use ($enquiryNos) {
+    //                 foreach ($enquiryNos as $no) {
+    //                     if ($no === '') continue;
+    //                     $q->orWhere('enquiry_no', 'LIKE', '%' . $no . '%');
+    //                 }
+    //             });
+    //         }
+
+    //         // Multi client contact person ID (based on contact_person column)
+    //         if ($contactPersonIds) {
+    //             $query->whereIn('contact_person', $contactPersonIds);
+    //         }
+
+    //         // Date filters on quotation_date
+    //         if ($dateFrom && $dateTo) {
+    //             $query->whereBetween('quotation_date', [$dateFrom, $dateTo]);
+    //         } elseif ($dateFrom) {
+    //             $query->whereDate('quotation_date', '>=', $dateFrom);
+    //         } elseif ($dateTo) {
+    //             $query->whereDate('quotation_date', '<=', $dateTo);
+    //         }
+
+    //         // Single exact quotation date
+    //         if ($quotationDate) {
+    //             $query->whereDate('quotation_date', $quotationDate);
+    //         }
+
+    //         // Single exact enquiry date
+    //         if ($enquiryDate) {
+    //             $query->whereDate('enquiry_date', $enquiryDate);
+    //         }
+
+    //         // User
+    //         if ($userId) {
+    //             $query->where('user', $userId);
+    //         }
+
+    //         // Status
+    //         if (!empty($status)) {
+    //             $query->where('status', $status);
+    //         }
+
+    //         // Order & pagination (limit/offset)
+    //         $query->orderBy('quotation_date', 'desc');
+
+    //         if ($offset > 0) {
+    //             $query->offset($offset);
+    //         }
+    //         if ($limit > 0) {
+    //             $query->limit($limit);
+    //         }
+
+    //         // Fetch filtered data
+    //         $quotations = $query->get();
+
+    //         if ($quotations->isEmpty()) {
+    //             return response()->json([
+    //                 'code'    => 404,
+    //                 'success' => false,
+    //                 'message' => 'No quotations found for export!'
+    //             ]);
+    //         }
+
+    //         // ========================================================
+    //         //             BUILD EXPORT DATA (HEADER LEVEL)
+    //         // ========================================================
+
+    //         $exportData = [];
+    //         $sn = 1;
+
+    //         foreach ($quotations as $q) {
+    //             $state = optional($q->client->addresses->first())->state;
+
+    //             $exportData[] = [
+    //                 'SN'              => $sn++,
+    //                 'Quotation No'    => $q->quotation_no,
+    //                 'Quotation Date'  => $q->quotation_date_formatted,
+    //                 'Enquiry No'      => $q->enquiry_no,
+    //                 'Enquiry Date'    => $q->enquiry_date_formatted,
+    //                 'Client Name'     => $q->name,
+    //                 'Client State'    => $state,
+    //                 // 'Currency'        => $q->currency,
+    //                 'Gross'           => $q->gross,
+    //                 'CGST'            => $q->cgst,
+    //                 'SGST'            => $q->sgst,
+    //                 'IGST'            => $q->igst,
+    //                 'Total'           => $q->total,
+    //                 // 'Amount In Words' => $this->convertNumberToWords($q->total),
+    //                 'Status'          => $q->status,
+    //                 'User'            => $q->get_user->name        ?? 'Unknown',
+    //                 'Sales Person'    => $q->salesPerson->name     ?? 'Unknown',
+    //                 'Contact Person'  => $q->contact_person->name  ?? 'Unknown', // ID only
+    //                 'Template'        => $q->get_template->name    ?? 'Unknown',
+    //                 // 'Created At'      => $q->created_at ? Carbon::parse($q->created_at)->format('d-m-Y H:i') : null,
+    //             ];
+    //         }
+
+    //         // ========================================================
+    //         //                EXPORT TO EXCEL FILE
+    //         // ========================================================
+
+    //         $timestamp    = now()->format('Ymd_His');
+    //         $fileName     = "quotations_export_{$timestamp}.xlsx";
+    //         $relativePath = "uploads/quotation_report/{$fileName}";
+
+    //         Excel::store(
+    //             new class($exportData) implements FromCollection, WithHeadings {
+    //                 private $data;
+
+    //                 public function __construct($data)
+    //                 {
+    //                     $this->data = $data;
+    //                 }
+
+    //                 public function collection()
+    //                 {
+    //                     return collect($this->data);
+    //                 }
+
+    //                 public function headings(): array
+    //                 {
+    //                     return [
+    //                         'SN',
+    //                         'Quotation No',
+    //                         'Quotation Date',
+    //                         'Enquiry No',
+    //                         'Enquiry Date',
+    //                         'Client Name',
+    //                         'Client State',
+    //                         // 'Currency',
+    //                         'Gross',
+    //                         'CGST',
+    //                         'SGST',
+    //                         'IGST',
+    //                         'Total',
+    //                         // 'Amount In Words',
+    //                         'Status',
+    //                         'User',
+    //                         'Sales Person',
+    //                         'Contact Person', // (name)
+    //                         'Template'
+    //                         // 'Created At'
+    //                     ];
+    //                 }
+    //             },
+    //             $relativePath,
+    //             'public'
+    //         );
+
+    //         return response()->json([
+    //             'code'    => 200,
+    //             'success' => true,
+    //             'message' => 'Quotation report generated successfully!',
+    //             'data'    => [
+    //                 'file_url'     => asset("storage/{$relativePath}"),
+    //                 'file_name'    => $fileName,
+    //                 'file_size'    => Storage::disk('public')->size($relativePath),
+    //                 'content_type' => 'Excel'
+    //             ]
+    //         ]);
+
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'code'    => 500,
+    //             'success' => false,
+    //             'message' => 'Error exporting quotations.',
+    //             'error'   => $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
 
     // update quotation status
     public function updateQuotationStatus(Request $request, $id)
