@@ -1237,6 +1237,7 @@ class QuotationsController extends Controller
                 'get_user:id,name',
                 'get_template:id,name',
                 'salesPerson:id,name',
+                'contactPerson:id,name', // <-- make sure relation exists in model
                 'client' => function ($q) {
                     $q->select('id', 'customer_id')
                     ->with(['addresses' => function ($query) {
@@ -1269,52 +1270,27 @@ class QuotationsController extends Controller
             )
             ->where('company_id', $companyId);
 
+            // ========================================================
+            //                 READ FILTERS FROM BODY
+            // ========================================================
+            $dateFrom        = $request->input('date_from');
+            $dateTo          = $request->input('date_to');
+            $userId          = $request->input('user');
+            $status          = $request->input('status');           // pending/completed/rejected
+            $limit           = (int) $request->input('limit', 0);
+            $offset          = (int) $request->input('offset', 0);
+
+            $enquiryDate     = $request->input('enquiry_date');
+            $enquiryNo       = $request->input('enquiry_no');
+            $quotationDate   = $request->input('quotation_date');
+            $quotationNo     = $request->input('quotation_no');
+            $clientContactId = $request->input('client_contact_id'); // maps to contact_person
 
             // ========================================================
-            //           READ ALL FILTERS FROM POST BODY
+            //                      APPLY FILTERS
             // ========================================================
 
-            $clientId      = $request->input('client_id');
-            $name          = $request->input('name');
-            $quotationNo   = $request->input('quotation_no');
-            $quotationDate = $request->input('quotation_date');
-            $dateFrom      = $request->input('date_from');
-            $dateTo        = $request->input('date_to');
-            $enquiryNo     = $request->input('enquiry_no');
-            $enquiryDate   = $request->input('enquiry_date');
-            $user          = $request->input('user');
-            $status        = $request->input('status');
-            $productIds    = $request->input('product_ids');
-
-
-            // ========================================================
-            //                  APPLY FILTERS
-            // ========================================================
-
-            if ($clientId) {
-                $query->where('client_id', $clientId);
-            }
-
-            if ($name) {
-                $query->where('name', 'LIKE', '%' . $name . '%');
-            }
-
-            if ($quotationNo) {
-                $query->where('quotation_no', 'LIKE', '%' . $quotationNo . '%');
-            }
-
-            if ($quotationDate) {
-                $query->whereDate('quotation_date', $quotationDate);
-            }
-
-            if ($enquiryNo) {
-                $query->where('enquiry_no', 'LIKE', '%' . $enquiryNo . '%');
-            }
-
-            if ($enquiryDate) {
-                $query->whereDate('enquiry_date', $enquiryDate);
-            }
-
+            // Date range on quotation_date
             if ($dateFrom && $dateTo) {
                 $query->whereBetween('quotation_date', [$dateFrom, $dateTo]);
             } elseif ($dateFrom) {
@@ -1323,36 +1299,60 @@ class QuotationsController extends Controller
                 $query->whereDate('quotation_date', '<=', $dateTo);
             }
 
-            if ($user) {
-                $query->where('user', $user);
+            // Single exact quotation_date filter (extra)
+            if ($quotationDate) {
+                $query->whereDate('quotation_date', $quotationDate);
             }
 
+            // Enquiry filters
+            if ($enquiryNo) {
+                $query->where('enquiry_no', 'LIKE', '%' . $enquiryNo . '%');
+            }
+
+            if ($enquiryDate) {
+                $query->whereDate('enquiry_date', $enquiryDate);
+            }
+
+            // User who created quotation
+            if ($userId) {
+                $query->where('user', $userId);
+            }
+
+            // Status (pending / completed / rejected)
             if (!empty($status)) {
-                $query->whereIn('status', explode(',', $status));
+                $query->where('status', $status);
             }
 
-            if (!empty($productIds)) {
-                $productIdArray = explode(',', $productIds);
-                $query->whereHas('products', function ($q) use ($productIdArray) {
-                    $q->whereIn('product_id', $productIdArray);
-                });
+            // Filter by quotation number
+            if ($quotationNo) {
+                $query->where('quotation_no', 'LIKE', '%' . $quotationNo . '%');
             }
 
-            // Sort same as view
+            // Filter by contact person (client_contact_id)
+            if ($clientContactId) {
+                $query->where('contact_person', $clientContactId);
+            }
+
+            // Order & pagination (limit/offset)
             $query->orderBy('quotation_date', 'desc');
 
+            if ($offset > 0) {
+                $query->offset($offset);
+            }
+            if ($limit > 0) {
+                $query->limit($limit);
+            }
 
             // Fetch filtered data
             $quotations = $query->get();
 
             if ($quotations->isEmpty()) {
                 return response()->json([
-                    'code' => 404,
+                    'code'    => 404,
                     'success' => false,
                     'message' => 'No quotations found for export!'
                 ]);
             }
-
 
             // ========================================================
             //             BUILD EXPORT DATA (HEADER LEVEL)
@@ -1378,17 +1378,17 @@ class QuotationsController extends Controller
                     'SGST'            => $q->sgst,
                     'IGST'            => $q->igst,
                     'Total'           => $q->total,
-                    // 'Amount In Words' => $this->convertNumberToWords($q->total),
+                    'Amount In Words' => $this->convertNumberToWords($q->total),
                     'Status'          => $q->status,
-                    'User'            => $q->get_user->name      ?? 'Unknown',
-                    'Sales Person'    => $q->salesPerson->name   ?? 'Unknown',
-                    'Template'        => $q->get_template->name  ?? 'Unknown',
-                    // 'Created At'      => $q->created_at
-                    //                         ? Carbon::parse($q->created_at)->format('d-m-Y H:i')
-                    //                         : null,
+                    'User'            => $q->get_user->name        ?? 'Unknown',
+                    'Sales Person'    => $q->salesPerson->name     ?? 'Unknown',
+                    'Contact Person'  => $q->contactPerson->name   ?? 'Unknown', // ← added
+                    'Template'        => $q->get_template->name    ?? 'Unknown',
+                    'Created At'      => $q->created_at
+                                            ? Carbon::parse($q->created_at)->format('d-m-Y H:i')
+                                            : null,
                 ];
             }
-
 
             // ========================================================
             //                EXPORT TO EXCEL FILE
@@ -1432,6 +1432,7 @@ class QuotationsController extends Controller
                             'Status',
                             'User',
                             'Sales Person',
+                            'Contact Person',
                             'Template',
                             'Created At'
                         ];
@@ -1441,16 +1442,11 @@ class QuotationsController extends Controller
                 'public'
             );
 
-
-            // ========================================================
-            //                SUCCESS RESPONSE
-            // ========================================================
-
             return response()->json([
-                'code' => 200,
+                'code'    => 200,
                 'success' => true,
                 'message' => 'Quotation report generated successfully!',
-                'data' => [
+                'data'    => [
                     'file_url'     => asset("storage/{$relativePath}"),
                     'file_name'    => $fileName,
                     'file_size'    => Storage::disk('public')->size($relativePath),
@@ -1460,10 +1456,10 @@ class QuotationsController extends Controller
 
         } catch (\Exception $e) {
             return response()->json([
-                'code' => 500,
+                'code'    => 500,
                 'success' => false,
                 'message' => 'Error exporting quotations.',
-                'error' => $e->getMessage()
+                'error'   => $e->getMessage()
             ], 500);
         }
     }
@@ -1511,7 +1507,7 @@ class QuotationsController extends Controller
         $quotation = QuotationsModel::with(['products', 'addons'])->findOrFail($id);
 
         // ---------- 1. ITEMS: from t_quotation_products ----------
-        $products = $quotation->products; // Eloquent collection
+        $products = $quotation->products;
 
         $items = [];
         foreach ($products as $product) {
@@ -1527,12 +1523,15 @@ class QuotationsController extends Controller
                 'tax'      => $product->tax ?? 0,
                 'cgst'     => $product->cgst ?? 0,
                 'sgst'     => $product->sgst ?? 0,
-                'igst'     => $product->igst ?? 0,   // <--- add igst here
+                'igst'     => $product->igst ?? 0,
                 'amount'   => $product->amount ?? 0,
             ];
         }
 
-        // ---------- 2. TAX SUMMARY: grouped by HSN from products ----------
+        // ---------- 2. SPLIT ITEMS INTO PAGES (your custom rules) ----------
+        $itemPages = $this->chunkItemsForPages($items);
+
+        // ---------- 3. TAX SUMMARY ----------
         $tax_summary = [];
         $grouped = $products->groupBy('hsn');
 
@@ -1543,14 +1542,8 @@ class QuotationsController extends Controller
 
             $totalTax = $cgstSum + $sgstSum + $igstSum;
 
-            // taxable = line amount - all taxes
             $taxableSum = $groupItems->sum(function ($item) {
-                $amount = $item->amount ?? 0;
-                $cgst   = $item->cgst ?? 0;
-                $sgst   = $item->sgst ?? 0;
-                $igst   = $item->igst ?? 0;
-
-                return $amount - $cgst - $sgst - $igst;
+                return ($item->amount ?? 0) - ($item->cgst ?? 0) - ($item->sgst ?? 0) - ($item->igst ?? 0);
             });
 
             $avgTaxRate = $groupItems->avg('tax') ?? 0;
@@ -1561,37 +1554,31 @@ class QuotationsController extends Controller
                 'taxable'    => round($taxableSum, 2),
                 'cgst'       => round($cgstSum, 2),
                 'sgst'       => round($sgstSum, 2),
-                'igst'       => round($igstSum, 2),     // <--- keep igst separately
+                'igst'       => round($igstSum, 2),
                 'total_tax'  => round($totalTax, 2),
             ];
         }
 
-        // ---------- 3. ADD-ONS: PF & FREIGHT from t_quotation_addons ----------
-        $addons = $quotation->addons; // collection of QuotationAddonsModel
+        // ---------- 4. ADDONS: PF & FREIGHT ----------
+        $addons = $quotation->addons;
 
-        // Match 'pf' and 'freight' (case-insensitive, trims spaces)
         $pfAmount = $addons
-            ->filter(function ($addon) {
-                return strtolower(trim($addon->name)) === 'pf';
-            })
+            ->filter(fn($a) => strtolower(trim($a->name)) === 'pf')
             ->sum('amount');
 
         $freightAmount = $addons
-            ->filter(function ($addon) {
-                return strtolower(trim($addon->name)) === 'freight';
-            })
+            ->filter(fn($a) => strtolower(trim($a->name)) === 'freight')
             ->sum('amount');
 
-
-        // ---------- 4. Decide which tax style to show (IGST vs CGST+SGST) ----------
+        // ---------- 5. TAX STYLE: IGST or CGST+SGST ----------
         $igstTotal = $quotation->igst ?? 0;
         $cgstTotal = $quotation->cgst ?? 0;
         $sgstTotal = $quotation->sgst ?? 0;
 
-        $showIgst      = $igstTotal > 0;            // if IGST present, don't show CGST/SGST block
-        $showCgstSgst  = !$showIgst;                // otherwise use CGST+SGST
+        $showIgst = $igstTotal > 0;
+        $showCgstSgst = !$showIgst;
 
-        // ---------- 5. Build data array for the view ----------
+        // ---------- 6. Prepare data for Blade ----------
         $data = [
             'quotation_no'      => $quotation->quotation_no ?? '',
             'quotation_date'    => $quotation->quotation_date ?? '',
@@ -1602,50 +1589,88 @@ class QuotationsController extends Controller
             'cgst'              => $cgstTotal,
             'sgst'              => $sgstTotal,
             'igst'              => $igstTotal,
-            'roundoff'          => $quotation->round_off ?? 0, // <--- matches DB column
+            'roundoff'          => $quotation->round_off ?? 0,
 
             'grand_total'       => $quotation->total ?? 0,
             'grand_total_words' => $this->convertNumberToWords($quotation->total ?? 0),
 
-            // Items and tax summary
-            'items'             => $items,
+            'itemPages'         => $itemPages,  // <-- NEW PAGINATED ITEMS
             'tax_summary'       => $tax_summary,
 
-            // Add-ons
             'pf_amount'         => $pfAmount,
             'freight_amount'    => $freightAmount,
 
-            // Tax style flags
             'show_igst'         => $showIgst,
             'show_cgst_sgst'    => $showCgstSgst,
         ];
 
-        // ---------- 6. Generate PDF ----------
-        // $pdf = new \Mpdf\Mpdf([
-        //     'format'        => 'A4',
-        //     'margin_top'    => 5,
-        //     'margin_bottom' => 5,
-        //     'margin_left'   => 5,
-        //     'margin_right'  => 5,
-        // ]);
+        // ---------- 7. Generate PDF ----------
         $pdf = new \Mpdf\Mpdf([
             'format'        => 'A4',
-
-            // space for header (logo + title + dashed line)
-            'margin_top'    => 55,   // you can tweak 50–60 if needed
-
-            // space for footer (bank details + T&C + footer image)
-            'margin_bottom' => 90,   // increased so content never enters footer area
-
+            'margin_top'    => 55,   // space for header
+            'margin_bottom' => 90,   // space for footer + summary
             'margin_left'   => 10,
             'margin_right'  => 10,
         ]);
 
-
         $html = view('quotation.pdf', $data)->render();
         $pdf->WriteHTML($html);
 
-        return $pdf->Output('quotation.layout', 'I');
+        return $pdf->Output('quotation.pdf', 'I');
+    }
+
+    private function chunkItemsForPages(array $items): array
+    {
+        $fullCap = 13;  // max items on a normal page
+        $lastCap = 8;   // max items on the page that also has summary
+
+        $total  = count($items);
+        $pages  = [];
+
+        // Case 1: everything fits on one page with summary
+        if ($total <= $lastCap) {
+            $pages[] = $items;
+            return $pages;
+        }
+
+        $remaining = $total;
+        $offset    = 0;
+
+        // Case 2: we need more than 2 pages
+        // While items remaining > 13 + 8 = 21, keep adding full pages of 13
+        while ($remaining > ($fullCap + $lastCap)) { // >21
+            $pages[]   = array_slice($items, $offset, $fullCap);
+            $offset   += $fullCap;
+            $remaining -= $fullCap;
+        }
+
+        // Now remaining is between 9 and 21 (or <=8)
+
+        // If remaining can fit on a single summary page (unlikely here but safe)
+        if ($remaining <= $lastCap) {
+            $pages[] = array_slice($items, $offset, $remaining);
+        } else {
+            // We must split remaining into:
+            //   - one normal page (<=13)
+            //   - one summary page (<=8)
+
+            if ($remaining - $fullCap >= 1 && $remaining - $fullCap <= $lastCap) {
+                // e.g. 14 => 13 + 1, 18 => 13 + 5, 17 => 13 + 4, etc.
+                $pages[] = array_slice($items, $offset, $fullCap);
+                $offset += $fullCap;
+                $pages[] = array_slice($items, $offset, $remaining - $fullCap);
+            } else {
+                // Special small cases like 9 or 10:
+                // 9  => 8 + 1
+                // 10 => 8 + 2
+                $firstPageCount = 8;
+                $pages[] = array_slice($items, $offset, $firstPageCount);
+                $offset += $firstPageCount;
+                $pages[] = array_slice($items, $offset, $remaining - $firstPageCount);
+            }
+        }
+
+        return $pages;
     }
 
     // public function generateQuotationPDF($id)
@@ -1764,18 +1789,31 @@ class QuotationsController extends Controller
     //     ];
 
     //     // ---------- 6. Generate PDF ----------
+    //     // $pdf = new \Mpdf\Mpdf([
+    //     //     'format'        => 'A4',
+    //     //     'margin_top'    => 5,
+    //     //     'margin_bottom' => 5,
+    //     //     'margin_left'   => 5,
+    //     //     'margin_right'  => 5,
+    //     // ]);
     //     $pdf = new \Mpdf\Mpdf([
     //         'format'        => 'A4',
-    //         'margin_top'    => 5,
-    //         'margin_bottom' => 5,
-    //         'margin_left'   => 5,
-    //         'margin_right'  => 5,
+
+    //         // space for header (logo + title + dashed line)
+    //         'margin_top'    => 55,   // you can tweak 50–60 if needed
+
+    //         // space for footer (bank details + T&C + footer image)
+    //         'margin_bottom' => 90,   // increased so content never enters footer area
+
+    //         'margin_left'   => 10,
+    //         'margin_right'  => 10,
     //     ]);
+
 
     //     $html = view('quotation.pdf', $data)->render();
     //     $pdf->WriteHTML($html);
 
-    //     return $pdf->Output('quotation.pdf', 'I');
+    //     return $pdf->Output('quotation.layout', 'I');
     // }
 
     public function fetchQuotationsAllProducts(Request $request)
