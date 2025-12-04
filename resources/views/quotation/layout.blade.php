@@ -17,7 +17,7 @@
       margin-right: 10mm;
 
       /* background image for whole page */
-      background-image: url("{{ public_path('storage/uploads/pdf_template/pdf_bg.jpg') }}");
+      background-image: url("{{ public_path('storage/uploads/pdf_template/expo_line.jpg') }}");
       background-image-resize: 6;
     }
 
