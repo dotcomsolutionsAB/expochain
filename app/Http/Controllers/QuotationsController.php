@@ -1308,7 +1308,7 @@ class QuotationsController extends Controller
             if (!empty($name)) {
                 $query->where('name', 'LIKE', '%' . $name . '%');
             }
-            
+
             // Multi quotation_no
             if ($quotationNos) {
                 $query->where(function ($q) use ($quotationNos) {
@@ -1635,8 +1635,8 @@ class QuotationsController extends Controller
         // ---------- 7. Generate PDF ----------
         $pdf = new \Mpdf\Mpdf([
             'format'        => 'A4',
-            'margin_top'    => 55,   // space for header
-            'margin_bottom' => 90,   // space for footer + summary
+            'margin_top'    => 35,   // space for header
+            'margin_bottom' => 50,   // space for footer + summary
             'margin_left'   => 10,
             'margin_right'  => 10,
         ]);
@@ -1650,7 +1650,7 @@ class QuotationsController extends Controller
     private function chunkItemsForPages(array $items): array
     {
         $fullCap = 13;  // max items on a normal page
-        $lastCap = 8;   // max items on the page that also has summary
+        $lastCap = 9;   // max items on the page that also has summary
 
         $total  = count($items);
         $pages  = [];
@@ -1691,7 +1691,7 @@ class QuotationsController extends Controller
                 // Special small cases like 9 or 10:
                 // 9  => 8 + 1
                 // 10 => 8 + 2
-                $firstPageCount = 8;
+                $firstPageCount = 9;
                 $pages[] = array_slice($items, $offset, $firstPageCount);
                 $offset += $firstPageCount;
                 $pages[] = array_slice($items, $offset, $remaining - $firstPageCount);
