@@ -40,7 +40,7 @@
     /* Middle part of the frame: around main content */
     .frame-middle {
       border-left: 0x solid #8b440c;
-      border-right: 1px solid #8b440c;
+      border-right: 0px solid #8b440c;
       padding: 2mm 4mm 2mm 4mm;     /* space from side borders */
     }
 
