@@ -1232,12 +1232,11 @@ class QuotationsController extends Controller
         try {
             $companyId = Auth::user()->company_id;
 
-            // === Base query (same structure as view_quotations) ===
+            // === Base query (aligned with view_quotations) ===
             $query = QuotationsModel::with([
                 'get_user:id,name',
                 'get_template:id,name',
                 'salesPerson:id,name',
-                'contactPerson:id,name', // <-- make sure relation exists in model
                 'client' => function ($q) {
                     $q->select('id', 'customer_id')
                     ->with(['addresses' => function ($query) {
@@ -1270,33 +1269,34 @@ class QuotationsController extends Controller
             )
             ->where('company_id', $companyId);
 
-            // ================= MULTI-VALUE FILTER PARSING ==================
+            // ================= MULTI-VALUE + SINGLE FILTER PARSING ==================
 
             $clientIds        = $request->filled('client_id') 
                                 ? array_map('intval', explode(',', $request->client_id)) 
                                 : null;
 
             $quotationNos     = $request->filled('quotation_no') 
-                                ? explode(',', $request->quotation_no) 
+                                ? array_map('trim', explode(',', $request->quotation_no)) 
                                 : null;
 
             $enquiryNos       = $request->filled('enquiry_no') 
-                                ? explode(',', $request->enquiry_no) 
+                                ? array_map('trim', explode(',', $request->enquiry_no)) 
                                 : null;
 
             $contactPersonIds = $request->filled('client_contact_id') 
                                 ? array_map('intval', explode(',', $request->client_contact_id)) 
                                 : null;
 
-            $name            = $request->input('name');          // <<=== NEW
-            $userId           = $request->input('user');
-            $status           = $request->input('status'); // single
-            $dateFrom         = $request->input('date_from');
-            $dateTo           = $request->input('date_to');
-            $quotationDate    = $request->input('quotation_date');
-            $enquiryDate      = $request->input('enquiry_date');
-            $limit            = (int) $request->input('limit', 0);
-            $offset           = (int) $request->input('offset', 0);
+            // single-value filters
+            $name            = $request->input('name');          // party/client name
+            $userId          = $request->input('user');
+            $status          = $request->input('status');        // pending/completed/rejected
+            $dateFrom        = $request->input('date_from');
+            $dateTo          = $request->input('date_to');
+            $quotationDate   = $request->input('quotation_date');
+            $enquiryDate     = $request->input('enquiry_date');
+            $limit           = (int) $request->input('limit', 0);
+            $offset          = (int) $request->input('offset', 0);
 
             // ================= APPLY FILTERS ==================
 
@@ -1304,35 +1304,38 @@ class QuotationsController extends Controller
             if ($clientIds) {
                 $query->whereIn('client_id', $clientIds);
             }
+
             // Name (party/client name) - LIKE search
             if (!empty($name)) {
                 $query->where('name', 'LIKE', '%' . $name . '%');
             }
 
-            // Multi quotation_no
+            // Multi quotation_no (LIKE for each)
             if ($quotationNos) {
                 $query->where(function ($q) use ($quotationNos) {
                     foreach ($quotationNos as $no) {
-                        $q->orWhere('quotation_no', 'LIKE', '%' . trim($no) . '%');
+                        if ($no === '') continue;
+                        $q->orWhere('quotation_no', 'LIKE', '%' . $no . '%');
                     }
                 });
             }
 
-            // Multi enquiry_no
+            // Multi enquiry_no (LIKE for each)
             if ($enquiryNos) {
                 $query->where(function ($q) use ($enquiryNos) {
                     foreach ($enquiryNos as $no) {
-                        $q->orWhere('enquiry_no', 'LIKE', '%' . trim($no) . '%');
+                        if ($no === '') continue;
+                        $q->orWhere('enquiry_no', 'LIKE', '%' . $no . '%');
                     }
                 });
             }
 
-            // Multi client contact person ID
+            // Multi client contact person ID (based on contact_person column)
             if ($contactPersonIds) {
                 $query->whereIn('contact_person', $contactPersonIds);
             }
 
-            // Date filters
+            // Date filters on quotation_date
             if ($dateFrom && $dateTo) {
                 $query->whereBetween('quotation_date', [$dateFrom, $dateTo]);
             } elseif ($dateFrom) {
@@ -1410,7 +1413,7 @@ class QuotationsController extends Controller
                     'Status'          => $q->status,
                     'User'            => $q->get_user->name        ?? 'Unknown',
                     'Sales Person'    => $q->salesPerson->name     ?? 'Unknown',
-                    'Contact Person'  => $q->contactPerson->name   ?? 'Unknown', // ← added
+                    'Contact Person'  => $q->contact_person        ?? null, // ID only
                     'Template'        => $q->get_template->name    ?? 'Unknown',
                     'Created At'      => $q->created_at
                                             ? Carbon::parse($q->created_at)->format('d-m-Y H:i')
@@ -1460,7 +1463,7 @@ class QuotationsController extends Controller
                             'Status',
                             'User',
                             'Sales Person',
-                            'Contact Person',
+                            'Contact Person', // (ID)
                             'Template',
                             'Created At'
                         ];
@@ -1491,7 +1494,7 @@ class QuotationsController extends Controller
             ], 500);
         }
     }
-
+    
     // update quotation status
     public function updateQuotationStatus(Request $request, $id)
     {
@@ -1635,7 +1638,7 @@ class QuotationsController extends Controller
         // ---------- 7. Generate PDF ----------
         $pdf = new \Mpdf\Mpdf([
             'format'        => 'A4',
-            'margin_top'    => 35,   // space for header
+            'margin_top'    => 55,   // space for header
             'margin_bottom' => 50,   // space for footer + summary
             'margin_left'   => 10,
             'margin_right'  => 10,
