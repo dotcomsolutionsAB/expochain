@@ -305,10 +305,10 @@ class QuotationsController extends Controller
                 $quotation = $query->where('id', $id)->first();
                 if (!$quotation) {
                     return response()->json([
-                        'code' => 404,
+                        'code' => 200,
                         'success' => false,
                         'message' => 'Quotation not found!',
-                    ], 404);
+                    ], 200);
                 }
 
                 // Transform single quotation
@@ -427,10 +427,10 @@ class QuotationsController extends Controller
 
             if ($get_quotations->isEmpty()) {
                 return response()->json([
-                    'code' => 404,
+                    'code' => 200,
                     'success' => false,
                     'message' => 'No Quotations found!',
-                ], 404);
+                ], 200);
             }
 
             // Transform Data for each quotation
