@@ -1270,27 +1270,69 @@ class QuotationsController extends Controller
             )
             ->where('company_id', $companyId);
 
-            // ========================================================
-            //                 READ FILTERS FROM BODY
-            // ========================================================
-            $dateFrom        = $request->input('date_from');
-            $dateTo          = $request->input('date_to');
-            $userId          = $request->input('user');
-            $status          = $request->input('status');           // pending/completed/rejected
-            $limit           = (int) $request->input('limit', 0);
-            $offset          = (int) $request->input('offset', 0);
+            // ================= MULTI-VALUE FILTER PARSING ==================
 
-            $enquiryDate     = $request->input('enquiry_date');
-            $enquiryNo       = $request->input('enquiry_no');
-            $quotationDate   = $request->input('quotation_date');
-            $quotationNo     = $request->input('quotation_no');
-            $clientContactId = $request->input('client_contact_id'); // maps to contact_person
+            $clientIds        = $request->filled('client_id') 
+                                ? array_map('intval', explode(',', $request->client_id)) 
+                                : null;
 
-            // ========================================================
-            //                      APPLY FILTERS
-            // ========================================================
+            $quotationNos     = $request->filled('quotation_no') 
+                                ? explode(',', $request->quotation_no) 
+                                : null;
 
-            // Date range on quotation_date
+            $enquiryNos       = $request->filled('enquiry_no') 
+                                ? explode(',', $request->enquiry_no) 
+                                : null;
+
+            $contactPersonIds = $request->filled('client_contact_id') 
+                                ? array_map('intval', explode(',', $request->client_contact_id)) 
+                                : null;
+
+            $name            = $request->input('name');          // <<=== NEW
+            $userId           = $request->input('user');
+            $status           = $request->input('status'); // single
+            $dateFrom         = $request->input('date_from');
+            $dateTo           = $request->input('date_to');
+            $quotationDate    = $request->input('quotation_date');
+            $enquiryDate      = $request->input('enquiry_date');
+            $limit            = (int) $request->input('limit', 0);
+            $offset           = (int) $request->input('offset', 0);
+
+            // ================= APPLY FILTERS ==================
+
+            // Multi client_id
+            if ($clientIds) {
+                $query->whereIn('client_id', $clientIds);
+            }
+            // Name (party/client name) - LIKE search
+            if (!empty($name)) {
+                $query->where('name', 'LIKE', '%' . $name . '%');
+            }
+            
+            // Multi quotation_no
+            if ($quotationNos) {
+                $query->where(function ($q) use ($quotationNos) {
+                    foreach ($quotationNos as $no) {
+                        $q->orWhere('quotation_no', 'LIKE', '%' . trim($no) . '%');
+                    }
+                });
+            }
+
+            // Multi enquiry_no
+            if ($enquiryNos) {
+                $query->where(function ($q) use ($enquiryNos) {
+                    foreach ($enquiryNos as $no) {
+                        $q->orWhere('enquiry_no', 'LIKE', '%' . trim($no) . '%');
+                    }
+                });
+            }
+
+            // Multi client contact person ID
+            if ($contactPersonIds) {
+                $query->whereIn('contact_person', $contactPersonIds);
+            }
+
+            // Date filters
             if ($dateFrom && $dateTo) {
                 $query->whereBetween('quotation_date', [$dateFrom, $dateTo]);
             } elseif ($dateFrom) {
@@ -1299,38 +1341,24 @@ class QuotationsController extends Controller
                 $query->whereDate('quotation_date', '<=', $dateTo);
             }
 
-            // Single exact quotation_date filter (extra)
+            // Single exact quotation date
             if ($quotationDate) {
                 $query->whereDate('quotation_date', $quotationDate);
             }
 
-            // Enquiry filters
-            if ($enquiryNo) {
-                $query->where('enquiry_no', 'LIKE', '%' . $enquiryNo . '%');
-            }
-
+            // Single exact enquiry date
             if ($enquiryDate) {
                 $query->whereDate('enquiry_date', $enquiryDate);
             }
 
-            // User who created quotation
+            // User
             if ($userId) {
                 $query->where('user', $userId);
             }
 
-            // Status (pending / completed / rejected)
+            // Status
             if (!empty($status)) {
                 $query->where('status', $status);
-            }
-
-            // Filter by quotation number
-            if ($quotationNo) {
-                $query->where('quotation_no', 'LIKE', '%' . $quotationNo . '%');
-            }
-
-            // Filter by contact person (client_contact_id)
-            if ($clientContactId) {
-                $query->where('contact_person', $clientContactId);
             }
 
             // Order & pagination (limit/offset)
