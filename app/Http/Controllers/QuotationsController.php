@@ -1403,21 +1403,19 @@ class QuotationsController extends Controller
                     'Enquiry Date'    => $q->enquiry_date_formatted,
                     'Client Name'     => $q->name,
                     'Client State'    => $state,
-                    'Currency'        => $q->currency,
+                    // 'Currency'        => $q->currency,
                     'Gross'           => $q->gross,
                     'CGST'            => $q->cgst,
                     'SGST'            => $q->sgst,
                     'IGST'            => $q->igst,
                     'Total'           => $q->total,
-                    'Amount In Words' => $this->convertNumberToWords($q->total),
+                    // 'Amount In Words' => $this->convertNumberToWords($q->total),
                     'Status'          => $q->status,
                     'User'            => $q->get_user->name        ?? 'Unknown',
                     'Sales Person'    => $q->salesPerson->name     ?? 'Unknown',
-                    'Contact Person'  => $q->contact_person        ?? null, // ID only
+                    'Contact Person'  => $q->contact_person->name  ?? 'Unknown', // ID only
                     'Template'        => $q->get_template->name    ?? 'Unknown',
-                    'Created At'      => $q->created_at
-                                            ? Carbon::parse($q->created_at)->format('d-m-Y H:i')
-                                            : null,
+                    // 'Created At'      => $q->created_at ? Carbon::parse($q->created_at)->format('d-m-Y H:i') : null,
                 ];
             }
 
@@ -1453,19 +1451,19 @@ class QuotationsController extends Controller
                             'Enquiry Date',
                             'Client Name',
                             'Client State',
-                            'Currency',
+                            // 'Currency',
                             'Gross',
                             'CGST',
                             'SGST',
                             'IGST',
                             'Total',
-                            'Amount In Words',
+                            // 'Amount In Words',
                             'Status',
                             'User',
                             'Sales Person',
-                            'Contact Person', // (ID)
-                            'Template',
-                            'Created At'
+                            'Contact Person', // (name)
+                            'Template'
+                            // 'Created At'
                         ];
                     }
                 },
@@ -1494,7 +1492,7 @@ class QuotationsController extends Controller
             ], 500);
         }
     }
-    
+
     // update quotation status
     public function updateQuotationStatus(Request $request, $id)
     {
