@@ -1629,11 +1629,18 @@ class QuotationsController extends Controller
         //     'margin_right'  => 5,
         // ]);
         $pdf = new \Mpdf\Mpdf([
-            'margin_top'    => 45,
-            'margin_bottom' => 70,
+            'format'        => 'A4',
+
+            // space for header (logo + title + dashed line)
+            'margin_top'    => 55,   // you can tweak 50–60 if needed
+
+            // space for footer (bank details + T&C + footer image)
+            'margin_bottom' => 90,   // increased so content never enters footer area
+
             'margin_left'   => 10,
             'margin_right'  => 10,
         ]);
+
 
         $html = view('quotation.pdf', $data)->render();
         $pdf->WriteHTML($html);

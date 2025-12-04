@@ -8,14 +8,6 @@
     @page {
       header: pageHeader;
       footer: pageFooter;
-
-      /* space for header & footer */
-      margin-top: 45mm;
-      header-margin: 1mm;
-      margin-bottom: 70mm;
-      margin-left: 10mm;
-      margin-right: 10mm;
-
       /* background image for whole page */
       background-image: url("{{ public_path('storage/uploads/pdf_template/expo_line.jpg') }}");
       background-image-resize: 6;
