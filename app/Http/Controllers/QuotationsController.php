@@ -305,9 +305,12 @@ class QuotationsController extends Controller
                 $quotation = $query->where('id', $id)->first();
                 if (!$quotation) {
                     return response()->json([
-                        'code' => 200,
-                        'success' => false,
-                        'message' => 'Quotation not found!',
+                        'code'          => 200,
+                        'success'       => false,
+                        'message'       => 'Quotation not found!',
+                        'data'          => null,   // or [] if you prefer
+                        'count'         => 0,
+                        'total_records' => 0,
                     ], 200);
                 }
 
@@ -427,9 +430,12 @@ class QuotationsController extends Controller
 
             if ($get_quotations->isEmpty()) {
                 return response()->json([
-                    'code' => 200,
-                    'success' => false,
-                    'message' => 'No Quotations found!',
+                    'code'          => 200,
+                    'success'       => true,
+                    'message'       => 'No quotations available',
+                    'data'          => [],
+                    'count'         => 0,
+                    'total_records' => $totalRecords,  // will be 0 here
                 ], 200);
             }
 
