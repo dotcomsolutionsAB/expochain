@@ -32,21 +32,21 @@
 
     /* Top part of the frame: around header + dashed line */
     .frame-top {
-      border: 1px solid #8b440c;
+      border: 0px solid #8b440c;
       border-bottom: none;          /* middle will close it */
       padding: 4mm 4mm 0 4mm;       /* top + sides, no bottom padding */
     }
 
     /* Middle part of the frame: around main content */
     .frame-middle {
-      border-left: 1px solid #8b440c;
+      border-left: 0x solid #8b440c;
       border-right: 1px solid #8b440c;
       padding: 2mm 4mm 2mm 4mm;     /* space from side borders */
     }
 
     /* Bottom part of the frame: around footer */
     .frame-bottom {
-      border: 1px solid #8b440c;
+      border: 0px solid #8b440c;
       border-top: none;             /* middle will close it */
       padding: 0 4mm 4mm 4mm;       /* bottom padding */
     }
@@ -136,7 +136,7 @@
       <div class="terms" style="margin-top: 5px">
         <table class="no-border" style="width: 100%; border-collapse: collapse">
           <tr>
-            <td style="width: 60%; vertical-align: top; padding-right: 10px; border-right: 1px dotted #000; text-align:left;">
+            <td style="width: 60%; vertical-align: top; padding-right: 10px; text-align:left;">
               <strong>TERMS &amp; CONDITIONS:</strong><br />
               <table class="no-border" style="width: 100%; border-collapse: collapse; margin-top:5px;">
                 <tr>

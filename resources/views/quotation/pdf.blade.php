@@ -5,15 +5,7 @@
   <!-- Customer and Quotation Info -->
   <table class="no-border">
     <tr>
-      <td
-        style="
-          width: 60%;
-          vertical-align: top;
-          padding-right: 10px;
-          border-right: 1px dotted #000;
-          text-align:left;
-        "
-      >
+      <td style="width: 60%; vertical-align: top; padding-right: 10px; text-align:left;">
         <strong>Customer Details :</strong><br />
         ELECTROSTEEL CASTINGS LTD<br />
         30 B.T ROAD, Kharadah, P.O - Sukchar<br />
