@@ -232,7 +232,7 @@ class SalesInvoiceController extends Controller
                 'name'             => $addon['name'],
                 'amount'           => $addon['amount'],
                 'tax'              => $addon['tax'],
-                'hsn'              => '99', // fixed as per your logic
+                'hsn'              => $addon['hsn'], // fixed as per your logic
                 'cgst'             => $addon['cgst'],
                 'sgst'             => $addon['sgst'],
                 'igst'             => $addon['igst'],
