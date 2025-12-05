@@ -333,7 +333,7 @@ class SalesInvoiceController extends Controller
         ])
         ->select('id', 'client_id', 'name', 'sales_invoice_no', 'sales_invoice_date',
             DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date_formatted'), 
-            'user', 'sales_order_id', 
+            'user', 'sales_order_id', 'sales_order_no',
             DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 
             'template', 'sales_person', 'commission', 'cash', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
         )
@@ -428,10 +428,13 @@ class SalesInvoiceController extends Controller
 
         if ($get_sales_invoices->isEmpty()) {
             return response()->json([
-                'code' => 404,
-                'success' => false,
-                'message' => 'No Sales Invoices found!',
-            ], 404);
+                'code' => 200,
+                'success' => true,
+                'message' => 'No Sales Invoices available',
+                'data' => [],
+                'count' => 0,
+                'total_records' => 0
+            ], 200);
         }
 
         // Transform Data
