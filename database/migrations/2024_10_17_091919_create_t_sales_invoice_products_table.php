@@ -29,6 +29,7 @@ return new class extends Migration
             $table->float('cgst');
             $table->float('sgst');
             $table->float('igst');
+            $table->float('gross');
             $table->float('amount');
             $table->integer('channel')->nullable();
             $table->integer('godown')->nullable();

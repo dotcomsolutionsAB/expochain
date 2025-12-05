@@ -51,26 +51,40 @@ class SalesInvoiceController extends Controller
             'gross' => 'required|numeric|min:0',
             'round_off' => 'required|numeric',
 
-            // Products Array Validation
+            // PRODUCTS VALIDATION
             'products' => 'required|array',
+
             'products.*.product_id' => 'required|integer|exists:t_products,id',
             'products.*.product_name' => 'required|string|exists:t_products,name',
             'products.*.description' => 'nullable|string',
+
             'products.*.quantity' => 'required|integer|min:0',
             'products.*.unit' => 'required|string',
             'products.*.price' => 'required|numeric|min:0',
+
             'products.*.discount' => 'nullable|numeric|min:0',
             'products.*.discount_type' => 'required|in:percentage,value',
+
             'products.*.hsn' => 'required|string',
             'products.*.tax' => 'required|numeric|min:0',
             'products.*.cgst' => 'required|numeric|min:0',
             'products.*.sgst' => 'required|numeric|min:0',
             'products.*.igst' => 'required|numeric|min:0',
-            'products.*.amount' => 'required|numeric|min:0',
-            'products.*.channel' => 'nullable|integer|exists:t_channels,id',
-            'products.*.godown' => 'nullable|exists:t_godown,id',
 
-            // Addons Array Validation
+            'products.*.gross' => 'nullable|numeric|min:0',   // NEW
+            'products.*.amount' => 'required|numeric|min:0',
+
+            'products.*.channel' => 'nullable|integer|exists:t_channels,id',
+            'products.*.godown' => 'nullable|integer|exists:t_godown,id',
+
+            // NEW FIELDS FROM MODEL
+            'products.*.so_id' => 'nullable|integer',
+            'products.*.returned' => 'nullable|numeric|min:0',
+            'products.*.profit' => 'nullable|numeric',
+            'products.*.purchase_invoice_id' => 'nullable|integer',
+            'products.*.purchase_rate' => 'nullable|numeric|min:0',
+
+            // ADDONS VALIDATION
             'addons' => 'required|array',
             'addons.*.name' => 'required|string',
             'addons.*.amount' => 'required|numeric',
@@ -78,7 +92,7 @@ class SalesInvoiceController extends Controller
             'addons.*.hsn' => 'required|numeric',
             'addons.*.cgst' => 'required|numeric',
             'addons.*.sgst' => 'required|numeric',
-            'addons.*.igst' => 'required|numeric'
+            'addons.*.igst' => 'required|numeric',
         ]);
 
         $companyId   = Auth::user()->company_id;
@@ -101,7 +115,7 @@ class SalesInvoiceController extends Controller
 
         $get_customer_type = null;
         if (($decodedResponse['code'] ?? null) === 200 && !empty($decodedResponse['data'][0])) {
-            $data             = $decodedResponse['data'];
+            $data              = $decodedResponse['data'];
             $get_customer_type = $data[0]['type'] ?? null;
         }
 
@@ -145,24 +159,24 @@ class SalesInvoiceController extends Controller
 
         // ===== Register the sales invoice =====
         $register_sales_invoice = SalesInvoiceModel::create([
-            'client_id'         => $request->input('client_id'),
-            'company_id'        => $companyId,
-            'name'              => $client->name,
-            'sales_invoice_no'  => $sales_invoice_no,
-            'sales_invoice_date'=> $currentDate,
-            'sales_order_id'    => $request->input('sales_order_id'),
-            'sales_order_date'  => $request->input('sales_order_date'),
-            'template'          => $request->input('template'),
-            'sales_person'      => $request->input('sales_person'),
-            'commission'        => $request->input('commission'),
-            'cash'              => $request->input('cash'),
-            'user'              => Auth::user()->id,
-            'cgst'              => $request->input('cgst'),
-            'sgst'              => $request->input('sgst'),
-            'igst'              => $request->input('igst'),
-            'total'             => $request->input('total'),
-            'gross'             => $request->input('gross'),
-            'round_off'         => $request->input('round_off'),
+            'client_id'          => $request->input('client_id'),
+            'company_id'         => $companyId,
+            'name'               => $client->name,
+            'sales_invoice_no'   => $sales_invoice_no,
+            'sales_invoice_date' => $currentDate,
+            'sales_order_id'     => $request->input('sales_order_id'),
+            'sales_order_date'   => $request->input('sales_order_date'),
+            'template'           => $request->input('template'),
+            'sales_person'       => $request->input('sales_person'),
+            'commission'         => $request->input('commission'),
+            'cash'               => $request->input('cash'),
+            'user'               => Auth::user()->id,
+            'cgst'               => $request->input('cgst'),
+            'sgst'               => $request->input('sgst'),
+            'igst'               => $request->input('igst'),
+            'total'              => $request->input('total'),
+            'gross'              => $request->input('gross'),
+            'round_off'          => $request->input('round_off'),
         ]);
 
         // ===== Process and insert products =====
@@ -175,24 +189,30 @@ class SalesInvoiceController extends Controller
 
         foreach ($products as $product) {
             SalesInvoiceProductsModel::create([
-                'sales_invoice_id' => $register_sales_invoice->id,
-                'company_id'       => $companyId,
-                'product_id'       => $product['product_id'],
-                'product_name'     => $product['product_name'],
-                'description'      => $product['description'] ?? null,
-                'quantity'         => $product['quantity'],
-                'unit'             => $product['unit'],
-                'price'            => $product['price'],
-                'discount'         => $product['discount'] ?? 0,
-                'discount_type'    => $product['discount_type'],
-                'hsn'              => $product['hsn'],
-                'tax'              => $product['tax'],
-                'cgst'             => $product['cgst'],
-                'sgst'             => $product['sgst'],
-                'igst'             => $product['igst'],
-                'amount'           => $product['amount'],
-                'channel'          => $product['channel'] ?? null,
-                'godown'           => $product['godown'] ?? null,
+                'sales_invoice_id'     => $register_sales_invoice->id,
+                'company_id'           => $companyId,
+                'product_id'           => $product['product_id'],
+                'product_name'         => $product['product_name'],
+                'description'          => $product['description'] ?? null,
+                'quantity'             => $product['quantity'],
+                'unit'                 => $product['unit'],
+                'price'                => $product['price'],
+                'discount'             => $product['discount'] ?? 0,
+                'discount_type'        => $product['discount_type'],
+                'hsn'                  => $product['hsn'],
+                'tax'                  => $product['tax'],
+                'cgst'                 => $product['cgst'],
+                'sgst'                 => $product['sgst'],
+                'igst'                 => $product['igst'],
+                'gross'                => $product['gross'] ?? 0,             // NEW
+                'amount'               => $product['amount'],
+                'channel'              => $product['channel'] ?? null,
+                'godown'               => $product['godown'] ?? null,
+                'so_id'                => $product['so_id'] ?? null,          // NEW
+                'returned'             => $product['returned'] ?? 0,          // NEW
+                'profit'               => $product['profit'] ?? 0,            // NEW
+                'purchase_invoice_id'  => $product['purchase_invoice_id'] ?? 0, // NEW
+                'purchase_rate'        => $product['purchase_rate'] ?? 0,     // NEW
             ]);
 
             // Totals

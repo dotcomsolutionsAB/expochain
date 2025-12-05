@@ -25,6 +25,7 @@ class SalesInvoiceProductsModel extends Model
         'cgst',
         'sgst',
         'igst',
+        'gross',
         'amount',
         'channel',  // Added based on schema, nullable
         'godown',   // Added based on schema, nullable
