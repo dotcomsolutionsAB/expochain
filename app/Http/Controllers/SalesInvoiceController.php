@@ -282,197 +282,7 @@ class SalesInvoiceController extends Controller
             'total_discount' => $total_discount,
             'total_amount'   => $total_amount,
         ], 201);
-    }
-
-    // public function add_sales_invoice(Request $request)
-    // {
-    //     // Validate the request data
-    //     $request->validate([
-    //         // Sales Invoice
-    //         'client_id' => 'required|integer|exists:t_clients,id',
-    //         'sales_invoice_no' => 'required|string',
-    //         'sales_invoice_date' => 'required|date_format:Y-m-d',
-    //         'sales_order_id' => 'nullable|string|exists:t_sales_order,id',
-    //         'sales_order_date' => 'required|date_format:Y-m-d',
-    //         'template' => 'required|integer|exists:t_pdf_template,id',
-    //         'sales_person' => 'required|integer|exists:users,id',
-    //         'commission' => 'nullable|numeric',
-    //         'cash' => 'required|in:0,1',
-    //         'cgst' => 'required|numeric|min:0',
-    //         'sgst' => 'required|numeric|min:0',
-    //         'igst' => 'required|numeric|min:0',
-    //         'total' => 'required|numeric|min:0',
-    //         'gross' => 'required|numeric|min:0',
-    //         'round_off' => 'required|numeric',
-            
-    //         // Products Array Validation
-    //         'products' => 'required|array',
-    //         'products.*.product_id' => 'required|integer|exists:t_products,id',
-    //         'products.*.product_name' => 'required|string|exists:t_products,name',
-    //         'products.*.description' => 'nullable|string',
-    //         'products.*.quantity' => 'required|integer|min:0',
-    //         'products.*.unit' => 'required|string',
-    //         'products.*.price' => 'required|numeric|min:0',
-    //         'products.*.discount' => 'nullable|numeric|min:0',
-    //         'products.*.discount_type' => 'required|in:percentage,value',
-    //         'products.*.hsn' => 'required|string',
-    //         'products.*.tax' => 'required|numeric|min:0',
-    //         'products.*.cgst' => 'required|numeric|min:0',
-    //         'products.*.sgst' => 'required|numeric|min:0',
-    //         'products.*.igst' => 'required|numeric|min:0',
-    //         'products.*.amount' => 'required|numeric|min:0',
-    //         'products.*.channel' => 'nullable|integer|exists:t_channels,id',
-    //         'products.*.godown' => 'nullable|exists:t_godown,id',
-
-    //         // Addons Array Validation
-    //         'addons' => 'required|array',
-    //         'addons.*.name' => 'required|string',
-    //         'addons.*.amount' => 'required|numeric',
-    //         'addons.*.tax' => 'required|numeric',
-    //         'addons.*.hsn' => 'required|numeric',
-    //         'addons.*.cgst' => 'required|numeric',
-    //         'addons.*.sgst' => 'required|numeric',
-    //         'addons.*.igst' => 'required|numeric'
-    //     ]);  
-
-    //     // Fetch the client details using client_id
-    //     $client = ClientsModel::find($request->input('client_id'));
-
-    //     // Handle quotation number logic
-    //     $counterController = new CounterController();
-    //     $sendRequest = Request::create('/counter/fetch', 'GET', [
-    //         'name' => 'sales_invoice',
-    //         'company_id' => Auth::user()->company_id,
-    //     ]);
-
-    //     $response = $counterController->view($sendRequest);
-    //     $decodedResponse = json_decode($response->getContent(), true);
-
-    //     if ($decodedResponse['code'] === 200) {
-    //         $data = $decodedResponse['data'];
-    //         $get_customer_type = $data[0]['type'];
-    //     }
-
-    //     if ($get_customer_type == "auto") {
-    //         $quotation_no = $decodedResponse['data'][0]['prefix'] .
-    //             str_pad($decodedResponse['data'][0]['next_number'], 3, '0', STR_PAD_LEFT) .
-    //             $decodedResponse['data'][0]['postfix'];
-    //     } else {
-    //         $sales_invoice_no = $request->input('sales_invoice_no');
-    //     }
-
-    //     $exists = SalesInvoiceModel::where('company_id', Auth::user()->company_id)
-    //         ->where('sales_invoice_no', $sales_invoice_no)
-    //         ->exists();
-
-    //     if ($exists) {
-    //         return response()->json([
-    //             'code' => 422,
-    //             'success' => false,
-    //             'error' => 'The combination of company_id and sales_invoice_no must be unique.',
-    //         ], 422);
-    //     }
-
-    //     // Register the sales invoice
-    //     $register_sales_invoice = SalesInvoiceModel::create([
-    //         'client_id' => $request->input('client_id'),
-    //         'company_id' => Auth::user()->company_id,
-    //         'name' => $client->name,
-    //         'sales_invoice_no' => $request->input('sales_invoice_no'),
-    //         'sales_invoice_date' => $currentDate,
-    //         'sales_order_id' => $request->input('sales_order_id'),
-    //         'sales_order_date' => $request->input('sales_order_date'),
-    //         'template' => $request->input('template'),
-    //         'sales_person' => $request->input('sales_person'),
-    //         'commission' => $request->input('commission'),
-    //         'cash' => $request->input('cash'),
-    //         'user' => Auth::user()->id,
-    //         'cgst' => $request->input('cgst'),
-    //         'sgst' => $request->input('sgst'),
-    //         'igst' => $request->input('igst'),
-    //         'total' => $request->input('total'),
-    //         'gross' => $request->input('gross'),
-    //         'round_off' => $request->input('round_off'),
-    //     ]);
-
-    //     // Process and insert products
-    //     $products = $request->input('products');
-    //     foreach ($products as $product) {
-    //         // Create a record for the product
-    //         SalesInvoiceProductsModel::create([
-    //             'sales_invoice_id' => $register_sales_invoice->id,
-    //             'company_id' => Auth::user()->company_id,
-    //             'product_id' => $product['product_id'],
-    //             'product_name' => $product['product_name'],
-    //             'description' => $product['description'],
-    //             'quantity' => $product['quantity'],
-    //             'unit' => $product['unit'],
-    //             'price' => $product['price'],
-    //             'discount' => $product['discount'],
-    //             'discount_type' => $product['discount_type'],
-    //             'hsn' => $product['hsn'],
-    //             'tax' => $product['tax'],
-    //             'cgst' => $product['cgst'],
-    //             'sgst' => $product['sgst'],
-    //             'igst' => $product['igst'],
-    //             'amount' => $product['amount'],
-    //             'channel' => $product['channel'],
-    //             'godown' => $product['godown'],
-    //         ]);
-    //     }
-
-    //     // Process and insert addons
-    //     $addons = $request->input('addons');
-    //     foreach ($addons as $addon) {
-    //         SalesInvoiceAddonsModel::create([
-    //             'sales_invoice_id' => $register_sales_invoice->id,
-    //             'company_id' => Auth::user()->company_id,
-    //             'name' => $addon['name'],
-    //             'amount' => $addon['amount'],
-    //             'tax' => $addon['tax'],
-    //             'hsn' =>  '99',
-    //             'cgst' => $addon['cgst'],
-    //             'sgst' => $addon['sgst'],
-    //             'igst' => $addon['igst'],
-    //         ]);
-    //     }
-
-    //     // increment the `next_number` by 1
-    //     CounterModel::where('name', 'sales_invoice')
-    //         ->where('company_id', Auth::user()->company_id)
-    //         ->increment('next_number');
-
-    //     unset($register_sales_invoice['id'], $register_sales_invoice['created_at'], $register_sales_invoice['updated_at']);
-
-    //     $productIds = array_column($request->input('products'), 'product_id');
-
-    //     // add to `reset table`
-    //     foreach ($productIds as $reset_product) {
-    //         $get_reset_product = new ResetController();
-
-    //         $resetRequest = new \Illuminate\Http\Request([
-    //             'product_id' => $reset_product,
-    //         ]);
-
-    //         $reset_response = ($get_reset_product->make_reset_queue($resetRequest))->getData()->message;
-
-    //         // call `reset-controller` for `reset-calculation`
-    //         $stockCalculationResponse  = $get_reset_product->stock_calculation($reset_product);
-    //     }
-
-    //     return response()->json([
-    //         'code' => 201,
-    //         'success' => true,
-    //         'message' => 'Sales Invoice registered successfully!',
-    //         'data' => $register_sales_invoice,
-    //         'total_cgst' => $total_cgst,
-    //         'total_sgst' => $total_sgst,
-    //         'total_igst' => $total_igst,
-    //         'total_discount' => $total_discount,
-    //         'total_amount' => $total_amount
-    //     ], 201);
-    // }
-    
+    }   
 
     // View Sales Invoices
     // helper function
@@ -505,7 +315,7 @@ class SalesInvoiceController extends Controller
                     DB::raw('(tax / 2) as cgst_rate'), 
                     DB::raw('(tax / 2) as sgst_rate'), 
                     DB::raw('(tax) as igst_rate'), 
-                    'amount', 'channel', 'godown', 'so_id', 'returned', 'profit', 'purchase_invoice_id', 'purchase_rate'
+                    'amount','gross', 'channel', 'godown', 'so_id', 'returned', 'profit', 'purchase_invoice_id', 'purchase_rate'
                 );
             },
             'addons' => function ($query) {
@@ -525,7 +335,7 @@ class SalesInvoiceController extends Controller
             DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date_formatted'), 
             'user', 'sales_order_id', 
             DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 
-            'template', 'sales_person', 'commission', 'cash', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
+            'template', 'sales_person', 'commission', 'cash', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
         )
         ->where('company_id', Auth::user()->company_id);
 
