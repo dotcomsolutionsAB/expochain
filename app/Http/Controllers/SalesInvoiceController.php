@@ -675,7 +675,8 @@ class SalesInvoiceController extends Controller
         unset($invoiceData['created_at'], $invoiceData['updated_at']);
 
         // ===== STOCK / RETURNED QTY RECALC =====
-        ResetController::updateReturnedQuantitiesForSalesInvoice($id);
+        $resetController = new ResetController();
+        $resetController->updateReturnedQuantitiesForSalesInvoice($id);
 
         // ===== RESPONSE =====
         return response()->json([

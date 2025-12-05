@@ -204,6 +204,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/sales_order_by_product', [SalesOrderController::class, 'fetchSalesOrdersAllProduct']);
 
+    // Sales Invoice 
     Route::post('/add_sales_invoice', [SalesInvoiceController::class, 'add_sales_invoice']);
     Route::post('/sales_invoice/{id?}', [SalesInvoiceController::class, 'view_sales_invoice']);
     Route::post('/update_sales_invoice/{id?}', [SalesInvoiceController::class, 'edit_sales_invoice']);
