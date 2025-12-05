@@ -39,6 +39,7 @@ class SalesInvoiceController extends Controller
             'sales_invoice_no' => 'required|string',
             'sales_invoice_date' => 'required|date_format:Y-m-d',
             'sales_order_id' => 'nullable|string|exists:t_sales_order,id',
+            'sales_order_no' => 'nullable|string|exists:t_sales_order,sales_order_no', // (Number column)
             'sales_order_date' => 'required|date_format:Y-m-d',
             'template' => 'required|integer|exists:t_pdf_template,id',
             'sales_person' => 'required|integer|exists:users,id',
@@ -136,11 +137,11 @@ class SalesInvoiceController extends Controller
         // Safety: if still null, throw a validation-like error
         if (empty($sales_invoice_no)) {
             return response()->json([
-                'code'    => 422,
+                'code'    => 200,
                 'success' => false,
                 'message' => 'Sales invoice number could not be generated or is missing.',
                 'data'    => [],
-            ], 422);
+            ], 200);
         }
 
         // ===== Uniqueness check =====
@@ -150,11 +151,11 @@ class SalesInvoiceController extends Controller
 
         if ($exists) {
             return response()->json([
-                'code'    => 422,
+                'code'    => 200,
                 'success' => false,
                 'message' => 'The combination of company_id and sales_invoice_no must be unique.',
                 'data'    => [],
-            ], 422);
+            ], 200);
         }
 
         // ===== Register the sales invoice =====
@@ -165,6 +166,7 @@ class SalesInvoiceController extends Controller
             'sales_invoice_no'   => $sales_invoice_no,
             'sales_invoice_date' => $currentDate,
             'sales_order_id'     => $request->input('sales_order_id'),
+            'sales_order_no'     => $request->input('sales_order_no'),
             'sales_order_date'   => $request->input('sales_order_date'),
             'template'           => $request->input('template'),
             'sales_person'       => $request->input('sales_person'),
@@ -344,10 +346,10 @@ class SalesInvoiceController extends Controller
             $salesInvoice = $query->where('id', $id)->first();
             if (!$salesInvoice) {
                 return response()->json([
-                    'code' => 404,
+                    'code' => 200,
                     'success' => false,
                     'message' => 'Sales Invoice not found!',
-                ], 404);
+                ], 200);
             }
 
             // Transform Single Sales Invoice

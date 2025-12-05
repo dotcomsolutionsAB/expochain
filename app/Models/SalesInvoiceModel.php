@@ -16,6 +16,7 @@ class SalesInvoiceModel extends Model
         'sales_invoice_no',
         'sales_invoice_date',
         'sales_order_id',
+        'sales_order_no',
         'sales_order_date',
         'template',
         'sales_person',

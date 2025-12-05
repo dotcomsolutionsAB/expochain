@@ -17,8 +17,9 @@ return new class extends Migration
             $table->integer('client_id');
             $table->string('name');
             $table->string('sales_invoice_no');
-            $table->date('sales_invoice_date');
+            $table->date('sales_invoice_date'); 
             $table->string('sales_order_id')->nullable();
+            $table->string('sales_order_no')->nullable();
             $table->date('sales_order_date')->nullable();
             $table->integer('template');
             $table->integer('sales_person')->nullable();
