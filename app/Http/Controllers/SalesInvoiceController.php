@@ -50,7 +50,7 @@ class SalesInvoiceController extends Controller
             'total' => 'required|numeric|min:0',
             'gross' => 'required|numeric|min:0',
             'round_off' => 'required|numeric',
-            
+
             // Products Array Validation
             'products' => 'required|array',
             'products.*.product_id' => 'required|integer|exists:t_products,id',
@@ -79,120 +79,164 @@ class SalesInvoiceController extends Controller
             'addons.*.cgst' => 'required|numeric',
             'addons.*.sgst' => 'required|numeric',
             'addons.*.igst' => 'required|numeric'
-        ]);  
+        ]);
+
+        $companyId   = Auth::user()->company_id;
+        $currentDate = $request->input('sales_invoice_date'); // or Carbon::now()->format('Y-m-d');
 
         // Fetch the client details using client_id
         $client = ClientsModel::find($request->input('client_id'));
 
-        // Handle quotation number logic
+        // ===== Handle invoice number logic =====
+        $sales_invoice_no = null;   // <-- define first to avoid "undefined variable"
+
         $counterController = new CounterController();
         $sendRequest = Request::create('/counter/fetch', 'GET', [
-            'name' => 'sales_invoice',
-            'company_id' => Auth::user()->company_id,
+            'name'       => 'sales_invoice',
+            'company_id' => $companyId,
         ]);
 
-        $response = $counterController->view($sendRequest);
-        $decodedResponse = json_decode($response->getContent(), true);
+        $response         = $counterController->view($sendRequest);
+        $decodedResponse  = json_decode($response->getContent(), true);
 
-        if ($decodedResponse['code'] === 200) {
-            $data = $decodedResponse['data'];
-            $get_customer_type = $data[0]['type'];
+        $get_customer_type = null;
+        if (($decodedResponse['code'] ?? null) === 200 && !empty($decodedResponse['data'][0])) {
+            $data             = $decodedResponse['data'];
+            $get_customer_type = $data[0]['type'] ?? null;
         }
 
-        if ($get_customer_type == "auto") {
-            $quotation_no = $decodedResponse['data'][0]['prefix'] .
-                str_pad($decodedResponse['data'][0]['next_number'], 3, '0', STR_PAD_LEFT) .
-                $decodedResponse['data'][0]['postfix'];
+        if ($get_customer_type === "auto") {
+            // Auto-generate invoice number
+            $prefix      = $decodedResponse['data'][0]['prefix']      ?? '';
+            $nextNumber  = $decodedResponse['data'][0]['next_number'] ?? 1;
+            $postfix     = $decodedResponse['data'][0]['postfix']     ?? '';
+
+            $sales_invoice_no = $prefix .
+                str_pad($nextNumber, 3, '0', STR_PAD_LEFT) .
+                $postfix;
         } else {
+            // Use manual invoice number from request
             $sales_invoice_no = $request->input('sales_invoice_no');
         }
 
-        $exists = SalesInvoiceModel::where('company_id', Auth::user()->company_id)
+        // Safety: if still null, throw a validation-like error
+        if (empty($sales_invoice_no)) {
+            return response()->json([
+                'code'    => 422,
+                'success' => false,
+                'message' => 'Sales invoice number could not be generated or is missing.',
+                'data'    => [],
+            ], 422);
+        }
+
+        // ===== Uniqueness check =====
+        $exists = SalesInvoiceModel::where('company_id', $companyId)
             ->where('sales_invoice_no', $sales_invoice_no)
             ->exists();
 
         if ($exists) {
             return response()->json([
-                'code' => 422,
+                'code'    => 422,
                 'success' => false,
-                'error' => 'The combination of company_id and sales_invoice_no must be unique.',
+                'message' => 'The combination of company_id and sales_invoice_no must be unique.',
+                'data'    => [],
             ], 422);
         }
 
-        // Register the sales invoice
+        // ===== Register the sales invoice =====
         $register_sales_invoice = SalesInvoiceModel::create([
-            'client_id' => $request->input('client_id'),
-            'company_id' => Auth::user()->company_id,
-            'name' => $client->name,
-            'sales_invoice_no' => $request->input('sales_invoice_no'),
-            'sales_invoice_date' => $currentDate,
-            'sales_order_id' => $request->input('sales_order_id'),
-            'sales_order_date' => $request->input('sales_order_date'),
-            'template' => $request->input('template'),
-            'sales_person' => $request->input('sales_person'),
-            'commission' => $request->input('commission'),
-            'cash' => $request->input('cash'),
-            'user' => Auth::user()->id,
-            'cgst' => $request->input('cgst'),
-            'sgst' => $request->input('sgst'),
-            'igst' => $request->input('igst'),
-            'total' => $request->input('total'),
-            'gross' => $request->input('gross'),
-            'round_off' => $request->input('round_off'),
+            'client_id'         => $request->input('client_id'),
+            'company_id'        => $companyId,
+            'name'              => $client->name,
+            'sales_invoice_no'  => $sales_invoice_no,
+            'sales_invoice_date'=> $currentDate,
+            'sales_order_id'    => $request->input('sales_order_id'),
+            'sales_order_date'  => $request->input('sales_order_date'),
+            'template'          => $request->input('template'),
+            'sales_person'      => $request->input('sales_person'),
+            'commission'        => $request->input('commission'),
+            'cash'              => $request->input('cash'),
+            'user'              => Auth::user()->id,
+            'cgst'              => $request->input('cgst'),
+            'sgst'              => $request->input('sgst'),
+            'igst'              => $request->input('igst'),
+            'total'             => $request->input('total'),
+            'gross'             => $request->input('gross'),
+            'round_off'         => $request->input('round_off'),
         ]);
 
-        // Process and insert products
-        $products = $request->input('products');
+        // ===== Process and insert products =====
+        $products        = $request->input('products', []);
+        $total_cgst      = 0;
+        $total_sgst      = 0;
+        $total_igst      = 0;
+        $total_discount  = 0;
+        $total_amount    = 0;
+
         foreach ($products as $product) {
-            // Create a record for the product
             SalesInvoiceProductsModel::create([
                 'sales_invoice_id' => $register_sales_invoice->id,
-                'company_id' => Auth::user()->company_id,
-                'product_id' => $product['product_id'],
-                'product_name' => $product['product_name'],
-                'description' => $product['description'],
-                'quantity' => $product['quantity'],
-                'unit' => $product['unit'],
-                'price' => $product['price'],
-                'discount' => $product['discount'],
-                'discount_type' => $product['discount_type'],
-                'hsn' => $product['hsn'],
-                'tax' => $product['tax'],
-                'cgst' => $product['cgst'],
-                'sgst' => $product['sgst'],
-                'igst' => $product['igst'],
-                'amount' => $product['amount'],
-                'channel' => $product['channel'],
-                'godown' => $product['godown'],
+                'company_id'       => $companyId,
+                'product_id'       => $product['product_id'],
+                'product_name'     => $product['product_name'],
+                'description'      => $product['description'] ?? null,
+                'quantity'         => $product['quantity'],
+                'unit'             => $product['unit'],
+                'price'            => $product['price'],
+                'discount'         => $product['discount'] ?? 0,
+                'discount_type'    => $product['discount_type'],
+                'hsn'              => $product['hsn'],
+                'tax'              => $product['tax'],
+                'cgst'             => $product['cgst'],
+                'sgst'             => $product['sgst'],
+                'igst'             => $product['igst'],
+                'amount'           => $product['amount'],
+                'channel'          => $product['channel'] ?? null,
+                'godown'           => $product['godown'] ?? null,
             ]);
+
+            // Totals
+            $total_cgst     += $product['cgst'];
+            $total_sgst     += $product['sgst'];
+            $total_igst     += $product['igst'];
+            $total_discount += $product['discount'] ?? 0;
+            $total_amount   += $product['amount'];
         }
 
-        // Process and insert addons
-        $addons = $request->input('addons');
+        // ===== Process and insert addons =====
+        $addons = $request->input('addons', []);
         foreach ($addons as $addon) {
             SalesInvoiceAddonsModel::create([
                 'sales_invoice_id' => $register_sales_invoice->id,
-                'company_id' => Auth::user()->company_id,
-                'name' => $addon['name'],
-                'amount' => $addon['amount'],
-                'tax' => $addon['tax'],
-                'hsn' =>  '99',
-                'cgst' => $addon['cgst'],
-                'sgst' => $addon['sgst'],
-                'igst' => $addon['igst'],
+                'company_id'       => $companyId,
+                'name'             => $addon['name'],
+                'amount'           => $addon['amount'],
+                'tax'              => $addon['tax'],
+                'hsn'              => '99', // fixed as per your logic
+                'cgst'             => $addon['cgst'],
+                'sgst'             => $addon['sgst'],
+                'igst'             => $addon['igst'],
             ]);
+
+            // Addons tax & amount in totals
+            $total_cgst   += $addon['cgst'];
+            $total_sgst   += $addon['sgst'];
+            $total_igst   += $addon['igst'];
+            $total_amount += $addon['amount'];
         }
 
-        // increment the `next_number` by 1
+        // ===== Increment the counter =====
         CounterModel::where('name', 'sales_invoice')
-            ->where('company_id', Auth::user()->company_id)
+            ->where('company_id', $companyId)
             ->increment('next_number');
 
-        unset($register_sales_invoice['id'], $register_sales_invoice['created_at'], $register_sales_invoice['updated_at']);
+        // Prepare response data (optional: hide id, timestamps)
+        $invoiceData = $register_sales_invoice->toArray();
+        unset($invoiceData['created_at'], $invoiceData['updated_at']);
 
-        $productIds = array_column($request->input('products'), 'product_id');
+        // ===== Reset queue for products =====
+        $productIds = array_column($products, 'product_id');
 
-        // add to `reset table`
         foreach ($productIds as $reset_product) {
             $get_reset_product = new ResetController();
 
@@ -200,24 +244,215 @@ class SalesInvoiceController extends Controller
                 'product_id' => $reset_product,
             ]);
 
+            // enqueue reset
             $reset_response = ($get_reset_product->make_reset_queue($resetRequest))->getData()->message;
 
-            // call `reset-controller` for `reset-calculation`
-            $stockCalculationResponse  = $get_reset_product->stock_calculation($reset_product);
+            // call reset-calculation
+            $stockCalculationResponse = $get_reset_product->stock_calculation($reset_product);
         }
 
         return response()->json([
-            'code' => 201,
-            'success' => true,
-            'message' => 'Sales Invoice registered successfully!',
-            'data' => $register_sales_invoice,
-            'total_cgst' => $total_cgst,
-            'total_sgst' => $total_sgst,
-            'total_igst' => $total_igst,
+            'code'           => 201,
+            'success'        => true,
+            'message'        => 'Sales Invoice registered successfully!',
+            'data'           => $invoiceData,
+            'total_cgst'     => $total_cgst,
+            'total_sgst'     => $total_sgst,
+            'total_igst'     => $total_igst,
             'total_discount' => $total_discount,
-            'total_amount' => $total_amount
+            'total_amount'   => $total_amount,
         ], 201);
     }
+
+    // public function add_sales_invoice(Request $request)
+    // {
+    //     // Validate the request data
+    //     $request->validate([
+    //         // Sales Invoice
+    //         'client_id' => 'required|integer|exists:t_clients,id',
+    //         'sales_invoice_no' => 'required|string',
+    //         'sales_invoice_date' => 'required|date_format:Y-m-d',
+    //         'sales_order_id' => 'nullable|string|exists:t_sales_order,id',
+    //         'sales_order_date' => 'required|date_format:Y-m-d',
+    //         'template' => 'required|integer|exists:t_pdf_template,id',
+    //         'sales_person' => 'required|integer|exists:users,id',
+    //         'commission' => 'nullable|numeric',
+    //         'cash' => 'required|in:0,1',
+    //         'cgst' => 'required|numeric|min:0',
+    //         'sgst' => 'required|numeric|min:0',
+    //         'igst' => 'required|numeric|min:0',
+    //         'total' => 'required|numeric|min:0',
+    //         'gross' => 'required|numeric|min:0',
+    //         'round_off' => 'required|numeric',
+            
+    //         // Products Array Validation
+    //         'products' => 'required|array',
+    //         'products.*.product_id' => 'required|integer|exists:t_products,id',
+    //         'products.*.product_name' => 'required|string|exists:t_products,name',
+    //         'products.*.description' => 'nullable|string',
+    //         'products.*.quantity' => 'required|integer|min:0',
+    //         'products.*.unit' => 'required|string',
+    //         'products.*.price' => 'required|numeric|min:0',
+    //         'products.*.discount' => 'nullable|numeric|min:0',
+    //         'products.*.discount_type' => 'required|in:percentage,value',
+    //         'products.*.hsn' => 'required|string',
+    //         'products.*.tax' => 'required|numeric|min:0',
+    //         'products.*.cgst' => 'required|numeric|min:0',
+    //         'products.*.sgst' => 'required|numeric|min:0',
+    //         'products.*.igst' => 'required|numeric|min:0',
+    //         'products.*.amount' => 'required|numeric|min:0',
+    //         'products.*.channel' => 'nullable|integer|exists:t_channels,id',
+    //         'products.*.godown' => 'nullable|exists:t_godown,id',
+
+    //         // Addons Array Validation
+    //         'addons' => 'required|array',
+    //         'addons.*.name' => 'required|string',
+    //         'addons.*.amount' => 'required|numeric',
+    //         'addons.*.tax' => 'required|numeric',
+    //         'addons.*.hsn' => 'required|numeric',
+    //         'addons.*.cgst' => 'required|numeric',
+    //         'addons.*.sgst' => 'required|numeric',
+    //         'addons.*.igst' => 'required|numeric'
+    //     ]);  
+
+    //     // Fetch the client details using client_id
+    //     $client = ClientsModel::find($request->input('client_id'));
+
+    //     // Handle quotation number logic
+    //     $counterController = new CounterController();
+    //     $sendRequest = Request::create('/counter/fetch', 'GET', [
+    //         'name' => 'sales_invoice',
+    //         'company_id' => Auth::user()->company_id,
+    //     ]);
+
+    //     $response = $counterController->view($sendRequest);
+    //     $decodedResponse = json_decode($response->getContent(), true);
+
+    //     if ($decodedResponse['code'] === 200) {
+    //         $data = $decodedResponse['data'];
+    //         $get_customer_type = $data[0]['type'];
+    //     }
+
+    //     if ($get_customer_type == "auto") {
+    //         $quotation_no = $decodedResponse['data'][0]['prefix'] .
+    //             str_pad($decodedResponse['data'][0]['next_number'], 3, '0', STR_PAD_LEFT) .
+    //             $decodedResponse['data'][0]['postfix'];
+    //     } else {
+    //         $sales_invoice_no = $request->input('sales_invoice_no');
+    //     }
+
+    //     $exists = SalesInvoiceModel::where('company_id', Auth::user()->company_id)
+    //         ->where('sales_invoice_no', $sales_invoice_no)
+    //         ->exists();
+
+    //     if ($exists) {
+    //         return response()->json([
+    //             'code' => 422,
+    //             'success' => false,
+    //             'error' => 'The combination of company_id and sales_invoice_no must be unique.',
+    //         ], 422);
+    //     }
+
+    //     // Register the sales invoice
+    //     $register_sales_invoice = SalesInvoiceModel::create([
+    //         'client_id' => $request->input('client_id'),
+    //         'company_id' => Auth::user()->company_id,
+    //         'name' => $client->name,
+    //         'sales_invoice_no' => $request->input('sales_invoice_no'),
+    //         'sales_invoice_date' => $currentDate,
+    //         'sales_order_id' => $request->input('sales_order_id'),
+    //         'sales_order_date' => $request->input('sales_order_date'),
+    //         'template' => $request->input('template'),
+    //         'sales_person' => $request->input('sales_person'),
+    //         'commission' => $request->input('commission'),
+    //         'cash' => $request->input('cash'),
+    //         'user' => Auth::user()->id,
+    //         'cgst' => $request->input('cgst'),
+    //         'sgst' => $request->input('sgst'),
+    //         'igst' => $request->input('igst'),
+    //         'total' => $request->input('total'),
+    //         'gross' => $request->input('gross'),
+    //         'round_off' => $request->input('round_off'),
+    //     ]);
+
+    //     // Process and insert products
+    //     $products = $request->input('products');
+    //     foreach ($products as $product) {
+    //         // Create a record for the product
+    //         SalesInvoiceProductsModel::create([
+    //             'sales_invoice_id' => $register_sales_invoice->id,
+    //             'company_id' => Auth::user()->company_id,
+    //             'product_id' => $product['product_id'],
+    //             'product_name' => $product['product_name'],
+    //             'description' => $product['description'],
+    //             'quantity' => $product['quantity'],
+    //             'unit' => $product['unit'],
+    //             'price' => $product['price'],
+    //             'discount' => $product['discount'],
+    //             'discount_type' => $product['discount_type'],
+    //             'hsn' => $product['hsn'],
+    //             'tax' => $product['tax'],
+    //             'cgst' => $product['cgst'],
+    //             'sgst' => $product['sgst'],
+    //             'igst' => $product['igst'],
+    //             'amount' => $product['amount'],
+    //             'channel' => $product['channel'],
+    //             'godown' => $product['godown'],
+    //         ]);
+    //     }
+
+    //     // Process and insert addons
+    //     $addons = $request->input('addons');
+    //     foreach ($addons as $addon) {
+    //         SalesInvoiceAddonsModel::create([
+    //             'sales_invoice_id' => $register_sales_invoice->id,
+    //             'company_id' => Auth::user()->company_id,
+    //             'name' => $addon['name'],
+    //             'amount' => $addon['amount'],
+    //             'tax' => $addon['tax'],
+    //             'hsn' =>  '99',
+    //             'cgst' => $addon['cgst'],
+    //             'sgst' => $addon['sgst'],
+    //             'igst' => $addon['igst'],
+    //         ]);
+    //     }
+
+    //     // increment the `next_number` by 1
+    //     CounterModel::where('name', 'sales_invoice')
+    //         ->where('company_id', Auth::user()->company_id)
+    //         ->increment('next_number');
+
+    //     unset($register_sales_invoice['id'], $register_sales_invoice['created_at'], $register_sales_invoice['updated_at']);
+
+    //     $productIds = array_column($request->input('products'), 'product_id');
+
+    //     // add to `reset table`
+    //     foreach ($productIds as $reset_product) {
+    //         $get_reset_product = new ResetController();
+
+    //         $resetRequest = new \Illuminate\Http\Request([
+    //             'product_id' => $reset_product,
+    //         ]);
+
+    //         $reset_response = ($get_reset_product->make_reset_queue($resetRequest))->getData()->message;
+
+    //         // call `reset-controller` for `reset-calculation`
+    //         $stockCalculationResponse  = $get_reset_product->stock_calculation($reset_product);
+    //     }
+
+    //     return response()->json([
+    //         'code' => 201,
+    //         'success' => true,
+    //         'message' => 'Sales Invoice registered successfully!',
+    //         'data' => $register_sales_invoice,
+    //         'total_cgst' => $total_cgst,
+    //         'total_sgst' => $total_sgst,
+    //         'total_igst' => $total_igst,
+    //         'total_discount' => $total_discount,
+    //         'total_amount' => $total_amount
+    //     ], 201);
+    // }
+    
 
     // View Sales Invoices
     // helper function
