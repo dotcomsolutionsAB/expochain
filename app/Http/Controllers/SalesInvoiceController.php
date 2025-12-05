@@ -379,9 +379,6 @@ class SalesInvoiceController extends Controller
         if ($clientId) {
             $query->where('client_id', $clientId);
         }
-        if ($clientContactId) {
-            $query->where('client_contact_id', $clientContactId);
-        }
         if ($name) {
             $query->where('name', 'LIKE', '%' . $name . '%');
         }
@@ -395,9 +392,9 @@ class SalesInvoiceController extends Controller
             $query->where('sales_order_no', 'LIKE', '%' . $salesOrderNo . '%');
         }
         if (!empty($productIds)) {
-            $productIdArray = explode(',', $productIds);
-            $query->whereHas('products', function ($query) use ($productIdArray) {
-                $query->whereIn('product_id', $productIdArray);
+            $ids = array_filter(explode(',', $productIds)); // handles single & multi
+            $query->whereHas('products', function ($q) use ($ids) {
+                $q->whereIn('product_id', $ids);
             });
         }
         if ($dateFrom && $dateTo) {
@@ -409,8 +406,7 @@ class SalesInvoiceController extends Controller
         }
         if ($product) {
             $query->whereHas('products', function ($q) use ($product) {
-                $q->where('product_name', 'LIKE', '%' . $product . '%')
-                ->orWhere('product_id', $product);
+                $q->where('product_name', 'LIKE', '%' . $product . '%');
             });
         }
         if ($user) {
