@@ -470,184 +470,402 @@ class SalesInvoiceController extends Controller
     // Update Sales Invoice
     public function edit_sales_invoice(Request $request, $id)
     {
+        // ===== VALIDATION =====
         $request->validate([
             // Sales Invoice
-            'client_id' => 'required|integer|exists:t_clients,id',
-            'name' => 'required|string|exists:t_clients,name',
-            'sales_invoice_no' => 'required|string',
+            'client_id'          => 'required|integer|exists:t_clients,id',
+            'name'               => 'required|string|exists:t_clients,name',
+            'sales_invoice_no'   => 'required|string',
             'sales_invoice_date' => 'required|date_format:Y-m-d',
-            'sales_order_id' => 'required|string|exists:t_sales_order,id',
-            'sales_order_date' => 'required|date_format:Y-m-d',
-            'template' => 'required|integer|exists:t_pdf_template,id',
-            'sales_person' => 'required|integer|exists:users,id',
-            'commission' => 'nullable|numeric',
-            'cash' => 'required|in:0,1',
-            'cgst' => 'required|numeric|min:0',
-            'sgst' => 'required|numeric|min:0',
-            'igst' => 'required|numeric|min:0',
-            'total' => 'required|numeric|min:0',
-            'gross' => 'required|numeric|min:0',
-            'round_off' => 'required|numeric',
-            
+
+            // 🔹 keep same as add_sales_invoice
+            'sales_order_id'     => 'nullable|integer|exists:t_sales_order,id',
+            'sales_order_no'     => 'nullable|string|exists:t_sales_order,sales_order_no',
+            'sales_order_date'   => 'required|date_format:Y-m-d',
+
+            'template'           => 'required|integer|exists:t_pdf_template,id',
+            'sales_person'       => 'required|integer|exists:users,id',
+            'commission'         => 'nullable|numeric',
+            'cash'               => 'required|in:0,1',
+            'cgst'               => 'required|numeric|min:0',
+            'sgst'               => 'required|numeric|min:0',
+            'igst'               => 'required|numeric|min:0',
+            'total'              => 'required|numeric|min:0',
+            'gross'              => 'required|numeric|min:0',
+            'round_off'          => 'required|numeric',
+
             // Products Array Validation
-            'products' => 'required|array',
-            'products.*.product_id' => 'required|integer|exists:t_products,id',
-            'products.*.product_name' => 'required|string|exists:t_products,name',
-            'products.*.description' => 'nullable|string',
-            'products.*.quantity' => 'required|integer|min:0',
-            'products.*.unit' => 'required|string',
-            'products.*.price' => 'required|numeric|min:0',
-            'products.*.discount' => 'nullable|numeric|min:0',
-            'products.*.discount_type' => 'required|in:percentage,value',
-            'products.*.hsn' => 'required|string',
-            'products.*.tax' => 'required|numeric|min:0',
-            'products.*.cgst' => 'required|numeric|min:0',
-            'products.*.sgst' => 'required|numeric|min:0',
-            'products.*.igst' => 'required|numeric|min:0',
-            'products.*.amount' => 'required|numeric|min:0',
-            'products.*.channel' => 'nullable|integer|exists:t_channels,id',
-            'products.*.godown' => 'nullable|exists:t_godown,id',
+            'products'                       => 'required|array',
+            'products.*.product_id'          => 'required|integer|exists:t_products,id',
+            'products.*.product_name'        => 'required|string|exists:t_products,name',
+            'products.*.description'         => 'nullable|string',
+            'products.*.quantity'            => 'required|integer|min:0',
+            'products.*.unit'                => 'required|string',
+            'products.*.price'               => 'required|numeric|min:0',
+            'products.*.discount'            => 'nullable|numeric|min:0',
+            'products.*.discount_type'       => 'required|in:percentage,value',
+            'products.*.hsn'                 => 'required|string',
+            'products.*.tax'                 => 'required|numeric|min:0',
+            'products.*.cgst'                => 'required|numeric|min:0',
+            'products.*.sgst'                => 'required|numeric|min:0',
+            'products.*.igst'                => 'required|numeric|min:0',
+            'products.*.gross'               => 'nullable|numeric|min:0',
+            'products.*.amount'              => 'required|numeric|min:0',
+            'products.*.channel'             => 'nullable|integer|exists:t_channels,id',
+            'products.*.godown'              => 'nullable|integer|exists:t_godown,id',
+
+            // NEW FIELDS (same as add)
+            'products.*.so_id'               => 'nullable|integer',
+            'products.*.returned'            => 'nullable|numeric|min:0',
+            'products.*.profit'              => 'nullable|numeric',
+            'products.*.purchase_invoice_id' => 'nullable|integer',
+            'products.*.purchase_rate'       => 'nullable|numeric|min:0',
 
             // Addons Array Validation
-            'addons' => 'required|array',
-            'addons.*.name' => 'required|string',
-            'addons.*.amount' => 'required|numeric',
-            'addons.*.tax' => 'required|numeric',
-            'addons.*.hsn' => 'required|numeric',
-            'addons.*.cgst' => 'required|numeric',
-            'addons.*.sgst' => 'required|numeric',
-            'addons.*.igst' => 'required|numeric'
+            'addons'             => 'required|array',
+            'addons.*.name'      => 'required|string',
+            'addons.*.amount'    => 'required|numeric',
+            'addons.*.tax'       => 'required|numeric',
+            'addons.*.hsn'       => 'required|numeric',
+            'addons.*.cgst'      => 'required|numeric',
+            'addons.*.sgst'      => 'required|numeric',
+            'addons.*.igst'      => 'required|numeric'
         ]);
 
-        $salesInvoice = SalesInvoiceModel::where('id', $id)->first();
+        $companyId   = Auth::user()->company_id;
+        $currentDate = $request->input('sales_invoice_date');
 
+        // ===== FETCH INVOICE =====
+        $salesInvoice = SalesInvoiceModel::where('id', $id)
+            ->where('company_id', $companyId)
+            ->first();
+
+        if (!$salesInvoice) {
+            // 🔹 This is an actual error (editing non-existent)
+            return response()->json([
+                'code'    => 422,
+                'success' => false,
+                'message' => 'Sales Invoice not found for update.',
+                'data'    => null,
+            ], 422);
+        }
+
+        // ===== UPDATE HEADER =====
         $salesInvoiceUpdated = $salesInvoice->update([
-            'client_id' => $request->input('client_id'),
-            'company_id' => Auth::user()->company_id,
-            'name' => $request->input('name'),
-            'sales_invoice_no' => $request->input('sales_invoice_no'),
+            'client_id'          => $request->input('client_id'),
+            'company_id'         => $companyId,
+            'name'               => $request->input('name'),
+            'sales_invoice_no'   => $request->input('sales_invoice_no'),
             'sales_invoice_date' => $currentDate,
-            'sales_order_id' => $request->input('sales_order_id'),
-            'sales_order_date' => $request->input('sales_order_date'),
-            'template' => $request->input('template'),
-            'sales_person' => $request->input('sales_person'),
-            'commission' => $request->input('commission'),
-            'cash' => $request->input('cash'),
-            'user' => Auth::user()->id,
-            'cgst' => $request->input('cgst'),
-            'sgst' => $request->input('sgst'),
-            'igst' => $request->input('igst'),
-            'total' => $request->input('total'),
-            'gross' => $request->input('gross'),
-            'round_off' => $request->input('round_off'),
+            'sales_order_id'     => $request->input('sales_order_id'),
+            'sales_order_no'     => $request->input('sales_order_no'),
+            'sales_order_date'   => $request->input('sales_order_date'),
+            'template'           => $request->input('template'),
+            'sales_person'       => $request->input('sales_person'),
+            'commission'         => $request->input('commission'),
+            'cash'               => $request->input('cash'),
+            'user'               => Auth::user()->id,
+            'cgst'               => $request->input('cgst'),
+            'sgst'               => $request->input('sgst'),
+            'igst'               => $request->input('igst'),
+            'total'              => $request->input('total'),
+            'gross'              => $request->input('gross'),
+            'round_off'          => $request->input('round_off'),
         ]);
 
-        // Handle Products
-        $products = $request->input('products');
-        $existingProductIDs = SalesInvoiceProductsModel::where('sales_invoice_id', $id)->pluck('product_id')->toArray();
-        $requestProductIDs = [];
+        // ===== HANDLE PRODUCTS =====
+        $products          = $request->input('products', []);
+        $handledProductIds = [];
 
-        // Process products
         foreach ($products as $productData) {
-            $requestProductIDs[] = $productData['product_id'];
+            $handledProductIds[] = $productData['product_id'];
 
-            $existingProduct = SalesInvoiceProductsModel::where('sales_invoice_id', $productData['sales_invoice_id'])
-                                                    ->where('product_id', $productData['product_id'])
-                                                    ->first();
+            $existingProduct = SalesInvoiceProductsModel::where('sales_invoice_id', $id)
+                ->where('product_id', $productData['product_id'])
+                ->first();
+
+            $productPayload = [
+                'sales_invoice_id'    => $id,
+                'company_id'          => $companyId,
+                'product_id'          => $productData['product_id'],
+                'product_name'        => $productData['product_name'],
+                'description'         => $productData['description'] ?? null,
+                'quantity'            => $productData['quantity'],
+                'unit'                => $productData['unit'],
+                'price'               => $productData['price'],
+                'discount'            => $productData['discount'] ?? 0,
+                'discount_type'       => $productData['discount_type'],
+                'hsn'                 => $productData['hsn'],
+                'tax'                 => $productData['tax'],
+                'cgst'                => $productData['cgst'],
+                'sgst'                => $productData['sgst'],
+                'igst'                => $productData['igst'],
+                'gross'               => $productData['gross'] ?? 0,
+                'amount'              => $productData['amount'],
+                'channel'             => $productData['channel'] ?? null,
+                'godown'              => $productData['godown'] ?? null,
+                'so_id'               => $productData['so_id'] ?? null,
+                'returned'            => $productData['returned'] ?? 0,
+                'profit'              => $productData['profit'] ?? 0,
+                'purchase_invoice_id' => $productData['purchase_invoice_id'] ?? 0,
+                'purchase_rate'       => $productData['purchase_rate'] ?? 0,
+            ];
 
             if ($existingProduct) {
-                $existingProduct->update([
-                    'product_name' => $productData['product_name'],
-                    'description' => $productData['description'],
-                    'quantity' => $productData['quantity'],
-                    'unit' => $productData['unit'],
-                    'price' => $productData['price'],
-                    'discount' => $productData['discount'],
-                    'discount_type' => $productData['discount_type'],
-                    'hsn' => $productData['hsn'],
-                    'tax' => $productData['tax'],
-                    'cgst' => $productData['cgst'],
-                    'sgst' => $productData['sgst'],
-                    'igst' => $productData['igst'],
-                    'amount' => $productData['amount'],
-                    'channel' => $productData['channel'],
-                    'godown' => $productData['godown'],
-                ]);
+                $existingProduct->update($productPayload);
             } else {
-                SalesInvoiceProductsModel::create([
-                    'sales_invoice_id' => $productData['sales_invoice_id'],
-                    'product_id' => $productData['product_id'],
-                    'product_name' => $productData['product_name'],
-                    'description' => $productData['description'],
-                    'quantity' => $productData['quantity'],
-                    'unit' => $productData['unit'],
-                    'price' => $productData['price'],
-                    'discount' => $productData['discount'],
-                    'discount_type' => $productData['discount_type'],
-                    'hsn' => $productData['hsn'],
-                    'tax' => $productData['tax'],
-                    'cgst' => $productData['cgst'],
-                    'sgst' => $productData['sgst'],
-                    'igst' => $productData['igst'],
-                    'amount' => $productData['amount'],
-                    'channel' => $productData['channel'],
-                    'godown' => $productData['godown'],
-                ]);
+                SalesInvoiceProductsModel::create($productPayload);
             }
         }
 
-        // Process addons
-        $addons = $request->input('addons');
-        $requestAddonIDs = [];
+        // Delete products NOT in request list
+        $productsDeleted = 0;
+        if (!empty($handledProductIds)) {
+            $productsDeleted = SalesInvoiceProductsModel::where('sales_invoice_id', $id)
+                ->whereNotIn('product_id', $handledProductIds)
+                ->delete();
+        } else {
+            // if somehow empty, delete all (safety)
+            $productsDeleted = SalesInvoiceProductsModel::where('sales_invoice_id', $id)->delete();
+        }
+
+        // ===== HANDLE ADDONS =====
+        $addons             = $request->input('addons', []);
+        $handledAddonNames  = [];
 
         foreach ($addons as $addonData) {
-            $requestAddonIDs[] = $addonData['name'];
+            $handledAddonNames[] = $addonData['name'];
 
-            $existingAddon = SalesInvoiceAddonsModel::where('sales_invoice_id', $addonData['sales_invoice_id'])
-                                                    ->where('name', $addonData['name'])
-                                                    ->first();
+            $existingAddon = SalesInvoiceAddonsModel::where('sales_invoice_id', $id)
+                ->where('name', $addonData['name'])
+                ->first();
+
+            $addonPayload = [
+                'sales_invoice_id' => $id,
+                'company_id'       => $companyId,
+                'name'             => $addonData['name'],
+                'amount'           => $addonData['amount'],
+                'tax'              => $addonData['tax'],
+                'hsn'              => $addonData['hsn'],
+                'cgst'             => $addonData['cgst'],
+                'sgst'             => $addonData['sgst'],
+                'igst'             => $addonData['igst'],
+            ];
 
             if ($existingAddon) {
-                $existingAddon->update([
-                    'amount' => $addonData['amount'],
-                    'tax' => $addonData['tax'],
-                    'hsn' => $addonData['hsn'],
-                    'cgst' => $addonData['cgst'],
-                    'sgst' => $addonData['sgst'],
-                    'igst' => $addonData['igst'],
-                ]);
+                $existingAddon->update($addonPayload);
             } else {
-                SalesInvoiceAddonsModel::create([
-                    'sales_invoice_id' => $addonData['sales_invoice_id'],
-                    'name' => $addonData['name'],
-                    'amount' => $addonData['amount'],
-                    'tax' => $addonData['tax'],
-                    'hsn' => $addonData['hsn'],
-                    'cgst' => $addonData['cgst'],
-                    'sgst' => $addonData['sgst'],
-                    'igst' => $addonData['igst'],
-                ]);
+                SalesInvoiceAddonsModel::create($addonPayload);
             }
         }
 
-        // Delete products not included in the request
-        $productsDeleted = SalesInvoiceProductsModel::where('sales_invoice_id', $id)
-                                                    ->where('product_id', $requestProductIDs)
-                                                    ->delete();
+        // Delete addons NOT in request list
+        $addonsDeleted = 0;
+        if (!empty($handledAddonNames)) {
+            $addonsDeleted = SalesInvoiceAddonsModel::where('sales_invoice_id', $id)
+                ->whereNotIn('name', $handledAddonNames)
+                ->delete();
+        } else {
+            $addonsDeleted = SalesInvoiceAddonsModel::where('sales_invoice_id', $id)->delete();
+        }
 
-        // Delete addons not included in the request
-        $addonsDeleted = SalesInvoiceAddonsModel::where('sales_invoice_id', $id)
-                                                ->where('name', $requestAddonIDs)
-                                                ->delete();
+        // Refresh model and clean
+        $salesInvoice = $salesInvoice->fresh();
+        $invoiceData  = $salesInvoice->toArray();
+        unset($invoiceData['created_at'], $invoiceData['updated_at']);
 
-        unset($salesInvoice['created_at'], $salesInvoice['updated_at']);
-
+        // ===== STOCK / RETURNED QTY RECALC =====
         ResetController::updateReturnedQuantitiesForSalesInvoice($id);
 
-        return ($salesInvoiceUpdated || $productsDeleted || $addonsDeleted)
-            ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Invoice, products, and addons updated successfully!', 'data' => $salesInvoice], 200)
-            : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
+        // ===== RESPONSE =====
+        return response()->json([
+            'code'    => 200,
+            'success' => true,
+            'message' => 'Sales Invoice, products, and addons updated successfully!',
+            'data'    => $invoiceData,
+        ], 200);
     }
+
+    // public function edit_sales_invoice(Request $request, $id)
+    // {
+    //     $request->validate([
+    //         // Sales Invoice
+    //         'client_id' => 'required|integer|exists:t_clients,id',
+    //         'name' => 'required|string|exists:t_clients,name',
+    //         'sales_invoice_no' => 'required|string',
+    //         'sales_invoice_date' => 'required|date_format:Y-m-d',
+    //         'sales_order_id' => 'required|string|exists:t_sales_order,id',
+    //         'sales_order_date' => 'required|date_format:Y-m-d',
+    //         'template' => 'required|integer|exists:t_pdf_template,id',
+    //         'sales_person' => 'required|integer|exists:users,id',
+    //         'commission' => 'nullable|numeric',
+    //         'cash' => 'required|in:0,1',
+    //         'cgst' => 'required|numeric|min:0',
+    //         'sgst' => 'required|numeric|min:0',
+    //         'igst' => 'required|numeric|min:0',
+    //         'total' => 'required|numeric|min:0',
+    //         'gross' => 'required|numeric|min:0',
+    //         'round_off' => 'required|numeric',
+            
+    //         // Products Array Validation
+    //         'products' => 'required|array',
+    //         'products.*.product_id' => 'required|integer|exists:t_products,id',
+    //         'products.*.product_name' => 'required|string|exists:t_products,name',
+    //         'products.*.description' => 'nullable|string',
+    //         'products.*.quantity' => 'required|integer|min:0',
+    //         'products.*.unit' => 'required|string',
+    //         'products.*.price' => 'required|numeric|min:0',
+    //         'products.*.discount' => 'nullable|numeric|min:0',
+    //         'products.*.discount_type' => 'required|in:percentage,value',
+    //         'products.*.hsn' => 'required|string',
+    //         'products.*.tax' => 'required|numeric|min:0',
+    //         'products.*.cgst' => 'required|numeric|min:0',
+    //         'products.*.sgst' => 'required|numeric|min:0',
+    //         'products.*.igst' => 'required|numeric|min:0',
+    //         'products.*.amount' => 'required|numeric|min:0',
+    //         'products.*.channel' => 'nullable|integer|exists:t_channels,id',
+    //         'products.*.godown' => 'nullable|exists:t_godown,id',
+
+    //         // Addons Array Validation
+    //         'addons' => 'required|array',
+    //         'addons.*.name' => 'required|string',
+    //         'addons.*.amount' => 'required|numeric',
+    //         'addons.*.tax' => 'required|numeric',
+    //         'addons.*.hsn' => 'required|numeric',
+    //         'addons.*.cgst' => 'required|numeric',
+    //         'addons.*.sgst' => 'required|numeric',
+    //         'addons.*.igst' => 'required|numeric'
+    //     ]);
+
+    //     $salesInvoice = SalesInvoiceModel::where('id', $id)->first();
+
+    //     $salesInvoiceUpdated = $salesInvoice->update([
+    //         'client_id' => $request->input('client_id'),
+    //         'company_id' => Auth::user()->company_id,
+    //         'name' => $request->input('name'),
+    //         'sales_invoice_no' => $request->input('sales_invoice_no'),
+    //         'sales_invoice_date' => $currentDate,
+    //         'sales_order_id' => $request->input('sales_order_id'),
+    //         'sales_order_date' => $request->input('sales_order_date'),
+    //         'template' => $request->input('template'),
+    //         'sales_person' => $request->input('sales_person'),
+    //         'commission' => $request->input('commission'),
+    //         'cash' => $request->input('cash'),
+    //         'user' => Auth::user()->id,
+    //         'cgst' => $request->input('cgst'),
+    //         'sgst' => $request->input('sgst'),
+    //         'igst' => $request->input('igst'),
+    //         'total' => $request->input('total'),
+    //         'gross' => $request->input('gross'),
+    //         'round_off' => $request->input('round_off'),
+    //     ]);
+
+    //     // Handle Products
+    //     $products = $request->input('products');
+    //     $existingProductIDs = SalesInvoiceProductsModel::where('sales_invoice_id', $id)->pluck('product_id')->toArray();
+    //     $requestProductIDs = [];
+
+    //     // Process products
+    //     foreach ($products as $productData) {
+    //         $requestProductIDs[] = $productData['product_id'];
+
+    //         $existingProduct = SalesInvoiceProductsModel::where('sales_invoice_id', $productData['sales_invoice_id'])
+    //                                                 ->where('product_id', $productData['product_id'])
+    //                                                 ->first();
+
+    //         if ($existingProduct) {
+    //             $existingProduct->update([
+    //                 'product_name' => $productData['product_name'],
+    //                 'description' => $productData['description'],
+    //                 'quantity' => $productData['quantity'],
+    //                 'unit' => $productData['unit'],
+    //                 'price' => $productData['price'],
+    //                 'discount' => $productData['discount'],
+    //                 'discount_type' => $productData['discount_type'],
+    //                 'hsn' => $productData['hsn'],
+    //                 'tax' => $productData['tax'],
+    //                 'cgst' => $productData['cgst'],
+    //                 'sgst' => $productData['sgst'],
+    //                 'igst' => $productData['igst'],
+    //                 'amount' => $productData['amount'],
+    //                 'channel' => $productData['channel'],
+    //                 'godown' => $productData['godown'],
+    //             ]);
+    //         } else {
+    //             SalesInvoiceProductsModel::create([
+    //                 'sales_invoice_id' => $productData['sales_invoice_id'],
+    //                 'product_id' => $productData['product_id'],
+    //                 'product_name' => $productData['product_name'],
+    //                 'description' => $productData['description'],
+    //                 'quantity' => $productData['quantity'],
+    //                 'unit' => $productData['unit'],
+    //                 'price' => $productData['price'],
+    //                 'discount' => $productData['discount'],
+    //                 'discount_type' => $productData['discount_type'],
+    //                 'hsn' => $productData['hsn'],
+    //                 'tax' => $productData['tax'],
+    //                 'cgst' => $productData['cgst'],
+    //                 'sgst' => $productData['sgst'],
+    //                 'igst' => $productData['igst'],
+    //                 'amount' => $productData['amount'],
+    //                 'channel' => $productData['channel'],
+    //                 'godown' => $productData['godown'],
+    //             ]);
+    //         }
+    //     }
+
+    //     // Process addons
+    //     $addons = $request->input('addons');
+    //     $requestAddonIDs = [];
+
+    //     foreach ($addons as $addonData) {
+    //         $requestAddonIDs[] = $addonData['name'];
+
+    //         $existingAddon = SalesInvoiceAddonsModel::where('sales_invoice_id', $addonData['sales_invoice_id'])
+    //                                                 ->where('name', $addonData['name'])
+    //                                                 ->first();
+
+    //         if ($existingAddon) {
+    //             $existingAddon->update([
+    //                 'amount' => $addonData['amount'],
+    //                 'tax' => $addonData['tax'],
+    //                 'hsn' => $addonData['hsn'],
+    //                 'cgst' => $addonData['cgst'],
+    //                 'sgst' => $addonData['sgst'],
+    //                 'igst' => $addonData['igst'],
+    //             ]);
+    //         } else {
+    //             SalesInvoiceAddonsModel::create([
+    //                 'sales_invoice_id' => $addonData['sales_invoice_id'],
+    //                 'name' => $addonData['name'],
+    //                 'amount' => $addonData['amount'],
+    //                 'tax' => $addonData['tax'],
+    //                 'hsn' => $addonData['hsn'],
+    //                 'cgst' => $addonData['cgst'],
+    //                 'sgst' => $addonData['sgst'],
+    //                 'igst' => $addonData['igst'],
+    //             ]);
+    //         }
+    //     }
+
+    //     // Delete products not included in the request
+    //     $productsDeleted = SalesInvoiceProductsModel::where('sales_invoice_id', $id)
+    //                                                 ->where('product_id', $requestProductIDs)
+    //                                                 ->delete();
+
+    //     // Delete addons not included in the request
+    //     $addonsDeleted = SalesInvoiceAddonsModel::where('sales_invoice_id', $id)
+    //                                             ->where('name', $requestAddonIDs)
+    //                                             ->delete();
+
+    //     unset($salesInvoice['created_at'], $salesInvoice['updated_at']);
+
+    //     ResetController::updateReturnedQuantitiesForSalesInvoice($id);
+
+    //     return ($salesInvoiceUpdated || $productsDeleted || $addonsDeleted)
+    //         ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Invoice, products, and addons updated successfully!', 'data' => $salesInvoice], 200)
+    //         : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
+    // }
 
     // Delete Sales Invoice
     public function delete_sales_invoice($id)
