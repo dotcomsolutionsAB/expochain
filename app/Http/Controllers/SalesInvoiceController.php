@@ -1596,7 +1596,7 @@ class SalesInvoiceController extends Controller
                     return [
                         'SN', 'Client', 'Invoice', 'Date', 'Item Name', 'Group',
                         'Quantity', 'Unit', 'Price', 'Discount', 'Amount',
-                        'Added On', 'Profit',
+                        'Profit','Added On',
                     ];
                 }
             }, $relativePath, 'public');
