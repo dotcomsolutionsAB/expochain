@@ -89,28 +89,32 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/users_migrate', [UsersController::class, 'get_migrate']);
 
+    // Client
     Route::post('/client', [ClientsController::class, 'add_clients']);
     // Route::get('/client', [ClientsController::class, 'view_clients']);
     Route::post('/get_client/{id?}', [ClientsController::class, 'view_clients']);
     Route::post('/update_client/{id}', [ClientsController::class, 'update_clients']);
-    Route::delete('/client/{id}', [ClientsController::class, 'delete_clients']);
-
-    Route::get('/client_migrate', [ClientsController::class, 'importClientsData']);
-
-    Route::post('/export_clients', [ClientsController::class, 'export_clients']);
+    Route::delete('/client/{id}', [ClientsController::class, 'delete_clients']);    
     Route::post('/update_client_address/{id}', [ClientsController::class, 'update_client_address']);
     Route::post('/update_client_gst/{id}', [ClientsController::class, 'update_client_gst']);
 
+    Route::get('/client_migrate', [ClientsController::class, 'importClientsData']);
+    Route::post('/export_clients', [ClientsController::class, 'export_clients']);
+
+    
+    // Supplier
     Route::post('/suppliers', [SuppliersController::class, 'add_suppliers']);
     Route::post('/get_suppliers/{id?}', [SuppliersController::class, 'view_suppliers']);
     Route::post('/update_suppliers/{id}', [SuppliersController::class, 'update_suppliers']);
     Route::delete('/suppliers/{id}', [SuppliersController::class, 'delete_supplier']);
-
-    Route::get('/suppliers_migrate', [SuppliersController::class, 'importSuppliersData']);
-    Route::post('/export_suppliers', [SuppliersController::class, 'export_suppliers']);
     Route::post('/update_supplier_address/{id}', [SuppliersController::class, 'update_supplier_address']);
     Route::post('/update_supplier_gst/{id}', [SuppliersController::class, 'update_supplier_gst']);
 
+    Route::get('/suppliers_migrate', [SuppliersController::class, 'importSuppliersData']);
+    Route::post('/export_suppliers', [SuppliersController::class, 'export_suppliers']);
+
+
+    // Products
     Route::get('/products/alias', [MastersController::class, 'getDistinctAliases']);
     Route::post('/products/{id}/set-pb-alias', [HelperController::class, 'setProductAsPbAlias']);
     Route::post('/products', [MastersController::class, 'add_products']);
@@ -118,7 +122,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/get_products/{id?}', [MastersController::class, 'view_products']);
     Route::post('/update_products/{id}', [MastersController::class, 'edit_products']);
     Route::delete('/products/{id}', [MastersController::class, 'delete_products']);
-
     Route::get('/get_products', [MastersController::class, 'get_product']);
 
     // Route::get('products_migrate', [MastersController::class, 'importProducts']);
@@ -137,32 +140,34 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/update_year/{id}', [MastersController::class, 'edit_f_year']);
     Route::delete('/year/{id}', [MastersController::class, 'delete_f_year']);
 
+    // Godown
     Route::post('/godown', [MastersController::class, 'add_godown']);
     Route::get('/godown', [MastersController::class, 'view_godown']);
     Route::post('/update_godown/{id?}', [MastersController::class, 'edit_godown']);
     Route::delete('/godown/{id?}', [MastersController::class, 'delete_godown']);
 
+    // Category
     Route::post('/category', [MastersController::class, 'add_category']);
     Route::get('/category', [MastersController::class, 'view_category']);
     Route::post('/update_category/{id?}', [MastersController::class, 'edit_category']);
     Route::delete('/category/{id?}', [MastersController::class, 'delete_category']);
 
+    // Sub Category
     Route::post('/sub_category', [MastersController::class, 'add_sub_category']);
     Route::get('/sub_category', [MastersController::class, 'view_sub_category']);
     Route::post('/update_sub_category/{id?}', [MastersController::class, 'edit_sub_category']);
     Route::delete('/sub_category/{id?}', [MastersController::class, 'delete_sub_category']);
 
+    // Group
     Route::post('/group', [MastersController::class, 'add_group']);
     Route::get('/group', [MastersController::class, 'view_group']);
     Route::post('/update_group/{id?}', [MastersController::class, 'edit_group']);
     Route::delete('/group/{id?}', [MastersController::class, 'delete_group']);
 
+    // Template
     Route::post('/add_pdf_template', [MastersController::class, 'add_pdf_template']);
-
     Route::get('/get_pdf_template', [MastersController::class, 'pdf_template']);
-
     Route::post('/update_pdf_template/{id}', [MastersController::class, 'edit_pdf_template']);
-
     Route::delete('/get_pdf_template/{id}', [MastersController::class, 'delete_pdf_template']);
 
     Route::get('/pdf_template_migrate', [MastersController::class, 'importPdfTemplates']);
@@ -176,67 +181,64 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/migrate', [CustomerVisitController::class, 'importCustomerVisits']); //Migrate from `old customer visit` table
     });
 
+    // Quotation
     Route::post('/add_quotations', [QuotationsController::class, 'add_quotations']);
     Route::post('/quotations/{id?}', [QuotationsController::class, 'view_quotations']);
     Route::post('/update_quotations/{id?}', [QuotationsController::class, 'update_quotations']);
     Route::delete('/quotations/{id?}', [QuotationsController::class, 'delete_quotations']);
-    Route::get('/quotations_migrate', [QuotationsController::class, 'importQuotations']);
-    Route::post('/export_quotation', [QuotationsController::class, 'exportQuotationReport']);
     Route::post('/update_quotation_status/{id}', [QuotationsController::class, 'updateQuotationStatus']);
-    Route::get('/quotation_generate_pdf/{id}', [QuotationsController::class, 'generateQuotationPDF']);
-
     Route::post('/quotation_by_product', [QuotationsController::class, 'fetchQuotationsAllProducts']);
 
+    Route::get('/quotations_migrate', [QuotationsController::class, 'importQuotations']);
+    Route::post('/export_quotation', [QuotationsController::class, 'exportQuotationReport']);
+    Route::get('/quotation_generate_pdf/{id}', [QuotationsController::class, 'generateQuotationPDF']);
+
+
+    // Sales Order 
     Route::post('/add_sales_order', [SalesOrderController::class, 'add_sales_order']);
     Route::post('/sales_order/{id?}', [SalesOrderController::class, 'view_sales_order']);
     Route::post('/update_sales_order/{id?}', [SalesOrderController::class, 'edit_sales_order']);
     Route::delete('/sales_order/{id?}', [SalesOrderController::class, 'delete_sales_order']);
-    Route::post('/pending_ref_no', [SalesOrderController::class, 'getPendingSupplierseOrders']);
-    Route::post('/pending_partial_no', [SalesOrderController::class, 'getPendingPartialSalesOrders']);
-
-    Route::get('/sales_order_migrate', [SalesOrderController::class, 'importSalesOrders']);
-
+    Route::post('/sales_order_by_product/{id}', [SalesOrderController::class, 'fetchSalesOrdersByProduct']);
+    Route::post('/sales_order_by_product', [SalesOrderController::class, 'fetchSalesOrdersAllProduct']);
     Route::post('/export_sales_orders', [SalesOrderController::class, 'export_sales_orders']);
-
     Route::post('/export_sales_order_report', [SalesOrderController::class, 'exportSalesOrderReport']);
 
-    Route::post('/sales_order_by_product/{id}', [SalesOrderController::class, 'fetchSalesOrdersByProduct']);
-
-    Route::post('/sales_order_by_product', [SalesOrderController::class, 'fetchSalesOrdersAllProduct']);
+    Route::post('/pending_ref_no', [SalesOrderController::class, 'getPendingSupplierseOrders']);
+    Route::post('/pending_partial_no', [SalesOrderController::class, 'getPendingPartialSalesOrders']);
+    Route::get('/sales_order_migrate', [SalesOrderController::class, 'importSalesOrders']);
 
     // Sales Invoice 
     Route::post('/add_sales_invoice', [SalesInvoiceController::class, 'add_sales_invoice']);
     Route::post('/sales_invoice/{id?}', [SalesInvoiceController::class, 'view_sales_invoice']);
     Route::post('/update_sales_invoice/{id?}', [SalesInvoiceController::class, 'edit_sales_invoice']);
     Route::delete('/sales_invoice/{id?}', [SalesInvoiceController::class, 'delete_sales_invoice']);
+    Route::post('/sales_by_product/{id}', [SalesInvoiceController::class, 'fetchSalesByProduct']);
+    Route::post('/sales_by_product', [SalesInvoiceController::class, 'fetchSalesAllProducts']);
 
     Route::get('/sales_invoice_migrate', [SalesInvoiceController::class, 'importSalesInvoices']);
-
     Route::post('/export_sales_invoice_report', [SalesInvoiceController::class, 'exportSalesInvoiceReport']);
-
-    Route::post('/sales_by_product/{id}', [SalesInvoiceController::class, 'fetchSalesByProduct']);
-
-    Route::post('/sales_by_product', [SalesInvoiceController::class, 'fetchSalesAllProducts']);
 
     Route::post('/product_wise', [SalesInvoiceController::class, 'product_wise_profit']);
     Route::post('/client_wise', [SalesInvoiceController::class, 'client_wise_profit']);
-
     Route::post('/export_product_wise', [SalesInvoiceController::class, 'exportProductWiseProfitExcel']);
     Route::post('/export_client_wise', [SalesInvoiceController::class, 'exportClientWiseProfitExcel']);
 
     Route::post('/cash_invoice', [SalesInvoiceController::class, 'getCashSalesInvoices']);
     Route::post('/commission_invoice', [SalesInvoiceController::class, 'getCommissionSalesInvoices']);
-
     Route::post('/export_cash_invoice', [SalesInvoiceController::class, 'exportCashInvoices']);
     Route::post('/export_commission_invoice', [SalesInvoiceController::class, 'exportCommissionInvoices']);
 
+
+    // Sales Return 
     Route::post('/add_sales_return', [SalesReturnController::class, 'add_sales_return']);
     Route::post('/sales_return/{id?}', [SalesReturnController::class, 'view_sales_return']);
     Route::post('/update_sales_return/{id?}', [SalesReturnController::class, 'edit_sales_return']);
     Route::delete('/sales_return/{id?}', [SalesReturnController::class, 'delete_sales_return']);
-
+    
     Route::get('/sales_return_migrate', [SalesReturnController::class, 'importSalesReturns']);
 
+    // Create Note
     Route::post('/add_credit_note', [CreditNoteController::class, 'add_credit_note']);
     Route::post('/credit_note/{id?}', [CreditNoteController::class, 'view_credit_note']);
     Route::post('/update_credit_note/{id?}', [CreditNoteController::class, 'edit_credit_note']);
@@ -245,6 +247,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/credit_note_migrate', [CreditNoteController::class, 'importCreditNotes']);
 
+    // Cirtificate
     Route::post('/add_test_certificate', [TestCertificateController::class, 'add_test_certificate']);
     Route::post('/test_certificate', [TestCertificateController::class, 'view_test_certificate']);
     Route::post('/update_test_certificate/{id?}', [TestCertificateController::class, 'edit_test_certificate']);
@@ -252,6 +255,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/test_certificate_migrate', [TestCertificateController::class, 'importTestCertificates']);
 
+    // Purchase Order
     Route::post('/add_purchase_order', [PurchaseOrderController::class, 'add_purchase_order']);
     Route::post('/purchase_order/{id?}', [PurchaseOrderController::class, 'view_purchase_order']);
     Route::post('/update_purchase_order/{id?}', [PurchaseOrderController::class, 'edit_purchase_order']);
@@ -259,31 +263,32 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/purchaseorder_migrate', [PurchaseOrderController::class, 'importPurchaseOrders']);
     Route::post('/pending_oa_no', [PurchaseOrderController::class, 'getPendingPurchaseOrders']);
 
+    Route::post('/purchase_order_by_product/{id}', [PurchaseOrderController::class, 'fetchPurchaseOrdersByProduct']);
+    Route::post('/purchase_order_by_product', [PurchaseOrderController::class, 'fetchPurchaseOrdersAllProduct']);
+    
     Route::post('/export_purchase_order_report', [PurchaseOrderController::class, 'exportPurchaseOrdersReport']);
 
-    Route::post('/purchase_order_by_product/{id}', [PurchaseOrderController::class, 'fetchPurchaseOrdersByProduct']);
 
-    Route::post('/purchase_order_by_product', [PurchaseOrderController::class, 'fetchPurchaseOrdersAllProduct']);
-
+    // Purchase Invoice
     Route::post('/add_purchase_invoice', [PurchaseInvoiceController::class, 'add_purchase_invoice']);
     Route::post('/purchase_invoice/{id?}', [PurchaseInvoiceController::class, 'view_purchase_invoice']);
     Route::post('/update_purchase_invoice/{id?}', [PurchaseInvoiceController::class, 'edit_purchase_invoice']);
     Route::delete('/purchase_invoice/{id?}', [PurchaseInvoiceController::class, 'delete_purchase_invoice']);
-
-    Route::get('/purchase_invoice_migrate', [PurchaseInvoiceController::class, 'importPurchaseInvoices']);
-
-    Route::post('/export_purchase_invoice_report', [PurchaseInvoiceController::class, 'exportPurchaseInvoiceReport']);
-
     Route::post('/purchase_by_product/{id}', [PurchaseInvoiceController::class, 'fetchPurchasesByProduct']);
-
     Route::post('/purchase_by_product', [PurchaseInvoiceController::class, 'fetchPurchasesAllProduct']);
 
+    Route::get('/purchase_invoice_migrate', [PurchaseInvoiceController::class, 'importPurchaseInvoices']);
+    Route::post('/export_purchase_invoice_report', [PurchaseInvoiceController::class, 'exportPurchaseInvoiceReport']);
+
+    // Purchase Return
     Route::post('/add_purchase_return', [PurchaseReturnController::class, 'add_purchase_return']);
     Route::post('/purchase_return/{id?}', [PurchaseReturnController::class, 'view_purchase_return']);
     Route::post('/update_purchase_return/{id?}', [PurchaseReturnController::class, 'edit_purchase_return']);
     Route::delete('/purchase_return/{id?}', [PurchaseReturnController::class, 'delete_purchase_return']);
+
     Route::get('/purchase_return_migrate', [PurchaseReturnController::class, 'importPurchaseReturns']);
 
+    // Debit Note
     Route::post('/add_debit_note', [DebitNoteController::class, 'add_debit_note']);
     Route::post('/debit_note/{id?}', [DebitNoteController::class, 'view_debit_note']);
     Route::post('/update_debit_note/{id?}', [DebitNoteController::class, 'edit_debit_note']);
@@ -291,17 +296,19 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/debit_note_migrate', [DebitNoteController::class, 'importDebitNotes']);
 
+
+    // Stock Transfer
     Route::post('/add_stock_transfer', [StockTransferController::class, 'add_stock_transfer']);
     Route::post('/stock_transfer/{id?}', [StockTransferController::class, 'view_stock_transfer']);
     Route::post('/update_stock_transfer/{id?}', [StockTransferController::class, 'edit_stock_transfer']);
     Route::delete('/stock_transfer/{id?}', [StockTransferController::class, 'delete_stock_transfer']);
+    Route::post('/stock_transfers_by_product/{productId}', [StockTransferController::class, 'fetchStockTransfersByProduct']);
+    Route::post('/stock_transfers_by_product', [StockTransferController::class, 'fetchStockTransfersAllProduct']);
 
     Route::get('/stock_transfer_migrate', [StockTransferController::class, 'importStockTransfers']);
 
-    Route::post('/stock_transfers_by_product/{productId}', [StockTransferController::class, 'fetchStockTransfersByProduct']);
 
-    Route::post('/stock_transfers_by_product', [StockTransferController::class, 'fetchStockTransfersAllProduct']);
-
+    // Assembly
     Route::post('/add_assembly', [AssemblyController::class, 'add_assembly']);
     Route::post('/assembly/{id?}', [AssemblyController::class, 'view_assembly']);
     Route::post('/product_assembly/{id?}', [AssemblyController::class, 'view_product_assembly']);
@@ -319,6 +326,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::post('/assembly_operations_by_product/{productId}', [AssemblyOperationsController::class, 'fetchAssemblyByProduct']);
 
+    // Fabrication
     Route::prefix('fabrication')->group(function () {
         Route::post('/add', [FabricationController::class, 'add']);
         Route::post('/fetch', [FabricationController::class, 'view']);
@@ -326,6 +334,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/delete/{id?}', [FabricationController::class, 'delete']);
     });
 
+    // Counter
     Route::prefix('counter')->group(function () {
         Route::post('/add', [CounterController::class, 'add']);
         Route::post('/fetch/{id?}', [CounterController::class, 'view']);
@@ -348,22 +357,26 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/client_category', [MastersController::class, 'getClientsCategories']);
 
+    // Country
     Route::post('/add_country', [CountryController::class, 'registerCountries']);
     Route::get('/country', [CountryController::class, 'viewCountries']);
     Route::post('/edit_country/{id}', [CountryController::class, 'updateCountry']);
     Route::delete('/country/{id}', [CountryController::class, 'deleteCountry']);
 
+    // State
     Route::post('/add_state', [StateController::class, 'registerStates']);
     Route::get('/state', [StateController::class, 'viewStates']);
     Route::post('/edit_state/{id}', [StateController::class, 'updateState']);
     Route::delete('/state/{id}', [StateController::class, 'deleteState']);
     Route::get('/states/{country_name}', [StateController::class, 'viewStatesByCountry']);
 
+    // Quotation Terms
     Route::post('/quotation-terms', [QuotationTermMasterController::class, 'add']);
     Route::get('/quotation-terms', [QuotationTermMasterController::class, 'retrieve']);
     Route::post('/edit-quotation-terms/{id}', [QuotationTermMasterController::class, 'update']);
     Route::delete('/quotation-terms/{id}', [QuotationTermMasterController::class, 'delete']);
 
+    // Channel
     Route::post('/channel', [ChannelController::class, 'add']); // Create Channel
     Route::get('/channels', [ChannelController::class, 'retrieve']); // View All Channels
     Route::post('/update_channel/{id}', [ChannelController::class, 'update']); // Update Channel
@@ -373,7 +386,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/purchase_back', [PurchaseBackController::class, 'fetch_purchase_back']); // View All purchase-back
 
     // routes/api.php
-    
+    // Reports
     Route::prefix('report')->group(function () {
         Route::post('/dashboard/export', [HelperController::class, 'exportDashboardExcel']);
 
@@ -438,6 +451,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/get_product_timeline/{productId}', [HelperController::class, 'product_timeline']);
     });
 
+    // Adjustment
     Route::prefix('adjustment')->group(function () {
         Route::post('/add', [AdjustmentController::class, 'store']);
          Route::post('/retrieve/{id?}', [AdjustmentController::class, 'fetch']);
@@ -445,6 +459,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/delete/{id}', [AdjustmentController::class, 'delete']);
     });
 
+    // Vendor
     Route::prefix('vendor')->group(function () {
         Route::post('/add', [VendorsController::class, 'create']);
         Route::post('/retrieve/{id?}', [VendorsController::class, 'fetch']);
@@ -452,6 +467,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/delete/{id}', [VendorsController::class, 'delete']);
     });
 
+    // Lot
     Route::post('/add_lot', [LotController::class, 'add']); // Create Channel
     Route::post('/fetch_lot/{id?}', [LotController::class, 'retrieve']); // View All Channels
     Route::post('/update_lot/{id}', [LotController::class, 'update']); // Update Channel
