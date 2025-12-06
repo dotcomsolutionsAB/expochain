@@ -1455,40 +1455,70 @@ class SalesInvoiceController extends Controller
         try {
             $companyId = Auth::user()->company_id;
 
-            $startDate = Carbon::parse($request->start_date)->startOfDay();
-            $endDate = Carbon::parse($request->end_date)->endOfDay();
+            // Date range (optional)
+            $startDate = $request->filled('start_date')
+                ? Carbon::parse($request->start_date)->startOfDay()
+                : null;
 
-            // Eager load relationships with joins to client and product group
-            // $invoices = SalesInvoiceProductsModel::with([
-            //     'salesInvoice' => function ($q) use ($companyId, $startDate, $endDate) {
-            //         $q->where('company_id', $companyId)
-            //         ->whereBetween('sales_invoice_date', [$startDate, $endDate])
-            //         ->with('client:id,name');
-            //     },
-            //     'product.groupRelation:id,name'
-            // ])->get();
+            $endDate = $request->filled('end_date')
+                ? Carbon::parse($request->end_date)->endOfDay()
+                : null;
 
-            // Parse optional filters
-            $clientIds = $request->filled('client_id') ? array_map('intval', explode(',', $request->client_id)) : null;
-            $productIds = $request->filled('product_id') ? array_map('intval', explode(',', $request->product_id)) : null;
-            $groupIds = $request->filled('group_id') ? array_map('intval', explode(',', $request->group_id)) : null;
-            $categoryIds = $request->filled('category_id') ? array_map('intval', explode(',', $request->category_id)) : null;
-            $subCategoryIds = $request->filled('sub_category_id') ? array_map('intval', explode(',', $request->sub_category_id)) : null;
+            // Optional filters (comma-separated)
+            $clientIds      = $request->filled('client_id')       ? array_map('intval', explode(',', $request->client_id))        : null;
+            $productIds     = $request->filled('product_id')      ? array_map('intval', explode(',', $request->product_id))       : null;
+            $groupIds       = $request->filled('group_id')        ? array_map('intval', explode(',', $request->group_id))         : null;
+            $categoryIds    = $request->filled('category_id')     ? array_map('intval', explode(',', $request->category_id))      : null;
+            $subCategoryIds = $request->filled('sub_category_id') ? array_map('intval', explode(',', $request->sub_category_id))  : null;
+
+            // NEW: invoice filters (optional)
+            $invoiceIds = $request->filled('invoice_id')
+                ? array_map('intval', explode(',', $request->invoice_id))      // "18837, 18838"
+                : null;
+
+            $invoiceNos = $request->filled('invoice_no')
+                ? array_map('trim', explode(',', $request->invoice_no))        // "SI/1001/2025, SI/1002/2025"
+                : null;
 
             // Build query with relations and filters
             $query = SalesInvoiceProductsModel::with([
-                'salesInvoice.client:id,name',
-                'product.groupRelation:id,name'
-            ])
-            ->whereHas('salesInvoice', function ($q) use ($companyId, $startDate, $endDate, $clientIds) {
-                $q->where('company_id', $companyId)
-                ->whereBetween('sales_invoice_date', [$startDate, $endDate]);
+                    'salesInvoice.client:id,name',
+                    'product.groupRelation:id,name'
+                ])
+                ->whereHas('salesInvoice', function ($q) use (
+                    $companyId,
+                    $startDate,
+                    $endDate,
+                    $clientIds,
+                    $invoiceIds,
+                    $invoiceNos
+                ) {
+                    $q->where('company_id', $companyId);
 
-                if ($clientIds) {
-                    $q->whereIn('client_id', $clientIds);
-                }
-            });
+                    // 🔹 If specific invoices are requested, filter by them
+                    if ($invoiceIds) {
+                        $q->whereIn('id', $invoiceIds); // SalesInvoice id
+                    }
 
+                    if ($invoiceNos) {
+                        $q->whereIn('sales_invoice_no', $invoiceNos);
+                    }
+
+                    // 🔹 Date filter is OPTIONAL and can be combined with any other filters
+                    if ($startDate && $endDate) {
+                        $q->whereBetween('sales_invoice_date', [$startDate, $endDate]);
+                    } elseif ($startDate) {
+                        $q->whereDate('sales_invoice_date', '>=', $startDate);
+                    } elseif ($endDate) {
+                        $q->whereDate('sales_invoice_date', '<=', $endDate);
+                    }
+
+                    if ($clientIds) {
+                        $q->whereIn('client_id', $clientIds);
+                    }
+                });
+
+            // Product-related filters
             if ($productIds) {
                 $query->whereIn('product_id', $productIds);
             }
@@ -1509,7 +1539,7 @@ class SalesInvoiceController extends Controller
 
             $items = $query->get();
 
-            // Filter only those with invoices in date range
+            // Safety filter
             $filtered = $items->filter(fn ($item) => $item->salesInvoice !== null);
 
             // Build export data
@@ -1517,35 +1547,38 @@ class SalesInvoiceController extends Controller
             $sn = 1;
             foreach ($filtered as $item) {
                 $exportData[] = [
-                    'SN' => $sn++,
-                    'Client' => $item->salesInvoice->client->name ?? 'N/A',
-                    'Invoice' => $item->salesInvoice->sales_invoice_no,
-                    'Date' => Carbon::parse($item->salesInvoice->sales_invoice_date)->format('d-m-Y'),
+                    'SN'        => $sn++,
+                    'Client'    => $item->salesInvoice->client->name ?? 'N/A',
+                    'Invoice'   => $item->salesInvoice->sales_invoice_no,
+                    'Date'      => Carbon::parse($item->salesInvoice->sales_invoice_date)->format('d-m-Y'),
                     'Item Name' => $item->product_name,
-                    'Group' => $item->product->groupRelation->name ?? 'N/A',
-                    'Quantity' => $item->quantity,
-                    'Unit' => $item->unit,
-                    'Price' => $item->price,
-                    'Discount' => $item->discount,
-                    'Amount' => $item->amount,
-                    'Added On' => Carbon::parse($item->created_at)->format('d-m-Y H:i'),
-                    'Profit' => $item->profit
+                    'Group'     => $item->product->groupRelation->name ?? 'N/A',
+                    'Quantity'  => $item->quantity,
+                    'Unit'      => $item->unit,
+                    'Price'     => $item->price,
+                    'Discount'  => $item->discount,
+                    'Amount'    => $item->amount,
+                    'Added On'  => Carbon::parse($item->created_at)->format('d-m-Y H:i'),
+                    'Profit'    => $item->profit,
                 ];
             }
 
+            // ✅ No data = 200 with empty data (not error)
             if (empty($exportData)) {
                 return response()->json([
-                    'code' => 404,
-                    'success' => false,
-                    'message' => 'No sales invoice products found in the given range.'
-                ]);
+                    'code'          => 200,
+                    'success'       => true,
+                    'message'       => 'No sales invoice products found for the given filters.',
+                    'data'          => [],
+                    'total_records' => 0,
+                ], 200);
             }
 
             // Generate dynamic filename
-            $timestamp = now()->format('Ymd_His');
-            $fileName = "sales_invoices_export_{$timestamp}.xlsx";
+            $timestamp    = now()->format('Ymd_His');
+            $fileName     = "sales_invoices_export_{$timestamp}.xlsx";
             $relativePath = "uploads/sales_invoices_report/{$fileName}";
-            $fullPath = storage_path("app/public/{$relativePath}");
+            $fullPath     = storage_path("app/public/{$relativePath}");
 
             // Store Excel using inline export class
             Excel::store(new class($exportData) implements FromCollection, WithHeadings {
@@ -1563,31 +1596,170 @@ class SalesInvoiceController extends Controller
                     return [
                         'SN', 'Client', 'Invoice', 'Date', 'Item Name', 'Group',
                         'Quantity', 'Unit', 'Price', 'Discount', 'Amount',
-                        'Added On', 'Profit'
+                        'Added On', 'Profit',
                     ];
                 }
             }, $relativePath, 'public');
 
             return response()->json([
-                'code' => 200,
+                'code'    => 200,
                 'success' => true,
                 'message' => 'File available for download',
-                'data' => [
-                    'file_url' => asset("storage/{$relativePath}"),
-                    'file_name' => $fileName,
-                    'file_size' => Storage::disk('public')->size($relativePath),
-                    'content_type' => 'Excel'
-                ]
-            ]);
+                'data'    => [
+                    'file_url'     => asset("storage/{$relativePath}"),
+                    'file_name'    => $fileName,
+                    'file_size'    => Storage::disk('public')->size($relativePath),
+                    'content_type' => 'Excel',
+                ],
+            ], 200);
         } catch (\Exception $e) {
             return response()->json([
-                'code' => 500,
+                'code'    => 500,
                 'success' => false,
                 'message' => 'Something went wrong while generating Excel.',
-                'error' => $e->getMessage()
-            ]);
+                'error'   => $e->getMessage(),
+            ], 500);
         }
     }
+
+    // public function exportSalesInvoiceReport(Request $request)
+    // {
+    //     try {
+    //         $companyId = Auth::user()->company_id;
+
+    //         $startDate = Carbon::parse($request->start_date)->startOfDay();
+    //         $endDate = Carbon::parse($request->end_date)->endOfDay();
+
+    //         // Eager load relationships with joins to client and product group
+    //         // $invoices = SalesInvoiceProductsModel::with([
+    //         //     'salesInvoice' => function ($q) use ($companyId, $startDate, $endDate) {
+    //         //         $q->where('company_id', $companyId)
+    //         //         ->whereBetween('sales_invoice_date', [$startDate, $endDate])
+    //         //         ->with('client:id,name');
+    //         //     },
+    //         //     'product.groupRelation:id,name'
+    //         // ])->get();
+
+    //         // Parse optional filters
+    //         $clientIds = $request->filled('client_id') ? array_map('intval', explode(',', $request->client_id)) : null;
+    //         $productIds = $request->filled('product_id') ? array_map('intval', explode(',', $request->product_id)) : null;
+    //         $groupIds = $request->filled('group_id') ? array_map('intval', explode(',', $request->group_id)) : null;
+    //         $categoryIds = $request->filled('category_id') ? array_map('intval', explode(',', $request->category_id)) : null;
+    //         $subCategoryIds = $request->filled('sub_category_id') ? array_map('intval', explode(',', $request->sub_category_id)) : null;
+
+    //         // Build query with relations and filters
+    //         $query = SalesInvoiceProductsModel::with([
+    //             'salesInvoice.client:id,name',
+    //             'product.groupRelation:id,name'
+    //         ])
+    //         ->whereHas('salesInvoice', function ($q) use ($companyId, $startDate, $endDate, $clientIds) {
+    //             $q->where('company_id', $companyId)
+    //             ->whereBetween('sales_invoice_date', [$startDate, $endDate]);
+
+    //             if ($clientIds) {
+    //                 $q->whereIn('client_id', $clientIds);
+    //             }
+    //         });
+
+    //         if ($productIds) {
+    //             $query->whereIn('product_id', $productIds);
+    //         }
+
+    //         if ($groupIds || $categoryIds || $subCategoryIds) {
+    //             $query->whereHas('product', function ($q) use ($groupIds, $categoryIds, $subCategoryIds) {
+    //                 if ($groupIds) {
+    //                     $q->whereIn('group', $groupIds);
+    //                 }
+    //                 if ($categoryIds) {
+    //                     $q->whereIn('category', $categoryIds);
+    //                 }
+    //                 if ($subCategoryIds) {
+    //                     $q->whereIn('sub_category', $subCategoryIds);
+    //                 }
+    //             });
+    //         }
+
+    //         $items = $query->get();
+
+    //         // Filter only those with invoices in date range
+    //         $filtered = $items->filter(fn ($item) => $item->salesInvoice !== null);
+
+    //         // Build export data
+    //         $exportData = [];
+    //         $sn = 1;
+    //         foreach ($filtered as $item) {
+    //             $exportData[] = [
+    //                 'SN' => $sn++,
+    //                 'Client' => $item->salesInvoice->client->name ?? 'N/A',
+    //                 'Invoice' => $item->salesInvoice->sales_invoice_no,
+    //                 'Date' => Carbon::parse($item->salesInvoice->sales_invoice_date)->format('d-m-Y'),
+    //                 'Item Name' => $item->product_name,
+    //                 'Group' => $item->product->groupRelation->name ?? 'N/A',
+    //                 'Quantity' => $item->quantity,
+    //                 'Unit' => $item->unit,
+    //                 'Price' => $item->price,
+    //                 'Discount' => $item->discount,
+    //                 'Amount' => $item->amount,
+    //                 'Added On' => Carbon::parse($item->created_at)->format('d-m-Y H:i'),
+    //                 'Profit' => $item->profit
+    //             ];
+    //         }
+
+    //         if (empty($exportData)) {
+    //             return response()->json([
+    //                 'code' => 404,
+    //                 'success' => false,
+    //                 'message' => 'No sales invoice products found in the given range.'
+    //             ]);
+    //         }
+
+    //         // Generate dynamic filename
+    //         $timestamp = now()->format('Ymd_His');
+    //         $fileName = "sales_invoices_export_{$timestamp}.xlsx";
+    //         $relativePath = "uploads/sales_invoices_report/{$fileName}";
+    //         $fullPath = storage_path("app/public/{$relativePath}");
+
+    //         // Store Excel using inline export class
+    //         Excel::store(new class($exportData) implements FromCollection, WithHeadings {
+    //             private $data;
+    //             public function __construct($data)
+    //             {
+    //                 $this->data = $data;
+    //             }
+    //             public function collection()
+    //             {
+    //                 return collect($this->data);
+    //             }
+    //             public function headings(): array
+    //             {
+    //                 return [
+    //                     'SN', 'Client', 'Invoice', 'Date', 'Item Name', 'Group',
+    //                     'Quantity', 'Unit', 'Price', 'Discount', 'Amount',
+    //                     'Added On', 'Profit'
+    //                 ];
+    //             }
+    //         }, $relativePath, 'public');
+
+    //         return response()->json([
+    //             'code' => 200,
+    //             'success' => true,
+    //             'message' => 'File available for download',
+    //             'data' => [
+    //                 'file_url' => asset("storage/{$relativePath}"),
+    //                 'file_name' => $fileName,
+    //                 'file_size' => Storage::disk('public')->size($relativePath),
+    //                 'content_type' => 'Excel'
+    //             ]
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'code' => 500,
+    //             'success' => false,
+    //             'message' => 'Something went wrong while generating Excel.',
+    //             'error' => $e->getMessage()
+    //         ]);
+    //     }
+    // }
 
     // fetch by product id
     public function fetchSalesByProduct(Request $request, $productId)
