@@ -1604,102 +1604,89 @@ class SalesInvoiceController extends Controller
                         'Profit', 'Added On',
                     ];
                 }
-
                 public function registerEvents(): array
                 {
                     return [
                         AfterSheet::class => function (AfterSheet $event) {
-                            $sheet   = $event->sheet->getDelegate();
-                            $rowCount = count($this->data) + 1; // +1 for header row
+                            $sheet    = $event->sheet->getDelegate();
+                            $rowCount = count($this->data) + 1; // total rows including header
 
-                            // 🔹 HEADER STYLE: bold, larger font, border
+                            // =====================================================
+                            // 🔹 HEADER STYLE (Bold + Font Size + Border)
+                            // =====================================================
                             $sheet->getStyle("A1:M1")->getFont()
                                 ->setBold(true)
                                 ->setSize(12);
 
-                            // Borders for ALL cells (header + data)
+                            // Apply borders to all cells
                             $sheet->getStyle("A1:M{$rowCount}")
                                 ->getBorders()
                                 ->getAllBorders()
                                 ->setBorderStyle(Border::BORDER_THIN);
 
-                            // 🔹 ALIGNMENTS (header + data)
-
-                            // SN -> center
-                            $sheet->getStyle("A1:A{$rowCount}")
+                            // =====================================================
+                            // 🔹 VERTICAL ALIGN TOP FOR ALL CELLS
+                            // =====================================================
+                            $sheet->getStyle("A1:M{$rowCount}")
                                 ->getAlignment()
-                                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                                ->setVertical(Alignment::VERTICAL_TOP);
 
-                            // Client -> left
-                            $sheet->getStyle("B1:B{$rowCount}")
-                                ->getAlignment()
-                                ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+                            // =====================================================
+                            // 🔹 COLUMN WIDTHS (custom balanced widths)
+                            // =====================================================
+                            $columnWidths = [
+                                'A' => 7,   // SN
+                                'B' => 22,  // Client
+                                'C' => 22,  // Invoice
+                                'D' => 14,  // Date
+                                'E' => 28,  // Item Name
+                                'F' => 20,  // Group
+                                'G' => 10,  // Quantity
+                                'H' => 10,  // Unit
+                                'I' => 12,  // Price
+                                'J' => 12,  // Discount
+                                'K' => 12,  // Amount
+                                'L' => 12,  // Profit
+                                'M' => 18,  // Added On
+                            ];
 
-                            // Invoice -> left
-                            $sheet->getStyle("C1:C{$rowCount}")
-                                ->getAlignment()
-                                ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+                            foreach ($columnWidths as $col => $width) {
+                                $sheet->getColumnDimension($col)->setWidth($width);
+                            }
 
-                            // Date -> left
-                            $sheet->getStyle("D1:D{$rowCount}")
-                                ->getAlignment()
-                                ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+                            // =====================================================
+                            // 🔹 ALIGNMENTS (Same as your requirement)
+                            // =====================================================
 
-                            // Item Name -> left
-                            $sheet->getStyle("E1:E{$rowCount}")
-                                ->getAlignment()
-                                ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+                            // Center Alignment Columns
+                            $centerColumns = ['A','G','H','I','J','K','L'];
+                            foreach ($centerColumns as $col) {
+                                $sheet->getStyle("{$col}1:{$col}{$rowCount}")
+                                    ->getAlignment()
+                                    ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                            }
 
-                            // Group -> left
-                            $sheet->getStyle("F1:F{$rowCount}")
-                                ->getAlignment()
-                                ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+                            // Left Alignment Columns
+                            $leftColumns = ['B','C','D','E','F','M'];
+                            foreach ($leftColumns as $col) {
+                                $sheet->getStyle("{$col}1:{$col}{$rowCount}")
+                                    ->getAlignment()
+                                    ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+                            }
 
-                            // Quantity -> center
-                            $sheet->getStyle("G1:G{$rowCount}")
-                                ->getAlignment()
-                                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-                            // Unit -> center
-                            $sheet->getStyle("H1:H{$rowCount}")
-                                ->getAlignment()
-                                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-                            // Price -> center
-                            $sheet->getStyle("I1:I{$rowCount}")
-                                ->getAlignment()
-                                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-                            // Discount -> center
-                            $sheet->getStyle("J1:J{$rowCount}")
-                                ->getAlignment()
-                                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-                            // Amount -> center
-                            $sheet->getStyle("K1:K{$rowCount}")
-                                ->getAlignment()
-                                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-                            // Profit -> center
-                            $sheet->getStyle("L1:L{$rowCount}")
-                                ->getAlignment()
-                                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-                            // Added On -> left
-                            $sheet->getStyle("M1:M{$rowCount}")
-                                ->getAlignment()
-                                ->setHorizontal(Alignment::HORIZONTAL_LEFT);
-
-                            // 🔹 WRAP TEXT for columns that can have long text
-                            $sheet->getStyle("B1:B{$rowCount}")
-                                ->getAlignment()->setWrapText(true); // Client
-                            $sheet->getStyle("E1:E{$rowCount}")
-                                ->getAlignment()->setWrapText(true); // Item Name
-                            $sheet->getStyle("F1:F{$rowCount}")
-                                ->getAlignment()->setWrapText(true); // Group
+                            // =====================================================
+                            // 🔹 WRAP TEXT for long columns
+                            // =====================================================
+                            $wrapColumns = ['B','E','F'];
+                            foreach ($wrapColumns as $col) {
+                                $sheet->getStyle("{$col}1:{$col}{$rowCount}")
+                                    ->getAlignment()
+                                    ->setWrapText(true);
+                            }
                         },
                     ];
                 }
+
             }, $relativePath, 'public');
 
 
