@@ -25,6 +25,10 @@ use DB;
 use NumberFormatter;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class SalesInvoiceController extends Controller
 {
@@ -1581,8 +1585,9 @@ class SalesInvoiceController extends Controller
             $fullPath     = storage_path("app/public/{$relativePath}");
 
             // Store Excel using inline export class
-            Excel::store(new class($exportData) implements FromCollection, WithHeadings {
+            Excel::store(new class($exportData) implements FromCollection, WithHeadings, WithEvents {
                 private $data;
+
                 public function __construct($data)
                 {
                     $this->data = $data;
@@ -1596,10 +1601,107 @@ class SalesInvoiceController extends Controller
                     return [
                         'SN', 'Client', 'Invoice', 'Date', 'Item Name', 'Group',
                         'Quantity', 'Unit', 'Price', 'Discount', 'Amount',
-                        'Profit','Added On',
+                        'Profit', 'Added On',
+                    ];
+                }
+
+                public function registerEvents(): array
+                {
+                    return [
+                        AfterSheet::class => function (AfterSheet $event) {
+                            $sheet   = $event->sheet->getDelegate();
+                            $rowCount = count($this->data) + 1; // +1 for header row
+
+                            // 🔹 HEADER STYLE: bold, larger font, border
+                            $sheet->getStyle("A1:M1")->getFont()
+                                ->setBold(true)
+                                ->setSize(12);
+
+                            // Borders for ALL cells (header + data)
+                            $sheet->getStyle("A1:M{$rowCount}")
+                                ->getBorders()
+                                ->getAllBorders()
+                                ->setBorderStyle(Border::BORDER_THIN);
+
+                            // 🔹 ALIGNMENTS (header + data)
+
+                            // SN -> center
+                            $sheet->getStyle("A1:A{$rowCount}")
+                                ->getAlignment()
+                                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+                            // Client -> left
+                            $sheet->getStyle("B1:B{$rowCount}")
+                                ->getAlignment()
+                                ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+                            // Invoice -> left
+                            $sheet->getStyle("C1:C{$rowCount}")
+                                ->getAlignment()
+                                ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+                            // Date -> left
+                            $sheet->getStyle("D1:D{$rowCount}")
+                                ->getAlignment()
+                                ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+                            // Item Name -> left
+                            $sheet->getStyle("E1:E{$rowCount}")
+                                ->getAlignment()
+                                ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+                            // Group -> left
+                            $sheet->getStyle("F1:F{$rowCount}")
+                                ->getAlignment()
+                                ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+                            // Quantity -> center
+                            $sheet->getStyle("G1:G{$rowCount}")
+                                ->getAlignment()
+                                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+                            // Unit -> center
+                            $sheet->getStyle("H1:H{$rowCount}")
+                                ->getAlignment()
+                                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+                            // Price -> center
+                            $sheet->getStyle("I1:I{$rowCount}")
+                                ->getAlignment()
+                                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+                            // Discount -> center
+                            $sheet->getStyle("J1:J{$rowCount}")
+                                ->getAlignment()
+                                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+                            // Amount -> center
+                            $sheet->getStyle("K1:K{$rowCount}")
+                                ->getAlignment()
+                                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+                            // Profit -> center
+                            $sheet->getStyle("L1:L{$rowCount}")
+                                ->getAlignment()
+                                ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+                            // Added On -> left
+                            $sheet->getStyle("M1:M{$rowCount}")
+                                ->getAlignment()
+                                ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+                            // 🔹 WRAP TEXT for columns that can have long text
+                            $sheet->getStyle("B1:B{$rowCount}")
+                                ->getAlignment()->setWrapText(true); // Client
+                            $sheet->getStyle("E1:E{$rowCount}")
+                                ->getAlignment()->setWrapText(true); // Item Name
+                            $sheet->getStyle("F1:F{$rowCount}")
+                                ->getAlignment()->setWrapText(true); // Group
+                        },
                     ];
                 }
             }, $relativePath, 'public');
+
 
             return response()->json([
                 'code'    => 200,
