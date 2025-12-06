@@ -1558,8 +1558,8 @@ class SalesInvoiceController extends Controller
                     'Price'     => $item->price,
                     'Discount'  => $item->discount,
                     'Amount'    => $item->amount,
-                    'Added On'  => Carbon::parse($item->created_at)->format('d-m-Y H:i'),
-                    'Profit'    => $item->profit,
+                    'Profit'    => $item->profit,                    
+                    'Added On'  => Carbon::parse($item->created_at)->format('d-m-Y'),
                 ];
             }
 
