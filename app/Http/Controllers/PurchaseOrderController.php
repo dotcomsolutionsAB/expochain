@@ -460,164 +460,6 @@ class PurchaseOrderController extends Controller
         ], 200);
     }
 
-    // public function view_purchase_order(Request $request, $id = null)
-    // {
-    //     // Get filter inputs
-    //     $supplierId = $request->input('supplier_id');
-    //     $name = $request->input('name');
-    //     $purchaseOrderNo = $request->input('purchase_order_no');
-    //     $purchaseOrderDate = $request->input('purchase_order_date');
-    //     $dateFrom = $request->input('date_from');
-    //     $dateTo = $request->input('date_to');
-    //     $user = $request->input('user');
-    //     $status = $request->input('status');
-    //     $productIds = $request->input('product_ids');
-    //     $limit = $request->input('limit', 10);
-    //     $offset = $request->input('offset', 0);
-
-    //     // Query Purchase Orders
-    //     $query = PurchaseOrderModel::with([
-    //         'products' => function ($query) {
-    //             $query->select('purchase_order_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 
-    //                 DB::raw('(tax / 2) as cgst_rate'), 
-    //                 DB::raw('(tax / 2) as sgst_rate'), 
-    //                 DB::raw('(tax) as igst_rate'), 'cgst', 'sgst', 'igst', 'amount', 'gross', 'channel', 'received', 'short_closed');
-    //         },
-    //         'addons' => function ($query) {
-    //             $query->select('purchase_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
-    //         },
-    //         'terms' => function ($query) {
-    //             $query->select('purchase_order_id', 'name', 'value');
-    //         },
-    //         'get_user:id,name',
-    //         'get_template:id,name',
-    //         'supplier' => function ($q) {
-    //             // Select key supplier columns and include addresses
-    //             $q->select('id', 'supplier_id')
-    //               ->with(['addresses' => function ($query) {
-    //                   $query->select('supplier_id', 'state');
-    //               }]);
-    //         }
-    //     ])
-    //     ->select(
-    //         'id', 'supplier_id', 'name', 'purchase_order_no', 'purchase_order_date', DB::raw('DATE_FORMAT(purchase_order_date, "%d-%m-%Y") as purchase_order_date_formatted'), 'oa_no', 
-    //         DB::raw('DATE_FORMAT(oa_date, "%d-%m-%Y") as oa_date'), 'template', 'status', 
-    //         'user', 'cgst', 'sgst', 'igst', 'total', 'currency', 'gross', 'round_off'
-    //     )
-    //     ->where('company_id', Auth::user()->company_id);
-
-    //     // 🔹 **Fetch Single Purchase Order by ID**
-    //     if ($id) {
-    //         $purchaseOrder = $query->where('id', $id)->first();
-    //         if (!$purchaseOrder) {
-    //             return response()->json([
-    //                 'code'    => 200,
-    //                 'success' => false,
-    //                 'message' => 'Purchase Order not found!',
-    //                 'data'    => null,
-    //             ], 200);
-    //         }
-
-    //         // Transform Single Purchase Order
-    //         $purchaseOrder->amount_in_words = $this->convertNumberToWords($purchaseOrder->total);
-    //         $purchaseOrder->total = is_numeric($purchaseOrder->total) ? number_format((float) $purchaseOrder->total, 2) : $purchaseOrder->total;
-    //         $purchaseOrder->status = ucfirst($purchaseOrder->status);
-    //         $purchaseOrder->user = $purchaseOrder->get_user ? ['id' => $purchaseOrder->get_user->id, 'name' => $purchaseOrder->get_user->name] : ['id' => null, 'name' => 'Unknown'];
-    //         unset($purchaseOrder->get_user);
-    //         $purchaseOrder->template = $purchaseOrder->get_template ? ['id' => $purchaseOrder->get_template->id, 'name' => $purchaseOrder->get_template->name] : ['id' => null, 'name' => 'Unknown'];
-    //         unset($purchaseOrder->get_template);
-    //         $purchaseOrder->products->transform(fn($product) => collect($product)->except(['purchase_order_id']));
-    //         $purchaseOrder->addons->transform(fn($addon) => collect($addon)->except(['purchase_order_id']));
-    //         $purchaseOrder->terms->transform(fn($term) => collect($term)->except(['purchase_order_id']));
-
-    //         // Transform supplier: Only return state from addresses
-    //         if ($purchaseOrder->supplier) {
-    //             $state = optional($purchaseOrder->supplier->addresses->first())->state;
-    //             $purchaseOrder->supplier = ['state' => $state];
-    //         } else {
-    //             $purchaseOrder->supplier = null;
-    //         }
-
-    //         return response()->json([
-    //             'code' => 200,
-    //             'success' => true,
-    //             'message' => 'Purchase Order fetched successfully!',
-    //             'data' => $purchaseOrder,
-    //         ], 200);
-    //     }
-
-    //     // 🔹 **Apply Filters for Listing**
-    //     if ($supplierId) {
-    //         $query->where('supplier_id', $supplierId);
-    //     }
-    //     if ($name) {
-    //         $query->where('name', 'LIKE', '%' . $name . '%');
-    //     }
-    //     if ($purchaseOrderNo) {
-    //         $query->where('purchase_order_no', 'LIKE', '%' . $purchaseOrderNo . '%');
-    //     }
-    //     if ($purchaseOrderDate) {
-    //         $query->whereDate('purchase_order_date', $purchaseOrderDate);
-    //     }
-    //     if ($dateFrom && $dateTo) {
-    //         $query->whereBetween('purchase_order_date', [$dateFrom, $dateTo]);
-    //     } elseif ($dateFrom) {
-    //         $query->whereDate('purchase_order_date', '>=', $dateFrom);
-    //     } elseif ($dateTo) {
-    //         $query->whereDate('purchase_order_date', '<=', $dateTo);
-    //     }
-    //     if ($user) {
-    //         $query->where('user', $user);
-    //     }
-
-    //     // Get total record count before applying limit
-    //     $totalRecords = $query->count();
-
-    //     // Order by latest purchase_order_date
-    //     $query->orderBy('purchase_order_date', 'desc');
-
-    //     $query->offset($offset)->limit($limit);
-
-    //     // Fetch paginated results
-    //     $get_purchase_orders = $query->get();
-
-    //     if ($get_purchase_orders->isEmpty()) {
-    //         return response()->json([
-    //             'code' => 404,
-    //             'success' => false,
-    //             'message' => 'No Purchase Orders found!',
-    //         ], 404);
-    //     }
-
-    //     // Transform Data
-    //     $get_purchase_orders->transform(function ($purchase_orders) {
-    //         $purchase_orders->purchase_order_date = $purchase_orders->purchase_order_date_formatted;
-    //         unset($purchase_orders->purchase_order_date_formatted);
-    //         $purchase_orders->amount_in_words = $this->convertNumberToWords($purchase_orders->total);
-    //         $purchase_orders->total = is_numeric($purchase_orders->total) ? number_format((float) $purchase_orders->total, 2) : $purchase_orders->total;
-    //         $purchase_orders->status = ucfirst($purchase_orders->status);
-    //         $purchase_orders->user = $purchase_orders->get_user ? ['id' => $purchase_orders->get_user->id, 'name' => $purchase_orders->get_user->name] : ['id' => null, 'name' => 'Unknown'];
-    //         unset($purchase_orders->get_user);
-    //         $purchase_orders->template = $purchase_orders->get_template ? ['id' => $purchase_orders->get_template->id, 'name' => $purchase_orders->get_template->name] : ['id' => null, 'name' => 'Unknown'];
-    //         unset($purchase_orders->get_template);
-    //         $purchase_orders->products->transform(fn($product) => collect($product)->except(['purchase_order_id']));
-    //         $purchase_orders->addons->transform(fn($addon) => collect($addon)->except(['purchase_order_id']));
-    //         $purchase_orders->terms->transform(fn($term) => collect($term)->except(['purchase_order_id']));
-
-    //         return $purchase_orders;
-    //     });
-
-    //     // Return response for list
-    //     return response()->json([
-    //         'code' => 200,
-    //         'success' => true,
-    //         'message' => 'Purchase Orders fetched successfully!',
-    //         'data' => $get_purchase_orders,
-    //         'count' => $get_purchase_orders->count(),
-    //         'total_records' => $totalRecords,
-    //     ], 200);
-    // }
-
     // update
     public function edit_purchase_order(Request $request, $id)
     {
@@ -1350,40 +1192,70 @@ class PurchaseOrderController extends Controller
     {
         try {
             $companyId = Auth::user()->company_id;
-            $startDate = Carbon::parse($request->start_date)->startOfDay();
-            $endDate = Carbon::parse($request->end_date)->endOfDay();
 
-            // // Load purchase order products with order and supplier
-            // $items = PurchaseOrderProductsModel::with([
-            //     'purchaseOrder' => function ($q) use ($companyId, $startDate, $endDate) {
-            //         $q->where('company_id', $companyId)
-            //             ->whereBetween('purchase_order_date', [$startDate, $endDate])
-            //             ->with('supplier:id,name');
-            //     },
-            //     'product.groupRelation:id,name'
-            // ])->get();
+            $startDate = Carbon::parse($request->start_date)->startOfDay();
+            $endDate   = Carbon::parse($request->end_date)->endOfDay();
 
             // Parse comma-separated filters
-            $supplierIds = $request->filled('supplier_id') ? array_map('intval', explode(',', $request->supplier_id)) : null;
-            $productIds = $request->filled('product_id') ? array_map('intval', explode(',', $request->product_id)) : null;
-            $groupIds = $request->filled('group_id') ? array_map('intval', explode(',', $request->group_id)) : null;
-            $categoryIds = $request->filled('category_id') ? array_map('intval', explode(',', $request->category_id)) : null;
-            $subCategoryIds = $request->filled('sub_category_id') ? array_map('intval', explode(',', $request->sub_category_id)) : null;
+            $supplierIds = $request->filled('supplier_id') 
+                ? array_map('intval', explode(',', $request->supplier_id)) 
+                : null;
+
+            $productIds = $request->filled('product_id') 
+                ? array_map('intval', explode(',', $request->product_id)) 
+                : null;
+
+            $groupIds = $request->filled('group_id') 
+                ? array_map('intval', explode(',', $request->group_id)) 
+                : null;
+
+            $categoryIds = $request->filled('category_id') 
+                ? array_map('intval', explode(',', $request->category_id)) 
+                : null;
+
+            $subCategoryIds = $request->filled('sub_category_id') 
+                ? array_map('intval', explode(',', $request->sub_category_id)) 
+                : null;
+
+            // NEW: purchase order number filter
+            $poNumbers = $request->filled('purchase_order_no')
+                ? array_map('trim', explode(',', $request->purchase_order_no))
+                : null;
+
+            // NEW: status filter
+            $status = $request->filled('status') ? trim($request->status) : null;
 
             // Build query with relations and filters
             $query = PurchaseOrderProductsModel::with([
                 'purchaseOrder.supplier:id,name',
                 'product.groupRelation:id,name'
             ])
-            ->whereHas('purchaseOrder', function ($q) use ($companyId, $startDate, $endDate, $supplierIds) {
+            ->whereHas('purchaseOrder', function ($q) 
+                use ($companyId, $startDate, $endDate, $supplierIds, $poNumbers, $status) 
+            {
                 $q->where('company_id', $companyId)
                 ->whereBetween('purchase_order_date', [$startDate, $endDate]);
 
                 if ($supplierIds) {
                     $q->whereIn('supplier_id', $supplierIds);
                 }
+
+                // 🔹 Filter multiple PO numbers (LIKE)
+                if ($poNumbers) {
+                    $q->where(function ($q2) use ($poNumbers) {
+                        foreach ($poNumbers as $no) {
+                            $q2->orWhere('purchase_order_no', 'LIKE', '%' . $no . '%');
+                        }
+                    });
+                }
+
+                // 🔹 Filter by status
+                if (!empty($status)) {
+                    $q->where('status', $status);
+                }
             });
 
+            // Product filters
             if ($productIds) {
                 $query->whereIn('product_id', $productIds);
             }
@@ -1404,53 +1276,47 @@ class PurchaseOrderController extends Controller
 
             $items = $query->get();
 
-            // Filter out entries without a purchase order
+            // Filter invalid entries
             $filtered = $items->filter(fn ($item) => $item->purchaseOrder !== null);
 
-            // Prepare export data
+            // Build export data
             $exportData = [];
             $sn = 1;
+
             foreach ($filtered as $item) {
                 $exportData[] = [
-                    'SN' => $sn++,
-                    'Supplier' => $item->purchaseOrder->supplier->name ?? 'N/A',
-                    'Order' => $item->purchaseOrder->purchase_order_no,
-                    'Date' => Carbon::parse($item->purchaseOrder->purchase_order_date)->format('d-m-Y'),
+                    'SN'        => $sn++,
+                    'Supplier'  => $item->purchaseOrder->supplier->name ?? 'N/A',
+                    'Order'     => $item->purchaseOrder->purchase_order_no,
+                    'Date'      => Carbon::parse($item->purchaseOrder->purchase_order_date)->format('d-m-Y'),
                     'Item Name' => $item->product_name,
-                    'Group' => $item->product->groupRelation->name ?? 'N/A',
-                    'Quantity' => $item->quantity,
-                    'Unit' => $item->unit,
-                    'Price' => $item->price,
-                    'Discount' => $item->discount,
-                    'Amount' => $item->amount,
-                    'Added On' => Carbon::parse($item->created_at)->format('d-m-Y H:i')
+                    'Group'     => $item->product->groupRelation->name ?? 'N/A',
+                    'Quantity'  => $item->quantity,
+                    'Unit'      => $item->unit,
+                    'Price'     => $item->price,
+                    'Discount'  => $item->discount,
+                    'Amount'    => $item->amount,
+                    'Added On'  => Carbon::parse($item->created_at)->format('d-m-Y H:i'),
                 ];
             }
 
             if (empty($exportData)) {
                 return response()->json([
-                    'code' => 404,
+                    'code'    => 404,
                     'success' => false,
-                    'message' => 'No purchase order products found for the selected range.'
+                    'message' => 'No purchase order products found for the selected range.',
                 ]);
             }
 
-            // Save Excel file
+            // Generate Excel
             $fileName = 'purchase_orders_export_' . now()->format('Ymd_His') . '.xlsx';
             $relativePath = 'purchase_orders_report/' . $fileName;
 
             Excel::store(new class($exportData) implements FromCollection, WithHeadings {
                 private $data;
-                public function __construct($data)
-                {
-                    $this->data = $data;
-                }
-                public function collection()
-                {
-                    return collect($this->data);
-                }
-                public function headings(): array
-                {
+                public function __construct($data) { $this->data = $data; }
+                public function collection() { return collect($this->data); }
+                public function headings(): array {
                     return [
                         'SN', 'Supplier', 'Order', 'Date', 'Item Name', 'Group',
                         'Quantity', 'Unit', 'Price', 'Discount', 'Amount', 'Added On'
@@ -1459,11 +1325,11 @@ class PurchaseOrderController extends Controller
             }, $relativePath, 'public');
 
             return response()->json([
-                'code' => 200,
+                'code'    => 200,
                 'success' => true,
                 'message' => 'File available for download',
-                'data' => [
-                    'file_url' => asset('storage/' . $relativePath),
+                'data'    => [
+                    'file_url'  => asset('storage/' . $relativePath),
                     'file_name' => $fileName,
                     'file_size' => Storage::disk('public')->size($relativePath),
                     'content_type' => 'Excel'
@@ -1479,6 +1345,141 @@ class PurchaseOrderController extends Controller
             ]);
         }
     }
+
+
+    // public function exportPurchaseOrdersReport(Request $request)
+    // {
+    //     try {
+    //         $companyId = Auth::user()->company_id;
+    //         $startDate = Carbon::parse($request->start_date)->startOfDay();
+    //         $endDate = Carbon::parse($request->end_date)->endOfDay();
+
+    //         // // Load purchase order products with order and supplier
+    //         // $items = PurchaseOrderProductsModel::with([
+    //         //     'purchaseOrder' => function ($q) use ($companyId, $startDate, $endDate) {
+    //         //         $q->where('company_id', $companyId)
+    //         //             ->whereBetween('purchase_order_date', [$startDate, $endDate])
+    //         //             ->with('supplier:id,name');
+    //         //     },
+    //         //     'product.groupRelation:id,name'
+    //         // ])->get();
+
+    //         // Parse comma-separated filters
+    //         $supplierIds = $request->filled('supplier_id') ? array_map('intval', explode(',', $request->supplier_id)) : null;
+    //         $productIds = $request->filled('product_id') ? array_map('intval', explode(',', $request->product_id)) : null;
+    //         $groupIds = $request->filled('group_id') ? array_map('intval', explode(',', $request->group_id)) : null;
+    //         $categoryIds = $request->filled('category_id') ? array_map('intval', explode(',', $request->category_id)) : null;
+    //         $subCategoryIds = $request->filled('sub_category_id') ? array_map('intval', explode(',', $request->sub_category_id)) : null;
+
+    //         // Build query with relations and filters
+    //         $query = PurchaseOrderProductsModel::with([
+    //             'purchaseOrder.supplier:id,name',
+    //             'product.groupRelation:id,name'
+    //         ])
+    //         ->whereHas('purchaseOrder', function ($q) use ($companyId, $startDate, $endDate, $supplierIds) {
+    //             $q->where('company_id', $companyId)
+    //             ->whereBetween('purchase_order_date', [$startDate, $endDate]);
+
+    //             if ($supplierIds) {
+    //                 $q->whereIn('supplier_id', $supplierIds);
+    //             }
+    //         });
+
+    //         if ($productIds) {
+    //             $query->whereIn('product_id', $productIds);
+    //         }
+
+    //         if ($groupIds || $categoryIds || $subCategoryIds) {
+    //             $query->whereHas('product', function ($q) use ($groupIds, $categoryIds, $subCategoryIds) {
+    //                 if ($groupIds) {
+    //                     $q->whereIn('group', $groupIds);
+    //                 }
+    //                 if ($categoryIds) {
+    //                     $q->whereIn('category', $categoryIds);
+    //                 }
+    //                 if ($subCategoryIds) {
+    //                     $q->whereIn('sub_category', $subCategoryIds);
+    //                 }
+    //             });
+    //         }
+
+    //         $items = $query->get();
+
+    //         // Filter out entries without a purchase order
+    //         $filtered = $items->filter(fn ($item) => $item->purchaseOrder !== null);
+
+    //         // Prepare export data
+    //         $exportData = [];
+    //         $sn = 1;
+    //         foreach ($filtered as $item) {
+    //             $exportData[] = [
+    //                 'SN' => $sn++,
+    //                 'Supplier' => $item->purchaseOrder->supplier->name ?? 'N/A',
+    //                 'Order' => $item->purchaseOrder->purchase_order_no,
+    //                 'Date' => Carbon::parse($item->purchaseOrder->purchase_order_date)->format('d-m-Y'),
+    //                 'Item Name' => $item->product_name,
+    //                 'Group' => $item->product->groupRelation->name ?? 'N/A',
+    //                 'Quantity' => $item->quantity,
+    //                 'Unit' => $item->unit,
+    //                 'Price' => $item->price,
+    //                 'Discount' => $item->discount,
+    //                 'Amount' => $item->amount,
+    //                 'Added On' => Carbon::parse($item->created_at)->format('d-m-Y H:i')
+    //             ];
+    //         }
+
+    //         if (empty($exportData)) {
+    //             return response()->json([
+    //                 'code' => 404,
+    //                 'success' => false,
+    //                 'message' => 'No purchase order products found for the selected range.'
+    //             ]);
+    //         }
+
+    //         // Save Excel file
+    //         $fileName = 'purchase_orders_export_' . now()->format('Ymd_His') . '.xlsx';
+    //         $relativePath = 'purchase_orders_report/' . $fileName;
+
+    //         Excel::store(new class($exportData) implements FromCollection, WithHeadings {
+    //             private $data;
+    //             public function __construct($data)
+    //             {
+    //                 $this->data = $data;
+    //             }
+    //             public function collection()
+    //             {
+    //                 return collect($this->data);
+    //             }
+    //             public function headings(): array
+    //             {
+    //                 return [
+    //                     'SN', 'Supplier', 'Order', 'Date', 'Item Name', 'Group',
+    //                     'Quantity', 'Unit', 'Price', 'Discount', 'Amount', 'Added On'
+    //                 ];
+    //             }
+    //         }, $relativePath, 'public');
+
+    //         return response()->json([
+    //             'code' => 200,
+    //             'success' => true,
+    //             'message' => 'File available for download',
+    //             'data' => [
+    //                 'file_url' => asset('storage/' . $relativePath),
+    //                 'file_name' => $fileName,
+    //                 'file_size' => Storage::disk('public')->size($relativePath),
+    //                 'content_type' => 'Excel'
+    //             ]
+    //         ]);
+
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'code' => 500,
+    //             'success' => false,
+    //             'message' => 'Something went wrong while generating Excel.',
+    //             'error' => $e->getMessage()
+    //         ]);
+    //     }
+    // }
 
     // fetch by product id
     public function fetchPurchaseOrdersByProduct(Request $request, $productId)
