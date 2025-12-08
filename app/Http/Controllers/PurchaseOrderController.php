@@ -1314,7 +1314,7 @@ class PurchaseOrderController extends Controller
                     'Price'     => $item->price,
                     'Discount'  => $item->discount,
                     'Amount'    => $item->amount,
-                    'Added On'  => Carbon::parse($item->created_at)->format('d-m-Y H:i'),
+                    // 'Added On'  => Carbon::parse($item->created_at)->format('d-m-Y H:i'),
                 ];
             }
 
@@ -1359,7 +1359,7 @@ class PurchaseOrderController extends Controller
                         'Price',
                         'Discount',
                         'Amount',
-                        'Added On',
+                        // 'Added On',
                     ];
                 }
             }, $relativePath, 'public');
@@ -1385,7 +1385,7 @@ class PurchaseOrderController extends Controller
             ], 500);
         }
     }
-    
+
     // public function exportPurchaseOrdersReport(Request $request)
     // {
     //     try {
