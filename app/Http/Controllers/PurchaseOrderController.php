@@ -1193,6 +1193,10 @@ class PurchaseOrderController extends Controller
         try {
             $companyId = Auth::user()->company_id;
 
+            // 🔹 Pagination controls (optional)
+            $limit  = (int) $request->input('limit', 0);   // 0 = no limit
+            $offset = (int) $request->input('offset', 0);  // default 0
+
             // 🔹 Date range is OPTIONAL now
             $startDate = $request->filled('start_date')
                 ? Carbon::parse($request->start_date)->startOfDay()
@@ -1290,6 +1294,13 @@ class PurchaseOrderController extends Controller
                         $q->whereIn('sub_category', $subCategoryIds);
                     }
                 });
+            }
+
+            // 🔹 Order + apply pagination for export rows
+            $query->orderBy('id'); // stable ordering by product-row id
+
+            if ($limit > 0) {
+                $query->skip($offset)->take($limit);
             }
 
             $items = $query->get();
