@@ -945,22 +945,76 @@ class SalesInvoiceController extends Controller
     // Delete Sales Invoice
     public function delete_sales_invoice($id)
     {
-        $delete_sales_invoice = SalesInvoiceModel::where('id', $id)
-                                                    ->where('company_id', $company_id)
-                                                    ->delete();
+        try {
+            $company_id = Auth::user()->company_id;
 
-        $delete_sales_invoice_products = SalesInvoiceProductsModel::where('sales_invoice_id', $id)
-                                                                    ->where('company_id', $company_id)
-                                                                    ->delete();
-                                                                    
-        $delete_sales_invoice_addons = SalesInvoiceAddonsModel::where('sales_invoice_id', $id)
-                                                                ->where('company_id', $company_id)
-                                                                ->delete();
+            // Check if invoice exists
+            $invoice = SalesInvoiceModel::where('id', $id)
+                        ->where('company_id', $company_id)
+                        ->first();
 
-        return $delete_sales_invoice && $delete_sales_invoice_products && $delete_sales_invoice_addons
-            ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Invoice and associated products/addons deleted successfully!'], 200)
-            : response()->json(['code' => 404,'success' => false, 'message' => 'Sales Invoice not found.'], 404);
+            if (!$invoice) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'Sales Invoice not found.'
+                ], 404);
+            }
+
+            DB::beginTransaction();
+
+            // Delete products
+            SalesInvoiceProductsModel::where('sales_invoice_id', $id)
+                ->where('company_id', $company_id)
+                ->delete();
+
+            // Delete addons
+            SalesInvoiceAddonsModel::where('sales_invoice_id', $id)
+                ->where('company_id', $company_id)
+                ->delete();
+
+            // Delete main invoice
+            $invoice->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Sales Invoice and associated products/addons deleted successfully!'
+            ], 200);
+
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
+
+    // public function delete_sales_invoice($id)
+    // {
+    //     $delete_sales_invoice = SalesInvoiceModel::where('id', $id)
+    //                                                 ->where('company_id', $company_id)
+    //                                                 ->delete();
+
+    //     $delete_sales_invoice_products = SalesInvoiceProductsModel::where('sales_invoice_id', $id)
+    //                                                                 ->where('company_id', $company_id)
+    //                                                                 ->delete();
+                                                                    
+    //     $delete_sales_invoice_addons = SalesInvoiceAddonsModel::where('sales_invoice_id', $id)
+    //                                                             ->where('company_id', $company_id)
+    //                                                             ->delete();
+
+    //     return $delete_sales_invoice && $delete_sales_invoice_products && $delete_sales_invoice_addons
+    //         ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Invoice and associated products/addons deleted successfully!'], 200)
+    //         : response()->json(['code' => 404,'success' => false, 'message' => 'Sales Invoice not found.'], 404);
+    // }
 
     // import   
     // public function importSalesInvoices()
