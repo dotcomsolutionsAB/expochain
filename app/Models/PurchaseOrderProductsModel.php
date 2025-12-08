@@ -26,6 +26,7 @@ class PurchaseOrderProductsModel extends Model
         'sgst',
         'igst',
         'amount',
+        'gross',
         'channel',
         'received',
         'short_closed'
