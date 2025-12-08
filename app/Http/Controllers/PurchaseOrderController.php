@@ -1193,82 +1193,100 @@ class PurchaseOrderController extends Controller
         try {
             $companyId = Auth::user()->company_id;
 
-            $startDate = Carbon::parse($request->start_date)->startOfDay();
-            $endDate   = Carbon::parse($request->end_date)->endOfDay();
-
-            // Parse comma-separated filters
-            $supplierIds = $request->filled('supplier_id') 
-                ? array_map('intval', explode(',', $request->supplier_id)) 
+            // 🔹 Date range is OPTIONAL now
+            $startDate = $request->filled('start_date')
+                ? Carbon::parse($request->start_date)->startOfDay()
                 : null;
 
-            $productIds = $request->filled('product_id') 
-                ? array_map('intval', explode(',', $request->product_id)) 
+            $endDate = $request->filled('end_date')
+                ? Carbon::parse($request->end_date)->endOfDay()
                 : null;
 
-            $groupIds = $request->filled('group_id') 
-                ? array_map('intval', explode(',', $request->group_id)) 
+            // 🔹 Optional filters (comma-separated)
+            $supplierIds = $request->filled('supplier_id')
+                ? array_filter(array_map('intval', array_map('trim', explode(',', $request->supplier_id))))
                 : null;
 
-            $categoryIds = $request->filled('category_id') 
-                ? array_map('intval', explode(',', $request->category_id)) 
+            $productIds = $request->filled('product_id')
+                ? array_filter(array_map('intval', array_map('trim', explode(',', $request->product_id))))
                 : null;
 
-            $subCategoryIds = $request->filled('sub_category_id') 
-                ? array_map('intval', explode(',', $request->sub_category_id)) 
+            $groupIds = $request->filled('group_id')
+                ? array_filter(array_map('intval', array_map('trim', explode(',', $request->group_id))))
                 : null;
 
-            // NEW: purchase order number filter
+            $categoryIds = $request->filled('category_id')
+                ? array_filter(array_map('intval', array_map('trim', explode(',', $request->category_id))))
+                : null;
+
+            $subCategoryIds = $request->filled('sub_category_id')
+                ? array_filter(array_map('intval', array_map('trim', explode(',', $request->sub_category_id))))
+                : null;
+
+            // 🔹 NEW: purchase_order_no can be multiple (comma separated)
             $poNumbers = $request->filled('purchase_order_no')
-                ? array_map('trim', explode(',', $request->purchase_order_no))
+                ? array_filter(array_map('trim', explode(',', $request->purchase_order_no)))
                 : null;
 
-            // NEW: status filter
+            // 🔹 NEW: status filter
             $status = $request->filled('status') ? trim($request->status) : null;
 
-            // Build query with relations and filters
+            // 🔹 Build query with relations and filters
             $query = PurchaseOrderProductsModel::with([
-                'purchaseOrder.supplier:id,name',
-                'product.groupRelation:id,name'
-            ])
-            ->whereHas('purchaseOrder', function ($q) 
-                use ($companyId, $startDate, $endDate, $supplierIds, $poNumbers, $status) 
-            {
-                $q->where('company_id', $companyId)
-                ->whereBetween('purchase_order_date', [$startDate, $endDate]);
+                    'purchaseOrder.supplier:id,name',
+                    'product.groupRelation:id,name',
+                ])
+                ->whereHas('purchaseOrder', function ($q) use (
+                    $companyId,
+                    $startDate,
+                    $endDate,
+                    $supplierIds,
+                    $poNumbers,
+                    $status
+                ) {
+                    $q->where('company_id', $companyId);
 
-                if ($supplierIds) {
-                    $q->whereIn('supplier_id', $supplierIds);
-                }
+                    // Optional date filters
+                    if ($startDate && $endDate) {
+                        $q->whereBetween('purchase_order_date', [$startDate, $endDate]);
+                    } elseif ($startDate) {
+                        $q->whereDate('purchase_order_date', '>=', $startDate);
+                    } elseif ($endDate) {
+                        $q->whereDate('purchase_order_date', '<=', $endDate);
+                    }
 
-                // 🔹 Filter multiple PO numbers (LIKE)
-                if ($poNumbers) {
-                    $q->where(function ($q2) use ($poNumbers) {
-                        foreach ($poNumbers as $no) {
-                            $q2->orWhere('purchase_order_no', 'LIKE', '%' . $no . '%');
-                        }
-                    });
-                }
+                    if (!empty($supplierIds)) {
+                        $q->whereIn('supplier_id', $supplierIds);
+                    }
 
-                // 🔹 Filter by status
-                if (!empty($status)) {
-                    $q->where('status', $status);
-                }
-            });
+                    // Multiple PO numbers with LIKE
+                    if (!empty($poNumbers)) {
+                        $q->where(function ($q2) use ($poNumbers) {
+                            foreach ($poNumbers as $no) {
+                                $q2->orWhere('purchase_order_no', 'LIKE', '%' . $no . '%');
+                            }
+                        });
+                    }
 
-            // Product filters
-            if ($productIds) {
+                    if (!empty($status)) {
+                        $q->where('status', $status);
+                    }
+                });
+
+            // 🔹 Product-related filters (optional)
+            if (!empty($productIds)) {
                 $query->whereIn('product_id', $productIds);
             }
 
             if ($groupIds || $categoryIds || $subCategoryIds) {
                 $query->whereHas('product', function ($q) use ($groupIds, $categoryIds, $subCategoryIds) {
-                    if ($groupIds) {
+                    if (!empty($groupIds)) {
                         $q->whereIn('group', $groupIds);
                     }
-                    if ($categoryIds) {
+                    if (!empty($categoryIds)) {
                         $q->whereIn('category', $categoryIds);
                     }
-                    if ($subCategoryIds) {
+                    if (!empty($subCategoryIds)) {
                         $q->whereIn('sub_category', $subCategoryIds);
                     }
                 });
@@ -1286,11 +1304,11 @@ class PurchaseOrderController extends Controller
             foreach ($filtered as $item) {
                 $exportData[] = [
                     'SN'        => $sn++,
-                    'Supplier'  => $item->purchaseOrder->supplier->name ?? 'N/A',
+                    'Supplier'  => optional($item->purchaseOrder->supplier)->name ?? 'N/A',
                     'Order'     => $item->purchaseOrder->purchase_order_no,
                     'Date'      => Carbon::parse($item->purchaseOrder->purchase_order_date)->format('d-m-Y'),
                     'Item Name' => $item->product_name,
-                    'Group'     => $item->product->groupRelation->name ?? 'N/A',
+                    'Group'     => optional(optional($item->product)->groupRelation)->name ?? 'N/A',
                     'Quantity'  => $item->quantity,
                     'Unit'      => $item->unit,
                     'Price'     => $item->price,
@@ -1300,26 +1318,48 @@ class PurchaseOrderController extends Controller
                 ];
             }
 
+            // ✅ No data = 200 + empty data (not error)
             if (empty($exportData)) {
                 return response()->json([
-                    'code'    => 404,
-                    'success' => false,
-                    'message' => 'No purchase order products found for the selected range.',
-                ]);
+                    'code'    => 200,
+                    'success' => true,
+                    'message' => 'No purchase order products found for the given filters.',
+                    'data'    => [],
+                ], 200);
             }
 
-            // Generate Excel
-            $fileName = 'purchase_orders_export_' . now()->format('Ymd_His') . '.xlsx';
+            // Generate Excel file
+            $fileName     = 'purchase_orders_export_' . now()->format('Ymd_His') . '.xlsx';
             $relativePath = 'purchase_orders_report/' . $fileName;
 
             Excel::store(new class($exportData) implements FromCollection, WithHeadings {
                 private $data;
-                public function __construct($data) { $this->data = $data; }
-                public function collection() { return collect($this->data); }
-                public function headings(): array {
+
+                public function __construct($data)
+                {
+                    $this->data = $data;
+                }
+
+                public function collection()
+                {
+                    return collect($this->data);
+                }
+
+                public function headings(): array
+                {
                     return [
-                        'SN', 'Supplier', 'Order', 'Date', 'Item Name', 'Group',
-                        'Quantity', 'Unit', 'Price', 'Discount', 'Amount', 'Added On'
+                        'SN',
+                        'Supplier',
+                        'Order',
+                        'Date',
+                        'Item Name',
+                        'Group',
+                        'Quantity',
+                        'Unit',
+                        'Price',
+                        'Discount',
+                        'Amount',
+                        'Added On',
                     ];
                 }
             }, $relativePath, 'public');
@@ -1329,24 +1369,23 @@ class PurchaseOrderController extends Controller
                 'success' => true,
                 'message' => 'File available for download',
                 'data'    => [
-                    'file_url'  => asset('storage/' . $relativePath),
-                    'file_name' => $fileName,
-                    'file_size' => Storage::disk('public')->size($relativePath),
-                    'content_type' => 'Excel'
-                ]
-            ]);
+                    'file_url'     => asset('storage/' . $relativePath),
+                    'file_name'    => $fileName,
+                    'file_size'    => Storage::disk('public')->size($relativePath),
+                    'content_type' => 'Excel',
+                ],
+            ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
-                'code' => 500,
+                'code'    => 500,
                 'success' => false,
                 'message' => 'Something went wrong while generating Excel.',
-                'error' => $e->getMessage()
-            ]);
+                'error'   => $e->getMessage(),
+            ], 500);
         }
     }
-
-
+    
     // public function exportPurchaseOrdersReport(Request $request)
     // {
     //     try {
