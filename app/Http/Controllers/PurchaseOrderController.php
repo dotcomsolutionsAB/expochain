@@ -466,21 +466,21 @@ class PurchaseOrderController extends Controller
         $request->validate([
             'supplier_id' => 'required|integer|exists:t_suppliers,id',
             'name' => 'nullable|string|exists:t_suppliers,name',
-            'purchase_order_no' => 'required|string|max:255', // Matches DB column
+            'purchase_order_no' => 'required|string|max:255',
             'purchase_order_date' => 'required|date',
-            'oa_no' => 'required|string', 
-            'oa_date' => 'required|date', 
+            'oa_no' => 'required|string',
+            'oa_date' => 'required|date',
             'template' => 'required|integer|exists:t_pdf_template,id',
-            'cgst' => 'nullable|numeric|min:0', // Made nullable, default 0
-            'sgst' => 'nullable|numeric|min:0', // Made nullable, default 0
-            'igst' => 'nullable|numeric|min:0', // Made nullable, default 0
+            'cgst' => 'nullable|numeric|min:0',
+            'sgst' => 'nullable|numeric|min:0',
+            'igst' => 'nullable|numeric|min:0',
             'total' => 'required|numeric|min:0',
             'currency' => 'required|string|max:10',
             'gross' => 'required|numeric|min:0',
             'round_off' => 'required|numeric',
 
-            // Product Details (Array Validation)
-            'products' => 'required|array', // Validating array of products
+            // Products
+            'products' => 'required|array',
             'products.*.product_id' => 'required|integer',
             'products.*.product_name' => 'required|string',
             'products.*.description' => 'nullable|string',
@@ -497,7 +497,10 @@ class PurchaseOrderController extends Controller
             'products.*.amount' => 'nullable|numeric',
             'products.*.channel' => 'nullable|exists:t_channels,id',
 
-            // for add-ons
+            // 🔥 Added gross validation
+            'products.*.gross' => 'nullable|numeric|min:0',
+
+            // addons
             'addons' => 'nullable|array',
             'addons.*.name' => 'required|string|max:255',
             'addons.*.amount' => 'required|numeric|min:0',
@@ -507,14 +510,13 @@ class PurchaseOrderController extends Controller
             'addons.*.sgst' => 'nullable|numeric|min:0',
             'addons.*.igst' => 'nullable|numeric|min:0',
 
-            // for terms
+            // terms
             'terms' => 'nullable|array',
             'terms.*.name' => 'required|string|max:255',
             'terms.*.value' => 'required|string|min:0',
         ]);
 
         $purchaseOrder = PurchaseOrderModel::where('id', $id)->first();
-
 
         $purchaseOrderUpdated = $purchaseOrder->update([
             'supplier_id' => $request->input('supplier_id'),
@@ -542,8 +544,8 @@ class PurchaseOrderController extends Controller
             $requestProductIDs[] = $productData['product_id'];
 
             $existingProduct = PurchaseOrderProductsModel::where('purchase_order_id', $id)
-                                                        ->where('product_id', $productData['product_id'])
-                                                        ->first();
+                ->where('product_id', $productData['product_id'])
+                ->first();
 
             if ($existingProduct) {
                 $existingProduct->update([
@@ -561,6 +563,9 @@ class PurchaseOrderController extends Controller
                     'igst' => $productData['igst'],
                     'amount' => $productData['amount'],
                     'channel' => $productData['channel'],
+
+                    // 🔥 Added gross update
+                    'gross' => $productData['gross'],
                 ]);
             } else {
                 PurchaseOrderProductsModel::create([
@@ -581,14 +586,19 @@ class PurchaseOrderController extends Controller
                     'igst' => $productData['igst'],
                     'amount' => $productData['amount'],
                     'channel' => $productData['channel'],
+
+                    // 🔥 Added gross create
+                    'gross' => $productData['gross'],
                 ]);
             }
         }
 
-        $productsDeleted = PurchaseOrderProductsModel::where('purchase_order_id', $id)
-                                                    ->whereNotIn('product_id', $requestProductIDs)
-                                                    ->delete();
+        // delete removed products
+        PurchaseOrderProductsModel::where('purchase_order_id', $id)
+            ->whereNotIn('product_id', $requestProductIDs)
+            ->delete();
 
+        // addons
         $addons = $request->input('addons');
         $requestAddonIDs = [];
 
@@ -596,8 +606,8 @@ class PurchaseOrderController extends Controller
             $requestAddonIDs[] = $addonData['name'];
 
             $existingAddon = PurchaseOrderAddonsModel::where('purchase_order_id', $id)
-                                                ->where('name', $addonData['name'])
-                                                ->first();
+                ->where('name', $addonData['name'])
+                ->first();
 
             if ($existingAddon) {
                 $existingAddon->update([
@@ -623,24 +633,23 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        // Delete Addons that are not part of the request
         PurchaseOrderAddonsModel::where('purchase_order_id', $id)
-        ->whereNotIn('name', $requestAddonIDs)
-        ->delete();
+            ->whereNotIn('name', $requestAddonIDs)
+            ->delete();
 
-        // Handle Terms
+        // terms
         $terms = $request->input('terms');
         $requestTermsIDs = [];
 
         foreach ($terms as $termData) {
             $requestTermsIDs[] = $termData['name'];
 
-            $existingAddon = PurchaseOrderTermsModel::where('purchase_order_id', $id)
-                                                ->where('name', $termData['name'])
-                                                ->first();
+            $existingTerm = PurchaseOrderTermsModel::where('purchase_order_id', $id)
+                ->where('name', $termData['name'])
+                ->first();
 
-            if ($existingAddon) {
-                $existingAddon->update([
+            if ($existingTerm) {
+                $existingTerm->update([
                     'value' => $termData['value'],
                 ]);
             } else {
@@ -653,18 +662,224 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        // Delete Terms that are not part of the request
         PurchaseOrderTermsModel::where('purchase_order_id', $id)
-                                    ->whereNotIn('name', $requestTermsIDs)
-                                    ->delete();
-                                            
+            ->whereNotIn('name', $requestTermsIDs)
+            ->delete();
 
         unset($purchaseOrder['created_at'], $purchaseOrder['updated_at']);
 
-        return ($purchaseOrderUpdated || $productsDeleted)
-            ? response()->json(['code' => 200,'success' => true, 'message' => 'Purchase Order and products updated successfully!', 'data' => $purchaseOrder], 200)
-            : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Purchase Order and products updated successfully!',
+            'data' => $purchaseOrder
+        ], 200);
     }
+
+    // public function edit_purchase_order(Request $request, $id)
+    // {
+    //     $request->validate([
+    //         'supplier_id' => 'required|integer|exists:t_suppliers,id',
+    //         'name' => 'nullable|string|exists:t_suppliers,name',
+    //         'purchase_order_no' => 'required|string|max:255', // Matches DB column
+    //         'purchase_order_date' => 'required|date',
+    //         'oa_no' => 'required|string', 
+    //         'oa_date' => 'required|date', 
+    //         'template' => 'required|integer|exists:t_pdf_template,id',
+    //         'cgst' => 'nullable|numeric|min:0', // Made nullable, default 0
+    //         'sgst' => 'nullable|numeric|min:0', // Made nullable, default 0
+    //         'igst' => 'nullable|numeric|min:0', // Made nullable, default 0
+    //         'total' => 'required|numeric|min:0',
+    //         'currency' => 'required|string|max:10',
+    //         'gross' => 'required|numeric|min:0',
+    //         'round_off' => 'required|numeric',
+
+    //         // Product Details (Array Validation)
+    //         'products' => 'required|array', // Validating array of products
+    //         'products.*.product_id' => 'required|integer',
+    //         'products.*.product_name' => 'required|string',
+    //         'products.*.description' => 'nullable|string',
+    //         'products.*.quantity' => 'required|integer',
+    //         'products.*.unit' => 'required|string',
+    //         'products.*.price' => 'required|numeric',
+    //         'products.*.discount' => 'nullable|numeric',
+    //         'products.*.discount_type' => 'required|in:percentage,value',
+    //         'products.*.hsn' => 'required|string',
+    //         'products.*.tax' => 'required|numeric',
+    //         'products.*.cgst' => 'required|numeric',
+    //         'products.*.sgst' => 'required|numeric',
+    //         'products.*.igst' => 'required|numeric',
+    //         'products.*.amount' => 'nullable|numeric',
+    //         'products.*.channel' => 'nullable|exists:t_channels,id',
+
+    //         // for add-ons
+    //         'addons' => 'nullable|array',
+    //         'addons.*.name' => 'required|string|max:255',
+    //         'addons.*.amount' => 'required|numeric|min:0',
+    //         'addons.*.tax' => 'nullable|numeric|min:0',
+    //         'addons.*.hsn' => 'nullable|string|max:255',
+    //         'addons.*.cgst' => 'nullable|numeric|min:0',
+    //         'addons.*.sgst' => 'nullable|numeric|min:0',
+    //         'addons.*.igst' => 'nullable|numeric|min:0',
+
+    //         // for terms
+    //         'terms' => 'nullable|array',
+    //         'terms.*.name' => 'required|string|max:255',
+    //         'terms.*.value' => 'required|string|min:0',
+    //     ]);
+
+    //     $purchaseOrder = PurchaseOrderModel::where('id', $id)->first();
+
+
+    //     $purchaseOrderUpdated = $purchaseOrder->update([
+    //         'supplier_id' => $request->input('supplier_id'),
+    //         'name' => $request->input('name'),
+    //         'purchase_order_no' => $request->input('purchase_order_no'),
+    //         'purchase_order_date' => $request->input('purchase_order_date'),
+    //         'oa_no' => $request->input('oa_no'),
+    //         'oa_date' => $request->input('oa_date'),
+    //         'template' => $request->input('template'),
+    //         'status' => "pending",
+    //         'user' => Auth::user()->id,
+    //         'cgst' => $request->input('cgst'),
+    //         'sgst' => $request->input('sgst'),
+    //         'igst' => $request->input('igst'),
+    //         'total' => $request->input('total'),
+    //         'currency' => $request->input('currency'),
+    //         'gross' => $request->input('gross'),
+    //         'round_off' => $request->input('round_off'),
+    //     ]);
+
+    //     $products = $request->input('products');
+    //     $requestProductIDs = [];
+
+    //     foreach ($products as $productData) {
+    //         $requestProductIDs[] = $productData['product_id'];
+
+    //         $existingProduct = PurchaseOrderProductsModel::where('purchase_order_id', $id)
+    //                                                     ->where('product_id', $productData['product_id'])
+    //                                                     ->first();
+
+    //         if ($existingProduct) {
+    //             $existingProduct->update([
+    //                 'product_name' => $productData['product_name'],
+    //                 'description' => $productData['description'],
+    //                 'quantity' => $productData['quantity'],
+    //                 'unit' => $productData['unit'],
+    //                 'price' => $productData['price'],
+    //                 'discount' => $productData['discount'],
+    //                 'discount_type' => $productData['discount_type'],
+    //                 'hsn' => $productData['hsn'],
+    //                 'tax' => $productData['tax'],
+    //                 'cgst' => $productData['cgst'],
+    //                 'sgst' => $productData['sgst'],
+    //                 'igst' => $productData['igst'],
+    //                 'amount' => $productData['amount'],
+    //                 'channel' => $productData['channel'],
+    //             ]);
+    //         } else {
+    //             PurchaseOrderProductsModel::create([
+    //                 'purchase_order_id' => $id,
+    //                 'company_id' => Auth::user()->company_id,
+    //                 'product_id' => $productData['product_id'],
+    //                 'product_name' => $productData['product_name'],
+    //                 'description' => $productData['description'],
+    //                 'quantity' => $productData['quantity'],
+    //                 'unit' => $productData['unit'],
+    //                 'price' => $productData['price'],
+    //                 'discount' => $productData['discount'],
+    //                 'discount_type' => $productData['discount_type'],
+    //                 'hsn' => $productData['hsn'],
+    //                 'tax' => $productData['tax'],
+    //                 'cgst' => $productData['cgst'],
+    //                 'sgst' => $productData['sgst'],
+    //                 'igst' => $productData['igst'],
+    //                 'amount' => $productData['amount'],
+    //                 'channel' => $productData['channel'],
+    //             ]);
+    //         }
+    //     }
+
+    //     $productsDeleted = PurchaseOrderProductsModel::where('purchase_order_id', $id)
+    //                                                 ->whereNotIn('product_id', $requestProductIDs)
+    //                                                 ->delete();
+
+    //     $addons = $request->input('addons');
+    //     $requestAddonIDs = [];
+
+    //     foreach ($addons as $addonData) {
+    //         $requestAddonIDs[] = $addonData['name'];
+
+    //         $existingAddon = PurchaseOrderAddonsModel::where('purchase_order_id', $id)
+    //                                             ->where('name', $addonData['name'])
+    //                                             ->first();
+
+    //         if ($existingAddon) {
+    //             $existingAddon->update([
+    //                 'amount' => $addonData['amount'],
+    //                 'tax' => $addonData['tax'],
+    //                 'hsn' => $addonData['hsn'],
+    //                 'cgst' => $addonData['cgst'],
+    //                 'sgst' => $addonData['sgst'],
+    //                 'igst' => $addonData['igst'],
+    //             ]);
+    //         } else {
+    //             PurchaseOrderAddonsModel::create([
+    //                 'purchase_order_id' => $id,
+    //                 'company_id' => Auth::user()->company_id,
+    //                 'name' => $addonData['name'],
+    //                 'amount' => $addonData['amount'],
+    //                 'tax' => $addonData['tax'],
+    //                 'hsn' => $addonData['hsn'],
+    //                 'cgst' => $addonData['cgst'],
+    //                 'sgst' => $addonData['sgst'],
+    //                 'igst' => $addonData['igst'],
+    //             ]);
+    //         }
+    //     }
+
+    //     // Delete Addons that are not part of the request
+    //     PurchaseOrderAddonsModel::where('purchase_order_id', $id)
+    //     ->whereNotIn('name', $requestAddonIDs)
+    //     ->delete();
+
+    //     // Handle Terms
+    //     $terms = $request->input('terms');
+    //     $requestTermsIDs = [];
+
+    //     foreach ($terms as $termData) {
+    //         $requestTermsIDs[] = $termData['name'];
+
+    //         $existingAddon = PurchaseOrderTermsModel::where('purchase_order_id', $id)
+    //                                             ->where('name', $termData['name'])
+    //                                             ->first();
+
+    //         if ($existingAddon) {
+    //             $existingAddon->update([
+    //                 'value' => $termData['value'],
+    //             ]);
+    //         } else {
+    //             PurchaseOrderTermsModel::create([
+    //                 'purchase_order_id' => $id,
+    //                 'company_id' => Auth::user()->company_id,
+    //                 'name' => $termData['name'],
+    //                 'value' => $termData['value'],
+    //             ]);
+    //         }
+    //     }
+
+    //     // Delete Terms that are not part of the request
+    //     PurchaseOrderTermsModel::where('purchase_order_id', $id)
+    //                                 ->whereNotIn('name', $requestTermsIDs)
+    //                                 ->delete();
+                                            
+
+    //     unset($purchaseOrder['created_at'], $purchaseOrder['updated_at']);
+
+    //     return ($purchaseOrderUpdated || $productsDeleted)
+    //         ? response()->json(['code' => 200,'success' => true, 'message' => 'Purchase Order and products updated successfully!', 'data' => $purchaseOrder], 200)
+    //         : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
+    // }
 
     // delete
     public function delete_purchase_order($id)
