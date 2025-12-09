@@ -90,7 +90,7 @@ class SalesInvoiceController extends Controller
             'products.*.purchase_rate' => 'nullable|numeric|min:0',
 
             // ADDONS VALIDATION
-            'addons' => 'required|array',
+            'addons' => 'nullable|array',
             'addons.*.name' => 'required|string',
             'addons.*.amount' => 'required|numeric',
             'addons.*.tax' => 'required|numeric',
