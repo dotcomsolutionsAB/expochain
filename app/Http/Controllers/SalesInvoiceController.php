@@ -997,25 +997,6 @@ class SalesInvoiceController extends Controller
         }
     }
 
-    // public function delete_sales_invoice($id)
-    // {
-    //     $delete_sales_invoice = SalesInvoiceModel::where('id', $id)
-    //                                                 ->where('company_id', $company_id)
-    //                                                 ->delete();
-
-    //     $delete_sales_invoice_products = SalesInvoiceProductsModel::where('sales_invoice_id', $id)
-    //                                                                 ->where('company_id', $company_id)
-    //                                                                 ->delete();
-                                                                    
-    //     $delete_sales_invoice_addons = SalesInvoiceAddonsModel::where('sales_invoice_id', $id)
-    //                                                             ->where('company_id', $company_id)
-    //                                                             ->delete();
-
-    //     return $delete_sales_invoice && $delete_sales_invoice_products && $delete_sales_invoice_addons
-    //         ? response()->json(['code' => 200,'success' => true, 'message' => 'Sales Invoice and associated products/addons deleted successfully!'], 200)
-    //         : response()->json(['code' => 404,'success' => false, 'message' => 'Sales Invoice not found.'], 404);
-    // }
-
     // import   
     // public function importSalesInvoices()
     // {
@@ -1510,6 +1491,8 @@ class SalesInvoiceController extends Controller
     // export sales invoice report
     public function exportSalesInvoiceReport(Request $request)
     {
+        ini_set('memory_limit', '1024M');
+        ini_set('max_execution_time', '600');
         try {
             $companyId = Auth::user()->company_id;
 
