@@ -1577,6 +1577,19 @@ class SalesInvoiceController extends Controller
                     }
                 });
             }
+            // ✅ Check size BEFORE loading all rows in memory
+            $totalRows = (clone $query)->count();   // clone so we don't consume the original query
+            $maxRows   = 50000;                     // you can tune this limit
+
+            if ($totalRows > $maxRows) {
+                return response()->json([
+                    'code'          => 413,
+                    'success'       => false,
+                    'message'       => "Too many records ({$totalRows}). Please apply more filters and keep it below {$maxRows} rows for export.",
+                    'data'          => [],
+                    'total_records' => $totalRows,
+                ], 413);
+            }
 
             $items = $query->get();
 
