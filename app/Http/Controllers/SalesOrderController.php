@@ -211,7 +211,7 @@ class SalesOrderController extends Controller
         $status = $request->input('status');
         $productIds = $request->input('product_ids'); 
         $limit = $request->input('limit', 10);
-        $offset = $request->input('offset', 0);
+        $offset = $request->input('offset', 0);        
 
         // Query Sales Orders
         $query = SalesOrderModel::with([
@@ -240,16 +240,19 @@ class SalesOrderController extends Controller
         )
         ->where('company_id', Auth::user()->company_id);
         
-
+        if ($user) {
+            $query->where('user', $user);
+        }
         // 🔹 **Fetch Single Sales Order by ID**
         if ($id) {
             $salesOrder = $query->where('id', $id)->first();
             if (!$salesOrder) {
                 return response()->json([
-                    'code' => 404,
+                    'code'    => 200,
                     'success' => false,
                     'message' => 'Sales Order not found!',
-                ], 404);
+                    'data'    => null,
+                ], 200);
             }
 
             // Transform Single Sales Order
@@ -332,11 +335,15 @@ class SalesOrderController extends Controller
 
         if ($get_sales_orders->isEmpty()) {
             return response()->json([
-                'code' => 404,
-                'success' => false,
-                'message' => 'No Sales Orders found!',
-            ], 404);
+                'code'          => 200,
+                'success'       => true,
+                'message'       => 'No Sales Orders available.',
+                'data'          => [],
+                'count'         => 0,
+                'total_records' => 0,
+            ], 200);
         }
+
 
         // Transform Data
         $get_sales_orders->transform(function ($order) {
