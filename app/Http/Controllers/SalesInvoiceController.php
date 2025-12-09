@@ -93,11 +93,11 @@ class SalesInvoiceController extends Controller
             'addons' => 'nullable|array',
             'addons.*.name' => 'required|string',
             'addons.*.amount' => 'required|numeric',
-            'addons.*.tax' => 'required|numeric',
-            'addons.*.hsn' => 'required|numeric',
-            'addons.*.cgst' => 'required|numeric',
-            'addons.*.sgst' => 'required|numeric',
-            'addons.*.igst' => 'required|numeric',
+            'addons.*.tax' => 'nullable|numeric',
+            'addons.*.hsn' => 'nullable|numeric',
+            'addons.*.cgst' => 'nullable|numeric',
+            'addons.*.sgst' => 'nullable|numeric',
+            'addons.*.igst' => 'nullable|numeric',
         ]);
 
         $companyId   = Auth::user()->company_id;
