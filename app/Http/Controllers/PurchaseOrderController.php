@@ -175,7 +175,7 @@ class PurchaseOrderController extends Controller
                 'name' => $addon['name'],
                 'amount' => $addon['amount'],
                 'tax' => $addon['tax'],
-                'hsn' =>  '99',
+                'hsn' =>  $addon['hsn'],
                 'cgst' => $addon['cgst'],
                 'sgst' => $addon['sgst'],
                 'igst' => $addon['igst'],
