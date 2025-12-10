@@ -10,6 +10,7 @@ use App\Models\PurchaseInvoiceAddonsModel;
 use App\Models\SuppliersModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
+use App\Models\CounterModel;
 use App\Models\SalesInvoiceProductsModel;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
