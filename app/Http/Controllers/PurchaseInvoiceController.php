@@ -506,146 +506,6 @@ class PurchaseInvoiceController extends Controller
         ], 200);
     }
 
-    // public function view_purchase_invoice(Request $request, $id = null)
-    // {
-    //     // Get filter inputs
-    //     $supplierId = $request->input('supplier_id');
-    //     $name = $request->input('name');
-    //     $purchaseInvoiceNo = $request->input('purchase_invoice_no');
-    //     $purchaseInvoiceDate = $request->input('purchase_invoice_date');
-    //     $purchaseOrderNo = $request->input('purchase_order_no');
-    //     $productIds = $request->input('product_ids');
-    //     $limit = $request->input('limit', 10);
-    //     $offset = $request->input('offset', 0);
-
-    //     // Query Purchase Invoices
-    //     $query = PurchaseInvoiceModel::with([
-    //         'products' => function ($query) {
-    //             $query->select('purchase_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',
-    //                 DB::raw('(tax / 2) as cgst_rate'),
-    //                 DB::raw('(tax / 2) as sgst_rate'),
-    //                 DB::raw('(tax) as igst_rate'),
-    //                 'amount', 'channel', 'godown', 'returned', 'sold');
-    //         },
-    //         'addons' => function ($query) {
-    //             $query->select('purchase_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
-    //         },
-    //         'get_user:id,name',
-    //         'supplier' => function ($q) {
-    //             // Select key supplier columns and include addresses
-    //             $q->select('id', 'supplier_id')
-    //               ->with(['addresses' => function ($query) {
-    //                   $query->select('supplier_id', 'state');
-    //               }]);
-    //         }
-    //     ])
-    //     ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 'purchase_invoice_date',
-    //         DB::raw('DATE_FORMAT(purchase_invoice_date, "%d-%m-%Y") as purchase_invoice_date_formatted'),
-    //         'oa_no', 'ref_no', 'template', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
-    //     )
-    //     ->where('company_id', Auth::user()->company_id);
-
-    //     // 🔹 **Fetch Single Purchase Invoice by ID**
-    //     if ($id) {
-    //         $purchaseInvoice = $query->where('id', $id)->first();
-    //         if (!$purchaseInvoice) {
-    //             return response()->json([
-    //                 'code' => 404,
-    //                 'success' => false,
-    //                 'message' => 'Purchase Invoice not found!',
-    //             ], 404);
-    //         }
-
-    //         // Transform Single Purchase Invoice
-    //         $purchaseInvoice->amount_in_words = $this->convertNumberToWords($purchaseInvoice->total);
-    //         $purchaseInvoice->total = is_numeric($purchaseInvoice->total) ? number_format((float) $purchaseInvoice->total, 2) : $purchaseInvoice->total;
-    //         $purchaseInvoice->contact_person = $purchaseInvoice->get_user ? ['id' => $purchaseInvoice->get_user->id, 'name' => $purchaseInvoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
-    //         $purchaseInvoice->user = $purchaseInvoice->get_user ? ['id' => $purchaseInvoice->get_user->id, 'name' => $purchaseInvoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
-    //         unset($purchaseInvoice->get_user);
-
-    //         return response()->json([
-    //             'code' => 200,
-    //             'success' => true,
-    //             'message' => 'Purchase Invoice fetched successfully!',
-    //             'data' => $purchaseInvoice,
-    //         ], 200);
-    //     }
-
-    //     // 🔹 **Apply Filters for Listing**
-    //     if ($supplierId) {
-    //         $query->where('supplier_id', $supplierId);
-    //     }
-    //     if ($name) {
-    //         $query->where('name', 'LIKE', '%' . $name . '%');
-    //     }
-    //     if ($purchaseInvoiceNo) {
-    //         $query->where('purchase_invoice_no', 'LIKE', '%' . $purchaseInvoiceNo . '%');
-    //     }
-    //     if ($purchaseInvoiceDate) {
-    //         $query->whereDate('purchase_invoice_date', $purchaseInvoiceDate);
-    //     }
-    //     if ($purchaseOrderNo) {
-    //         $query->where('purchase_order_no', 'LIKE', '%' . $purchaseOrderNo . '%');
-    //     }
-    //     if (!empty($productIds)) {
-    //         $productIdArray = explode(',', $productIds);
-    //         $query->whereHas('products', function ($query) use ($productIdArray) {
-    //             $query->whereIn('product_id', $productIdArray);
-    //         });
-    //     }
-
-    //     // Get total record count before applying limit
-    //     $totalRecords = $query->count();
-
-    //     // Order by latest purchase_invoice_date
-    //     $query->orderBy('purchase_invoice_date', 'desc');
-
-    //     $query->offset($offset)->limit($limit);
-
-    //     // Fetch paginated results
-    //     $get_purchase_invoices = $query->get();
-
-    //     if ($get_purchase_invoices->isEmpty()) {
-    //         return response()->json([
-    //             'code' => 404,
-    //             'success' => false,
-    //             'message' => 'No Purchase Invoices found!',
-    //         ], 404);
-    //     }
-
-    //     // Transform Data
-    //     $get_purchase_invoices->transform(function ($invoice) {
-    //         $invoice->purchase_order_date = $invoice->purchase_invoice_date_formatted;
-    //         unset($invoice->purchase_invoice_date_formatted);
-    //         $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
-    //         $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
-    //         $invoice->contact_person = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
-    //         $invoice->user = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
-    //         unset($invoice->get_user);
-
-
-    //         // Transform client: Only return state from addresses for each invoice
-    //         if ($invoice->client) {
-    //             $state = optional($invoice->client->addresses->first())->state;
-    //             $invoice->client = ['state' => $state];
-    //         } else {
-    //             $invoice->client = null;
-    //         }
-            
-    //         return $invoice;
-    //     });
-
-    //     // Return response for list
-    //     return response()->json([
-    //         'code' => 200,
-    //         'success' => true,
-    //         'message' => 'Purchase Invoices fetched successfully!',
-    //         'data' => $get_purchase_invoices,
-    //         'count' => $get_purchase_invoices->count(),
-    //         'total_records' => $totalRecords,
-    //     ], 200);
-    // }
-
     // update
     public function edit_purchase_invoice(Request $request, $id)
     {
@@ -1385,91 +1245,174 @@ class PurchaseInvoiceController extends Controller
     {
         try {
             $companyId = Auth::user()->company_id;
-            $startDate = Carbon::parse($request->start_date)->startOfDay();
-            $endDate = Carbon::parse($request->end_date)->endOfDay();
 
-            // Parse filters
-            // $supplierIds = $request->filled('supplier_id') ? explode(',', $request->supplier_id) : null;
-            $supplierIds = $request->filled('supplier_id') 
-            ? array_map('intval', array_map('trim', explode(',', $request->supplier_id))) 
-            : null;
-            //$productIds = $request->filled('product_id') ? explode(',', $request->product_id) : null;
-            $productIds = $request->filled('product_id') 
-            ? array_map('intval', array_map('trim', explode(',', $request->product_id))) 
-            : null;
-            //$groupIds = $request->filled('group_id') ? explode(',', $request->group_id) : null;
-            $groupIds = $request->filled('group_id') 
-            ? array_map('intval', array_map('trim', explode(',', $request->group_id))) 
-            : null;
-            //$categoryIds = $request->filled('category_id') ? explode(',', $request->category_id) : null;
-            $categoryIds = $request->filled('category_id') 
-            ? array_map('intval', array_map('trim', explode(',', $request->category_id))) 
-            : null;
-            //$subCategoryIds = $request->filled('sub_category_id') ? explode(',', $request->sub_category_id) : null;
-            $subCategoryIds = $request->filled('sub_category_id') 
-            ? array_map('intval', array_map('trim', explode(',', $request->sub_category_id))) 
-            : null;
+            // 🔹 Pagination controls (optional)
+            $limit  = (int) $request->input('limit', 0);   // 0 = no limit
+            $offset = (int) $request->input('offset', 0);  // default 0
 
-            // Load invoice products with filters
-            // $query = PurchaseInvoiceProductsModel::with([
-            //     'purchaseInvoice' => function ($q) use ($companyId, $startDate, $endDate, $supplierIds) {
-            //         $q->where('company_id', $companyId)
-            //         ->whereBetween('purchase_invoice_date', [$startDate, $endDate]);
+            // 🔹 Date filters
+            $purchaseInvoiceDate = $request->input('purchase_invoice_date');
 
-            //         if ($supplierIds) {
-            //             $q->whereIn('supplier_id', $supplierIds);
-            //         }
+            $startDate = $request->filled('date_from')
+                ? Carbon::parse($request->date_from)->startOfDay()
+                : null;
 
-            //         $q->with('supplier:id,name');
-            //     },
-            //     'product' => function ($q) use ($groupIds, $categoryIds, $subCategoryIds) {
-            //         $q->with('groupRelation:id,name');
+            $endDate = $request->filled('date_to')
+                ? Carbon::parse($request->date_to)->endOfDay()
+                : null;
 
-            //         if ($groupIds) {
-            //             $q->whereIn('group', $groupIds);
-            //         }
-            //         if ($categoryIds) {
-            //             $q->whereIn('category', $categoryIds);
-            //         }
-            //         if ($subCategoryIds) {
-            //             $q->whereIn('sub_category', $subCategoryIds);
-            //         }
-            //     }
-            // ]);
+            // 🔹 Optional filters (comma-separated)
+
+            // supplier_id: "216,1"
+            $supplierIds = $request->filled('supplier_id')
+                ? array_filter(array_map('intval', array_map('trim', explode(',', $request->supplier_id))))
+                : null;
+
+            // name: "KAMALESH BANERJEE,JK FENNER INDIA LTD"
+            $nameArray = $request->filled('name')
+                ? array_filter(array_map('trim', explode(',', $request->name)))
+                : null;
+
+            // purchase_invoice_no: "PI/1002/2025,PI/1001/2025"
+            $piNos = $request->filled('purchase_invoice_no')
+                ? array_filter(array_map('trim', explode(',', $request->purchase_invoice_no)))
+                : null;
+
+            // purchase_invoice_id: "101,205,309"  (id column)
+            $purchaseInvoiceIds = $request->filled('purchase_invoice_id')
+                ? array_filter(array_map('intval', array_map('trim', explode(',', $request->purchase_invoice_id))))
+                : null;
+
+            // oa_no: "OA/2025/078,OA/2025/079"
+            $oaNos = $request->filled('oa_no')
+                ? array_filter(array_map('trim', explode(',', $request->oa_no)))
+                : null;
+
+            // ref_no: "REF/PO/4458, REF/PO/4459"
+            $refNos = $request->filled('ref_no')
+                ? array_filter(array_map('trim', explode(',', $request->ref_no)))
+                : null;
+
+            // product_ids: "11,15,20"
+            $productIds = $request->filled('product_ids')
+                ? array_filter(array_map('intval', array_map('trim', explode(',', $request->product_ids))))
+                : null;
+
+            // group_id: "1,2"
+            $groupIds = $request->filled('group_id')
+                ? array_filter(array_map('intval', array_map('trim', explode(',', $request->group_id))))
+                : null;
+
+            // category_id: ""
+            $categoryIds = $request->filled('category_id')
+                ? array_filter(array_map('intval', array_map('trim', explode(',', $request->category_id))))
+                : null;
+
+            // sub_category_id: ""
+            $subCategoryIds = $request->filled('sub_category_id')
+                ? array_filter(array_map('intval', array_map('trim', explode(',', $request->sub_category_id))))
+                : null;
+
+            // 🔹 Build query with relations and filters
             $query = PurchaseInvoiceProductsModel::with([
-                'purchaseInvoice.supplier:id,name',
-                'product.groupRelation:id,name'
-            ])
-            ->whereHas('purchaseInvoice', function ($q) use ($companyId, $startDate, $endDate, $supplierIds) {
-                $q->where('company_id', $companyId)
-                  ->whereBetween('purchase_invoice_date', [$startDate, $endDate]);
-            
-                if ($supplierIds) {
-                    $q->whereIn('supplier_id', $supplierIds);
-                }
-            });
+                    'purchaseInvoice.supplier:id,name',
+                    'product.groupRelation:id,name',
+                ])
+                ->whereHas('purchaseInvoice', function ($q) use (
+                    $companyId,
+                    $startDate,
+                    $endDate,
+                    $purchaseInvoiceDate,
+                    $supplierIds,
+                    $nameArray,
+                    $piNos,
+                    $purchaseInvoiceIds,
+                    $oaNos,
+                    $refNos
+                ) {
+                    $q->where('company_id', $companyId);
 
-            if ($productIds) {
+                    // Date filters: range > single date
+                    if ($startDate && $endDate) {
+                        $q->whereBetween('purchase_invoice_date', [$startDate, $endDate]);
+                    } elseif ($startDate) {
+                        $q->whereDate('purchase_invoice_date', '>=', $startDate);
+                    } elseif ($endDate) {
+                        $q->whereDate('purchase_invoice_date', '<=', $endDate);
+                    } elseif ($purchaseInvoiceDate) {
+                        $q->whereDate('purchase_invoice_date', $purchaseInvoiceDate);
+                    }
+
+                    if (!empty($supplierIds)) {
+                        $q->whereIn('supplier_id', $supplierIds);
+                    }
+
+                    if (!empty($nameArray)) {
+                        $q->where(function ($q2) use ($nameArray) {
+                            foreach ($nameArray as $name) {
+                                $q2->orWhere('name', 'LIKE', '%' . $name . '%');
+                            }
+                        });
+                    }
+
+                    if (!empty($piNos)) {
+                        $q->where(function ($q2) use ($piNos) {
+                            foreach ($piNos as $no) {
+                                $q2->orWhere('purchase_invoice_no', 'LIKE', '%' . $no . '%');
+                            }
+                        });
+                    }
+
+                    if (!empty($purchaseInvoiceIds)) {
+                        $q->whereIn('id', $purchaseInvoiceIds);
+                    }
+
+                    if (!empty($oaNos)) {
+                        $q->where(function ($q2) use ($oaNos) {
+                            foreach ($oaNos as $no) {
+                                $q2->orWhere('oa_no', 'LIKE', '%' . $no . '%');
+                            }
+                        });
+                    }
+
+                    if (!empty($refNos)) {
+                        $q->where(function ($q2) use ($refNos) {
+                            foreach ($refNos as $no) {
+                                $q2->orWhere('ref_no', 'LIKE', '%' . $no . '%');
+                            }
+                        });
+                    }
+                });
+
+            // 🔹 Product-related filters
+            if (!empty($productIds)) {
                 $query->whereIn('product_id', $productIds);
             }
 
             if ($groupIds || $categoryIds || $subCategoryIds) {
                 $query->whereHas('product', function ($q) use ($groupIds, $categoryIds, $subCategoryIds) {
-                    if ($groupIds) {
+                    if (!empty($groupIds)) {
                         $q->whereIn('group', $groupIds);
                     }
-                    if ($categoryIds) {
+                    if (!empty($categoryIds)) {
                         $q->whereIn('category', $categoryIds);
                     }
-                    if ($subCategoryIds) {
+                    if (!empty($subCategoryIds)) {
                         $q->whereIn('sub_category', $subCategoryIds);
                     }
                 });
             }
 
-             $items = $query->get();
+            // 🔹 Order + optional pagination
+            $query->orderBy('id'); // stable order on product rows
 
-            // Filter valid entries
+            if ($limit > 0) {
+                $query->skip($offset)->take($limit);
+            }
+
+            $items = $query->get();
+
+            // Filter valid entries (safety, though whereHas already enforces it)
             $filtered = $items->filter(fn ($item) => $item->purchaseInvoice !== null);
 
             // Prepare export data
@@ -1477,75 +1420,256 @@ class PurchaseInvoiceController extends Controller
             $sn = 1;
             foreach ($filtered as $item) {
                 $exportData[] = [
-                    'SN' => $sn++,
-                    'Supplier' => $item->purchaseInvoice->supplier->name ?? 'N/A',
-                    'Invoice' => $item->purchaseInvoice->purchase_invoice_no,
-                    'Date' => Carbon::parse($item->purchaseInvoice->purchase_invoice_date)->format('d-m-Y'),
+                    'SN'        => $sn++,
+                    'Supplier'  => optional($item->purchaseInvoice->supplier)->name ?? 'N/A',
+                    'Invoice'   => $item->purchaseInvoice->purchase_invoice_no,
+                    'Date'      => Carbon::parse($item->purchaseInvoice->purchase_invoice_date)->format('d-m-Y'),
                     'Item Name' => $item->product_name,
-                    // 'Group' => $item->product->groupRelation->name ?? 'N/A',
-                    'Group' => optional(optional($item->product)->groupRelation)->name ?? 'N/A',
-                    'Quantity' => $item->quantity,
-                    'Unit' => $item->unit,
-                    'Price' => $item->price,
-                    'Discount' => $item->discount,
-                    'Amount' => $item->amount,
-                    'Added On' => Carbon::parse($item->created_at)->format('d-m-Y H:i')
+                    'Group'     => optional(optional($item->product)->groupRelation)->name ?? 'N/A',
+                    'Quantity'  => $item->quantity,
+                    'Unit'      => $item->unit,
+                    'Price'     => $item->price,
+                    'Discount'  => $item->discount,
+                    'Amount'    => $item->amount,
+                    'Added On'  => Carbon::parse($item->created_at)->format('d-m-Y H:i'),
                 ];
             }
 
+            // ✅ No data = 200 + empty data (not error)
             if (empty($exportData)) {
                 return response()->json([
-                    'code' => 404,
-                    'success' => false,
-                    'message' => 'No purchase invoice products found for the selected range.'
-                ]);
+                    'code'    => 200,
+                    'success' => true,
+                    'message' => 'No purchase invoice products found for the given filters.',
+                    'data'    => [],
+                ], 200);
             }
 
             // Generate file details
-            $fileName = 'purchase_invoices_export_' . now()->format('Ymd_His') . '.xlsx';
+            $fileName     = 'purchase_invoices_export_' . now()->format('Ymd_His') . '.xlsx';
             $relativePath = 'purchase_invoices_report/' . $fileName;
 
             // Store Excel file
             Excel::store(new class($exportData) implements FromCollection, WithHeadings {
                 private $data;
+
                 public function __construct($data)
                 {
                     $this->data = $data;
                 }
+
                 public function collection()
                 {
                     return collect($this->data);
                 }
+
                 public function headings(): array
                 {
                     return [
-                        'SN', 'Supplier', 'Invoice', 'Date', 'Item Name', 'Group',
-                        'Quantity', 'Unit', 'Price', 'Discount', 'Amount', 'Added On'
+                        'SN',
+                        'Supplier',
+                        'Invoice',
+                        'Date',
+                        'Item Name',
+                        'Group',
+                        'Quantity',
+                        'Unit',
+                        'Price',
+                        'Discount',
+                        'Amount',
+                        'Added On',
                     ];
                 }
             }, $relativePath, 'public');
 
             return response()->json([
-                'code' => 200,
+                'code'    => 200,
                 'success' => true,
                 'message' => 'File available for download',
-                'data' => [
-                    'file_url' => asset('storage/' . $relativePath),
-                    'file_name' => $fileName,
-                    'file_size' => Storage::disk('public')->size($relativePath),
-                    'content_type' => 'Excel'
-                ]
-            ]);
+                'data'    => [
+                    'file_url'     => asset('storage/' . $relativePath),
+                    'file_name'    => $fileName,
+                    'file_size'    => Storage::disk('public')->size($relativePath),
+                    'content_type' => 'Excel',
+                ],
+            ], 200);
 
         } catch (\Exception $e) {
             return response()->json([
-                'code' => 500,
+                'code'    => 500,
                 'success' => false,
                 'message' => 'Something went wrong while generating Excel.',
-                'error' => $e->getMessage()
-            ]);
+                'error'   => $e->getMessage(),
+            ], 500);
         }
     }
+
+
+    // public function exportPurchaseInvoiceReport(Request $request)
+    // {
+    //     try {
+    //         $companyId = Auth::user()->company_id;
+    //         $startDate = Carbon::parse($request->start_date)->startOfDay();
+    //         $endDate = Carbon::parse($request->end_date)->endOfDay();
+
+    //         // Parse filters
+    //         // $supplierIds = $request->filled('supplier_id') ? explode(',', $request->supplier_id) : null;
+    //         $supplierIds = $request->filled('supplier_id') 
+    //         ? array_map('intval', array_map('trim', explode(',', $request->supplier_id))) 
+    //         : null;
+    //         //$productIds = $request->filled('product_id') ? explode(',', $request->product_id) : null;
+    //         $productIds = $request->filled('product_id') 
+    //         ? array_map('intval', array_map('trim', explode(',', $request->product_id))) 
+    //         : null;
+    //         //$groupIds = $request->filled('group_id') ? explode(',', $request->group_id) : null;
+    //         $groupIds = $request->filled('group_id') 
+    //         ? array_map('intval', array_map('trim', explode(',', $request->group_id))) 
+    //         : null;
+    //         //$categoryIds = $request->filled('category_id') ? explode(',', $request->category_id) : null;
+    //         $categoryIds = $request->filled('category_id') 
+    //         ? array_map('intval', array_map('trim', explode(',', $request->category_id))) 
+    //         : null;
+    //         //$subCategoryIds = $request->filled('sub_category_id') ? explode(',', $request->sub_category_id) : null;
+    //         $subCategoryIds = $request->filled('sub_category_id') 
+    //         ? array_map('intval', array_map('trim', explode(',', $request->sub_category_id))) 
+    //         : null;
+
+    //         // Load invoice products with filters
+    //         // $query = PurchaseInvoiceProductsModel::with([
+    //         //     'purchaseInvoice' => function ($q) use ($companyId, $startDate, $endDate, $supplierIds) {
+    //         //         $q->where('company_id', $companyId)
+    //         //         ->whereBetween('purchase_invoice_date', [$startDate, $endDate]);
+
+    //         //         if ($supplierIds) {
+    //         //             $q->whereIn('supplier_id', $supplierIds);
+    //         //         }
+
+    //         //         $q->with('supplier:id,name');
+    //         //     },
+    //         //     'product' => function ($q) use ($groupIds, $categoryIds, $subCategoryIds) {
+    //         //         $q->with('groupRelation:id,name');
+
+    //         //         if ($groupIds) {
+    //         //             $q->whereIn('group', $groupIds);
+    //         //         }
+    //         //         if ($categoryIds) {
+    //         //             $q->whereIn('category', $categoryIds);
+    //         //         }
+    //         //         if ($subCategoryIds) {
+    //         //             $q->whereIn('sub_category', $subCategoryIds);
+    //         //         }
+    //         //     }
+    //         // ]);
+    //         $query = PurchaseInvoiceProductsModel::with([
+    //             'purchaseInvoice.supplier:id,name',
+    //             'product.groupRelation:id,name'
+    //         ])
+    //         ->whereHas('purchaseInvoice', function ($q) use ($companyId, $startDate, $endDate, $supplierIds) {
+    //             $q->where('company_id', $companyId)
+    //               ->whereBetween('purchase_invoice_date', [$startDate, $endDate]);
+            
+    //             if ($supplierIds) {
+    //                 $q->whereIn('supplier_id', $supplierIds);
+    //             }
+    //         });
+
+    //         if ($productIds) {
+    //             $query->whereIn('product_id', $productIds);
+    //         }
+
+    //         if ($groupIds || $categoryIds || $subCategoryIds) {
+    //             $query->whereHas('product', function ($q) use ($groupIds, $categoryIds, $subCategoryIds) {
+    //                 if ($groupIds) {
+    //                     $q->whereIn('group', $groupIds);
+    //                 }
+    //                 if ($categoryIds) {
+    //                     $q->whereIn('category', $categoryIds);
+    //                 }
+    //                 if ($subCategoryIds) {
+    //                     $q->whereIn('sub_category', $subCategoryIds);
+    //                 }
+    //             });
+    //         }
+
+    //          $items = $query->get();
+
+    //         // Filter valid entries
+    //         $filtered = $items->filter(fn ($item) => $item->purchaseInvoice !== null);
+
+    //         // Prepare export data
+    //         $exportData = [];
+    //         $sn = 1;
+    //         foreach ($filtered as $item) {
+    //             $exportData[] = [
+    //                 'SN' => $sn++,
+    //                 'Supplier' => $item->purchaseInvoice->supplier->name ?? 'N/A',
+    //                 'Invoice' => $item->purchaseInvoice->purchase_invoice_no,
+    //                 'Date' => Carbon::parse($item->purchaseInvoice->purchase_invoice_date)->format('d-m-Y'),
+    //                 'Item Name' => $item->product_name,
+    //                 // 'Group' => $item->product->groupRelation->name ?? 'N/A',
+    //                 'Group' => optional(optional($item->product)->groupRelation)->name ?? 'N/A',
+    //                 'Quantity' => $item->quantity,
+    //                 'Unit' => $item->unit,
+    //                 'Price' => $item->price,
+    //                 'Discount' => $item->discount,
+    //                 'Amount' => $item->amount,
+    //                 'Added On' => Carbon::parse($item->created_at)->format('d-m-Y H:i')
+    //             ];
+    //         }
+
+    //         if (empty($exportData)) {
+    //             return response()->json([
+    //                 'code' => 404,
+    //                 'success' => false,
+    //                 'message' => 'No purchase invoice products found for the selected range.'
+    //             ]);
+    //         }
+
+    //         // Generate file details
+    //         $fileName = 'purchase_invoices_export_' . now()->format('Ymd_His') . '.xlsx';
+    //         $relativePath = 'purchase_invoices_report/' . $fileName;
+
+    //         // Store Excel file
+    //         Excel::store(new class($exportData) implements FromCollection, WithHeadings {
+    //             private $data;
+    //             public function __construct($data)
+    //             {
+    //                 $this->data = $data;
+    //             }
+    //             public function collection()
+    //             {
+    //                 return collect($this->data);
+    //             }
+    //             public function headings(): array
+    //             {
+    //                 return [
+    //                     'SN', 'Supplier', 'Invoice', 'Date', 'Item Name', 'Group',
+    //                     'Quantity', 'Unit', 'Price', 'Discount', 'Amount', 'Added On'
+    //                 ];
+    //             }
+    //         }, $relativePath, 'public');
+
+    //         return response()->json([
+    //             'code' => 200,
+    //             'success' => true,
+    //             'message' => 'File available for download',
+    //             'data' => [
+    //                 'file_url' => asset('storage/' . $relativePath),
+    //                 'file_name' => $fileName,
+    //                 'file_size' => Storage::disk('public')->size($relativePath),
+    //                 'content_type' => 'Excel'
+    //             ]
+    //         ]);
+
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'code' => 500,
+    //             'success' => false,
+    //             'message' => 'Something went wrong while generating Excel.',
+    //             'error' => $e->getMessage()
+    //         ]);
+    //     }
+    // }
 
     // fetch by product id
     public function fetchPurchasesByProduct(Request $request, $productId)
