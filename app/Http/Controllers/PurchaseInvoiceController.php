@@ -894,28 +894,74 @@ class PurchaseInvoiceController extends Controller
 
     public function delete_purchase_invoice($id)
     {
-        $purchase_invoice = PurchaseInvoiceModel::find($id);
-
         $company_id = Auth::user()->company_id;
 
+        // Ensure invoice belongs to logged-in user's company
+        $purchase_invoice = PurchaseInvoiceModel::where('id', $id)
+            ->where('company_id', $company_id)
+            ->first();
+
         if (!$purchase_invoice) {
-            return response()->json(['code' => 404, 'success' => false, 'message' => 'Purchase Invoice not found.'], 404);
+            return response()->json([
+                'code'    => 404,
+                'success' => false,
+                'message' => 'Purchase Invoice not found.',
+            ], 404);
         }
 
-        // Delete related products first
-        $products_deleted = PurchaseInvoiceProductsModel::where('purchase_invoice_id', $id)->delete();
+        // Delete related products
+        $products_deleted = PurchaseInvoiceProductsModel::where('purchase_invoice_id', $id)
+            ->where('company_id', $company_id)
+            ->delete();
 
-        $delete_products_addons = PurchaseInvoiceAddonsModel::where('purchase_invoice_id', $id)
-                                                        ->where('company_id', $company_id)
-                                                        ->delete();
+        // Delete related addons
+        $addons_deleted = PurchaseInvoiceAddonsModel::where('purchase_invoice_id', $id)
+            ->where('company_id', $company_id)
+            ->delete();
 
-        // Delete the purchase invoice
+        // Delete the purchase invoice header
         $purchase_invoice_deleted = $purchase_invoice->delete();
 
-        return ($products_deleted && $purchase_invoice_deleted && $delete_products_addons)
-            ? response()->json(['code' => 200,'success' => true, 'message' => 'Purchase Invoice and related products deleted successfully!'], 200)
-            : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Purchase Invoice.'], 400);
+        // We only really need header delete to succeed; product/addon count can be 0
+        if ($purchase_invoice_deleted) {
+            return response()->json([
+                'code'    => 200,
+                'success' => true,
+                'message' => 'Purchase Invoice and related products/addons deleted successfully!',
+            ], 200);
+        }
+
+        return response()->json([
+            'code'    => 400,
+            'success' => false,
+            'message' => 'Failed to delete Purchase Invoice.',
+        ], 400);
     }
+
+    // public function delete_purchase_invoice($id)
+    // {
+    //     $purchase_invoice = PurchaseInvoiceModel::find($id);
+
+    //     $company_id = Auth::user()->company_id;
+
+    //     if (!$purchase_invoice) {
+    //         return response()->json(['code' => 404, 'success' => false, 'message' => 'Purchase Invoice not found.'], 404);
+    //     }
+
+    //     // Delete related products first
+    //     $products_deleted = PurchaseInvoiceProductsModel::where('purchase_invoice_id', $id)->delete();
+
+    //     $delete_products_addons = PurchaseInvoiceAddonsModel::where('purchase_invoice_id', $id)
+    //                                                     ->where('company_id', $company_id)
+    //                                                     ->delete();
+
+    //     // Delete the purchase invoice
+    //     $purchase_invoice_deleted = $purchase_invoice->delete();
+
+    //     return ($products_deleted && $purchase_invoice_deleted && $delete_products_addons)
+    //         ? response()->json(['code' => 200,'success' => true, 'message' => 'Purchase Invoice and related products deleted successfully!'], 200)
+    //         : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Purchase Invoice.'], 400);
+    // }
 
     // public function importPurchaseInvoices()
     // {
