@@ -890,32 +890,82 @@ class PurchaseOrderController extends Controller
     // delete
     public function delete_purchase_order($id)
     {
-        $get_purchase_order_id = PurchaseOrderModel::select('id', 'company_id')->where('id', $id)->first();
+        $company_id = Auth::user()->company_id;
 
-        if ($get_purchase_order_id && $get_purchase_order_id->company_id === Auth::user()->company_id) {
+        $get_purchase_order_id = PurchaseOrderModel::select('id', 'company_id')
+            ->where('id', $id)
+            ->first();
 
-            $company_id = Auth::user()->company_id;
-            
+        if ($get_purchase_order_id && $get_purchase_order_id->company_id === $company_id) {
+
+            // Delete main PO
             $delete_purchase_order = PurchaseOrderModel::where('id', $id)->delete();
 
-            $delete_purchase_order_products = PurchaseOrderProductsModel::where('purchase_order_id', $get_purchase_order_id->id)->delete();
+            // Delete related products
+            $delete_purchase_order_products = PurchaseOrderProductsModel::where('purchase_order_id', $get_purchase_order_id->id)
+                ->delete();
 
+            // Delete related addons
             $delete_purchase_order_addons = PurchaseOrderAddonsModel::where('purchase_order_id', $id)
-                                                        ->where('company_id', $company_id)
-                                                        ->delete();
+                ->where('company_id', $company_id)
+                ->delete();
 
-            $delete_purchase_order_addons = PurchaseOrderTermsModel::where('purchase_order_id', $id)
-                                                        ->where('company_id', $company_id)
-                                                        ->delete();
+            // Delete related terms
+            $delete_purchase_order_terms = PurchaseOrderTermsModel::where('purchase_order_id', $id)
+                ->where('company_id', $company_id)
+                ->delete();
 
+            // Consider success if main PO row was deleted
+            if ($delete_purchase_order) {
+                return response()->json([
+                    'code'    => 200,
+                    'success' => true,
+                    'message' => 'Purchase Order and associated products/addons/terms deleted successfully!',
+                ], 200);
+            }
 
-            return $delete_purchase_order && $delete_purchase_order_products
-                ? response()->json(['code' => 200,'success' => false, 'message' => 'Purchase Order and associated products deleted successfully!'], 200)
-                : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Purchase Order or products.'], 400);
+            return response()->json([
+                'code'    => 400,
+                'success' => false,
+                'message' => 'Failed to delete Purchase Order.',
+            ], 400);
+
         } else {
-            return response()->json(['code' => 404,'success' => false, 'message' => 'Purchase Order not found.'], 404);
+            return response()->json([
+                'code'    => 404,
+                'success' => false,
+                'message' => 'Purchase Order not found.',
+            ], 404);
         }
     }
+    // public function delete_purchase_order($id)
+    // {
+    //     $get_purchase_order_id = PurchaseOrderModel::select('id', 'company_id')->where('id', $id)->first();
+
+    //     if ($get_purchase_order_id && $get_purchase_order_id->company_id === Auth::user()->company_id) {
+
+    //         $company_id = Auth::user()->company_id;
+            
+    //         $delete_purchase_order = PurchaseOrderModel::where('id', $id)->delete();
+
+    //         $delete_purchase_order_products = PurchaseOrderProductsModel::where('purchase_order_id', $get_purchase_order_id->id)->delete();
+
+    //         $delete_purchase_order_addons = PurchaseOrderAddonsModel::where('purchase_order_id', $id)
+    //                                                     ->where('company_id', $company_id)
+    //                                                     ->delete();
+
+    //         $delete_purchase_order_addons = PurchaseOrderTermsModel::where('purchase_order_id', $id)
+    //                                                     ->where('company_id', $company_id)
+    //                                                     ->delete();
+
+
+    //         return $delete_purchase_order && $delete_purchase_order_products
+    //             ? response()->json(['code' => 200,'success' => false, 'message' => 'Purchase Order and associated products deleted successfully!'], 200)
+    //             : response()->json(['code' => 400,'success' => false, 'message' => 'Failed to delete Purchase Order or products.'], 400);
+    //     } else {
+    //         return response()->json(['code' => 404,'success' => false, 'message' => 'Purchase Order not found.'], 404);
+    //     }
+    // }
 
     // migration
     // public function importPurchaseOrders()

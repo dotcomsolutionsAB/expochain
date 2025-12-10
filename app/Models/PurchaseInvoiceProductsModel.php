@@ -25,6 +25,7 @@ class PurchaseInvoiceProductsModel extends Model
         'cgst',
         'sgst',
         'igst',
+        'gross',
         'amount',  // Set default(0)
         'channel', // Set default(0)
         'godown',  // Nullable

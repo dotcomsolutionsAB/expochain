@@ -59,6 +59,7 @@ class PurchaseInvoiceController extends Controller
             'products.*.sgst' => 'nullable|numeric|min:0',
             'products.*.igst' => 'nullable|numeric|min:0',
             'products.*.amount' => 'nullable|numeric|min:0',
+            'products.*.gross' => 'required|numeric|min:0',
             'products.*.channel' => 'nullable|exists:t_channels,id',
             'products.*.godown' => 'nullable|exists:t_godown,id',
 
@@ -71,19 +72,45 @@ class PurchaseInvoiceController extends Controller
             'addons.*.cgst' => 'nullable|numeric|min:0',
             'addons.*.sgst' => 'nullable|numeric|min:0',
             'addons.*.igst' => 'nullable|numeric|min:0',
-        ]);     
-        
+        ]);   
+
+        // Handle purchase invoice number logic
+        $counterController = new CounterController();
+        $sendRequest = Request::create('/counter/fetch', 'GET', [
+            'name'       => 'purchase_invoice',
+            'company_id' => Auth::user()->company_id,
+        ]);
+
+        $response         = $counterController->view($sendRequest);
+        $decodedResponse  = json_decode($response->getContent(), true);
+
+        if ($decodedResponse['code'] === 200) {
+            $data              = $decodedResponse['data'];
+            $get_customer_type = $data[0]['type'];
+        }
+
+        if (isset($get_customer_type) && $get_customer_type == "auto") {
+            $purchase_invoice_no = $decodedResponse['data'][0]['prefix'] .
+                str_pad($decodedResponse['data'][0]['next_number'], 3, '0', STR_PAD_LEFT) .
+                $decodedResponse['data'][0]['postfix'];
+        } else {
+            $purchase_invoice_no = $request->input('purchase_invoice_no');
+        }
+
         $exists = PurchaseInvoiceModel::where('company_id', Auth::user()->company_id)
-            ->where('purchase_invoice_no', $request->input('purchase_invoice_no'))
+            ->where('purchase_invoice_no', $purchase_invoice_no)
             ->exists();
+
 
         if ($exists) {
             return response()->json([
-                'code' => 422,
-                'success' => true,
-                'error' => 'The combination of company_id and purchase_invoice_number must be unique.',
+                'code'    => 422,
+                'success' => false,
+                'message' => 'The combination of company_id and purchase_invoice_number must be unique.',
+                'data'    => [],
             ], 422);
         }
+
 
         // Fetch supplier details using supplier_id
         $supplier = SuppliersModel::find($request->input('supplier_id'));
@@ -97,7 +124,7 @@ class PurchaseInvoiceController extends Controller
             'supplier_id' => $request->input('supplier_id'),
             'company_id' => Auth::user()->company_id,
             'name' => $supplier->name,
-            'purchase_invoice_no' => $request->input('purchase_invoice_no'),
+            'purchase_invoice_no' => $purchase_invoice_no,
             // 'purchase_invoice_date' => $currentDate,
             'purchase_invoice_date' => $request->input('purchase_invoice_date'),
             'oa_no' => $request->input('oa_no'),
@@ -134,6 +161,7 @@ class PurchaseInvoiceController extends Controller
                 'sgst' => $product['sgst'],
                 'igst' => $product['igst'],
                 'amount' => $product['amount'],
+                'gross' => $product['gross'],
                 'channel' => $product['channel'],
                 'godown' => isset($product['godown']) ? $product['godown'] : null,
             ]);
@@ -153,6 +181,11 @@ class PurchaseInvoiceController extends Controller
                 'igst' => $addon['igst'],
             ]);
         }
+
+        // increment the `next_number` by 1 for purchase_invoice
+        CounterModel::where('name', 'purchase_invoice')
+            ->where('company_id', Auth::user()->company_id)
+            ->increment('next_number');
 
         unset($register_purchase_invoice['id'], $register_purchase_invoice['created_at'], $register_purchase_invoice['updated_at']);
     
