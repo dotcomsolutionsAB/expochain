@@ -1453,6 +1453,11 @@ class PurchaseOrderController extends Controller
                 ? array_filter(array_map('trim', explode(',', $request->purchase_order_no)))
                 : null;
 
+            // 🔹 NEW: purchase_order_id can be multiple (comma separated)
+            $purchaseOrderIds = $request->filled('purchase_order_id')
+                ? array_filter(array_map('intval', array_map('trim', explode(',', $request->purchase_order_id))))
+                : null;
+
             // 🔹 NEW: status filter
             $status = $request->filled('status') ? trim($request->status) : null;
 
@@ -1467,6 +1472,7 @@ class PurchaseOrderController extends Controller
                     $endDate,
                     $supplierIds,
                     $poNumbers,
+                    $purchaseOrderIds,
                     $status
                 ) {
                     $q->where('company_id', $companyId);
@@ -1491,6 +1497,10 @@ class PurchaseOrderController extends Controller
                                 $q2->orWhere('purchase_order_no', 'LIKE', '%' . $no . '%');
                             }
                         });
+                    }
+                    // 🔹 Filter by purchase_order_id(s)
+                    if (!empty($purchaseOrderIds)) {
+                        $q->whereIn('id', $purchaseOrderIds);
                     }
 
                     if (!empty($status)) {
