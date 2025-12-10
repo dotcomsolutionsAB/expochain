@@ -217,6 +217,7 @@ class PurchaseOrderController extends Controller
         $supplierIdRaw      = $request->input('supplier_id');
         $nameRaw            = $request->input('name');
         $purchaseOrderNoRaw = $request->input('purchase_order_no');
+        $purchaseOrderIdRaw = $request->input('purchase_order_id');   // 🔹 NEW: purchase_order_id filter (comma-separated)
         $purchaseOrderDate  = $request->input('purchase_order_date');
         $dateFrom           = $request->input('date_from');
         $dateTo             = $request->input('date_to');
@@ -373,7 +374,12 @@ class PurchaseOrderController extends Controller
                 });
             }
         }
-
+        if (!empty($purchaseOrderIdRaw)) {
+            $poIds = array_filter(array_map('intval', explode(',', $purchaseOrderIdRaw)));
+            if (!empty($poIds)) {
+                $query->whereIn('id', $poIds);
+            }
+        }
         if ($purchaseOrderDate) {
             $query->whereDate('purchase_order_date', $purchaseOrderDate);
         }
