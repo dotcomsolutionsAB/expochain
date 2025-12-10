@@ -511,183 +511,386 @@ class PurchaseInvoiceController extends Controller
     {
         $request->validate([
             // Purchase Invoice Fields
-            'supplier_id' => 'required|integer|exists:t_suppliers,id',
-            'name' => 'nullable|string|exists:t_suppliers,name',
-            'purchase_invoice_no' => 'required|string|max:255',
-            'purchase_invoice_date' => 'required|date',
-            'oa_no' => 'required|string|max:50',
-            'ref_no' => 'required|string|max:50',
-            'template' => 'required|integer|exists:t_pdf_template,id',
-            'cgst' => 'nullable|numeric|min:0',
-            'sgst' => 'nullable|numeric|min:0',
-            'igst' => 'nullable|numeric|min:0',
-            'total' => 'required|numeric|min:0',
-            'gross' => 'required|numeric|min:0',
-            'round_off' => 'required|numeric',
+            'supplier_id'          => 'required|integer|exists:t_suppliers,id',
+            'name'                 => 'nullable|string', // no need exists here; we trust supplier_id
+            'purchase_invoice_no'  => 'required|string|max:255',
+            'purchase_invoice_date'=> 'required|date_format:Y-m-d',
+            'oa_no'                => 'required|string|max:50',
+            'ref_no'               => 'required|string|max:50',
+            'template'             => 'required|integer|exists:t_pdf_template,id',
+            'cgst'                 => 'nullable|numeric|min:0',
+            'sgst'                 => 'nullable|numeric|min:0',
+            'igst'                 => 'nullable|numeric|min:0',
+            'total'                => 'required|numeric|min:0',
+            'gross'                => 'required|numeric|min:0',
+            'round_off'            => 'required|numeric',
         
             // Product Details (Array Validation)
-            'products' => 'required|array',
-            'products.*.product_id' => 'required|integer|exists:t_products,id',
-            'products.*.product_name' => 'required|string|max:255',
-            'products.*.description' => 'nullable|string',
-            'products.*.quantity' => 'required|integer|min:1',
-            'products.*.unit' => 'required|string|max:20',
-            'products.*.price' => 'required|numeric|min:0',
-            'products.*.discount' => 'nullable|numeric|min:0',
-            'products.*.discount_type' => 'required|in:percentage,value',
-            'products.*.hsn' => 'required|string|max:20',
-            'products.*.tax' => 'required|numeric|min:0',
-            'products.*.cgst' => 'nullable|numeric|min:0',
-            'products.*.sgst' => 'nullable|numeric|min:0',
-            'products.*.igst' => 'nullable|numeric|min:0',
-            'products.*.amount' => 'nullable|numeric|min:0',
-            'products.*.channel' => 'nullable|exists:t_channels,id',
-            'products.*.godown' => 'nullable|exists:t_godown,id',
+            'products'                     => 'required|array',
+            'products.*.product_id'        => 'required|integer|exists:t_products,id',
+            'products.*.product_name'      => 'required|string|max:255',
+            'products.*.description'       => 'nullable|string',
+            'products.*.quantity'          => 'required|integer|min:1',
+            'products.*.unit'              => 'required|string|max:20',
+            'products.*.price'             => 'required|numeric|min:0',
+            'products.*.discount'          => 'nullable|numeric|min:0',
+            'products.*.discount_type'     => 'required|in:percentage,value',
+            'products.*.hsn'               => 'required|string|max:20',
+            'products.*.tax'               => 'required|numeric|min:0',
+            'products.*.cgst'              => 'nullable|numeric|min:0',
+            'products.*.sgst'              => 'nullable|numeric|min:0',
+            'products.*.igst'              => 'nullable|numeric|min:0',
+            'products.*.amount'            => 'nullable|numeric|min:0',
+            'products.*.gross'             => 'required|numeric|min:0',
+            'products.*.channel'           => 'nullable|exists:t_channels,id',
+            'products.*.godown'            => 'nullable|exists:t_godown,id',
 
             // for add-ons
-            'addons' => 'nullable|array',
-            'addons.*.name' => 'required|string|max:255',
-            'addons.*.amount' => 'required|numeric|min:0',
-            'addons.*.tax' => 'nullable|numeric|min:0',
-            'addons.*.hsn' => 'nullable|string|max:255',
-            'addons.*.cgst' => 'nullable|numeric|min:0',
-            'addons.*.sgst' => 'nullable|numeric|min:0',
-            'addons.*.igst' => 'nullable|numeric|min:0',
+            'addons'                => 'nullable|array',
+            'addons.*.name'         => 'required|string|max:255',
+            'addons.*.amount'       => 'required|numeric|min:0',
+            'addons.*.tax'          => 'nullable|numeric|min:0',
+            'addons.*.hsn'          => 'nullable|string|max:255',
+            'addons.*.cgst'         => 'nullable|numeric|min:0',
+            'addons.*.sgst'         => 'nullable|numeric|min:0',
+            'addons.*.igst'         => 'nullable|numeric|min:0',
         ]);
 
-        $purchaseInvoice = PurchaseInvoiceModel::where('id', $id)->first();
+        // Ensure invoice belongs to current company
+        $purchaseInvoice = PurchaseInvoiceModel::where('id', $id)
+            ->where('company_id', Auth::user()->company_id)
+            ->first();
 
-        // $exists = PurchaseInvoiceModel::where('company_id', Auth::user()->company_id)
-        //     ->where('purchase_invoice_number', $request->input('purchase_invoice_no'))
-        //     ->exists();
+        if (!$purchaseInvoice) {
+            return response()->json([
+                'code'    => 404,
+                'success' => false,
+                'message' => 'Purchase Invoice not found.',
+                'data'    => [],
+            ], 404);
+        }
 
-        // if ($exists) {
-        //     return response()->json([
-        //         'code' => 422,
-        //         'success' => true,
-        //         'error' => 'The combination of company_id and purchase_invoice_number must be unique.',
-        //     ], 422);
-        // }
+        // Optional: enforce uniqueness of purchase_invoice_no within company, excluding current invoice
+        $exists = PurchaseInvoiceModel::where('company_id', Auth::user()->company_id)
+            ->where('purchase_invoice_no', $request->input('purchase_invoice_no'))
+            ->where('id', '!=', $id)
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'code'    => 422,
+                'success' => false,
+                'message' => 'The combination of company_id and purchase_invoice_no must be unique.',
+                'data'    => [],
+            ], 422);
+        }
         
+        // Header update
         $purchaseInvoiceUpdated = $purchaseInvoice->update([
-            'supplier_id' => $request->input('supplier_id'),
-            'name' => $request->input('name'),
-            'purchase_invoice_no' => $request->input('purchase_invoice_no'),
-            'purchase_invoice_date' => $request->input('purchase_invoice_date'),
-            'oa_no' => $request->input('oa_no'),
-            'ref_no' => $request->input('ref_no'),
-            'template' => $request->input('template'),
-            'user' => Auth::user()->id,
-            'cgst' => $request->input('cgst'),
-            'sgst' => $request->input('sgst'),
-            'igst' => $request->input('igst'),
-            'total' => $request->input('total'),
-            'gross' => $request->input('gross'),
-            'round_off' => $request->input('round_off'),
+            'supplier_id'          => $request->input('supplier_id'),
+            'name'                 => $request->input('name'),
+            'purchase_invoice_no'  => $request->input('purchase_invoice_no'),
+            'purchase_invoice_date'=> $request->input('purchase_invoice_date'),
+            'oa_no'                => $request->input('oa_no'),
+            'ref_no'               => $request->input('ref_no'),
+            'template'             => $request->input('template'),
+            'user'                 => Auth::user()->id,
+            'cgst'                 => $request->input('cgst'),
+            'sgst'                 => $request->input('sgst'),
+            'igst'                 => $request->input('igst'),
+            'total'                => $request->input('total'),
+            'gross'                => $request->input('gross'),
+            'round_off'            => $request->input('round_off'),
         ]);
 
-        $products = $request->input('products');
+        // ---------- Products ----------
+        $products         = $request->input('products');
         $requestProductIDs = [];
 
         foreach ($products as $productData) {
             $requestProductIDs[] = $productData['product_id'];
 
             $existingProduct = PurchaseInvoiceProductsModel::where('purchase_invoice_id', $id)
-                                                        ->where('product_id', $productData['product_id'])
-                                                        ->first();
+                ->where('product_id', $productData['product_id'])
+                ->first();
+
+            $commonData = [
+                'product_name' => $productData['product_name'],
+                'description'  => $productData['description'],
+                'quantity'     => $productData['quantity'],
+                'unit'         => $productData['unit'],
+                'price'        => $productData['price'],
+                'discount'     => $productData['discount'],
+                'discount_type'=> $productData['discount_type'],
+                'hsn'          => $productData['hsn'],
+                'tax'          => $productData['tax'],
+                'cgst'         => $productData['cgst'],
+                'sgst'         => $productData['sgst'],
+                'igst'         => $productData['igst'],
+                'amount'       => $productData['amount'],
+                'gross'        => $productData['gross'],
+                'channel'      => $productData['channel'] ?? null,
+                'godown'       => $productData['godown'] ?? null,
+            ];
 
             if ($existingProduct) {
                 // Update existing product
-                $existingProduct->update([
-                    'product_name' => $productData['product_name'],
-                    'description' => $productData['description'],
-                    'quantity' => $productData['quantity'],
-                    'unit' => $productData['unit'],
-                    'price' => $productData['price'],
-                    'discount' => $productData['discount'],
-                    'discount_type' => $productData['discount_type'],
-                    'hsn' => $productData['hsn'],
-                    'tax' => $productData['tax'],
-                    'cgst' => $productData['cgst'],
-                    'sgst' => $productData['sgst'],
-                    'igst' => $productData['igst'],
-                    'amount' => $productData['amount'],
-                    'channel' => $productData['channel'],
-                    'godown' => $productData['godown'],
-                ]);
+                $existingProduct->update($commonData);
             } else {
                 // Add new product
-                PurchaseInvoiceProductsModel::create([
+                PurchaseInvoiceProductsModel::create(array_merge($commonData, [
                     'purchase_invoice_id' => $id,
-                    'company_id' => Auth::user()->company_id,
-                    'product_id' => $productData['product_id'],
-                    'product_name' => $productData['product_name'],
-                    'description' => $productData['description'],
-                    'quantity' => $productData['quantity'],
-                    'unit' => $productData['unit'],
-                    'price' => $productData['price'],
-                    'discount' => $productData['discount'],
-                    'discount_type' => $productData['discount_type'],
-                    'hsn' => $productData['hsn'],
-                    'tax' => $productData['tax'],
-                    'cgst' => $productData['cgst'],
-                    'sgst' => $productData['sgst'],
-                    'igst' => $productData['igst'],
-                    'amount' => $productData['amount'],
-                    'channel' => $productData['channel'],
-                    'godown' => $productData['godown'],
-                ]);
+                    'company_id'          => Auth::user()->company_id,
+                    'product_id'          => $productData['product_id'],
+                ]));
             }
         }
 
+        // Delete products that are no longer present
         $productsDeleted = PurchaseInvoiceProductsModel::where('purchase_invoice_id', $id)
-                                                    ->whereNotIn('product_id', $requestProductIDs)
-                                                    ->delete();
+            ->whereNotIn('product_id', $requestProductIDs)
+            ->delete();
 
-        $addons = $request->input('addons');
+        // ---------- Addons ----------
+        $addons          = $request->input('addons', []); // default []
         $requestAddonIDs = [];
 
         foreach ($addons as $addonData) {
             $requestAddonIDs[] = $addonData['name'];
 
             $existingAddon = PurchaseInvoiceAddonsModel::where('purchase_invoice_id', $id)
-                                                ->where('name', $addonData['name'])
-                                                ->first();
+                ->where('name', $addonData['name'])
+                ->first();
+
+            $addonCommon = [
+                'amount' => $addonData['amount'],
+                'tax'    => $addonData['tax'],
+                'hsn'    => $addonData['hsn'],
+                'cgst'   => $addonData['cgst'],
+                'sgst'   => $addonData['sgst'],
+                'igst'   => $addonData['igst'],
+            ];
 
             if ($existingAddon) {
-                $existingAddon->update([
-                    'amount' => $addonData['amount'],
-                    'tax' => $addonData['tax'],
-                    'hsn' => $addonData['hsn'],
-                    'cgst' => $addonData['cgst'],
-                    'sgst' => $addonData['sgst'],
-                    'igst' => $addonData['igst'],
-                ]);
+                $existingAddon->update($addonCommon);
             } else {
-                PurchaseInvoiceAddonsModel::create([
+                PurchaseInvoiceAddonsModel::create(array_merge($addonCommon, [
                     'purchase_invoice_id' => $id,
-                    'company_id' => Auth::user()->company_id,
-                    'name' => $addonData['name'],
-                    'amount' => $addonData['amount'],
-                    'tax' => $addonData['tax'],
-                    'hsn' => $addonData['hsn'],
-                    'cgst' => $addonData['cgst'],
-                    'sgst' => $addonData['sgst'],
-                    'igst' => $addonData['igst'],
-                ]);
+                    'company_id'          => Auth::user()->company_id,
+                    'name'                => $addonData['name'],
+                ]));
             }
         }
 
+        // Delete removed addons (if any)
         PurchaseInvoiceAddonsModel::where('purchase_invoice_id', $id)
-                                    ->whereNotIn('name', $requestAddonIDs)
-                                    ->delete();
+            ->when(!empty($requestAddonIDs), function ($q) use ($requestAddonIDs) {
+                $q->whereNotIn('name', $requestAddonIDs);
+            })
+            ->when(empty($requestAddonIDs), function ($q) {
+                // if addons is empty array or not sent, delete all
+                $q->delete();
+            });
 
-        unset($purchaseInvoice['created_at'], $purchaseInvoice['updated_at']);
+        // Refresh model for response
+        $purchaseInvoice = $purchaseInvoice->fresh()->makeHidden(['created_at', 'updated_at']);
 
         return ($purchaseInvoiceUpdated || $productsDeleted)
-            ? response()->json(['code' => 200,'success' => true, 'message' => 'Purchase Invoice and products updated successfully!', 'data' => $purchaseInvoice], 200)
-            : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
+            ? response()->json([
+                'code'    => 200,
+                'success' => true,
+                'message' => 'Purchase Invoice and products updated successfully!',
+                'data'    => $purchaseInvoice,
+            ], 200)
+            : response()->json([
+                'code'    => 304,
+                'success' => false,
+                'message' => 'No changes detected.',
+                'data'    => $purchaseInvoice,
+            ], 304);
     }
+
+    // public function edit_purchase_invoice(Request $request, $id)
+    // {
+    //     $request->validate([
+    //         // Purchase Invoice Fields
+    //         'supplier_id' => 'required|integer|exists:t_suppliers,id',
+    //         'name' => 'nullable|string|exists:t_suppliers,name',
+    //         'purchase_invoice_no' => 'required|string|max:255',
+    //         'purchase_invoice_date' => 'required|date',
+    //         'oa_no' => 'required|string|max:50',
+    //         'ref_no' => 'required|string|max:50',
+    //         'template' => 'required|integer|exists:t_pdf_template,id',
+    //         'cgst' => 'nullable|numeric|min:0',
+    //         'sgst' => 'nullable|numeric|min:0',
+    //         'igst' => 'nullable|numeric|min:0',
+    //         'total' => 'required|numeric|min:0',
+    //         'gross' => 'required|numeric|min:0',
+    //         'round_off' => 'required|numeric',
+        
+    //         // Product Details (Array Validation)
+    //         'products' => 'required|array',
+    //         'products.*.product_id' => 'required|integer|exists:t_products,id',
+    //         'products.*.product_name' => 'required|string|max:255',
+    //         'products.*.description' => 'nullable|string',
+    //         'products.*.quantity' => 'required|integer|min:1',
+    //         'products.*.unit' => 'required|string|max:20',
+    //         'products.*.price' => 'required|numeric|min:0',
+    //         'products.*.discount' => 'nullable|numeric|min:0',
+    //         'products.*.discount_type' => 'required|in:percentage,value',
+    //         'products.*.hsn' => 'required|string|max:20',
+    //         'products.*.tax' => 'required|numeric|min:0',
+    //         'products.*.cgst' => 'nullable|numeric|min:0',
+    //         'products.*.sgst' => 'nullable|numeric|min:0',
+    //         'products.*.igst' => 'nullable|numeric|min:0',
+    //         'products.*.amount' => 'nullable|numeric|min:0',
+    //         'products.*.channel' => 'nullable|exists:t_channels,id',
+    //         'products.*.godown' => 'nullable|exists:t_godown,id',
+
+    //         // for add-ons
+    //         'addons' => 'nullable|array',
+    //         'addons.*.name' => 'required|string|max:255',
+    //         'addons.*.amount' => 'required|numeric|min:0',
+    //         'addons.*.tax' => 'nullable|numeric|min:0',
+    //         'addons.*.hsn' => 'nullable|string|max:255',
+    //         'addons.*.cgst' => 'nullable|numeric|min:0',
+    //         'addons.*.sgst' => 'nullable|numeric|min:0',
+    //         'addons.*.igst' => 'nullable|numeric|min:0',
+    //     ]);
+
+    //     $purchaseInvoice = PurchaseInvoiceModel::where('id', $id)->first();
+
+    //     // $exists = PurchaseInvoiceModel::where('company_id', Auth::user()->company_id)
+    //     //     ->where('purchase_invoice_number', $request->input('purchase_invoice_no'))
+    //     //     ->exists();
+
+    //     // if ($exists) {
+    //     //     return response()->json([
+    //     //         'code' => 422,
+    //     //         'success' => true,
+    //     //         'error' => 'The combination of company_id and purchase_invoice_number must be unique.',
+    //     //     ], 422);
+    //     // }
+        
+    //     $purchaseInvoiceUpdated = $purchaseInvoice->update([
+    //         'supplier_id' => $request->input('supplier_id'),
+    //         'name' => $request->input('name'),
+    //         'purchase_invoice_no' => $request->input('purchase_invoice_no'),
+    //         'purchase_invoice_date' => $request->input('purchase_invoice_date'),
+    //         'oa_no' => $request->input('oa_no'),
+    //         'ref_no' => $request->input('ref_no'),
+    //         'template' => $request->input('template'),
+    //         'user' => Auth::user()->id,
+    //         'cgst' => $request->input('cgst'),
+    //         'sgst' => $request->input('sgst'),
+    //         'igst' => $request->input('igst'),
+    //         'total' => $request->input('total'),
+    //         'gross' => $request->input('gross'),
+    //         'round_off' => $request->input('round_off'),
+    //     ]);
+
+    //     $products = $request->input('products');
+    //     $requestProductIDs = [];
+
+    //     foreach ($products as $productData) {
+    //         $requestProductIDs[] = $productData['product_id'];
+
+    //         $existingProduct = PurchaseInvoiceProductsModel::where('purchase_invoice_id', $id)
+    //                                                     ->where('product_id', $productData['product_id'])
+    //                                                     ->first();
+
+    //         if ($existingProduct) {
+    //             // Update existing product
+    //             $existingProduct->update([
+    //                 'product_name' => $productData['product_name'],
+    //                 'description' => $productData['description'],
+    //                 'quantity' => $productData['quantity'],
+    //                 'unit' => $productData['unit'],
+    //                 'price' => $productData['price'],
+    //                 'discount' => $productData['discount'],
+    //                 'discount_type' => $productData['discount_type'],
+    //                 'hsn' => $productData['hsn'],
+    //                 'tax' => $productData['tax'],
+    //                 'cgst' => $productData['cgst'],
+    //                 'sgst' => $productData['sgst'],
+    //                 'igst' => $productData['igst'],
+    //                 'amount' => $productData['amount'],
+    //                 'channel' => $productData['channel'],
+    //                 'godown' => $productData['godown'],
+    //             ]);
+    //         } else {
+    //             // Add new product
+    //             PurchaseInvoiceProductsModel::create([
+    //                 'purchase_invoice_id' => $id,
+    //                 'company_id' => Auth::user()->company_id,
+    //                 'product_id' => $productData['product_id'],
+    //                 'product_name' => $productData['product_name'],
+    //                 'description' => $productData['description'],
+    //                 'quantity' => $productData['quantity'],
+    //                 'unit' => $productData['unit'],
+    //                 'price' => $productData['price'],
+    //                 'discount' => $productData['discount'],
+    //                 'discount_type' => $productData['discount_type'],
+    //                 'hsn' => $productData['hsn'],
+    //                 'tax' => $productData['tax'],
+    //                 'cgst' => $productData['cgst'],
+    //                 'sgst' => $productData['sgst'],
+    //                 'igst' => $productData['igst'],
+    //                 'amount' => $productData['amount'],
+    //                 'channel' => $productData['channel'],
+    //                 'godown' => $productData['godown'],
+    //             ]);
+    //         }
+    //     }
+
+    //     $productsDeleted = PurchaseInvoiceProductsModel::where('purchase_invoice_id', $id)
+    //                                                 ->whereNotIn('product_id', $requestProductIDs)
+    //                                                 ->delete();
+
+    //     $addons = $request->input('addons');
+    //     $requestAddonIDs = [];
+
+    //     foreach ($addons as $addonData) {
+    //         $requestAddonIDs[] = $addonData['name'];
+
+    //         $existingAddon = PurchaseInvoiceAddonsModel::where('purchase_invoice_id', $id)
+    //                                             ->where('name', $addonData['name'])
+    //                                             ->first();
+
+    //         if ($existingAddon) {
+    //             $existingAddon->update([
+    //                 'amount' => $addonData['amount'],
+    //                 'tax' => $addonData['tax'],
+    //                 'hsn' => $addonData['hsn'],
+    //                 'cgst' => $addonData['cgst'],
+    //                 'sgst' => $addonData['sgst'],
+    //                 'igst' => $addonData['igst'],
+    //             ]);
+    //         } else {
+    //             PurchaseInvoiceAddonsModel::create([
+    //                 'purchase_invoice_id' => $id,
+    //                 'company_id' => Auth::user()->company_id,
+    //                 'name' => $addonData['name'],
+    //                 'amount' => $addonData['amount'],
+    //                 'tax' => $addonData['tax'],
+    //                 'hsn' => $addonData['hsn'],
+    //                 'cgst' => $addonData['cgst'],
+    //                 'sgst' => $addonData['sgst'],
+    //                 'igst' => $addonData['igst'],
+    //             ]);
+    //         }
+    //     }
+
+    //     PurchaseInvoiceAddonsModel::where('purchase_invoice_id', $id)
+    //                                 ->whereNotIn('name', $requestAddonIDs)
+    //                                 ->delete();
+
+    //     unset($purchaseInvoice['created_at'], $purchaseInvoice['updated_at']);
+
+    //     return ($purchaseInvoiceUpdated || $productsDeleted)
+    //         ? response()->json(['code' => 200,'success' => true, 'message' => 'Purchase Invoice and products updated successfully!', 'data' => $purchaseInvoice], 200)
+    //         : response()->json(['code' => 304,'success' => false, 'message' => 'No changes detected.'], 304);
+    // }
 
     public function delete_purchase_invoice($id)
     {
