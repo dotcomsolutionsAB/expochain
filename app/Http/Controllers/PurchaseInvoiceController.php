@@ -197,149 +197,453 @@ class PurchaseInvoiceController extends Controller
 
     // view
     // helper function
-     private function convertNumberToWords($num) {
+    private function convertNumberToWords($num) {
         $formatter = new NumberFormatter("en", NumberFormatter::SPELLOUT);
         return ucfirst($formatter->format($num)) . ' Only';
     }
     public function view_purchase_invoice(Request $request, $id = null)
     {
         // Get filter inputs
-        $supplierId = $request->input('supplier_id');
-        $name = $request->input('name');
-        $purchaseInvoiceNo = $request->input('purchase_invoice_no');
-        $purchaseInvoiceDate = $request->input('purchase_invoice_date');
-        $purchaseOrderNo = $request->input('purchase_order_no');
-        $productIds = $request->input('product_ids');
-        $limit = $request->input('limit', 10);
-        $offset = $request->input('offset', 0);
+        $supplierIdRaw         = $request->input('supplier_id');          // "5" or "5,12"
+        $nameRaw               = $request->input('name');                 // "Expo Chain,Bearing"
+        $purchaseInvoiceNoRaw  = $request->input('purchase_invoice_no');  // "PI/2025/001,PI/2025/010"
+        $purchaseInvoiceIdRaw  = $request->input('purchase_invoice_id');  // "101,205,309" -> id column
+        $oaNoRaw               = $request->input('oa_no');                // "OA/1,OA/2"
+        $refNoRaw              = $request->input('ref_no');               // "REF1,REF2"
+        $purchaseInvoiceDate   = $request->input('purchase_invoice_date'); // exact date
+        $dateFrom              = $request->input('date_from');            // "2025-01-01"
+        $dateTo                = $request->input('date_to');              // "2025-12-31"
+        $productIds            = $request->input('product_ids');          // "11,15,20"
+        $limit                 = $request->input('limit', 10);
+        $offset                = $request->input('offset', 0);
 
-        // Query Purchase Invoices
+        // Base query
         $query = PurchaseInvoiceModel::with([
-            'products' => function ($query) {
-                $query->select('purchase_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',
-                    DB::raw('(tax / 2) as cgst_rate'),
-                    DB::raw('(tax / 2) as sgst_rate'),
-                    DB::raw('(tax) as igst_rate'),
-                    'amount', 'channel', 'godown', 'returned', 'sold');
-            },
-            'addons' => function ($query) {
-                $query->select('purchase_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
-            },
-            'get_user:id,name',
-            'supplier' => function ($q) {
-                // Select key supplier columns and include addresses
-                $q->select('id', 'supplier_id')
-                  ->with(['addresses' => function ($query) {
-                      $query->select('supplier_id', 'state');
-                  }]);
-            }
-        ])
-        ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 'purchase_invoice_date',
-            DB::raw('DATE_FORMAT(purchase_invoice_date, "%d-%m-%Y") as purchase_invoice_date_formatted'),
-            'oa_no', 'ref_no', 'template', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
-        )
-        ->where('company_id', Auth::user()->company_id);
+                'products' => function ($query) {
+                    $query->select(
+                        'purchase_invoice_id',
+                        'product_id',
+                        'product_name',
+                        'description',
+                        'quantity',
+                        'unit',
+                        'price',
+                        'discount',
+                        'discount_type',
+                        'hsn',
+                        'tax',
+                        DB::raw('(tax / 2) as cgst_rate'),
+                        DB::raw('(tax / 2) as sgst_rate'),
+                        DB::raw('(tax) as igst_rate'),
+                        'cgst',
+                        'sgst',
+                        'igst',
+                        'amount',
+                        'gross',
+                        'channel',
+                        'godown',
+                        'returned',
+                        'sold'
+                    );
+                },
+                'addons' => function ($query) {
+                    $query->select(
+                        'purchase_invoice_id',
+                        'name',
+                        'amount',
+                        'tax',
+                        'hsn',
+                        'cgst',
+                        'sgst',
+                        'igst'
+                    );
+                },
+                'get_user:id,name',
+                'get_template:id,name',
+                'supplier' => function ($q) {
+                    $q->select('id', 'supplier_id')
+                    ->with(['addresses' => function ($query) {
+                        $query->select('supplier_id', 'state');
+                    }]);
+                }
+            ])
+            ->select(
+                'id',
+                'supplier_id',
+                'name',
+                'purchase_invoice_no',
+                'purchase_invoice_date',
+                DB::raw('DATE_FORMAT(purchase_invoice_date, "%d-%m-%Y") as purchase_invoice_date_formatted'),
+                'oa_no',
+                'ref_no',
+                'template',
+                'user',
+                'cgst',
+                'sgst',
+                'igst',
+                'total',
+                'gross',
+                'round_off'
+            )
+            ->where('company_id', Auth::user()->company_id);
 
-        // 🔹 **Fetch Single Purchase Invoice by ID**
+        // 🔹 1) Single Purchase Invoice by ID (route param)
         if ($id) {
             $purchaseInvoice = $query->where('id', $id)->first();
+
             if (!$purchaseInvoice) {
                 return response()->json([
-                    'code' => 404,
+                    'code'    => 200,
                     'success' => false,
                     'message' => 'Purchase Invoice not found!',
-                ], 404);
+                    'data'    => null,
+                ], 200);
             }
 
-            // Transform Single Purchase Invoice
+            // Format date
+            $purchaseInvoice->purchase_invoice_date = $purchaseInvoice->purchase_invoice_date_formatted;
+            unset($purchaseInvoice->purchase_invoice_date_formatted);
+
+            // Amount in words + total formatting
             $purchaseInvoice->amount_in_words = $this->convertNumberToWords($purchaseInvoice->total);
-            $purchaseInvoice->total = is_numeric($purchaseInvoice->total) ? number_format((float) $purchaseInvoice->total, 2) : $purchaseInvoice->total;
-            $purchaseInvoice->contact_person = $purchaseInvoice->get_user ? ['id' => $purchaseInvoice->get_user->id, 'name' => $purchaseInvoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
-            $purchaseInvoice->user = $purchaseInvoice->get_user ? ['id' => $purchaseInvoice->get_user->id, 'name' => $purchaseInvoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            $purchaseInvoice->total = is_numeric($purchaseInvoice->total)
+                ? number_format((float) $purchaseInvoice->total, 2)
+                : $purchaseInvoice->total;
+
+            // User / contact
+            $purchaseInvoice->user = $purchaseInvoice->get_user
+                ? ['id' => $purchaseInvoice->get_user->id, 'name' => $purchaseInvoice->get_user->name]
+                : ['id' => null, 'name' => 'Unknown'];
+            $purchaseInvoice->contact_person = $purchaseInvoice->user;
             unset($purchaseInvoice->get_user);
 
+            // Template
+            $purchaseInvoice->template = $purchaseInvoice->get_template
+                ? ['id' => $purchaseInvoice->get_template->id, 'name' => $purchaseInvoice->get_template->name]
+                : ['id' => null, 'name' => 'Unknown'];
+            unset($purchaseInvoice->get_template);
+
+            // Products / addons – clean FK
+            $purchaseInvoice->products->transform(
+                fn ($product) => collect($product)->except(['purchase_invoice_id'])
+            );
+            $purchaseInvoice->addons->transform(
+                fn ($addon) => collect($addon)->except(['purchase_invoice_id'])
+            );
+
+            // Supplier: only state
+            if ($purchaseInvoice->supplier) {
+                $state = optional($purchaseInvoice->supplier->addresses->first())->state;
+                $purchaseInvoice->supplier = ['state' => $state];
+            } else {
+                $purchaseInvoice->supplier = null;
+            }
+
             return response()->json([
-                'code' => 200,
+                'code'    => 200,
                 'success' => true,
                 'message' => 'Purchase Invoice fetched successfully!',
-                'data' => $purchaseInvoice,
+                'data'    => $purchaseInvoice,
             ], 200);
         }
 
-        // 🔹 **Apply Filters for Listing**
-        if ($supplierId) {
-            $query->where('supplier_id', $supplierId);
+        // 🔹 2) Filters for list
+
+        // supplier_id: "5,12"
+        if (!empty($supplierIdRaw)) {
+            $supplierIds = array_filter(array_map('intval', explode(',', $supplierIdRaw)));
+            if (!empty($supplierIds)) {
+                $query->whereIn('supplier_id', $supplierIds);
+            }
         }
-        if ($name) {
-            $query->where('name', 'LIKE', '%' . $name . '%');
+
+        // name: "Expo Chain,Bearing Stores"
+        if (!empty($nameRaw)) {
+            $names = array_filter(array_map('trim', explode(',', $nameRaw)));
+            if (!empty($names)) {
+                $query->where(function ($q) use ($names) {
+                    foreach ($names as $name) {
+                        $q->orWhere('name', 'LIKE', '%' . $name . '%');
+                    }
+                });
+            }
         }
-        if ($purchaseInvoiceNo) {
-            $query->where('purchase_invoice_no', 'LIKE', '%' . $purchaseInvoiceNo . '%');
+
+        // purchase_invoice_no: "PI/2025/001,PI/2025/010"
+        if (!empty($purchaseInvoiceNoRaw)) {
+            $piNos = array_filter(array_map('trim', explode(',', $purchaseInvoiceNoRaw)));
+            if (!empty($piNos)) {
+                $query->where(function ($q) use ($piNos) {
+                    foreach ($piNos as $no) {
+                        $q->orWhere('purchase_invoice_no', 'LIKE', '%' . $no . '%');
+                    }
+                });
+            }
         }
-        if ($purchaseInvoiceDate) {
+
+        // 🔹 NEW: purchase_invoice_id: "101,205,309" (id column)
+        if (!empty($purchaseInvoiceIdRaw)) {
+            $piIds = array_filter(array_map('intval', explode(',', $purchaseInvoiceIdRaw)));
+            if (!empty($piIds)) {
+                $query->whereIn('id', $piIds);
+            }
+        }
+
+        // 🔹 NEW: oa_no: "OA/2025/001,OA/2025/050"
+        if (!empty($oaNoRaw)) {
+            $oaNos = array_filter(array_map('trim', explode(',', $oaNoRaw)));
+            if (!empty($oaNos)) {
+                $query->where(function ($q) use ($oaNos) {
+                    foreach ($oaNos as $no) {
+                        $q->orWhere('oa_no', 'LIKE', '%' . $no . '%');
+                    }
+                });
+            }
+        }
+
+        // 🔹 NEW: ref_no: "REF/123,REF/789"
+        if (!empty($refNoRaw)) {
+            $refNos = array_filter(array_map('trim', explode(',', $refNoRaw)));
+            if (!empty($refNos)) {
+                $query->where(function ($q) use ($refNos) {
+                    foreach ($refNos as $no) {
+                        $q->orWhere('ref_no', 'LIKE', '%' . $no . '%');
+                    }
+                });
+            }
+        }
+
+        // Date filters:
+        // Priority: date_from/date_to range, else single purchase_invoice_date
+        if ($dateFrom && $dateTo) {
+            $query->whereBetween('purchase_invoice_date', [$dateFrom, $dateTo]);
+        } elseif ($dateFrom) {
+            $query->whereDate('purchase_invoice_date', '>=', $dateFrom);
+        } elseif ($dateTo) {
+            $query->whereDate('purchase_invoice_date', '<=', $dateTo);
+        } elseif ($purchaseInvoiceDate) {
             $query->whereDate('purchase_invoice_date', $purchaseInvoiceDate);
         }
-        if ($purchaseOrderNo) {
-            $query->where('purchase_order_no', 'LIKE', '%' . $purchaseOrderNo . '%');
-        }
+
+        // product_ids: "11,15,20"
         if (!empty($productIds)) {
-            $productIdArray = explode(',', $productIds);
-            $query->whereHas('products', function ($query) use ($productIdArray) {
-                $query->whereIn('product_id', $productIdArray);
-            });
+            $productIdArray = array_filter(array_map('intval', explode(',', $productIds)));
+            if (!empty($productIdArray)) {
+                $query->whereHas('products', function ($q) use ($productIdArray) {
+                    $q->whereIn('product_id', $productIdArray);
+                });
+            }
         }
 
-        // Get total record count before applying limit
+        // 3) Count before pagination
         $totalRecords = $query->count();
 
-        // Order by latest purchase_invoice_date
-        $query->orderBy('purchase_invoice_date', 'desc');
+        // 4) Order + pagination
+        $query->orderBy('purchase_invoice_date', 'desc')
+            ->offset($offset)
+            ->limit($limit);
 
-        $query->offset($offset)->limit($limit);
-
-        // Fetch paginated results
         $get_purchase_invoices = $query->get();
 
         if ($get_purchase_invoices->isEmpty()) {
             return response()->json([
-                'code' => 404,
-                'success' => false,
-                'message' => 'No Purchase Invoices found!',
-            ], 404);
+                'code'          => 200,
+                'success'       => true,
+                'message'       => 'No Purchase Invoices found!',
+                'data'          => [],
+                'count'         => 0,
+                'total_records' => 0,
+            ], 200);
         }
 
-        // Transform Data
+        // 5) Transform list
         $get_purchase_invoices->transform(function ($invoice) {
-            $invoice->purchase_order_date = $invoice->purchase_invoice_date_formatted;
+            $invoice->purchase_invoice_date = $invoice->purchase_invoice_date_formatted;
             unset($invoice->purchase_invoice_date_formatted);
+
             $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
-            $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
-            $invoice->contact_person = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
-            $invoice->user = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+            $invoice->total = is_numeric($invoice->total)
+                ? number_format((float) $invoice->total, 2)
+                : $invoice->total;
+
+            $invoice->user = $invoice->get_user
+                ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name]
+                : ['id' => null, 'name' => 'Unknown'];
+            $invoice->contact_person = $invoice->user;
             unset($invoice->get_user);
 
+            $invoice->template = $invoice->get_template
+                ? ['id' => $invoice->get_template->id, 'name' => $invoice->get_template->name]
+                : ['id' => null, 'name' => 'Unknown'];
+            unset($invoice->get_template);
 
-            // Transform client: Only return state from addresses for each invoice
-            if ($invoice->client) {
-                $state = optional($invoice->client->addresses->first())->state;
-                $invoice->client = ['state' => $state];
+            if ($invoice->supplier) {
+                $state = optional($invoice->supplier->addresses->first())->state;
+                $invoice->supplier = ['state' => $state];
             } else {
-                $invoice->client = null;
+                $invoice->supplier = null;
             }
-            
+
+            $invoice->products->transform(
+                fn ($product) => collect($product)->except(['purchase_invoice_id'])
+            );
+            $invoice->addons->transform(
+                fn ($addon) => collect($addon)->except(['purchase_invoice_id'])
+            );
+
             return $invoice;
         });
 
-        // Return response for list
+        // 6) Response
         return response()->json([
-            'code' => 200,
-            'success' => true,
-            'message' => 'Purchase Invoices fetched successfully!',
-            'data' => $get_purchase_invoices,
-            'count' => $get_purchase_invoices->count(),
+            'code'          => 200,
+            'success'       => true,
+            'message'       => 'Purchase Invoices fetched successfully!',
+            'data'          => $get_purchase_invoices,
+            'count'         => $get_purchase_invoices->count(),
             'total_records' => $totalRecords,
         ], 200);
     }
+
+    // public function view_purchase_invoice(Request $request, $id = null)
+    // {
+    //     // Get filter inputs
+    //     $supplierId = $request->input('supplier_id');
+    //     $name = $request->input('name');
+    //     $purchaseInvoiceNo = $request->input('purchase_invoice_no');
+    //     $purchaseInvoiceDate = $request->input('purchase_invoice_date');
+    //     $purchaseOrderNo = $request->input('purchase_order_no');
+    //     $productIds = $request->input('product_ids');
+    //     $limit = $request->input('limit', 10);
+    //     $offset = $request->input('offset', 0);
+
+    //     // Query Purchase Invoices
+    //     $query = PurchaseInvoiceModel::with([
+    //         'products' => function ($query) {
+    //             $query->select('purchase_invoice_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',
+    //                 DB::raw('(tax / 2) as cgst_rate'),
+    //                 DB::raw('(tax / 2) as sgst_rate'),
+    //                 DB::raw('(tax) as igst_rate'),
+    //                 'amount', 'channel', 'godown', 'returned', 'sold');
+    //         },
+    //         'addons' => function ($query) {
+    //             $query->select('purchase_invoice_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
+    //         },
+    //         'get_user:id,name',
+    //         'supplier' => function ($q) {
+    //             // Select key supplier columns and include addresses
+    //             $q->select('id', 'supplier_id')
+    //               ->with(['addresses' => function ($query) {
+    //                   $query->select('supplier_id', 'state');
+    //               }]);
+    //         }
+    //     ])
+    //     ->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 'purchase_invoice_date',
+    //         DB::raw('DATE_FORMAT(purchase_invoice_date, "%d-%m-%Y") as purchase_invoice_date_formatted'),
+    //         'oa_no', 'ref_no', 'template', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
+    //     )
+    //     ->where('company_id', Auth::user()->company_id);
+
+    //     // 🔹 **Fetch Single Purchase Invoice by ID**
+    //     if ($id) {
+    //         $purchaseInvoice = $query->where('id', $id)->first();
+    //         if (!$purchaseInvoice) {
+    //             return response()->json([
+    //                 'code' => 404,
+    //                 'success' => false,
+    //                 'message' => 'Purchase Invoice not found!',
+    //             ], 404);
+    //         }
+
+    //         // Transform Single Purchase Invoice
+    //         $purchaseInvoice->amount_in_words = $this->convertNumberToWords($purchaseInvoice->total);
+    //         $purchaseInvoice->total = is_numeric($purchaseInvoice->total) ? number_format((float) $purchaseInvoice->total, 2) : $purchaseInvoice->total;
+    //         $purchaseInvoice->contact_person = $purchaseInvoice->get_user ? ['id' => $purchaseInvoice->get_user->id, 'name' => $purchaseInvoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+    //         $purchaseInvoice->user = $purchaseInvoice->get_user ? ['id' => $purchaseInvoice->get_user->id, 'name' => $purchaseInvoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+    //         unset($purchaseInvoice->get_user);
+
+    //         return response()->json([
+    //             'code' => 200,
+    //             'success' => true,
+    //             'message' => 'Purchase Invoice fetched successfully!',
+    //             'data' => $purchaseInvoice,
+    //         ], 200);
+    //     }
+
+    //     // 🔹 **Apply Filters for Listing**
+    //     if ($supplierId) {
+    //         $query->where('supplier_id', $supplierId);
+    //     }
+    //     if ($name) {
+    //         $query->where('name', 'LIKE', '%' . $name . '%');
+    //     }
+    //     if ($purchaseInvoiceNo) {
+    //         $query->where('purchase_invoice_no', 'LIKE', '%' . $purchaseInvoiceNo . '%');
+    //     }
+    //     if ($purchaseInvoiceDate) {
+    //         $query->whereDate('purchase_invoice_date', $purchaseInvoiceDate);
+    //     }
+    //     if ($purchaseOrderNo) {
+    //         $query->where('purchase_order_no', 'LIKE', '%' . $purchaseOrderNo . '%');
+    //     }
+    //     if (!empty($productIds)) {
+    //         $productIdArray = explode(',', $productIds);
+    //         $query->whereHas('products', function ($query) use ($productIdArray) {
+    //             $query->whereIn('product_id', $productIdArray);
+    //         });
+    //     }
+
+    //     // Get total record count before applying limit
+    //     $totalRecords = $query->count();
+
+    //     // Order by latest purchase_invoice_date
+    //     $query->orderBy('purchase_invoice_date', 'desc');
+
+    //     $query->offset($offset)->limit($limit);
+
+    //     // Fetch paginated results
+    //     $get_purchase_invoices = $query->get();
+
+    //     if ($get_purchase_invoices->isEmpty()) {
+    //         return response()->json([
+    //             'code' => 404,
+    //             'success' => false,
+    //             'message' => 'No Purchase Invoices found!',
+    //         ], 404);
+    //     }
+
+    //     // Transform Data
+    //     $get_purchase_invoices->transform(function ($invoice) {
+    //         $invoice->purchase_order_date = $invoice->purchase_invoice_date_formatted;
+    //         unset($invoice->purchase_invoice_date_formatted);
+    //         $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
+    //         $invoice->total = is_numeric($invoice->total) ? number_format((float) $invoice->total, 2) : $invoice->total;
+    //         $invoice->contact_person = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+    //         $invoice->user = $invoice->get_user ? ['id' => $invoice->get_user->id, 'name' => $invoice->get_user->name] : ['id' => null, 'name' => 'Unknown'];
+    //         unset($invoice->get_user);
+
+
+    //         // Transform client: Only return state from addresses for each invoice
+    //         if ($invoice->client) {
+    //             $state = optional($invoice->client->addresses->first())->state;
+    //             $invoice->client = ['state' => $state];
+    //         } else {
+    //             $invoice->client = null;
+    //         }
+            
+    //         return $invoice;
+    //     });
+
+    //     // Return response for list
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => 'Purchase Invoices fetched successfully!',
+    //         'data' => $get_purchase_invoices,
+    //         'count' => $get_purchase_invoices->count(),
+    //         'total_records' => $totalRecords,
+    //     ], 200);
+    // }
 
     // update
     public function edit_purchase_invoice(Request $request, $id)
