@@ -42,6 +42,11 @@ class PurchaseInvoiceModel extends Model
         return $this->hasMany(PurchaseInvoiceAddonsModel::class, 'purchase_invoice_id', 'id');
     }
 
+    public function get_template()
+    {
+        return $this->belongsTo(PdfTemplateModel::class, 'template', 'id');
+    }
+    
     public function supplier()
     {
         return $this->belongsTo(SuppliersModel::class, 'supplier_id', 'id');
