@@ -31,17 +31,54 @@ class ChannelController extends Controller
         ], 201);
     }
 
-    public function retrieve()
+    // public function retrieve()
+    // {
+    //     $channels = ChannelModel::all();
+
+    //     return response()->json([
+    //         'code' => 200,
+    //         'success' => true,
+    //         'message' => 'Channels fetched successfully!',
+    //         'data' => $channels->makeHidden(['created_at', 'updated_at'])
+    //     ], 200);
+    // }
+    
+    public function retrieve(Request $request, $id = null)
     {
+        // If an id is provided, fetch the channel by id
+        if ($id) {
+            $channel = ChannelModel::find($id);
+
+            // Check if the channel exists
+            if (!$channel) {
+                return response()->json([
+                    'code'    => 404,
+                    'success' => false,
+                    'message' => 'Channel not found!',
+                    'data'    => null,
+                ], 404);
+            }
+
+            // Return the channel data excluding created_at and updated_at
+            return response()->json([
+                'code'    => 200,
+                'success' => true,
+                'message' => 'Channel fetched successfully!',
+                'data'    => $channel->makeHidden(['created_at', 'updated_at']),
+            ], 200);
+        }
+
+        // If no id is provided, fetch all channels
         $channels = ChannelModel::all();
 
         return response()->json([
-            'code' => 200,
+            'code'    => 200,
             'success' => true,
             'message' => 'Channels fetched successfully!',
-            'data' => $channels->makeHidden(['created_at', 'updated_at'])
+            'data'    => $channels->makeHidden(['created_at', 'updated_at']),
         ], 200);
     }
+
 
     public function update(Request $request, $id)
     {
