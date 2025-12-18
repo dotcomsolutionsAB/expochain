@@ -601,9 +601,9 @@ class SalesOrderController extends Controller
                   ->where('product_id', $productId); // Ensure product_id is filtered here
         }])
         ->select('id', 'sales_order_no')
-        ->where('client_id', $clientId)
+        ->where('client_id', $clientId) // Filter by client_id
         ->whereHas('products', function ($query) use ($productId) {
-            $query->where('product_id', $productId); // Check if the product exists in the relationship
+            $query->where('product_id', $productId); // Filter by product_id in products table
         });
 
     // Get total record count before applying limit
