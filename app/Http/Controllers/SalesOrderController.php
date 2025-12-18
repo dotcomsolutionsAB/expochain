@@ -577,84 +577,82 @@ class SalesOrderController extends Controller
     }
 
     // Get sales order by product id and client id
-    // Get Sales Orders by Product
     public function getSalesOrderByProduct(Request $request)
-    {
-        // Get filter inputs
-        $clientId = $request->input('client_id');
-        $productId = $request->input('product_id');
-        $limit = $request->input('limit', 10);
-        $offset = $request->input('offset', 0);
+{
+    // Get filter inputs
+    $clientId = $request->input('client_id');
+    $productId = $request->input('product_id');
+    $limit = $request->input('limit', 10);
+    $offset = $request->input('offset', 0);
 
-        // Check if client_id and product_id are provided
-        if (!$clientId || !$productId) {
-            return response()->json([
-                'code'    => 400,
-                'success' => false,
-                'message' => 'Client ID and Product ID are required!',
-                'data'    => null,
-            ], 400);
-        }
+    // Check if client_id and product_id are provided
+    if (!$clientId || !$productId) {
+        return response()->json([
+            'code'    => 400,
+            'success' => false,
+            'message' => 'Client ID and Product ID are required!',
+            'data'    => null,
+        ], 400);
+    }
 
-        // Query Sales Orders based on client_id and product_id
-        $query = SalesOrderModel::with(['products' => function ($query) use ($productId) {
-                $query->select('sales_order_id', 'product_id', 'product_name', 'quantity')
-                    ->where('product_id', $productId);
-            }])
-            ->select('id', 'sales_order_no')
-            ->where('client_id', $clientId)
-            ->whereHas('products', function ($query) use ($productId) {
-                $query->where('product_id', $productId);
-            });
-
-        // Get total record count before applying limit
-        $totalRecords = $query->count();
-
-        // Apply pagination
-        $query->offset($offset)->limit($limit);
-
-        // Fetch sales orders with related product information
-        $salesOrders = $query->get();
-
-        // Check if any sales orders are found
-        if ($salesOrders->isEmpty()) {
-            return response()->json([
-                'code'          => 200,
-                'success'       => true,
-                'message'       => 'No Sales Orders found for the given client and product.',
-                'data'          => [],
-                'count'         => 0,
-                'total_records' => $totalRecords,
-            ], 200);
-        }
-
-        // Transform the data
-        $salesOrders->transform(function ($order) {
-            $orderData = [
-                'sales_order_id' => $order->id,
-                'sales_order_no' => $order->sales_order_no,
-                'products' => $order->products->map(function ($product) {
-                    return [
-                        'product_qty' => $product->quantity,
-                        'product_name' => $product->product_name,
-                        'product_id' => $product->product_id,
-                    ];
-                }),
-            ];
-            return $orderData;
+    // Query Sales Orders based on client_id and product_id
+    $query = SalesOrderModel::with(['products' => function ($query) use ($productId) {
+            $query->select('sales_order_id', 'product_id', 'product_name', 'quantity')
+                  ->where('product_id', $productId); // Ensure product_id is filtered here
+        }])
+        ->select('id', 'sales_order_no')
+        ->where('client_id', $clientId)
+        ->whereHas('products', function ($query) use ($productId) {
+            $query->where('product_id', $productId); // Check if the product exists in the relationship
         });
 
-        // Return the response with sales order data
+    // Get total record count before applying limit
+    $totalRecords = $query->count();
+
+    // Apply pagination
+    $query->offset($offset)->limit($limit);
+
+    // Fetch sales orders with related product information
+    $salesOrders = $query->get();
+
+    // Check if any sales orders are found
+    if ($salesOrders->isEmpty()) {
         return response()->json([
             'code'          => 200,
             'success'       => true,
-            'message'       => 'Sales Orders fetched successfully!',
-            'data'          => $salesOrders,
-            'count'         => $salesOrders->count(),
+            'message'       => 'No Sales Orders found for the given client and product.',
+            'data'          => [],
+            'count'         => 0,
             'total_records' => $totalRecords,
         ], 200);
     }
 
+    // Transform the data
+    $salesOrders->transform(function ($order) {
+        $orderData = [
+            'sales_order_id' => $order->id,
+            'sales_order_no' => $order->sales_order_no,
+            'products' => $order->products->map(function ($product) {
+                return [
+                    'product_qty' => $product->quantity,
+                    'product_name' => $product->product_name,
+                    'product_id' => $product->product_id,
+                ];
+            }),
+        ];
+        return $orderData;
+    });
+
+    // Return the response with sales order data
+    return response()->json([
+        'code'          => 200,
+        'success'       => true,
+        'message'       => 'Sales Orders fetched successfully!',
+        'data'          => $salesOrders,
+        'count'         => $salesOrders->count(),
+        'total_records' => $totalRecords,
+    ], 200);
+}
 
     // migrate
     // public function importSalesOrders()
