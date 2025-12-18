@@ -586,20 +586,26 @@ class SalesOrderController extends Controller
         $limit = $request->input('limit', 10);
         $offset = $request->input('offset', 0);
 
-        // Query Sales Orders by Product
-        $query = SalesOrderModel::with([
-            'products' => function ($query) use ($productId) {
-                $query->select(
-                    'sales_order_id', 'product_id', 'product_name', 'quantity', 
-                    'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',
-                    'amount', 'channel'
-                )
-                ->where('product_id', $productId); // Filter by product_id
-            }
-        ])
-        ->select('id', 'sales_order_no')
-        ->where('company_id', Auth::user()->company_id)
-        ->where('client_id', $clientId); // Filter by client_id
+        // Check if client_id and product_id are provided
+        if (!$clientId || !$productId) {
+            return response()->json([
+                'code'    => 400,
+                'success' => false,
+                'message' => 'Client ID and Product ID are required!',
+                'data'    => null,
+            ], 400);
+        }
+
+        // Query Sales Orders based on client_id and product_id
+        $query = SalesOrderModel::with(['products' => function ($query) use ($productId) {
+                $query->select('sales_order_id', 'product_id', 'product_name', 'quantity')
+                    ->where('product_id', $productId);
+            }])
+            ->select('id', 'sales_order_no')
+            ->where('client_id', $clientId)
+            ->whereHas('products', function ($query) use ($productId) {
+                $query->where('product_id', $productId);
+            });
 
         // Get total record count before applying limit
         $totalRecords = $query->count();
@@ -607,45 +613,48 @@ class SalesOrderController extends Controller
         // Apply pagination
         $query->offset($offset)->limit($limit);
 
-        // Fetch paginated results
-        $get_sales_orders = $query->get();
+        // Fetch sales orders with related product information
+        $salesOrders = $query->get();
 
-        if ($get_sales_orders->isEmpty()) {
+        // Check if any sales orders are found
+        if ($salesOrders->isEmpty()) {
             return response()->json([
                 'code'          => 200,
                 'success'       => true,
-                'message'       => 'No Sales Orders available for the specified product.',
+                'message'       => 'No Sales Orders found for the given client and product.',
                 'data'          => [],
                 'count'         => 0,
-                'total_records' => 0,
+                'total_records' => $totalRecords,
             ], 200);
         }
 
-        // Transform Data
-        $get_sales_orders->transform(function ($order) {
-            $order->products->transform(function ($product) {
-                $product->product_qty = $product->quantity; // Add quantity to response
-                unset($product->quantity); // Remove quantity from product details
-                return $product;
-            });
-
-            return [
+        // Transform the data
+        $salesOrders->transform(function ($order) {
+            $orderData = [
                 'sales_order_id' => $order->id,
                 'sales_order_no' => $order->sales_order_no,
-                'products' => $order->products,
+                'products' => $order->products->map(function ($product) {
+                    return [
+                        'product_qty' => $product->quantity,
+                        'product_name' => $product->product_name,
+                        'product_id' => $product->product_id,
+                    ];
+                }),
             ];
+            return $orderData;
         });
 
-        // Return response for list
+        // Return the response with sales order data
         return response()->json([
-            'code' => 200,
-            'success' => true,
-            'message' => 'Sales Orders by Product fetched successfully!',
-            'data' => $get_sales_orders,
-            'count' => $get_sales_orders->count(),
+            'code'          => 200,
+            'success'       => true,
+            'message'       => 'Sales Orders fetched successfully!',
+            'data'          => $salesOrders,
+            'count'         => $salesOrders->count(),
             'total_records' => $totalRecords,
         ], 200);
     }
+
 
     // migrate
     // public function importSalesOrders()
