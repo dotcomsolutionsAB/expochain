@@ -42,7 +42,7 @@ class ChannelController extends Controller
     //         'data' => $channels->makeHidden(['created_at', 'updated_at'])
     //     ], 200);
     // }
-    
+
     public function retrieve(Request $request, $id = null)
     {
         // If an id is provided, fetch the channel by id
@@ -52,33 +52,51 @@ class ChannelController extends Controller
             // Check if the channel exists
             if (!$channel) {
                 return response()->json([
-                    'code'    => 404,
-                    'success' => false,
+                    'code'    => 200,
+                    'success' => true,
                     'message' => 'Channel not found!',
-                    'data'    => null,
-                ], 404);
+                    'data'    => [],
+                    'count'   => 0,
+                    'total_records' => 0,
+                ], 200);
             }
 
-            // Return the channel data excluding created_at and updated_at
+            // Return the channel data in the required format
             return response()->json([
                 'code'    => 200,
                 'success' => true,
                 'message' => 'Channel fetched successfully!',
-                'data'    => $channel->makeHidden(['created_at', 'updated_at']),
+                'data'    => [$channel->makeHidden(['created_at', 'updated_at'])],
+                'count'   => 1,
+                'total_records' => 1,
             ], 200);
         }
 
         // If no id is provided, fetch all channels
         $channels = ChannelModel::all();
 
+        // If no channels are found
+        if ($channels->isEmpty()) {
+            return response()->json([
+                'code'    => 200,
+                'success' => true,
+                'message' => 'No Channels available',
+                'data'    => [],
+                'count'   => 0,
+                'total_records' => 0,
+            ], 200);
+        }
+
+        // Return all channels data in the required format
         return response()->json([
             'code'    => 200,
             'success' => true,
             'message' => 'Channels fetched successfully!',
             'data'    => $channels->makeHidden(['created_at', 'updated_at']),
+            'count'   => $channels->count(),
+            'total_records' => $channels->count(),
         ], 200);
     }
-
 
     public function update(Request $request, $id)
     {
