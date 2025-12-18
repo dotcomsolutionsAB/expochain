@@ -380,7 +380,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Channel
     Route::post('/channel', [ChannelController::class, 'add']); // Create Channel
-    Route::get('/channels', [ChannelController::class, 'retrieve']); // View All Channels
+    Route::get('/channels/{id}', [ChannelController::class, 'retrieve']); // View All Channels
     Route::post('/update_channel/{id}', [ChannelController::class, 'update']); // Update Channel
     Route::delete('/channel/{id}', [ChannelController::class, 'destroy']); // Delete Channel
 
