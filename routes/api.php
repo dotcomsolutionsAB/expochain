@@ -204,6 +204,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/export_sales_orders', [SalesOrderController::class, 'export_sales_orders']);
     Route::post('/export_sales_order_report', [SalesOrderController::class, 'exportSalesOrderReport']);
     Route::post('/get_salesOrder_by_product', [SalesOrderController::class, 'getSalesOrderByProduct']);
+    Route::post('/short_close', [SalesOrderController::class, 'shortCloseSalesOrderProduct']);
 
     Route::post('/pending_ref_no', [SalesOrderController::class, 'getPendingSupplierseOrders']);
     Route::post('/pending_partial_no', [SalesOrderController::class, 'getPendingPartialSalesOrders']);

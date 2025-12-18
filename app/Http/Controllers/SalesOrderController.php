@@ -649,6 +649,62 @@ class SalesOrderController extends Controller
         ], 200);
     }
 
+    // Update Short Close
+    public function shortCloseSalesOrderProduct(Request $request)
+    {
+        // Get the inputs
+        $salesOrderId = $request->input('sales_order_id');
+        $salesOrderItemId = $request->input('sales_order_item_id');
+
+        // Check if the required parameters are provided
+        if (!$salesOrderId || !$salesOrderItemId) {
+            return response()->json([
+                'code'    => 400,
+                'success' => false,
+                'message' => 'Sales Order ID and Sales Order Item ID are required!',
+                'data'    => null,
+            ], 400);
+        }
+
+        // Fetch the Sales Order Product by sales_order_id and sales_order_item_id
+        $salesOrderProduct = SalesOrderProductsModel::where('sales_order_id', $salesOrderId)
+                                                    ->where('id', $salesOrderItemId)
+                                                    ->first();
+
+        // Check if the Sales Order Product exists
+        if (!$salesOrderProduct) {
+            return response()->json([
+                'code'    => 404,
+                'success' => false,
+                'message' => 'Sales Order Product not found!',
+                'data'    => null,
+            ], 404);
+        }
+
+        // Calculate short_closed as qty - sent
+        $shortClosed = $salesOrderProduct->quantity - $salesOrderProduct->sent;
+
+        // Update the short_closed field
+        $salesOrderProduct->short_closed = $shortClosed;
+        $salesOrderProduct->save();
+
+        // Return the updated row in the response
+        return response()->json([
+            'code'    => 200,
+            'success' => true,
+            'message' => 'Sales Order Product updated successfully!',
+            'data'    => [
+                'sales_order_id'    => $salesOrderProduct->sales_order_id,
+                'sales_order_no'    => $salesOrderProduct->salesOrder->sales_order_no, // Get sales_order_no from related SalesOrderModel
+                'product_id'        => $salesOrderProduct->product_id,
+                'product_name'      => $salesOrderProduct->product_name,
+                'quantity'          => $salesOrderProduct->quantity,
+                'sent'              => $salesOrderProduct->sent,
+                'short_closed'      => $salesOrderProduct->short_closed,
+            ],
+        ], 200);
+    }
+
     // migrate
     // public function importSalesOrders()
     // {
