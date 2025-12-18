@@ -576,6 +576,77 @@ class SalesOrderController extends Controller
             : response()->json(['code' => 404,'success' => false, 'message' => 'Sales Order not found.'], 404);
     }
 
+    // Get sales order by product id and client id
+    // Get Sales Orders by Product
+    public function getSalesOrderByProduct(Request $request)
+    {
+        // Get filter inputs
+        $clientId = $request->input('client_id');
+        $productId = $request->input('product_id');
+        $limit = $request->input('limit', 10);
+        $offset = $request->input('offset', 0);
+
+        // Query Sales Orders by Product
+        $query = SalesOrderModel::with([
+            'products' => function ($query) use ($productId) {
+                $query->select(
+                    'sales_order_id', 'product_id', 'product_name', 'quantity', 
+                    'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst',
+                    'amount', 'channel'
+                )
+                ->where('product_id', $productId); // Filter by product_id
+            }
+        ])
+        ->select('id', 'sales_order_no')
+        ->where('company_id', Auth::user()->company_id)
+        ->where('client_id', $clientId); // Filter by client_id
+
+        // Get total record count before applying limit
+        $totalRecords = $query->count();
+
+        // Apply pagination
+        $query->offset($offset)->limit($limit);
+
+        // Fetch paginated results
+        $get_sales_orders = $query->get();
+
+        if ($get_sales_orders->isEmpty()) {
+            return response()->json([
+                'code'          => 200,
+                'success'       => true,
+                'message'       => 'No Sales Orders available for the specified product.',
+                'data'          => [],
+                'count'         => 0,
+                'total_records' => 0,
+            ], 200);
+        }
+
+        // Transform Data
+        $get_sales_orders->transform(function ($order) {
+            $order->products->transform(function ($product) {
+                $product->product_qty = $product->quantity; // Add quantity to response
+                unset($product->quantity); // Remove quantity from product details
+                return $product;
+            });
+
+            return [
+                'sales_order_id' => $order->id,
+                'sales_order_no' => $order->sales_order_no,
+                'products' => $order->products,
+            ];
+        });
+
+        // Return response for list
+        return response()->json([
+            'code' => 200,
+            'success' => true,
+            'message' => 'Sales Orders by Product fetched successfully!',
+            'data' => $get_sales_orders,
+            'count' => $get_sales_orders->count(),
+            'total_records' => $totalRecords,
+        ], 200);
+    }
+
     // migrate
     // public function importSalesOrders()
     // {
