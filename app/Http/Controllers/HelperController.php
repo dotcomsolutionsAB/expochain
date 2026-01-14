@@ -4587,6 +4587,323 @@ class HelperController extends Controller
         ]);
     }
 
+    /**
+     * Get all Purchase Orders for a specific product
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getProductPurchaseOrders(Request $request)
+    {
+        try {
+            $request->validate([
+                'product_id' => 'required|integer|exists:t_products,id',
+                'limit' => 'sometimes|integer|min:1|max:1000',
+                'offset' => 'sometimes|integer|min:0',
+                'status' => 'sometimes|string|in:pending,partial,completed,short_closed',
+            ]);
 
+            $companyId = Auth::user()->company_id;
+            $productId = $request->input('product_id');
+            $limit = (int) $request->input('limit', 50);
+            $offset = (int) $request->input('offset', 0);
+            $statusFilter = $request->input('status');
+
+            // Get all purchase orders for this product
+            $poProductsQuery = PurchaseOrderProductsModel::where('company_id', $companyId)
+                ->where('product_id', $productId);
+
+            // Handle type mismatch: purchase_order_id is string
+            $poIds = $poProductsQuery->distinct()
+                ->pluck('purchase_order_id')
+                ->map(function($id) {
+                    return (int) $id;
+                })
+                ->unique()
+                ->values();
+
+            if ($poIds->isEmpty()) {
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'No purchase orders found for this product',
+                    'data' => [
+                        'count' => 0,
+                        'total_records' => 0,
+                        'records' => [],
+                    ]
+                ], 200);
+            }
+
+            // Get purchase orders
+            $poQuery = PurchaseOrderModel::where('company_id', $companyId)
+                ->whereIn('id', $poIds)
+                ->with(['supplier:id,name']);
+
+            if ($statusFilter) {
+                $poQuery->where('status', $statusFilter);
+            }
+
+            $totalRecords = $poQuery->count();
+
+            $purchaseOrders = $poQuery->orderBy('purchase_order_date', 'desc')
+                ->orderBy('id', 'desc')
+                ->offset($offset)
+                ->limit($limit)
+                ->get();
+
+            // Get product details for each PO
+            $poProductDetails = PurchaseOrderProductsModel::where('company_id', $companyId)
+                ->where('product_id', $productId)
+                ->whereIn('purchase_order_id', $poIds->map(function($id) {
+                    return (string) $id;
+                }))
+                ->get()
+                ->keyBy(function($item) {
+                    return (int) $item->purchase_order_id;
+                });
+
+            // Get related purchase invoices (via oa_no)
+            $oaNos = $purchaseOrders->pluck('oa_no')->filter()->unique();
+            $purchaseInvoices = [];
+            if ($oaNos->isNotEmpty()) {
+                $pis = PurchaseInvoiceModel::where('company_id', $companyId)
+                    ->whereIn('oa_no', $oaNos)
+                    ->select('id', 'purchase_invoice_no', 'purchase_invoice_date', 'oa_no', 'gross', 'total')
+                    ->get()
+                    ->groupBy('oa_no');
+                $purchaseInvoices = $pis->toArray();
+            }
+
+            // Build response
+            $records = $purchaseOrders->map(function($po) use ($poProductDetails, $purchaseInvoices) {
+                $poProduct = $poProductDetails->get((int) $po->id);
+                $orderedQty = $poProduct ? (int) $poProduct->quantity : 0;
+                $receivedQty = $poProduct ? (int) $poProduct->received : 0;
+                $rate = $poProduct ? (float) $poProduct->price : 0.0;
+
+                // Get related PIs
+                $relatedPIs = [];
+                if (!empty($po->oa_no) && isset($purchaseInvoices[$po->oa_no])) {
+                    $relatedPIs = collect($purchaseInvoices[$po->oa_no])->map(function($pi) {
+                        return [
+                            'id' => $pi['id'],
+                            'invoice_no' => $pi['purchase_invoice_no'],
+                            'invoice_date' => $pi['purchase_invoice_date'],
+                            'gross' => (float) $pi['gross'],
+                            'total' => (float) $pi['total'],
+                        ];
+                    })->toArray();
+                }
+
+                return [
+                    'id' => $po->id,
+                    'po_no' => $po->purchase_order_no,
+                    'po_date' => $po->purchase_order_date,
+                    'oa_no' => $po->oa_no,
+                    'oa_date' => $po->oa_date,
+                    'status' => $po->status,
+                    'supplier_id' => $po->supplier_id,
+                    'supplier_name' => optional($po->supplier)->name,
+                    'ordered_quantity' => $orderedQty,
+                    'received_quantity' => $receivedQty,
+                    'pending_quantity' => max(0, $orderedQty - $receivedQty),
+                    'rate' => $rate,
+                    'unit' => $poProduct ? $poProduct->unit : null,
+                    'gross' => (float) $po->gross,
+                    'total' => (float) $po->total,
+                    'purchase_invoices' => $relatedPIs,
+                ];
+            });
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Purchase orders fetched successfully',
+                'data' => [
+                    'count' => $records->count(),
+                    'total_records' => $totalRecords,
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'records' => $records,
+                ]
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all Sales Orders for a specific product
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getProductSalesOrders(Request $request)
+    {
+        try {
+            $request->validate([
+                'product_id' => 'required|integer|exists:t_products,id',
+                'limit' => 'sometimes|integer|min:1|max:1000',
+                'offset' => 'sometimes|integer|min:0',
+                'status' => 'sometimes|string|in:pending,partial,completed,short_closed',
+            ]);
+
+            $companyId = Auth::user()->company_id;
+            $productId = $request->input('product_id');
+            $limit = (int) $request->input('limit', 50);
+            $offset = (int) $request->input('offset', 0);
+            $statusFilter = $request->input('status');
+
+            // Get all sales orders for this product
+            $soProductsQuery = SalesOrderProductsModel::where('company_id', $companyId)
+                ->where('product_id', $productId);
+
+            $soIds = $soProductsQuery->distinct()
+                ->pluck('sales_order_id')
+                ->unique()
+                ->values();
+
+            if ($soIds->isEmpty()) {
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'No sales orders found for this product',
+                    'data' => [
+                        'count' => 0,
+                        'total_records' => 0,
+                        'records' => [],
+                    ]
+                ], 200);
+            }
+
+            // Get sales orders
+            $soQuery = SalesOrderModel::where('company_id', $companyId)
+                ->whereIn('id', $soIds)
+                ->with(['client:id,name']);
+
+            if ($statusFilter) {
+                $soQuery->where('status', $statusFilter);
+            }
+
+            $totalRecords = $soQuery->count();
+
+            $salesOrders = $soQuery->orderBy('sales_order_date', 'desc')
+                ->orderBy('id', 'desc')
+                ->offset($offset)
+                ->limit($limit)
+                ->get();
+
+            // Get product details for each SO
+            $soProductDetails = SalesOrderProductsModel::where('company_id', $companyId)
+                ->where('product_id', $productId)
+                ->whereIn('sales_order_id', $soIds)
+                ->get()
+                ->keyBy('sales_order_id');
+
+            // Get related sales invoices (via sales_order_id and so_id in products)
+            $soIdsForInvoice = $salesOrders->pluck('id')->unique();
+            $salesInvoices = [];
+            if ($soIdsForInvoice->isNotEmpty()) {
+                // Get invoices linked via sales_order_id
+                $sisBySoId = SalesInvoiceModel::where('company_id', $companyId)
+                    ->whereIn('sales_order_id', $soIdsForInvoice)
+                    ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_id', 'gross', 'total')
+                    ->get()
+                    ->groupBy('sales_order_id');
+
+                // Get invoices linked via so_id in products
+                $siProductIds = SalesInvoiceProductsModel::where('company_id', $companyId)
+                    ->where('product_id', $productId)
+                    ->whereIn('so_id', $soIdsForInvoice)
+                    ->pluck('sales_invoice_id')
+                    ->unique();
+
+                if ($siProductIds->isNotEmpty()) {
+                    $sisBySoIdInProducts = SalesInvoiceModel::where('company_id', $companyId)
+                        ->whereIn('id', $siProductIds)
+                        ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_id', 'gross', 'total')
+                        ->get()
+                        ->groupBy('sales_order_id');
+
+                    // Merge both
+                    foreach ($sisBySoIdInProducts as $soId => $invoices) {
+                        if (isset($sisBySoId[$soId])) {
+                            $sisBySoId[$soId] = $sisBySoId[$soId]->merge($invoices)->unique('id');
+                        } else {
+                            $sisBySoId[$soId] = $invoices;
+                        }
+                    }
+                }
+
+                $salesInvoices = $sisBySoId->toArray();
+            }
+
+            // Build response
+            $records = $salesOrders->map(function($so) use ($soProductDetails, $salesInvoices) {
+                $soProduct = $soProductDetails->get($so->id);
+                $orderedQty = $soProduct ? (int) $soProduct->quantity : 0;
+                $sentQty = $soProduct ? (int) $soProduct->sent : 0;
+                $rate = $soProduct ? (float) $soProduct->price : 0.0;
+
+                // Get related SIs
+                $relatedSIs = [];
+                if (isset($salesInvoices[$so->id])) {
+                    $relatedSIs = collect($salesInvoices[$so->id])->map(function($si) {
+                        return [
+                            'id' => $si['id'],
+                            'invoice_no' => $si['sales_invoice_no'],
+                            'invoice_date' => $si['sales_invoice_date'],
+                            'gross' => (float) $si['gross'],
+                            'total' => (float) $si['total'],
+                        ];
+                    })->toArray();
+                }
+
+                return [
+                    'id' => $so->id,
+                    'so_no' => $so->sales_order_no,
+                    'so_date' => $so->sales_order_date,
+                    'ref_no' => $so->ref_no,
+                    'status' => $so->status,
+                    'client_id' => $so->client_id,
+                    'client_name' => optional($so->client)->name,
+                    'ordered_quantity' => $orderedQty,
+                    'sent_quantity' => $sentQty,
+                    'pending_quantity' => max(0, $orderedQty - $sentQty),
+                    'rate' => $rate,
+                    'unit' => $soProduct ? $soProduct->unit : null,
+                    'gross' => (float) $so->gross,
+                    'total' => (float) $so->total,
+                    'sales_invoices' => $relatedSIs,
+                ];
+            });
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Sales orders fetched successfully',
+                'data' => [
+                    'count' => $records->count(),
+                    'total_records' => $totalRecords,
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'records' => $records,
+                ]
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 
 }
