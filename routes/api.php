@@ -197,6 +197,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Sales Order 
     Route::post('/add_sales_order', [SalesOrderController::class, 'add_sales_order']);
     Route::post('/sales_order/{id?}', [SalesOrderController::class, 'view_sales_order']);
+    Route::post('/sales_order/retrieve_items', [SalesOrderController::class, 'retrieve_items']);
     Route::post('/update_sales_order/{id?}', [SalesOrderController::class, 'edit_sales_order']);
     Route::delete('/sales_order/{id?}', [SalesOrderController::class, 'delete_sales_order']);
     Route::post('/sales_order_by_product/{id}', [SalesOrderController::class, 'fetchSalesOrdersByProduct']);

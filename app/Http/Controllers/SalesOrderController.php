@@ -14,6 +14,8 @@ use App\Models\ClientAddressModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
 use App\Models\CounterModel;
+use App\Models\SalesInvoiceModel;
+use App\Models\SalesInvoiceProductsModel;
 use Auth;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
@@ -1698,6 +1700,208 @@ class SalesOrderController extends Controller
                 'data' => [],
                 'count' => 0,
                 'total_records' => 0
+            ], 500);
+        }
+    }
+
+    /**
+     * Retrieve sales order items (product-wise)
+     * Returns product-wise data with sales order and invoice details
+     * Uses same filtering logic as view_sales_order
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function retrieve_items(Request $request)
+    {
+        try {
+            $companyId = Auth::user()->company_id;
+            
+            // Get filter inputs (same as view_sales_order)
+            $clientId = $request->input('client_id');
+            $clientContactId = $request->input('client_contact_id');
+            $name = $request->input('name');
+            $salesOrderNo = $request->input('sales_order_no');
+            $salesOrderDate = $request->input('sales_order_date');
+            $user = $request->input('user');
+            $dateFrom = $request->input('date_from');
+            $dateTo = $request->input('date_to');
+            $status = $request->input('status');
+            $productIds = $request->input('product_ids');
+            $limit = (int) $request->input('limit', 50);
+            $offset = (int) $request->input('offset', 0);
+
+            // First, filter sales orders (same logic as view_sales_order)
+            $soQuery = SalesOrderModel::where('company_id', $companyId);
+
+            if ($user) {
+                $soQuery->where('user', $user);
+            }
+            if ($clientId) {
+                $soQuery->where('client_id', $clientId);
+            }
+            if ($clientContactId) {
+                $soQuery->where('client_contact_id', $clientContactId);
+            }
+            if ($name) {
+                $soQuery->where('name', 'LIKE', '%' . $name . '%');
+            }
+            if ($salesOrderNo) {
+                $soQuery->where('sales_order_no', 'LIKE', '%' . $salesOrderNo . '%');
+            }
+            if ($salesOrderDate) {
+                $soQuery->whereDate('sales_order_date', $salesOrderDate);
+            }
+            if (!empty($status)) {
+                $statusArray = explode(',', $status);
+                $soQuery->whereIn('status', $statusArray);
+            }
+            if (!empty($productIds)) {
+                $productIdArray = explode(',', $productIds);
+                $soQuery->whereHas('products', function ($query) use ($productIdArray) {
+                    $query->whereIn('product_id', $productIdArray);
+                });
+            }
+            if ($dateFrom && $dateTo) {
+                $soQuery->whereBetween('sales_order_date', [$dateFrom, $dateTo]);
+            } elseif ($dateFrom) {
+                $soQuery->whereDate('sales_order_date', '>=', $dateFrom);
+            } elseif ($dateTo) {
+                $soQuery->whereDate('sales_order_date', '<=', $dateTo);
+            }
+
+            // Get filtered sales order IDs
+            $soIds = $soQuery->pluck('id')->toArray();
+
+            if (empty($soIds)) {
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'No sales order items found',
+                    'data' => [
+                        'count' => 0,
+                        'total_records' => 0,
+                        'limit' => $limit,
+                        'offset' => $offset,
+                        'records' => [],
+                    ]
+                ], 200);
+            }
+
+            // Now get products for these sales orders
+            $query = SalesOrderProductsModel::with([
+                'salesOrder:id,sales_order_no,sales_order_date,client_id,status',
+                'salesOrder.client:id,name',
+                'product:id,name'
+            ])
+            ->where('company_id', $companyId)
+            ->whereIn('sales_order_id', $soIds);
+
+            // Get total count
+            $totalRecords = $query->count();
+
+            // Get related sales invoices
+            // Invoices linked via sales_order_id in sales_invoice table
+            $salesInvoices = SalesInvoiceModel::where('company_id', $companyId)
+                ->whereIn('sales_order_id', $soIds)
+                ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_id')
+                ->get()
+                ->groupBy('sales_order_id');
+
+            // Invoices linked via so_id in sales_invoice_products
+            $siProducts = SalesInvoiceProductsModel::where('company_id', $companyId)
+                ->whereIn('so_id', $soIds)
+                ->select('sales_invoice_id', 'so_id', 'product_id')
+                ->get()
+                ->groupBy('so_id');
+
+            // Get invoice IDs from siProducts
+            $siIds = $siProducts->flatten()->pluck('sales_invoice_id')->unique()->toArray();
+            
+            if (!empty($siIds)) {
+                $siBySoId = SalesInvoiceModel::where('company_id', $companyId)
+                    ->whereIn('id', $siIds)
+                    ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_id')
+                    ->get()
+                    ->groupBy('sales_order_id');
+
+                // Merge both invoice sources
+                foreach ($siBySoId as $soId => $invoices) {
+                    if (isset($salesInvoices[$soId])) {
+                        $salesInvoices[$soId] = $salesInvoices[$soId]->merge($invoices)->unique('id');
+                    } else {
+                        $salesInvoices[$soId] = $invoices;
+                    }
+                }
+            }
+
+            // Fetch and transform data - order by sales_order_date (like view_sales_order)
+            $soTable = (new SalesOrderModel)->getTable();
+            $sopTable = (new SalesOrderProductsModel)->getTable();
+            
+            $records = $query
+                ->select($sopTable.'.id', $sopTable.'.sales_order_id', $sopTable.'.product_id', $sopTable.'.quantity', $sopTable.'.sent', $sopTable.'.price')
+                ->join($soTable.' as so', 'so.id', '=', $sopTable.'.sales_order_id')
+                ->orderBy('so.sales_order_date', 'desc')
+                ->orderBy($sopTable.'.id', 'desc')
+                ->offset($offset)
+                ->limit($limit)
+                ->get()
+                ->map(function ($item) use ($salesInvoices) {
+                    $so = $item->salesOrder;
+                    $orderedQty = (int) $item->quantity;
+                    $sentQty = (int) $item->sent;
+                    $pendingQty = max(0, $orderedQty - $sentQty);
+
+                    // Get related sales invoices (only if partial material delivered - sent_qty > 0)
+                    $relatedInvoices = [];
+                    if ($sentQty > 0 && $so && isset($salesInvoices[$so->id])) {
+                        $relatedInvoices = $salesInvoices[$so->id]->map(function($si) {
+                            return [
+                                'id' => $si->id,
+                                'invoice_no' => $si->sales_invoice_no,
+                                'invoice_date' => $si->sales_invoice_date,
+                            ];
+                        })->toArray();
+                    }
+
+                    return [
+                        'product' => [
+                            'id' => $item->product_id,
+                            'name' => optional($item->product)->name,
+                        ],
+                        'sales_order_no' => $so ? $so->sales_order_no : null,
+                        'date' => $so ? $so->sales_order_date : null,
+                        'client' => [
+                            'id' => $so && $so->client ? $so->client->id : null,
+                            'name' => $so && $so->client ? $so->client->name : null,
+                        ],
+                        'ordered_qty' => $orderedQty,
+                        'sent_qty' => $sentQty,
+                        'pending_qty' => $pendingQty,
+                        'rate' => (float) $item->price,
+                        'sales_invoice' => $relatedInvoices, // Only if partial material delivered (sent > 0)
+                    ];
+                });
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Sales order items retrieved successfully',
+                'data' => [
+                    'count' => $records->count(),
+                    'total_records' => $totalRecords,
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'records' => $records->values(),
+                ]
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong: ' . $e->getMessage(),
             ], 500);
         }
     }
