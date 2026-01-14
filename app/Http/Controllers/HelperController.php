@@ -200,14 +200,14 @@ class HelperController extends Controller
 
             $productsTable = (new ProductsModel)->getTable();
 
-            // Special sorting: by pending PO/SO counts (computed from order product rows where parent order is pending and has pending quantity)
+            // Special sorting: by pending PO/SO quantities (sum of pending quantities where parent order is pending)
             if ($sortCol === 'pending_po') {
                 $poPendingCountsSub = DB::table((new PurchaseOrderProductsModel)->getTable().' as pop')
                     ->join((new PurchaseOrderModel)->getTable().' as po', DB::raw('CAST(pop.purchase_order_id AS UNSIGNED)'), '=', 'po.id')
                     ->where('po.company_id', $companyId)
                     ->where('po.status', 'pending')
                     ->whereRaw('pop.received < pop.quantity')
-                    ->select('pop.product_id', DB::raw('COUNT(*) as pending_po'))
+                    ->select('pop.product_id', DB::raw('SUM(pop.quantity - pop.received) as pending_po'))
                     ->groupBy('pop.product_id');
 
                 $pageQuery
@@ -224,7 +224,7 @@ class HelperController extends Controller
                     ->where('so.company_id', $companyId)
                     ->where('so.status', 'pending')
                     ->whereRaw('sop.sent < sop.quantity')
-                    ->select('sop.product_id', DB::raw('COUNT(*) as pending_so'))
+                    ->select('sop.product_id', DB::raw('SUM(sop.quantity - sop.sent) as pending_so'))
                     ->groupBy('sop.product_id');
 
                 $pageQuery
@@ -265,7 +265,7 @@ class HelperController extends Controller
                 ->pluck('total_value', 'product_id');
 
             // Pending purchase orders (per product, for this page)
-            // Only count where received < quantity (has actual pending quantity)
+            // Sum pending quantities (quantity - received) where received < quantity
             // Handle type mismatch: purchase_order_id is string, po.id is integer
             $pendingPurchase = DB::table((new PurchaseOrderProductsModel)->getTable().' as pop')
                 ->join((new PurchaseOrderModel)->getTable().' as po', DB::raw('CAST(pop.purchase_order_id AS UNSIGNED)'), '=', 'po.id')
@@ -273,21 +273,21 @@ class HelperController extends Controller
                 ->where('po.status', 'pending')
                 ->whereRaw('pop.received < pop.quantity')
                 ->whereIn('pop.product_id', $pageProductIds)
-                ->select('pop.product_id', DB::raw('COUNT(*) as cnt'))
+                ->select('pop.product_id', DB::raw('SUM(pop.quantity - pop.received) as pending_qty'))
                 ->groupBy('pop.product_id')
-                ->pluck('cnt', 'product_id');
+                ->pluck('pending_qty', 'product_id');
 
             // Pending sales orders (per product, for this page)
-            // Only count where sent < quantity (has actual pending quantity)
+            // Sum pending quantities (quantity - sent) where sent < quantity
             $pendingSales = DB::table((new SalesOrderProductsModel)->getTable().' as sop')
                 ->join((new SalesOrderModel)->getTable().' as so', 'so.id', '=', 'sop.sales_order_id')
                 ->where('so.company_id', $companyId)
                 ->where('so.status', 'pending')
                 ->whereRaw('sop.sent < sop.quantity')
                 ->whereIn('sop.product_id', $pageProductIds)
-                ->select('sop.product_id', DB::raw('COUNT(*) as cnt'))
+                ->select('sop.product_id', DB::raw('SUM(sop.quantity - sop.sent) as pending_qty'))
                 ->groupBy('sop.product_id')
-                ->pluck('cnt', 'product_id');
+                ->pluck('pending_qty', 'product_id');
 
             // Transform page rows (alias-level stock classification)
             $productsTransformed = $products->map(function ($product) use (
@@ -347,44 +347,29 @@ class HelperController extends Controller
                     ->sum('value')
                 : 0.0;
 
-            // ---- Total pending PO and SO amounts (without tax) ----
-            // Only include POs/SOs that have products matching the filtered product IDs
+            // ---- Total pending PO and SO quantities ----
+            // Sum of all pending quantities (quantity - received/sent) for filtered products
             $totalPo = 0.0;
             $totalSo = 0.0;
             
             if ($filteredIds->isNotEmpty()) {
-                // Get distinct purchase order IDs that have products matching the filters
-                // Handle type mismatch: purchase_order_id is string, need to cast to integer
-                $filteredPoIds = DB::table((new PurchaseOrderProductsModel)->getTable())
-                    ->where('company_id', $companyId)
-                    ->whereIn('product_id', $filteredIds)
-                    ->distinct()
-                    ->pluck('purchase_order_id')
-                    ->map(function($id) {
-                        return (int) $id;
-                    })
-                    ->unique()
-                    ->values();
+                // Sum pending quantities for purchase orders (quantity - received) where received < quantity
+                $totalPo = (float) DB::table((new PurchaseOrderProductsModel)->getTable().' as pop')
+                    ->join((new PurchaseOrderModel)->getTable().' as po', DB::raw('CAST(pop.purchase_order_id AS UNSIGNED)'), '=', 'po.id')
+                    ->where('po.company_id', $companyId)
+                    ->where('po.status', 'pending')
+                    ->whereRaw('pop.received < pop.quantity')
+                    ->whereIn('pop.product_id', $filteredIds)
+                    ->sum(DB::raw('pop.quantity - pop.received'));
                 
-                // Sum gross amounts of pending purchase orders that match the filters
-                $totalPo = $filteredPoIds->isNotEmpty()
-                    ? (float) PurchaseOrderModel::where('company_id', $companyId)
-                        ->where('status', 'pending')
-                        ->whereIn('id', $filteredPoIds)
-                        ->sum('gross')
-                    : 0.0;
-                
-                // Get distinct sales order IDs that have products matching the filters
-                $filteredSoIds = SalesOrderProductsModel::where('company_id', $companyId)
-                    ->whereIn('product_id', $filteredIds)
-                    ->distinct()
-                    ->pluck('sales_order_id');
-                
-                // Sum gross amounts of pending sales orders that match the filters
-                $totalSo = (float) SalesOrderModel::where('company_id', $companyId)
-                    ->where('status', 'pending')
-                    ->whereIn('id', $filteredSoIds)
-                    ->sum('gross');
+                // Sum pending quantities for sales orders (quantity - sent) where sent < quantity
+                $totalSo = (float) DB::table((new SalesOrderProductsModel)->getTable().' as sop')
+                    ->join((new SalesOrderModel)->getTable().' as so', 'so.id', '=', 'sop.sales_order_id')
+                    ->where('so.company_id', $companyId)
+                    ->where('so.status', 'pending')
+                    ->whereRaw('sop.sent < sop.quantity')
+                    ->whereIn('sop.product_id', $filteredIds)
+                    ->sum(DB::raw('sop.quantity - sop.sent'));
             }
 
             return response()->json([
