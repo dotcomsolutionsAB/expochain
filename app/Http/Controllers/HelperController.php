@@ -4607,24 +4607,17 @@ class HelperController extends Controller
             $limit = (int) $request->input('limit', 50);
             $offset = (int) $request->input('offset', 0);
 
-            // Get all purchase orders for this product (only pending)
-            $poProductsQuery = PurchaseOrderProductsModel::where('company_id', $companyId)
-                ->where('product_id', $productId);
+            // Get purchase order products where received < quantity (has pending quantity)
+            $poProductsWithPending = PurchaseOrderProductsModel::where('company_id', $companyId)
+                ->where('product_id', $productId)
+                ->whereRaw('received < quantity')
+                ->get();
 
-            // Handle type mismatch: purchase_order_id is string
-            $poIds = $poProductsQuery->distinct()
-                ->pluck('purchase_order_id')
-                ->map(function($id) {
-                    return (int) $id;
-                })
-                ->unique()
-                ->values();
-
-            if ($poIds->isEmpty()) {
+            if ($poProductsWithPending->isEmpty()) {
                 return response()->json([
                     'code' => 200,
                     'success' => true,
-                    'message' => 'No pending purchase orders found for this product',
+                    'message' => 'No purchase orders with pending quantity found for this product',
                     'data' => [
                         'count' => 0,
                         'total_records' => 0,
@@ -4633,13 +4626,27 @@ class HelperController extends Controller
                 ], 200);
             }
 
-            // Get purchase orders (only pending status)
+            // Handle type mismatch: purchase_order_id is string
+            $poIds = $poProductsWithPending->pluck('purchase_order_id')
+                ->map(function($id) {
+                    return (int) $id;
+                })
+                ->unique()
+                ->values();
+
+            // Use the already filtered product details (where received < quantity)
+            $poProductDetails = $poProductsWithPending->keyBy(function($item) {
+                return (int) $item->purchase_order_id;
+            });
+
+            // Get purchase orders (only pending status and only those with pending quantity items)
             $poQuery = PurchaseOrderModel::where('company_id', $companyId)
                 ->where('status', 'pending')
                 ->whereIn('id', $poIds)
                 ->with(['supplier:id,name']);
 
-            $totalRecords = $poQuery->count();
+            // Total records = count of unique orders with pending quantity items
+            $totalRecords = $poIds->count();
 
             $purchaseOrders = $poQuery->orderBy('purchase_order_date', 'desc')
                 ->orderBy('id', 'desc')
@@ -4647,16 +4654,10 @@ class HelperController extends Controller
                 ->limit($limit)
                 ->get();
 
-            // Get product details for each PO
-            $poProductDetails = PurchaseOrderProductsModel::where('company_id', $companyId)
-                ->where('product_id', $productId)
-                ->whereIn('purchase_order_id', $poIds->map(function($id) {
-                    return (string) $id;
-                }))
-                ->get()
-                ->keyBy(function($item) {
-                    return (int) $item->purchase_order_id;
-                });
+            // Filter to only include orders that have items with pending quantity
+            $purchaseOrders = $purchaseOrders->filter(function($po) use ($poProductDetails) {
+                return $poProductDetails->has((int) $po->id);
+            })->values();
 
             // Get related purchase invoices (via oa_no)
             $oaNos = $purchaseOrders->pluck('oa_no')->filter()->unique();
@@ -4753,20 +4754,17 @@ class HelperController extends Controller
             $limit = (int) $request->input('limit', 50);
             $offset = (int) $request->input('offset', 0);
 
-            // Get all sales orders for this product (only pending)
-            $soProductsQuery = SalesOrderProductsModel::where('company_id', $companyId)
-                ->where('product_id', $productId);
+            // Get sales order products where sent < quantity (has pending quantity)
+            $soProductsWithPending = SalesOrderProductsModel::where('company_id', $companyId)
+                ->where('product_id', $productId)
+                ->whereRaw('sent < quantity')
+                ->get();
 
-            $soIds = $soProductsQuery->distinct()
-                ->pluck('sales_order_id')
-                ->unique()
-                ->values();
-
-            if ($soIds->isEmpty()) {
+            if ($soProductsWithPending->isEmpty()) {
                 return response()->json([
                     'code' => 200,
                     'success' => true,
-                    'message' => 'No pending sales orders found for this product',
+                    'message' => 'No sales orders with pending quantity found for this product',
                     'data' => [
                         'count' => 0,
                         'total_records' => 0,
@@ -4775,13 +4773,21 @@ class HelperController extends Controller
                 ], 200);
             }
 
-            // Get sales orders (only pending status)
+            $soIds = $soProductsWithPending->pluck('sales_order_id')
+                ->unique()
+                ->values();
+
+            // Use the already filtered product details (where sent < quantity)
+            $soProductDetails = $soProductsWithPending->keyBy('sales_order_id');
+
+            // Get sales orders (only pending status and only those with pending quantity items)
             $soQuery = SalesOrderModel::where('company_id', $companyId)
                 ->where('status', 'pending')
                 ->whereIn('id', $soIds)
                 ->with(['client:id,name']);
 
-            $totalRecords = $soQuery->count();
+            // Total records = count of unique orders with pending quantity items
+            $totalRecords = $soIds->count();
 
             $salesOrders = $soQuery->orderBy('sales_order_date', 'desc')
                 ->orderBy('id', 'desc')
@@ -4789,12 +4795,10 @@ class HelperController extends Controller
                 ->limit($limit)
                 ->get();
 
-            // Get product details for each SO
-            $soProductDetails = SalesOrderProductsModel::where('company_id', $companyId)
-                ->where('product_id', $productId)
-                ->whereIn('sales_order_id', $soIds)
-                ->get()
-                ->keyBy('sales_order_id');
+            // Filter to only include orders that have items with pending quantity
+            $salesOrders = $salesOrders->filter(function($so) use ($soProductDetails) {
+                return $soProductDetails->has($so->id);
+            })->values();
 
             // Get related sales invoices (via sales_order_id and so_id in products)
             $soIdsForInvoice = $salesOrders->pluck('id')->unique();
