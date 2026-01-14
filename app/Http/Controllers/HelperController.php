@@ -107,7 +107,7 @@ class HelperController extends Controller
             }
 
             // Sorting
-            $sortable = ['name','group','category','sub_category','alias'];
+            $sortable = ['name','group','category','sub_category','alias','pending_po','pending_so'];
             $sortCol  = in_array($sortBy, $sortable, true) ? $sortBy : 'name';
             $sortDir  = strtolower($sortOrder) === 'desc' ? 'desc' : 'asc';
 
@@ -196,8 +196,48 @@ class HelperController extends Controller
 
             // ----- Pagination query (include si1/si2 for per-row display) -----
             $pageQuery = (clone $baseQuery)
-                ->select('id','name','alias','group','category','sub_category','unit','si1','si2')
-                ->orderBy($sortCol, $sortDir)
+                ->select('id','name','alias','group','category','sub_category','unit','si1','si2');
+
+            $productsTable = (new ProductsModel)->getTable();
+
+            // Special sorting: by pending PO/SO counts (computed from order product rows where parent order is pending)
+            if ($sortCol === 'pending_po') {
+                $poPendingCountsSub = DB::table((new PurchaseOrderProductsModel)->getTable().' as pop')
+                    ->join((new PurchaseOrderModel)->getTable().' as po', 'po.id', '=', 'pop.purchase_order_id')
+                    ->where('po.company_id', $companyId)
+                    ->where('po.status', 'pending')
+                    ->select('pop.product_id', DB::raw('COUNT(*) as pending_po'))
+                    ->groupBy('pop.product_id');
+
+                $pageQuery
+                    ->leftJoinSub($poPendingCountsSub, 'po_pending', function ($join) {
+                        $productsTable = (new ProductsModel)->getTable();
+                        $join->on('po_pending.product_id', '=', $productsTable.'.id');
+                    })
+                    ->addSelect(DB::raw('COALESCE(po_pending.pending_po, 0) as pending_po'))
+                    ->orderBy('pending_po', $sortDir)
+                    ->orderBy('name', 'asc');
+            } elseif ($sortCol === 'pending_so') {
+                $soPendingCountsSub = DB::table((new SalesOrderProductsModel)->getTable().' as sop')
+                    ->join((new SalesOrderModel)->getTable().' as so', 'so.id', '=', 'sop.sales_order_id')
+                    ->where('so.company_id', $companyId)
+                    ->where('so.status', 'pending')
+                    ->select('sop.product_id', DB::raw('COUNT(*) as pending_so'))
+                    ->groupBy('sop.product_id');
+
+                $pageQuery
+                    ->leftJoinSub($soPendingCountsSub, 'so_pending', function ($join) {
+                        $productsTable = (new ProductsModel)->getTable();
+                        $join->on('so_pending.product_id', '=', $productsTable.'.id');
+                    })
+                    ->addSelect(DB::raw('COALESCE(so_pending.pending_so, 0) as pending_so'))
+                    ->orderBy('pending_so', $sortDir)
+                    ->orderBy('name', 'asc');
+            } else {
+                $pageQuery->orderBy($sortCol, $sortDir);
+            }
+
+            $pageQuery
                 ->offset($offset)
                 ->limit($limit);
 
@@ -222,21 +262,25 @@ class HelperController extends Controller
                 ->groupBy('product_id')
                 ->pluck('total_value', 'product_id');
 
-            // Pending purchase orders
-            $pendingPurchase = PurchaseOrderModel::where('company_id', $companyId)
-                ->where('status', 'pending')
-                ->with('products:id')
-                ->get()
-                ->flatMap(fn ($order) => $order->products->pluck('id'))
-                ->countBy();
+            // Pending purchase orders (per product, for this page)
+            $pendingPurchase = DB::table((new PurchaseOrderProductsModel)->getTable().' as pop')
+                ->join((new PurchaseOrderModel)->getTable().' as po', 'po.id', '=', 'pop.purchase_order_id')
+                ->where('po.company_id', $companyId)
+                ->where('po.status', 'pending')
+                ->whereIn('pop.product_id', $pageProductIds)
+                ->select('pop.product_id', DB::raw('COUNT(*) as cnt'))
+                ->groupBy('pop.product_id')
+                ->pluck('cnt', 'product_id');
 
-            // Pending sales orders
-            $pendingSales = SalesOrderModel::where('company_id', $companyId)
-                ->where('status', 'pending')
-                ->with('products:id')
-                ->get()
-                ->flatMap(fn ($order) => $order->products->pluck('id'))
-                ->countBy();
+            // Pending sales orders (per product, for this page)
+            $pendingSales = DB::table((new SalesOrderProductsModel)->getTable().' as sop')
+                ->join((new SalesOrderModel)->getTable().' as so', 'so.id', '=', 'sop.sales_order_id')
+                ->where('so.company_id', $companyId)
+                ->where('so.status', 'pending')
+                ->whereIn('sop.product_id', $pageProductIds)
+                ->select('sop.product_id', DB::raw('COUNT(*) as cnt'))
+                ->groupBy('sop.product_id')
+                ->pluck('cnt', 'product_id');
 
             // Transform page rows (alias-level stock classification)
             $productsTransformed = $products->map(function ($product) use (
