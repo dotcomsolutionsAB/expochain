@@ -107,7 +107,7 @@ class HelperController extends Controller
             }
 
             // Sorting
-            $sortable = ['name','group','category','sub_category','alias','pending_po','pending_so'];
+            $sortable = ['name','group','category','sub_category','alias','pending_po','pending_so','total_stock','stock_value'];
             $sortCol  = in_array($sortBy, $sortable, true) ? $sortBy : 'name';
             $sortDir  = strtolower($sortOrder) === 'desc' ? 'desc' : 'asc';
 
@@ -234,6 +234,34 @@ class HelperController extends Controller
                     })
                     ->addSelect(DB::raw('COALESCE(so_pending.pending_so, 0) as pending_so'))
                     ->orderBy('pending_so', $sortDir)
+                    ->orderBy('name', 'asc');
+            } elseif ($sortCol === 'total_stock') {
+                // Sort by total stock quantity (sum of quantities from closing_stock)
+                $totalStockSub = DB::table((new ClosingStockModel)->getTable().' as cs')
+                    ->where('cs.company_id', $companyId)
+                    ->select('cs.product_id', DB::raw('SUM(cs.quantity) as total_stock'))
+                    ->groupBy('cs.product_id');
+
+                $pageQuery
+                    ->leftJoinSub($totalStockSub, 'stock_qty', function ($join) {
+                        $join->on('stock_qty.product_id', '=', 't_products.id');
+                    })
+                    ->addSelect(DB::raw('COALESCE(stock_qty.total_stock, 0) as total_stock_sort'))
+                    ->orderByRaw('COALESCE(stock_qty.total_stock, 0) ' . $sortDir)
+                    ->orderBy('name', 'asc');
+            } elseif ($sortCol === 'stock_value') {
+                // Sort by stock value (sum of values from closing_stock)
+                $stockValueSub = DB::table((new ClosingStockModel)->getTable().' as cs')
+                    ->where('cs.company_id', $companyId)
+                    ->select('cs.product_id', DB::raw('SUM(cs.value) as stock_value'))
+                    ->groupBy('cs.product_id');
+
+                $pageQuery
+                    ->leftJoinSub($stockValueSub, 'stock_val', function ($join) {
+                        $join->on('stock_val.product_id', '=', 't_products.id');
+                    })
+                    ->addSelect(DB::raw('COALESCE(stock_val.stock_value, 0) as stock_value_sort'))
+                    ->orderByRaw('COALESCE(stock_val.stock_value, 0) ' . $sortDir)
                     ->orderBy('name', 'asc');
             } else {
                 $pageQuery->orderBy($sortCol, $sortDir);
