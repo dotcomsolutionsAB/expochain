@@ -297,13 +297,35 @@ class HelperController extends Controller
                 : 0.0;
 
             // ---- Total pending PO and SO amounts (without tax) ----
-            $totalPo = (float) PurchaseOrderModel::where('company_id', $companyId)
-                ->where('status', 'pending')
-                ->sum('gross');
-
-            $totalSo = (float) SalesOrderModel::where('company_id', $companyId)
-                ->where('status', 'pending')
-                ->sum('gross');
+            // Only include POs/SOs that have products matching the filtered product IDs
+            $totalPo = 0.0;
+            $totalSo = 0.0;
+            
+            if ($filteredIds->isNotEmpty()) {
+                // Get distinct purchase order IDs that have products matching the filters
+                $filteredPoIds = PurchaseOrderProductsModel::where('company_id', $companyId)
+                    ->whereIn('product_id', $filteredIds)
+                    ->distinct()
+                    ->pluck('purchase_order_id');
+                
+                // Sum gross amounts of pending purchase orders that match the filters
+                $totalPo = (float) PurchaseOrderModel::where('company_id', $companyId)
+                    ->where('status', 'pending')
+                    ->whereIn('id', $filteredPoIds)
+                    ->sum('gross');
+                
+                // Get distinct sales order IDs that have products matching the filters
+                $filteredSoIds = SalesOrderProductsModel::where('company_id', $companyId)
+                    ->whereIn('product_id', $filteredIds)
+                    ->distinct()
+                    ->pluck('sales_order_id');
+                
+                // Sum gross amounts of pending sales orders that match the filters
+                $totalSo = (float) SalesOrderModel::where('company_id', $companyId)
+                    ->where('status', 'pending')
+                    ->whereIn('id', $filteredSoIds)
+                    ->sum('gross');
+            }
 
             return response()->json([
                 'code'    => 200,
