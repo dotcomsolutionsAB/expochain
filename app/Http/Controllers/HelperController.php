@@ -296,6 +296,15 @@ class HelperController extends Controller
                     ->sum('value')
                 : 0.0;
 
+            // ---- Total pending PO and SO amounts (without tax) ----
+            $totalPo = (float) PurchaseOrderModel::where('company_id', $companyId)
+                ->where('status', 'pending')
+                ->sum('gross');
+
+            $totalSo = (float) SalesOrderModel::where('company_id', $companyId)
+                ->where('status', 'pending')
+                ->sum('gross');
+
             return response()->json([
                 'code'    => 200,
                 'success' => true,
@@ -304,6 +313,8 @@ class HelperController extends Controller
                     'count'             => $products->count(),
                     'total_records'     => $totalProducts,
                     'total_stock_value' => round($totalStockValue),
+                    'total_po'          => round($totalPo),
+                    'total_so'          => round($totalSo),
                     'limit'             => $limit,
                     'offset'            => $offset,
                     'stock_level'       => $stockLevel ?? null, // echo applied level (alias-based)
