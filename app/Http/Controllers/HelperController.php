@@ -200,12 +200,13 @@ class HelperController extends Controller
 
             $productsTable = (new ProductsModel)->getTable();
 
-            // Special sorting: by pending PO/SO counts (computed from order product rows where parent order is pending)
+            // Special sorting: by pending PO/SO counts (computed from order product rows where parent order is pending and has pending quantity)
             if ($sortCol === 'pending_po') {
                 $poPendingCountsSub = DB::table((new PurchaseOrderProductsModel)->getTable().' as pop')
                     ->join((new PurchaseOrderModel)->getTable().' as po', DB::raw('CAST(pop.purchase_order_id AS UNSIGNED)'), '=', 'po.id')
                     ->where('po.company_id', $companyId)
                     ->where('po.status', 'pending')
+                    ->whereRaw('pop.received < pop.quantity')
                     ->select('pop.product_id', DB::raw('COUNT(*) as pending_po'))
                     ->groupBy('pop.product_id');
 
@@ -222,6 +223,7 @@ class HelperController extends Controller
                     ->join((new SalesOrderModel)->getTable().' as so', 'so.id', '=', 'sop.sales_order_id')
                     ->where('so.company_id', $companyId)
                     ->where('so.status', 'pending')
+                    ->whereRaw('sop.sent < sop.quantity')
                     ->select('sop.product_id', DB::raw('COUNT(*) as pending_so'))
                     ->groupBy('sop.product_id');
 
@@ -263,21 +265,25 @@ class HelperController extends Controller
                 ->pluck('total_value', 'product_id');
 
             // Pending purchase orders (per product, for this page)
+            // Only count where received < quantity (has actual pending quantity)
             // Handle type mismatch: purchase_order_id is string, po.id is integer
             $pendingPurchase = DB::table((new PurchaseOrderProductsModel)->getTable().' as pop')
                 ->join((new PurchaseOrderModel)->getTable().' as po', DB::raw('CAST(pop.purchase_order_id AS UNSIGNED)'), '=', 'po.id')
                 ->where('po.company_id', $companyId)
                 ->where('po.status', 'pending')
+                ->whereRaw('pop.received < pop.quantity')
                 ->whereIn('pop.product_id', $pageProductIds)
                 ->select('pop.product_id', DB::raw('COUNT(*) as cnt'))
                 ->groupBy('pop.product_id')
                 ->pluck('cnt', 'product_id');
 
             // Pending sales orders (per product, for this page)
+            // Only count where sent < quantity (has actual pending quantity)
             $pendingSales = DB::table((new SalesOrderProductsModel)->getTable().' as sop')
                 ->join((new SalesOrderModel)->getTable().' as so', 'so.id', '=', 'sop.sales_order_id')
                 ->where('so.company_id', $companyId)
                 ->where('so.status', 'pending')
+                ->whereRaw('sop.sent < sop.quantity')
                 ->whereIn('sop.product_id', $pageProductIds)
                 ->select('sop.product_id', DB::raw('COUNT(*) as cnt'))
                 ->groupBy('sop.product_id')
