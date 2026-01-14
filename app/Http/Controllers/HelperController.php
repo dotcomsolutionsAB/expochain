@@ -203,7 +203,7 @@ class HelperController extends Controller
             // Special sorting: by pending PO/SO counts (computed from order product rows where parent order is pending)
             if ($sortCol === 'pending_po') {
                 $poPendingCountsSub = DB::table((new PurchaseOrderProductsModel)->getTable().' as pop')
-                    ->join((new PurchaseOrderModel)->getTable().' as po', 'po.id', '=', 'pop.purchase_order_id')
+                    ->join((new PurchaseOrderModel)->getTable().' as po', DB::raw('CAST(pop.purchase_order_id AS UNSIGNED)'), '=', 'po.id')
                     ->where('po.company_id', $companyId)
                     ->where('po.status', 'pending')
                     ->select('pop.product_id', DB::raw('COUNT(*) as pending_po'))
@@ -263,8 +263,9 @@ class HelperController extends Controller
                 ->pluck('total_value', 'product_id');
 
             // Pending purchase orders (per product, for this page)
+            // Handle type mismatch: purchase_order_id is string, po.id is integer
             $pendingPurchase = DB::table((new PurchaseOrderProductsModel)->getTable().' as pop')
-                ->join((new PurchaseOrderModel)->getTable().' as po', 'po.id', '=', 'pop.purchase_order_id')
+                ->join((new PurchaseOrderModel)->getTable().' as po', DB::raw('CAST(pop.purchase_order_id AS UNSIGNED)'), '=', 'po.id')
                 ->where('po.company_id', $companyId)
                 ->where('po.status', 'pending')
                 ->whereIn('pop.product_id', $pageProductIds)
@@ -327,8 +328,8 @@ class HelperController extends Controller
                     'total_quantity'      => $productTotalQty,             // product-level total
                     'alias_total_quantity'=> $aliasTotalQty,               // alias-level total
                     'stock_value'         => (float) ($stockValueByProduct[$product->id] ?? 0.0),
-                    'pending_po'          => (int) ($pendingPurchase[$product->id] ?? 0),
-                    'pending_so'          => (int) ($pendingSales[$product->id] ?? 0),
+                    'pending_po'          => (int) (isset($product->pending_po) ? $product->pending_po : ($pendingPurchase[$product->id] ?? 0)),
+                    'pending_so'          => (int) (isset($product->pending_so) ? $product->pending_so : ($pendingSales[$product->id] ?? 0)),
                 ];
             });
 
@@ -347,16 +348,25 @@ class HelperController extends Controller
             
             if ($filteredIds->isNotEmpty()) {
                 // Get distinct purchase order IDs that have products matching the filters
-                $filteredPoIds = PurchaseOrderProductsModel::where('company_id', $companyId)
+                // Handle type mismatch: purchase_order_id is string, need to cast to integer
+                $filteredPoIds = DB::table((new PurchaseOrderProductsModel)->getTable())
+                    ->where('company_id', $companyId)
                     ->whereIn('product_id', $filteredIds)
                     ->distinct()
-                    ->pluck('purchase_order_id');
+                    ->pluck('purchase_order_id')
+                    ->map(function($id) {
+                        return (int) $id;
+                    })
+                    ->unique()
+                    ->values();
                 
                 // Sum gross amounts of pending purchase orders that match the filters
-                $totalPo = (float) PurchaseOrderModel::where('company_id', $companyId)
-                    ->where('status', 'pending')
-                    ->whereIn('id', $filteredPoIds)
-                    ->sum('gross');
+                $totalPo = $filteredPoIds->isNotEmpty()
+                    ? (float) PurchaseOrderModel::where('company_id', $companyId)
+                        ->where('status', 'pending')
+                        ->whereIn('id', $filteredPoIds)
+                        ->sum('gross')
+                    : 0.0;
                 
                 // Get distinct sales order IDs that have products matching the filters
                 $filteredSoIds = SalesOrderProductsModel::where('company_id', $companyId)
