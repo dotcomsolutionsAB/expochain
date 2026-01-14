@@ -56,12 +56,16 @@ class HelperController extends Controller
             $sortBy         = $request->input('sort_by', 'name');   // name, group, category, sub_category, alias
             $sortOrder      = $request->input('sort_order', 'asc'); // asc or desc
             $stockLevelReq  = $request->input('stock_level');       // critical|sufficient|excessive|null
+            $inStock        = $request->input('in_stock', false);   // boolean: show only products with stock
 
             // Normalize stock_level
             $validLevels = ['critical','sufficient','excessive'];
             $stockLevel  = in_array(strtolower((string) $stockLevelReq), $validLevels, true)
                 ? strtolower($stockLevelReq)
                 : null;
+            
+            // Normalize in_stock (accept true/false, 1/0, "true"/"false")
+            $inStock = filter_var($inStock, FILTER_VALIDATE_BOOLEAN);
 
             // Hex map
             $levelHex = [
@@ -103,6 +107,23 @@ class HelperController extends Controller
                 $aliasValues = array_map('trim', array_filter(explode(',', $filterAlias)));
                 if (!empty($aliasValues)) {
                     $baseQuery->whereIn('alias', $aliasValues);
+                }
+            }
+
+            // Filter: Show only products with stock (quantity > 0)
+            if ($inStock) {
+                $productsWithStock = DB::table((new ClosingStockModel)->getTable().' as cs')
+                    ->where('cs.company_id', $companyId)
+                    ->select('cs.product_id', DB::raw('SUM(cs.quantity) as total_qty'))
+                    ->groupBy('cs.product_id')
+                    ->havingRaw('SUM(cs.quantity) > 0')
+                    ->pluck('product_id');
+                
+                if ($productsWithStock->isNotEmpty()) {
+                    $baseQuery->whereIn('id', $productsWithStock);
+                } else {
+                    // No products with stock, return empty result
+                    $baseQuery->whereRaw('1 = 0');
                 }
             }
 
@@ -414,6 +435,7 @@ class HelperController extends Controller
                     'offset'            => $offset,
                     'stock_level'       => $stockLevel ?? null, // echo applied level (alias-based)
                     'alias_filter'      => $filterAlias ?? null,
+                    'in_stock'          => $inStock, // echo applied in_stock filter
                     'records'           => $productsTransformed,
                 ]
             ], 200);
