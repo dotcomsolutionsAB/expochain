@@ -4600,16 +4600,14 @@ class HelperController extends Controller
                 'product_id' => 'required|integer|exists:t_products,id',
                 'limit' => 'sometimes|integer|min:1|max:1000',
                 'offset' => 'sometimes|integer|min:0',
-                'status' => 'sometimes|string|in:pending,partial,completed,short_closed',
             ]);
 
             $companyId = Auth::user()->company_id;
             $productId = $request->input('product_id');
             $limit = (int) $request->input('limit', 50);
             $offset = (int) $request->input('offset', 0);
-            $statusFilter = $request->input('status');
 
-            // Get all purchase orders for this product
+            // Get all purchase orders for this product (only pending)
             $poProductsQuery = PurchaseOrderProductsModel::where('company_id', $companyId)
                 ->where('product_id', $productId);
 
@@ -4626,7 +4624,7 @@ class HelperController extends Controller
                 return response()->json([
                     'code' => 200,
                     'success' => true,
-                    'message' => 'No purchase orders found for this product',
+                    'message' => 'No pending purchase orders found for this product',
                     'data' => [
                         'count' => 0,
                         'total_records' => 0,
@@ -4635,14 +4633,11 @@ class HelperController extends Controller
                 ], 200);
             }
 
-            // Get purchase orders
+            // Get purchase orders (only pending status)
             $poQuery = PurchaseOrderModel::where('company_id', $companyId)
+                ->where('status', 'pending')
                 ->whereIn('id', $poIds)
                 ->with(['supplier:id,name']);
-
-            if ($statusFilter) {
-                $poQuery->where('status', $statusFilter);
-            }
 
             $totalRecords = $poQuery->count();
 
@@ -4719,7 +4714,7 @@ class HelperController extends Controller
             return response()->json([
                 'code' => 200,
                 'success' => true,
-                'message' => 'Purchase orders fetched successfully',
+                'message' => 'Pending purchase orders fetched successfully',
                 'data' => [
                     'count' => $records->count(),
                     'total_records' => $totalRecords,
@@ -4751,16 +4746,14 @@ class HelperController extends Controller
                 'product_id' => 'required|integer|exists:t_products,id',
                 'limit' => 'sometimes|integer|min:1|max:1000',
                 'offset' => 'sometimes|integer|min:0',
-                'status' => 'sometimes|string|in:pending,partial,completed,short_closed',
             ]);
 
             $companyId = Auth::user()->company_id;
             $productId = $request->input('product_id');
             $limit = (int) $request->input('limit', 50);
             $offset = (int) $request->input('offset', 0);
-            $statusFilter = $request->input('status');
 
-            // Get all sales orders for this product
+            // Get all sales orders for this product (only pending)
             $soProductsQuery = SalesOrderProductsModel::where('company_id', $companyId)
                 ->where('product_id', $productId);
 
@@ -4773,7 +4766,7 @@ class HelperController extends Controller
                 return response()->json([
                     'code' => 200,
                     'success' => true,
-                    'message' => 'No sales orders found for this product',
+                    'message' => 'No pending sales orders found for this product',
                     'data' => [
                         'count' => 0,
                         'total_records' => 0,
@@ -4782,14 +4775,11 @@ class HelperController extends Controller
                 ], 200);
             }
 
-            // Get sales orders
+            // Get sales orders (only pending status)
             $soQuery = SalesOrderModel::where('company_id', $companyId)
+                ->where('status', 'pending')
                 ->whereIn('id', $soIds)
                 ->with(['client:id,name']);
-
-            if ($statusFilter) {
-                $soQuery->where('status', $statusFilter);
-            }
 
             $totalRecords = $soQuery->count();
 
@@ -4887,7 +4877,7 @@ class HelperController extends Controller
             return response()->json([
                 'code' => 200,
                 'success' => true,
-                'message' => 'Sales orders fetched successfully',
+                'message' => 'Pending sales orders fetched successfully',
                 'data' => [
                     'count' => $records->count(),
                     'total_records' => $totalRecords,
