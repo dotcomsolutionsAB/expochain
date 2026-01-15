@@ -276,111 +276,371 @@ class StatsController extends Controller
             \Log::error("Old stats fetch failed: " . $e->getMessage());
         }
 
-        // ✅ Build HTML (two tables)
+        // ✅ Normalize voucher names for comparison
+        $voucherMapping = [
+            'Product' => 'Products',
+            'Products' => 'Products',
+            'Clients' => 'Clients',
+            'Suppliers' => 'Suppliers',
+            'Quotation' => 'Quotation',
+            'Sales order' => 'Sales Order',
+            'Sales Order' => 'Sales Order',
+            'Sales Invoice' => 'Sales Invoice',
+            'Sales Return' => 'Sales Return',
+            'Debit note' => 'Debit Note',
+            'Debit Note' => 'Debit Note',
+            'Lot info' => 'Lot Info',
+            'Lot Info' => 'Lot Info',
+            'Purchase bag' => 'Purchase Back',
+            'Purchase Back' => 'Purchase Back',
+            'Purchase order' => 'Purchase Order',
+            'Purchase Order' => 'Purchase Order',
+            'Purchase Invoice' => 'Purchase Invoice',
+            'Purchase Return' => 'Purchase Return',
+            'Credit note' => 'Credit Note',
+            'Credit Note' => 'Credit Note',
+            'Assembly combination' => 'Assembly Combinations',
+            'Assembly Combinations' => 'Assembly Combinations',
+            'Assembly operation' => 'Assembly Operation',
+            'Assembly Operation' => 'Assembly Operation',
+            'Fabrication' => 'Fabrication',
+            'Adjustments' => 'Adjustments',
+            'Stock transfer' => 'Stock Transfer',
+            'Stock Transfer' => 'Stock Transfer',
+            'Transfer bag' => 'Transfer Bag',
+            'Test certificate' => 'Test Certificate',
+            'Test Certificate' => 'Test Certificate',
+        ];
+
+        // ✅ Build comparison data
+        $comparisonData = [];
+        $slNo = 1;
+        
+        foreach ($newCounts as $model => $data) {
+            $newCount = is_array($data) ? $data['count'] : $data;
+            $newProducts = is_array($data) ? $data['products'] : null;
+            
+            // Find matching old row
+            $oldRow = null;
+            foreach ($oldRows as $row) {
+                $normalizedOld = $voucherMapping[trim($row['voucher'])] ?? trim($row['voucher']);
+                if ($normalizedOld === $model) {
+                    $oldRow = $row;
+                    break;
+                }
+            }
+            
+            $oldCount = $oldRow ? (int) str_replace(',', '', $oldRow['count']) : null;
+            $oldProducts = $oldRow ? ($oldRow['products'] !== '' && $oldRow['products'] !== '-' ? (int) str_replace(',', '', $oldRow['products']) : null) : null;
+            
+            $countDiff = $oldCount !== null ? $newCount - $oldCount : null;
+            $productsDiff = ($oldProducts !== null && $newProducts !== null) ? $newProducts - $oldProducts : null;
+            
+            $comparisonData[] = [
+                'sl' => $slNo++,
+                'voucher' => $model,
+                'new_count' => $newCount,
+                'old_count' => $oldCount,
+                'count_diff' => $countDiff,
+                'new_products' => $newProducts,
+                'old_products' => $oldProducts,
+                'products_diff' => $productsDiff,
+            ];
+        }
+
+        // ✅ Build HTML with comparison table
         $html = '
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
-            <title>Stats Overview</title>
+            <title>Database Migration Stats Comparison</title>
             <style>
-                body { font-family: Arial, sans-serif; margin: 24px; background: #f6f7fb; }
-                .wrap { display: flex; gap: 20px; align-items: flex-start; }
-                .card { flex: 1; min-width: 340px; background: #fff; border-radius: 12px; padding: 14px; box-shadow: 0 0 12px rgba(0,0,0,0.08); }
-                .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-                @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
-
-                table { width: 100%; border-collapse: collapse; background: white; }
-                th, td { padding: 10px 14px; border: 1px solid #e6e6e6; text-align: left; font-size: 14px; }
-                caption { font-size: 18px; margin: 8px 0 12px; font-weight: bold; color: #222; text-align: left; }
-
-                /* NEW DB theme (blue) */
-                .t-new th { background-color: #0d6efd; color: white; }
-                .t-new tbody tr:hover { background-color: #e9f2ff; }
-
-                /* OLD DB theme (orange) */
-                .t-old th { background-color: #fd7e14; color: white; }
-                .t-old tbody tr:hover { background-color: #fff1e6; }
-
-                .note { margin-top: 8px; font-size: 12px; color: #666; }
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                body { 
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    padding: 30px 20px;
+                    min-height: 100vh;
+                }
+                .container {
+                    max-width: 1400px;
+                    margin: 0 auto;
+                    background: white;
+                    border-radius: 16px;
+                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                    overflow: hidden;
+                }
+                .header {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 30px;
+                    text-align: center;
+                }
+                .header h1 {
+                    font-size: 32px;
+                    font-weight: 700;
+                    margin-bottom: 10px;
+                }
+                .header p {
+                    font-size: 16px;
+                    opacity: 0.9;
+                }
+                .summary {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 20px;
+                    padding: 30px;
+                    background: #f8f9fa;
+                    border-bottom: 2px solid #e9ecef;
+                }
+                .summary-card {
+                    background: white;
+                    padding: 20px;
+                    border-radius: 12px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    text-align: center;
+                }
+                .summary-card .label {
+                    font-size: 14px;
+                    color: #6c757d;
+                    margin-bottom: 8px;
+                    font-weight: 500;
+                }
+                .summary-card .value {
+                    font-size: 28px;
+                    font-weight: 700;
+                    color: #212529;
+                }
+                .summary-card .value.positive { color: #28a745; }
+                .summary-card .value.negative { color: #dc3545; }
+                .summary-card .value.neutral { color: #6c757d; }
+                .table-wrapper {
+                    padding: 30px;
+                    overflow-x: auto;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    background: white;
+                    font-size: 14px;
+                }
+                thead {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                }
+                th {
+                    padding: 16px 12px;
+                    text-align: left;
+                    font-weight: 600;
+                    font-size: 13px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                td {
+                    padding: 14px 12px;
+                    border-bottom: 1px solid #e9ecef;
+                }
+                tbody tr {
+                    transition: background-color 0.2s;
+                }
+                tbody tr:hover {
+                    background-color: #f8f9fa;
+                }
+                tbody tr.match { background-color: #d4edda; }
+                tbody tr.mismatch { background-color: #f8d7da; }
+                tbody tr.new-record { background-color: #d1ecf1; }
+                .voucher-name {
+                    font-weight: 600;
+                    color: #212529;
+                }
+                .count-cell {
+                    text-align: right;
+                    font-family: "Courier New", monospace;
+                    font-weight: 500;
+                }
+                .diff-cell {
+                    text-align: center;
+                    font-weight: 600;
+                }
+                .diff-positive {
+                    color: #28a745;
+                }
+                .diff-negative {
+                    color: #dc3545;
+                }
+                .diff-zero {
+                    color: #6c757d;
+                }
+                .diff-na {
+                    color: #adb5bd;
+                    font-style: italic;
+                }
+                .badge {
+                    display: inline-block;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 11px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                }
+                .badge-match { background: #d4edda; color: #155724; }
+                .badge-mismatch { background: #f8d7da; color: #721c24; }
+                .badge-new { background: #d1ecf1; color: #0c5460; }
+                .note {
+                    padding: 20px 30px;
+                    background: #f8f9fa;
+                    border-top: 2px solid #e9ecef;
+                    font-size: 13px;
+                    color: #6c757d;
+                }
+                .note a {
+                    color: #667eea;
+                    text-decoration: none;
+                }
+                .note a:hover {
+                    text-decoration: underline;
+                }
+                @media (max-width: 768px) {
+                    .header h1 { font-size: 24px; }
+                    .summary { grid-template-columns: 1fr; }
+                    .table-wrapper { padding: 15px; }
+                    table { font-size: 12px; }
+                    th, td { padding: 10px 8px; }
+                }
             </style>
         </head>
         <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📊 Database Migration Stats Comparison</h1>
+                    <p>Comparing New Database vs Old Database Record Counts</p>
+                </div>
+                
+                <div class="summary">';
 
-            <div class="grid">
+        // Calculate summary statistics
+        $totalMatches = 0;
+        $totalMismatches = 0;
+        $totalNew = 0;
+        $totalCountDiff = 0;
+        
+        foreach ($comparisonData as $row) {
+            if ($row['old_count'] === null) {
+                $totalNew++;
+            } elseif ($row['count_diff'] == 0) {
+                $totalMatches++;
+            } else {
+                $totalMismatches++;
+            }
+            if ($row['count_diff'] !== null) {
+                $totalCountDiff += abs($row['count_diff']);
+            }
+        }
 
-                <!-- New DB Table -->
-                <div class="card">
-                    <table class="t-new">
-                        <caption>New Database Table Counts</caption>
+        $html .= '
+                    <div class="summary-card">
+                        <div class="label">Total Records</div>
+                        <div class="value">' . count($comparisonData) . '</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">✅ Matches</div>
+                        <div class="value positive">' . $totalMatches . '</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">⚠️ Mismatches</div>
+                        <div class="value negative">' . $totalMismatches . '</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">🆕 New Records</div>
+                        <div class="value neutral">' . $totalNew . '</div>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
                         <thead>
                             <tr>
-                                <th>Sl No</th>
-                                <th>Voucher</th>
-                                <th>Count</th>
-                                <th>Products</th>
+                                <th>#</th>
+                                <th>Voucher Type</th>
+                                <th style="text-align: right;">New DB<br>Count</th>
+                                <th style="text-align: right;">Old DB<br>Count</th>
+                                <th style="text-align: center;">Difference</th>
+                                <th style="text-align: right;">New DB<br>Products</th>
+                                <th style="text-align: right;">Old DB<br>Products</th>
+                                <th style="text-align: center;">Products<br>Difference</th>
+                                <th style="text-align: center;">Status</th>
                             </tr>
                         </thead>
                         <tbody>';
 
-                            $slNo = 1;
-                            foreach ($newCounts as $model => $data) {
-                                if (is_array($data)) {
-                                    $html .= '<tr>
-                                        <td>' . $slNo++ . '</td>
-                                        <td>' . htmlspecialchars($model) . '</td>
-                                        <td>' . htmlspecialchars($data['count']) . '</td>
-                                        <td>' . htmlspecialchars($data['products']) . '</td>
-                                    </tr>';
-                                } else {
-                                    $html .= '<tr>
-                                        <td>' . $slNo++ . '</td>
-                                        <td>' . htmlspecialchars($model) . '</td>
-                                        <td>' . htmlspecialchars($data) . '</td>
-                                        <td>-</td>
-                                    </tr>';
-                                }
-                            }
+        foreach ($comparisonData as $row) {
+            // Determine row class and status
+            $rowClass = '';
+            $statusBadge = '';
+            
+            if ($row['old_count'] === null) {
+                $rowClass = 'new-record';
+                $statusBadge = '<span class="badge badge-new">New</span>';
+            } elseif ($row['count_diff'] == 0) {
+                $rowClass = 'match';
+                $statusBadge = '<span class="badge badge-match">Match</span>';
+            } else {
+                $rowClass = 'mismatch';
+                $statusBadge = '<span class="badge badge-mismatch">Diff</span>';
+            }
 
-        $html .= '      </tbody>
+            // Format difference
+            $countDiffHtml = '';
+            if ($row['count_diff'] === null) {
+                $countDiffHtml = '<span class="diff-na">N/A</span>';
+            } elseif ($row['count_diff'] > 0) {
+                $countDiffHtml = '<span class="diff-positive">+' . number_format($row['count_diff']) . '</span>';
+            } elseif ($row['count_diff'] < 0) {
+                $countDiffHtml = '<span class="diff-negative">' . number_format($row['count_diff']) . '</span>';
+            } else {
+                $countDiffHtml = '<span class="diff-zero">0</span>';
+            }
+
+            // Format products difference
+            $productsDiffHtml = '';
+            if ($row['products_diff'] === null) {
+                $productsDiffHtml = '<span class="diff-na">-</span>';
+            } elseif ($row['products_diff'] > 0) {
+                $productsDiffHtml = '<span class="diff-positive">+' . number_format($row['products_diff']) . '</span>';
+            } elseif ($row['products_diff'] < 0) {
+                $productsDiffHtml = '<span class="diff-negative">' . number_format($row['products_diff']) . '</span>';
+            } else {
+                $productsDiffHtml = '<span class="diff-zero">0</span>';
+            }
+
+            $html .= '<tr class="' . $rowClass . '">
+                <td>' . $row['sl'] . '</td>
+                <td><span class="voucher-name">' . htmlspecialchars($row['voucher']) . '</span></td>
+                <td class="count-cell">' . number_format($row['new_count']) . '</td>
+                <td class="count-cell">' . ($row['old_count'] !== null ? number_format($row['old_count']) : '<span class="diff-na">-</span>') . '</td>
+                <td class="diff-cell">' . $countDiffHtml . '</td>
+                <td class="count-cell">' . ($row['new_products'] !== null ? number_format($row['new_products']) : '-') . '</td>
+                <td class="count-cell">' . ($row['old_products'] !== null ? number_format($row['old_products']) : '-') . '</td>
+                <td class="diff-cell">' . $productsDiffHtml . '</td>
+                <td style="text-align: center;">' . $statusBadge . '</td>
+            </tr>';
+        }
+
+        $html .= '
+                        </tbody>
                     </table>
                 </div>
 
-                <!-- Old DB Table -->
-                <div class="card">
-                    <table class="t-old">
-                        <caption>Old Database Table Counts</caption>
-                        <thead>
-                            <tr>
-                                <th>Sl No</th>
-                                <th>Voucher</th>
-                                <th>Count</th>
-                                <th>Products</th>
-                            </tr>
-                        </thead>
-                        <tbody>';
-
-                            if (!empty($oldRows)) {
-                                foreach ($oldRows as $row) {
-                                    $html .= '<tr>
-                                        <td>' . htmlspecialchars($row['sl']) . '</td>
-                                        <td>' . htmlspecialchars($row['voucher']) . '</td>
-                                        <td>' . htmlspecialchars($row['count']) . '</td>
-                                        <td>' . ($row['products'] !== '' ? htmlspecialchars($row['products']) : '-') . '</td>
-                                    </tr>';
-                                }
-                            } else {
-                                $html .= '<tr><td colspan="4">Could not load old database stats.</td></tr>';
-                            }
-
-        $html .= '      </tbody>
-                    </table>
-                    <div class="note">Source: ' . htmlspecialchars($oldApiUrl) . '</div>
+                <div class="note">
+                    <strong>Source:</strong> Old database stats fetched from <a href="' . htmlspecialchars($oldApiUrl) . '" target="_blank">' . htmlspecialchars($oldApiUrl) . '</a><br>
+                    <strong>Legend:</strong> 
+                    <span class="badge badge-match">Match</span> = Counts match exactly | 
+                    <span class="badge badge-mismatch">Diff</span> = Counts differ | 
+                    <span class="badge badge-new">New</span> = Record exists only in new database
                 </div>
-
             </div>
-
         </body>
         </html>';
 
