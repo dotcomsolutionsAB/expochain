@@ -191,7 +191,6 @@ class StatsController extends Controller
             'Products' => ProductsModel::count(),
             'Clients' => ClientsModel::count(),
             'Suppliers' => SuppliersModel::count(),
-
             'Quotation' => [
                 'count' => QuotationsModel::count(),
                 'products' => QuotationProductsModel::count()
@@ -208,7 +207,6 @@ class StatsController extends Controller
                 'count' => SalesReturnModel::count(),
                 'products' => SalesReturnProductsModel::count()
             ],
-
             'Debit Note' => DebitNoteModel::count(),
             'Lot Info' => LotModel::count(),
             'Purchase Back' => PurchaseBackModel::count(),
@@ -225,14 +223,16 @@ class StatsController extends Controller
                 'count' => PurchaseReturnModel::count(),
                 'products' => PurchaseReturnProductsModel::count()
             ],
-
             'Credit Note' => CreditNoteModel::count(),
             'Assembly Combinations' => AssemblyModel::count(),
             'Assembly Operation' => [
                 'count' => AssemblyOperationModel::count(),
                 'products' => AssemblyOperationProductsModel::count()
             ],
-            'Fabrication' => FabricationModel::count(),
+            'Fabrication' => [
+                FabricationModel::count(),
+                FabricationProductsModel::count()
+            ],
             'Adjustments' => AdjustmentModel::count(),
             'Stock Transfer' => StockTransferModel::count(),
             'Test Certificate' => TestCertificateModel::count(),
@@ -386,71 +386,6 @@ class StatsController extends Controller
 
         return response($html, 200)->header('Content-Type', 'text/html');
     }
-
-
-    // public function importAdjustment()
-    // {
-    //     // Fetch API data
-    //     $response = Http::get('https://expo.egsm.in/assets/custom/migrate/adjustment.php');
-
-    //     if ($response->failed()) {
-    //         return response()->json(['error' => 'Failed to fetch API data'], 500);
-    //     }
-
-    //     $data = $response->json();
-
-    //     if (!isset($data['data']) || !is_array($data['data'])) {
-    //         return response()->json(['error' => 'Invalid API response format'], 422);
-    //     }
-
-    //     $inserted = 0;
-    //     $skipped = 0;
-
-    //     foreach ($data['data'] as $item) {
-    //         // Basic validation
-    //         if (empty($item['date']) || empty($item['product']) || !isset($item['quantity']) || !isset($item['type'])) {
-    //             $skipped++;
-    //             continue;
-    //         }
-
-    //         // Find product_id by product name (case insensitive)
-    //         $product = ProductsModel::where('name', 'LIKE', trim($item['product']))->first();
-    //         if (!$product) {
-    //             // Skip or handle missing product
-    //             $skipped++;
-    //             continue;
-    //         }
-
-    //         // Find godown_id by place (case insensitive)
-    //         $godown = GodownModel::where('name', 'LIKE', trim($item['place']))->first();
-    //         if (!$godown) {
-    //             // Optional: skip or set null or default godown
-    //             $skipped++;
-    //             continue;
-    //         }
-
-    //         // Prepare data for insertion
-    //         $adjustmentData = [
-    //             'company_id' => 1, // Change this as needed
-    //             'adjustment_date' => $item['date'],
-    //             'product_id' => $product->id,
-    //             'quantity' => (float) $item['quantity'],
-    //             'godown_id' => $godown->id,
-    //             'type' => $item['type'],
-    //         ];
-
-    //         // Insert record
-    //         AdjustmentModel::create($adjustmentData);
-    //         $inserted++;
-    //     }
-
-    //     return response()->json([
-    //         'message' => "Import completed",
-    //         'inserted' => $inserted,
-    //         'skipped' => $skipped,
-    //         'total' => count($data['data']),
-    //     ]);
-    // }
 
     public function importAdjustment()
     {
@@ -693,6 +628,4 @@ class StatsController extends Controller
             'total' => count($data['data']),
         ]);
     }
-
-
 }
