@@ -15,17 +15,8 @@ class UsersController extends Controller
     //register user
     public function register(Request $request)
     {
-        // Must be logged in
-        $authUser = Auth::user();
-        if (!$authUser) {
-            return response()->json([
-                'code' => 401,
-                'success' => false,
-                'message' => 'Unauthorized. Please log in.'
-            ], 401);
-        }
-
-        $companyId = (int) $authUser->company_id;
+        // Set company_id to 1
+        $companyId = 1;
 
         // Validate input (role must be admin or user)
         $request->validate([
@@ -67,15 +58,6 @@ class UsersController extends Controller
         // Normalize role & username
         $role = strtolower($request->input('role'));
         $username = $request->input('username') ? strtolower($request->input('username')) : strtolower($request->input('email'));
-
-        // Optional safety: only admins can create admin users
-        if ($role === 'admin' && strtolower((string) $authUser->role) !== 'admin') {
-            return response()->json([
-                'code' => 403,
-                'success' => false,
-                'message' => 'Only admins can create admin users.'
-            ], 403);
-        }
 
         // Create user
         $register_user = User::create([
