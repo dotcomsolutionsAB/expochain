@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\Http; // For HTTP client
 use Illuminate\Http\Request;
-
 use App\Models\AdjustmentModel;
 use App\Models\AssemblyModel;
 use App\Models\AssemblyOperationModel;
@@ -74,24 +73,133 @@ use App\Models\WhatsappQueueModel;
 
 class StatsController extends Controller
 {
+    // public function index()
+    // {
+    //     // Collect counts for all models here
+    //     $counts = [
+    //         'Products' => ProductsModel::count(),
+    //         'Clients' => ClientsModel::count(),
+    //         'Suppliers' => SuppliersModel::count(),
+    //         // Quotation & Quotation Products
+    //         'Quotation' => [
+    //             'count' => QuotationsModel::count(),
+    //             'products' => QuotationProductsModel::count()
+    //         ],
+    //         // Sales Order & Sales Order Products
+    //         'Sales Order' => [
+    //             'count' => SalesOrderModel::count(),
+    //             'products' => SalesOrderProductsModel::count()
+    //         ],
+    //         // Sales Invoice & Sales Invoice Products
+    //         'Sales Invoice' => [
+    //             'count' => SalesInvoiceModel::count(),
+    //             'products' => SalesInvoiceProductsModel::count()
+    //         ],
+    //         'Sales Return' => [
+    //             'count' => SalesReturnModel::count(),
+    //             'products' => SalesReturnProductsModel::count()
+    //         ],
+            
+    //         'Debit Note' => DebitNoteModel::count(),
+    //         'Lot Info' => LotModel::count(),
+    //         // Purchase bag
+    //         'Purchase Back' => PurchaseBackModel::count(), // need to check purchase bag
+
+    //         'Purchase Order' => [
+    //             'count' => PurchaseOrderModel::count(),
+    //             'products' => PurchaseOrderProductsModel::count()
+    //         ],
+    //         // Purchase Invoice & Purchase Invoice Products
+    //         'Purchase Invoice' => [
+    //             'count' => PurchaseInvoiceModel::count(),
+    //             'products' => PurchaseInvoiceProductsModel::count()
+    //         ],
+    //         // Purchase Return & Purchase Return Products
+    //         'Purchase Return' => [
+    //             'count' => PurchaseReturnModel::count(),
+    //             'products' => PurchaseReturnProductsModel::count()
+    //         ],
+
+    //         // Additional models
+    //         'Credit Note' => CreditNoteModel::count(),
+    //         'Assembly Combinations' => AssemblyModel::count(),
+    //         // Assembly Operation & Assembly Operation Products
+    //         'Assembly Operation' => [
+    //             'count' => AssemblyOperationModel::count(),
+    //             'products' => AssemblyOperationProductsModel::count()
+    //         ],
+    //         'Fabrication' => FabricationModel::count(),
+    //         'Adjustments' => AdjustmentModel::count(),
+    //         'Stock Transfer' => StockTransferModel::count(),
+    //         // transfer back
+    //         'Test Certificate' => TestCertificateModel::count(),
+    //     ];
+
+    //     // Build HTML directly
+    //     $html = '
+    //             <!DOCTYPE html>
+    //             <html lang="en">
+    //                 <head>
+    //                     <meta charset="UTF-8" />
+    //                     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    //                     <title>Stats Overview</title>
+    //                     <style>
+    //                         body { font-family: Arial, sans-serif; margin: 40px auto; max-width: 700px; background: #f9f9f9; }
+    //                         table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    //                         th, td { padding: 12px 20px; border: 1px solid #ddd; text-align: left; }
+    //                         th { background-color: #007bff; color: white; }
+    //                         caption { font-size: 1.5em; margin-bottom: 10px; font-weight: bold; color: #333; }
+    //                         tbody tr:hover { background-color: #f1f7ff; }
+    //                     </style>
+    //                 </head>
+    //                 <body>
+    //                     <table>
+    //                         <caption>Database Table Counts</caption>
+    //                         <thead>
+    //                             <tr>
+    //                                 <th>Sl No</th>
+    //                                 <th>Voucher</th>
+    //                                 <th>Count</th>
+    //                                 <th>Products</th>
+    //                             </tr>
+    //                         </thead>
+    //                         <tbody>';
+
+    //                             $slNo = 1;
+    //                             foreach ($counts as $model => $data) {
+    //                                 if (is_array($data)) {
+    //                                     $html .= '<tr><td>' . $slNo++ . '</td><td>' . htmlspecialchars($model) . '</td><td>' . htmlspecialchars($data['count']) . '</td><td>' . htmlspecialchars($data['products']) . '</td></tr>';
+    //                                 } else {
+    //                                     $html .= '<tr><td>' . $slNo++ . '</td><td>' . htmlspecialchars($model) . '</td><td>' . htmlspecialchars($data) . '</td><td>-</td></tr>';
+    //                                 }
+    //                             }
+
+    //                             $html .= '
+    //                         </tbody>
+    //                     </table>
+    //                 </body>
+    //             </html>
+    //         ';
+
+    //     return response($html, 200)->header('Content-Type', 'text/html');
+    // }
+
     public function index()
     {
-        // Collect counts for all models here
-        $counts = [
+        // ✅ New DB counts
+        $newCounts = [
             'Products' => ProductsModel::count(),
             'Clients' => ClientsModel::count(),
             'Suppliers' => SuppliersModel::count(),
-            // Quotation & Quotation Products
+
             'Quotation' => [
                 'count' => QuotationsModel::count(),
                 'products' => QuotationProductsModel::count()
             ],
-            // Sales Order & Sales Order Products
             'Sales Order' => [
                 'count' => SalesOrderModel::count(),
                 'products' => SalesOrderProductsModel::count()
             ],
-            // Sales Invoice & Sales Invoice Products
             'Sales Invoice' => [
                 'count' => SalesInvoiceModel::count(),
                 'products' => SalesInvoiceProductsModel::count()
@@ -100,31 +208,26 @@ class StatsController extends Controller
                 'count' => SalesReturnModel::count(),
                 'products' => SalesReturnProductsModel::count()
             ],
-            
+
             'Debit Note' => DebitNoteModel::count(),
             'Lot Info' => LotModel::count(),
-            // Purchase bag
-            'Purchase Back' => PurchaseBackModel::count(), // need to check purchase bag
+            'Purchase Back' => PurchaseBackModel::count(),
 
             'Purchase Order' => [
                 'count' => PurchaseOrderModel::count(),
                 'products' => PurchaseOrderProductsModel::count()
             ],
-            // Purchase Invoice & Purchase Invoice Products
             'Purchase Invoice' => [
                 'count' => PurchaseInvoiceModel::count(),
                 'products' => PurchaseInvoiceProductsModel::count()
             ],
-            // Purchase Return & Purchase Return Products
             'Purchase Return' => [
                 'count' => PurchaseReturnModel::count(),
                 'products' => PurchaseReturnProductsModel::count()
             ],
 
-            // Additional models
             'Credit Note' => CreditNoteModel::count(),
             'Assembly Combinations' => AssemblyModel::count(),
-            // Assembly Operation & Assembly Operation Products
             'Assembly Operation' => [
                 'count' => AssemblyOperationModel::count(),
                 'products' => AssemblyOperationProductsModel::count()
@@ -132,55 +235,154 @@ class StatsController extends Controller
             'Fabrication' => FabricationModel::count(),
             'Adjustments' => AdjustmentModel::count(),
             'Stock Transfer' => StockTransferModel::count(),
-            // transfer back
             'Test Certificate' => TestCertificateModel::count(),
         ];
 
-        // Build HTML directly
+        // ✅ Old DB counts (from external HTML page)
+        $oldApiUrl = 'https://expo.egsm.in/assets/custom/migrate/stats.php';
+        $oldRows = []; // each row: ['sl' => 1, 'voucher' => 'Product', 'count' => '4883', 'products' => '']
+
+        try {
+            $resp = Http::timeout(10)->get($oldApiUrl);
+
+            if ($resp->successful()) {
+                $htmlBody = $resp->body();
+
+                // Parse tbody rows from old HTML
+                libxml_use_internal_errors(true);
+
+                $dom = new \DOMDocument();
+                $dom->loadHTML($htmlBody);
+
+                $xpath = new \DOMXPath($dom);
+                $trs = $xpath->query("//table//tbody//tr");
+
+                foreach ($trs as $tr) {
+                    $tds = $tr->getElementsByTagName('td');
+                    if ($tds->length >= 3) {
+                        $oldRows[] = [
+                            'sl'       => trim($tds->item(0)->textContent ?? ''),
+                            'voucher'  => trim($tds->item(1)->textContent ?? ''),
+                            'count'    => trim($tds->item(2)->textContent ?? ''),
+                            'products' => trim($tds->item(3)->textContent ?? ''),
+                        ];
+                    }
+                }
+
+                libxml_clear_errors();
+            }
+        } catch (\Exception $e) {
+            // if old api fails, we'll just show empty oldRows and show a note in UI
+            \Log::error("Old stats fetch failed: " . $e->getMessage());
+        }
+
+        // ✅ Build HTML (two tables)
         $html = '
-                <!DOCTYPE html>
-                <html lang="en">
-                    <head>
-                        <meta charset="UTF-8" />
-                        <meta name="viewport" content="width=device-width, initial-scale=1" />
-                        <title>Stats Overview</title>
-                        <style>
-                            body { font-family: Arial, sans-serif; margin: 40px auto; max-width: 700px; background: #f9f9f9; }
-                            table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-                            th, td { padding: 12px 20px; border: 1px solid #ddd; text-align: left; }
-                            th { background-color: #007bff; color: white; }
-                            caption { font-size: 1.5em; margin-bottom: 10px; font-weight: bold; color: #333; }
-                            tbody tr:hover { background-color: #f1f7ff; }
-                        </style>
-                    </head>
-                    <body>
-                        <table>
-                            <caption>Database Table Counts</caption>
-                            <thead>
-                                <tr>
-                                    <th>Sl No</th>
-                                    <th>Voucher</th>
-                                    <th>Count</th>
-                                    <th>Products</th>
-                                </tr>
-                            </thead>
-                            <tbody>';
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>Stats Overview</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 24px; background: #f6f7fb; }
+                .wrap { display: flex; gap: 20px; align-items: flex-start; }
+                .card { flex: 1; min-width: 340px; background: #fff; border-radius: 12px; padding: 14px; box-shadow: 0 0 12px rgba(0,0,0,0.08); }
+                .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+                @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
 
-                                $slNo = 1;
-                                foreach ($counts as $model => $data) {
-                                    if (is_array($data)) {
-                                        $html .= '<tr><td>' . $slNo++ . '</td><td>' . htmlspecialchars($model) . '</td><td>' . htmlspecialchars($data['count']) . '</td><td>' . htmlspecialchars($data['products']) . '</td></tr>';
-                                    } else {
-                                        $html .= '<tr><td>' . $slNo++ . '</td><td>' . htmlspecialchars($model) . '</td><td>' . htmlspecialchars($data) . '</td><td>-</td></tr>';
-                                    }
+                table { width: 100%; border-collapse: collapse; background: white; }
+                th, td { padding: 10px 14px; border: 1px solid #e6e6e6; text-align: left; font-size: 14px; }
+                caption { font-size: 18px; margin: 8px 0 12px; font-weight: bold; color: #222; text-align: left; }
+
+                /* NEW DB theme (blue) */
+                .t-new th { background-color: #0d6efd; color: white; }
+                .t-new tbody tr:hover { background-color: #e9f2ff; }
+
+                /* OLD DB theme (orange) */
+                .t-old th { background-color: #fd7e14; color: white; }
+                .t-old tbody tr:hover { background-color: #fff1e6; }
+
+                .note { margin-top: 8px; font-size: 12px; color: #666; }
+            </style>
+        </head>
+        <body>
+
+            <div class="grid">
+
+                <!-- New DB Table -->
+                <div class="card">
+                    <table class="t-new">
+                        <caption>New Database Table Counts</caption>
+                        <thead>
+                            <tr>
+                                <th>Sl No</th>
+                                <th>Voucher</th>
+                                <th>Count</th>
+                                <th>Products</th>
+                            </tr>
+                        </thead>
+                        <tbody>';
+
+                            $slNo = 1;
+                            foreach ($newCounts as $model => $data) {
+                                if (is_array($data)) {
+                                    $html .= '<tr>
+                                        <td>' . $slNo++ . '</td>
+                                        <td>' . htmlspecialchars($model) . '</td>
+                                        <td>' . htmlspecialchars($data['count']) . '</td>
+                                        <td>' . htmlspecialchars($data['products']) . '</td>
+                                    </tr>';
+                                } else {
+                                    $html .= '<tr>
+                                        <td>' . $slNo++ . '</td>
+                                        <td>' . htmlspecialchars($model) . '</td>
+                                        <td>' . htmlspecialchars($data) . '</td>
+                                        <td>-</td>
+                                    </tr>';
                                 }
+                            }
 
-                                $html .= '
-                            </tbody>
-                        </table>
-                    </body>
-                </html>
-            ';
+        $html .= '      </tbody>
+                    </table>
+                </div>
+
+                <!-- Old DB Table -->
+                <div class="card">
+                    <table class="t-old">
+                        <caption>Old Database Table Counts</caption>
+                        <thead>
+                            <tr>
+                                <th>Sl No</th>
+                                <th>Voucher</th>
+                                <th>Count</th>
+                                <th>Products</th>
+                            </tr>
+                        </thead>
+                        <tbody>';
+
+                            if (!empty($oldRows)) {
+                                foreach ($oldRows as $row) {
+                                    $html .= '<tr>
+                                        <td>' . htmlspecialchars($row['sl']) . '</td>
+                                        <td>' . htmlspecialchars($row['voucher']) . '</td>
+                                        <td>' . htmlspecialchars($row['count']) . '</td>
+                                        <td>' . ($row['products'] !== '' ? htmlspecialchars($row['products']) : '-') . '</td>
+                                    </tr>';
+                                }
+                            } else {
+                                $html .= '<tr><td colspan="4">Could not load old database stats.</td></tr>';
+                            }
+
+        $html .= '      </tbody>
+                    </table>
+                    <div class="note">Source: ' . htmlspecialchars($oldApiUrl) . '</div>
+                </div>
+
+            </div>
+
+        </body>
+        </html>';
 
         return response($html, 200)->header('Content-Type', 'text/html');
     }
