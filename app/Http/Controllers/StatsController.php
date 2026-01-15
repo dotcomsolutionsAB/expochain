@@ -313,7 +313,7 @@ class StatsController extends Controller
                 <!-- New DB Table -->
                 <div class="card">
                     <table class="t-new">
-                        <caption>Old Database Table Counts</caption>
+                        <caption>New Database Table Counts</caption>
                         <thead>
                             <tr>
                                 <th>Sl No</th>
