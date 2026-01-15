@@ -230,8 +230,8 @@ class StatsController extends Controller
                 'products' => AssemblyOperationProductsModel::count()
             ],
             'Fabrication' => [
-                FabricationModel::count(),
-                FabricationProductsModel::count()
+                'count' => FabricationModel::count(),
+                'products' => FabricationProductsModel::count(),
             ],
             'Adjustments' => AdjustmentModel::count(),
             'Stock Transfer' => StockTransferModel::count(),
