@@ -208,6 +208,23 @@ class SalesReturnController extends Controller
                     $salesReturn->client = null;
                 }
 
+                // Get sales invoice details
+                $salesInvoice = null;
+                if ($salesReturn->sales_invoice_id) {
+                    $invoice = SalesInvoiceModel::where('company_id', Auth::user()->company_id)
+                        ->where('id', $salesReturn->sales_invoice_id)
+                        ->select('id', 'sales_invoice_no')
+                        ->first();
+                    
+                    if ($invoice) {
+                        $salesInvoice = [
+                            'sales_invoice_id' => $invoice->id,
+                            'sales_invoice_no' => $invoice->sales_invoice_no,
+                        ];
+                    }
+                }
+                $salesReturn->sales_invoice = $salesInvoice;
+
                 return response()->json([
                     'code' => 200,
                     'success' => true,
@@ -232,14 +249,48 @@ class SalesReturnController extends Controller
             // Fetch the data
             $get_sales_returns = $query->get();
 
+            // Collect all unique sales_invoice_id values for efficient querying
+            $uniqueInvoiceIds = $get_sales_returns
+                ->pluck('sales_invoice_id')
+                ->filter(function($invoiceId) {
+                    return !is_null($invoiceId) && $invoiceId != 0;
+                })
+                ->unique()
+                ->values()
+                ->toArray();
+
+            // Fetch all sales invoices in one query
+            $salesInvoicesMap = [];
+            if (!empty($uniqueInvoiceIds)) {
+                $salesInvoices = SalesInvoiceModel::where('company_id', Auth::user()->company_id)
+                    ->whereIn('id', $uniqueInvoiceIds)
+                    ->select('id', 'sales_invoice_no')
+                    ->get();
+                
+                foreach ($salesInvoices as $invoice) {
+                    $salesInvoicesMap[$invoice->id] = $invoice->sales_invoice_no;
+                }
+            }
+
             // Transform each sales return's client: Only return state from addresses
-            $get_sales_returns->transform(function ($salesReturn) {
+            $get_sales_returns->transform(function ($salesReturn) use ($salesInvoicesMap) {
                 if ($salesReturn->client) {
                     $state = optional($salesReturn->client->addresses->first())->state;
                     $salesReturn->client = ['state' => $state];
                 } else {
                     $salesReturn->client = null;
                 }
+
+                // Add sales invoice details
+                $salesInvoice = null;
+                if ($salesReturn->sales_invoice_id && isset($salesInvoicesMap[$salesReturn->sales_invoice_id])) {
+                    $salesInvoice = [
+                        'sales_invoice_id' => $salesReturn->sales_invoice_id,
+                        'sales_invoice_no' => $salesInvoicesMap[$salesReturn->sales_invoice_id],
+                    ];
+                }
+                $salesReturn->sales_invoice = $salesInvoice;
+
                 return $salesReturn;
             });
 
