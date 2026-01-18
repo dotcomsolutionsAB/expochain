@@ -1400,7 +1400,7 @@ class SalesInvoiceController extends Controller
                         if ($salesOrder) {
                             // Get the primary key value (so_id) from the found sales order
                             // Access so_id directly (same approach as SalesOrderController)
-                            $itemSoId = (int)$salesOrder->so_id;
+                            $itemSoId = (int)$salesOrder->id;
                         }
                     }
 
