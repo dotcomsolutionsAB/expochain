@@ -1289,22 +1289,45 @@ class SalesInvoiceController extends Controller
                 if (array_key_exists('so_no', $record) && !empty($record['so_no'])) {
                     $soNo = is_array($record['so_no']) ? (array_filter($record['so_no'])[0] ?? null) : $record['so_no'];
                     if ($soNo && is_string($soNo)) {
-                        // Lookup Sales Order by sales_order_no using model
+                        // Lookup Sales Order by sales_order_no and get its primary key (so_id)
                         $salesOrder = SalesOrderModel::where('company_id', Auth::user()->company_id)
                             ->where('sales_order_no', trim($soNo))
                             ->first();
-                        $salesOrderId = $salesOrder ? (int)$salesOrder->so_id : null;
+                        if ($salesOrder) {
+                            // Get the primary key value (so_id) from the found sales order
+                            // Access so_id directly (same approach as SalesOrderController)
+                            $salesOrderId = (int)$salesOrder->id;
+                        }
                     }
                 }
 
-                $salesInvoicesBatch[] = [
+                $invoiceData = [
                     'company_id'         => Auth::user()->company_id,
                     'client_id'          => $clientId,  // can be null
                     'name'               => $clientName !== '' ? $clientName : 'Unnamed Client',
                     'sales_invoice_no'   => !empty($record['si_no']) ? trim($record['si_no']) : null,
                     'sales_invoice_date' => !empty($record['si_date']) && $record['si_date'] !== '0000-00-00'
                                             ? date('Y-m-d', strtotime($record['si_date'])) : now(),
-                    'so_id'     => $salesOrderId,
+                    'template'           => isset($tplObj['id']) ? (int)$tplObj['id'] : 0,
+                    'commission'         => !empty($record['commission']) ? (float)$record['commission'] : 0.0,
+                    'cash'               => !empty($record['cash']) ? (string)$record['cash'] : '0',
+                    'user'               => Auth::user()->id,
+                    'cgst'               => isset($taxObj['cgst']) ? (float)$taxObj['cgst'] : 0.0,
+                    'sgst'               => isset($taxObj['sgst']) ? (float)$taxObj['sgst'] : 0.0,
+                    'igst'               => isset($taxObj['igst']) ? (float)$taxObj['igst'] : 0.0,
+                    'total'              => isset($record['total']) ? round((float)$record['total'], 2) : 0.0,
+                    'gross'              => $invGross,
+                    'round_off'          => round($roundoff, 2),
+                    'created_at'         => now(),
+                    'updated_at'         => now(),
+                ];
+                
+                // Only add so_id if we found a valid sales order
+                if ($salesOrderId !== null) {
+                    $invoiceData['so_id'] = $salesOrderId;
+                }
+                
+                $salesInvoicesBatch[] = $invoiceData;
                     'template'           => isset($tplObj['id']) ? (int)$tplObj['id'] : 0,
                     'commission'         => !empty($record['commission']) ? (float)$record['commission'] : 0.0,
                     'cash'               => !empty($record['cash']) ? (string)$record['cash'] : '0',
@@ -1383,7 +1406,22 @@ class SalesInvoiceController extends Controller
 
                     $lineAmount = round($lineGross + $lineCgst + $lineSgst + $lineIgst, 2);
 
-                    $productsBatch[] = [
+                    // Lookup so_id for this product item
+                    $itemSoId = null;
+                    if (isset($it['so_no']) && !empty($it['so_no']) && is_string($it['so_no'])) {
+                        $soNo = trim($it['so_no']);
+                        // Lookup Sales Order by sales_order_no and get its primary key (so_id)
+                        $salesOrder = SalesOrderModel::where('company_id', Auth::user()->company_id)
+                            ->where('sales_order_no', $soNo)
+                            ->first();
+                        if ($salesOrder) {
+                            // Get the primary key value (so_id) from the found sales order
+                            // Access so_id directly (same approach as SalesOrderController)
+                            $itemSoId = (int)$salesOrder->so_id;
+                        }
+                    }
+
+                    $productData = [
                         'sales_invoice_id' => $siId,
                         'company_id'       => Auth::user()->company_id,
                         'product_id'       => $productId,            // <-- can be null now
@@ -1415,25 +1453,18 @@ class SalesInvoiceController extends Controller
                                                     (strtoupper(trim((string)$it['place'])) === 'ANKURHATI' ? 3 : null))
                                                 )
                                                 : null,
-                        'so_id'            => (function() use ($it) {
-                                                if (!isset($it['so_no']) || empty($it['so_no'])) {
-                                                    return null;
-                                                }
-                                                $soNo = is_string($it['so_no']) ? trim($it['so_no']) : null;
-                                                if ($soNo) {
-                                                    // Lookup Sales Order by sales_order_no for this item using model
-                                                    $salesOrder = SalesOrderModel::where('company_id', Auth::user()->company_id)
-                                                        ->where('sales_order_no', $soNo)
-                                                        ->first();
-                                                    return $salesOrder ? (int)$salesOrder->so_id : null;
-                                                }
-                                                return null;
-                                            })(),
                         'returned'         => isset($it['returned']) ? (float)$it['returned'] : 0.0,
                         'profit'           => isset($it['profit']) ? (float)$it['profit'] : 0.0,
                         'created_at'       => now(),
                         'updated_at'       => now(),
                     ];
+                    
+                    // Only add so_id if we found a valid sales order
+                    if ($itemSoId !== null) {
+                        $productData['so_id'] = $itemSoId;
+                    }
+                    
+                    $productsBatch[] = $productData;
                 }
             }
 
