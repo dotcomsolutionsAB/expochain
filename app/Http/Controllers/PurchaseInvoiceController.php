@@ -1426,6 +1426,7 @@ class PurchaseInvoiceController extends Controller
                             )
                             : null,
                         'sold'                => isset($item['instock']) ? (float)$item['instock'] : 0.0,
+                        'returned'          => isset($item['returned']) ? (float)$item['returned'] : 0.0,
                         'created_at'          => now(),
                         'updated_at'          => now(),
                     ];
