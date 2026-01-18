@@ -222,6 +222,7 @@ class PurchaseInvoiceController extends Controller
         $query = PurchaseInvoiceModel::with([
                 'products' => function ($query) {
                     $query->select(
+                        'id',
                         'purchase_invoice_id',
                         'product_id',
                         'product_name',
