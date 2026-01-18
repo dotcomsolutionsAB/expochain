@@ -257,8 +257,13 @@ class LotController extends Controller
     {
         set_time_limit(300);
 
-        // Clear old data
-        LotModel::truncate(); // Adjust model if named differently
+        // Clear old data - disable foreign key checks temporarily to allow truncate
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        LotModel::truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        
+        // Also clear lot_id from purchase invoices
+        PurchaseInvoiceModel::whereNotNull('lot_id')->update(['lot_id' => null]);
 
         // Source URL
         $url = 'https://expo.egsm.in/assets/custom/migrate/lot_info.php';
