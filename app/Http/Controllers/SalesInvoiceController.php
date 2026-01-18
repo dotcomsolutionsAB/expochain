@@ -1308,6 +1308,7 @@ class SalesInvoiceController extends Controller
                     'sales_invoice_no'   => !empty($record['si_no']) ? trim($record['si_no']) : null,
                     'sales_invoice_date' => !empty($record['si_date']) && $record['si_date'] !== '0000-00-00'
                                             ? date('Y-m-d', strtotime($record['si_date'])) : now(),
+                    'so_id'              => $salesOrderId,  // Always include, null if not found
                     'template'           => isset($tplObj['id']) ? (int)$tplObj['id'] : 0,
                     'commission'         => !empty($record['commission']) ? (float)$record['commission'] : 0.0,
                     'cash'               => !empty($record['cash']) ? (string)$record['cash'] : '0',
@@ -1321,11 +1322,6 @@ class SalesInvoiceController extends Controller
                     'created_at'         => now(),
                     'updated_at'         => now(),
                 ];
-                
-                // Only add so_id if we found a valid sales order
-                if ($salesOrderId !== null) {
-                    $invoiceData['so_id'] = $salesOrderId;
-                }
                 
                 $salesInvoicesBatch[] = $invoiceData;
             }
@@ -1440,16 +1436,12 @@ class SalesInvoiceController extends Controller
                                                     (strtoupper(trim((string)$it['place'])) === 'ANKURHATI' ? 3 : null))
                                                 )
                                                 : null,
+                        'so_id'            => $itemSoId,  // Always include, null if not found
                         'returned'         => isset($it['returned']) ? (float)$it['returned'] : 0.0,
                         'profit'           => isset($it['profit']) ? (float)$it['profit'] : 0.0,
                         'created_at'       => now(),
                         'updated_at'       => now(),
                     ];
-                    
-                    // Only add so_id if we found a valid sales order
-                    if ($itemSoId !== null) {
-                        $productData['so_id'] = $itemSoId;
-                    }
                     
                     $productsBatch[] = $productData;
                 }
