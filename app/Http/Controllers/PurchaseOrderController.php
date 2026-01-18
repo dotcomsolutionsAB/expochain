@@ -1206,8 +1206,8 @@ class PurchaseOrderController extends Controller
             $termsBatch = [];
             $statusMap = [
                 '0' => 'pending', 0 => 'pending',
-                '1' => 'partial', 1 => 'partial',
-                '2' => 'completed', 2 => 'completed',
+                '1' => 'completed', 1 => 'completed',
+                '2' => 'partial', 2 => 'partial',
                 '3' => 'short_closed', 3 => 'short_closed',
             ];
 
