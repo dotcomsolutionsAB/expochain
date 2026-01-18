@@ -1045,7 +1045,7 @@ class SalesOrderController extends Controller
                         'company_id'     => Auth::user()->company_id,
                         'product_id'     => $get_product->id,
                         'product_name'   => $productName,
-                        'description'    => $line['desc'] ?? '',
+                        'description'    => str_replace('|', "\n", $line['desc'] ?? ''),
                         'quantity'       => (int)$qty,
                         'unit'           => $line['unit'] ?? '',
                         'price'          => $price,
