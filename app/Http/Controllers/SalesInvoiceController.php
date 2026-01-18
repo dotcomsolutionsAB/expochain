@@ -307,6 +307,7 @@ class SalesInvoiceController extends Controller
         $dateTo = $request->input('date_to');
         $user = $request->input('user');
         $productIds = $request->input('product_ids');
+        $search = $request->input('search'); // Generic search for name, sales_invoice_no, and sales_order_no
         $limit = $request->input('limit', 10);
         $offset = $request->input('offset', 0);
 
@@ -419,6 +420,27 @@ class SalesInvoiceController extends Controller
             $ids = array_filter(explode(',', $productIds)); // handles single & multi
             $query->whereHas('products', function ($q) use ($ids) {
                 $q->whereIn('product_id', $ids);
+            });
+        }
+        // Generic search - searches in name, sales_invoice_no, and sales_order_no
+        if ($search) {
+            $companyId = Auth::user()->company_id;
+            $query->where(function($q) use ($search, $companyId) {
+                // Search in name
+                $q->where('name', 'LIKE', '%' . $search . '%')
+                  // Search in sales_invoice_no
+                  ->orWhere('sales_invoice_no', 'LIKE', '%' . $search . '%')
+                  // Search in sales_order_no (through products)
+                  ->orWhereHas('products', function ($productQuery) use ($search, $companyId) {
+                      $productQuery->whereNotNull('so_id')
+                                   ->where('so_id', '!=', 0)
+                                   ->whereIn('so_id', function($subQuery) use ($search, $companyId) {
+                                       $subQuery->select('id')
+                                                ->from('t_sales_order')
+                                                ->where('company_id', $companyId)
+                                                ->where('sales_order_no', 'LIKE', '%' . $search . '%');
+                                   });
+                  });
             });
         }
         if ($dateFrom && $dateTo) {
