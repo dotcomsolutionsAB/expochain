@@ -297,17 +297,41 @@ class LotController extends Controller
 
         foreach ($data as $record) {
             try {
+                // Format date properly
+                $lrDate = null;
+                if (!empty($record['lr_date']) && $record['lr_date'] !== '0000-00-00') {
+                    $lrDate = date('Y-m-d', strtotime($record['lr_date']));
+                    if ($lrDate === '1970-01-01') {
+                        $lrDate = null; // Invalid date
+                    }
+                }
+
+                // Format receiving_date properly
+                $receivingDate = null;
+                if (!empty($record['lr_receiving_date']) && $record['lr_receiving_date'] !== '0000-00-00') {
+                    $receivingDate = date('Y-m-d', strtotime($record['lr_receiving_date']));
+                    if ($receivingDate === '1970-01-01') {
+                        $receivingDate = null; // Invalid date
+                    }
+                }
+
+                // Process invoice field
+                $invoice = null;
+                if (isset($record['lr_invoice']) && !empty($record['lr_invoice'])) {
+                    $invoice = is_string($record['lr_invoice']) 
+                        ? str_replace(['["', '"]', '","'], ['', '', ','], $record['lr_invoice'])
+                        : $record['lr_invoice'];
+                }
+
                 $batchData[] = [
                     'company_id'     => Auth::user()->company_id,
                     'name'           => $record['lr_name'] ?? null,
                     'lr_no'          => $record['lr_no'] ?? null,
-                    'date' => ($record['lr_date'] === '0000-00-00' || empty($record['lr_date'])) ? null : $record['lr_date'],
+                    'date'           => $lrDate,
                     'shipping_by'    => $record['lr_shipping'] ?? null,
                     'freight'        => is_numeric($record['lr_freight']) ? (float)$record['lr_freight'] : null,
-                    'invoice'        => isset($record['lr_invoice']) 
-                        ? str_replace(['["', '"]', '","'], [ '', '', ',' ], $record['lr_invoice']) 
-                        : null,
-                    'receiving_date' => ($record['lr_receiving_date'] === '0000-00-00' || empty($record['lr_receiving_date'])) ? null : $record['lr_receiving_date'],
+                    'invoice'        => $invoice,
+                    'receiving_date' => $receivingDate,
                     'created_at'     => now(),
                     'updated_at'     => now()
                 ];
@@ -320,9 +344,21 @@ class LotController extends Controller
             }
         }
 
-        // Perform batch insert
+        // Perform batch insert in chunks
         if (!empty($batchData)) {
-            LotModel::insert($batchData);
+            try {
+                foreach (array_chunk($batchData, 100) as $chunk) {
+                    LotModel::insert($chunk);
+                }
+            } catch (\Exception $e) {
+                return response()->json([
+                    'code'    => 500,
+                    'success' => false,
+                    'message' => 'Failed to insert lot data.',
+                    'error'   => $e->getMessage(),
+                    'errors'  => $errors
+                ], 500);
+            }
         }
 
         return response()->json([
