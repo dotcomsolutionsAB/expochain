@@ -1590,16 +1590,6 @@ class SalesInvoiceController extends Controller
             }
         }
 
-        // Recalculate returned quantities for all imported invoices based on actual sales returns
-        $resetController = new ResetController();
-        $allImportedInvoiceIds = SalesInvoiceModel::where('company_id', Auth::user()->company_id)
-            ->pluck('id')
-            ->toArray();
-        
-        foreach ($allImportedInvoiceIds as $invoiceId) {
-            $resetController->updateReturnedQuantitiesForSalesInvoice($invoiceId);
-        }
-
         return response()->json([
             'code' => 200,
             'success' => true,
