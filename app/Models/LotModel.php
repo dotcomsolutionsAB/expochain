@@ -19,4 +19,9 @@ class LotModel extends Model
         'invoice',
         'receiving_date',
     ];
+
+    public function purchaseInvoices()
+    {
+        return $this->hasMany(PurchaseInvoiceModel::class, 'lot_id', 'id');
+    }
 }

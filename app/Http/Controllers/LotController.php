@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\CounterModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 
 class LotController extends Controller
 {
@@ -292,10 +293,11 @@ class LotController extends Controller
 
         $userCompanyId = Auth::user()->company_id;
         $batchData = [];
+        $recordMap = []; // Map to track which record corresponds to which batch item
         $successful = 0;
         $errors = [];
 
-        foreach ($data as $record) {
+        foreach ($data as $index => $record) {
             try {
                 // Format date properly
                 $lrDate = null;
@@ -323,10 +325,11 @@ class LotController extends Controller
                         : $record['lr_invoice'];
                 }
 
+                $lrNo = $record['lr_no'] ?? null;
                 $batchData[] = [
                     'company_id'     => Auth::user()->company_id,
                     'name'           => $record['lr_name'] ?? null,
-                    'lr_no'          => $record['lr_no'] ?? null,
+                    'lr_no'          => $lrNo,
                     'date'           => $lrDate,
                     'shipping_by'    => $record['lr_shipping'] ?? null,
                     'freight'        => is_numeric($record['lr_freight']) ? (float)$record['lr_freight'] : null,
@@ -335,6 +338,12 @@ class LotController extends Controller
                     'created_at'     => now(),
                     'updated_at'     => now()
                 ];
+                
+                // Store mapping: lr_no -> original record (for invoice processing)
+                if ($lrNo) {
+                    $recordMap[$lrNo] = $record;
+                }
+                
                 $successful++;
             } catch (\Exception $e) {
                 $errors[] = [
@@ -345,10 +354,21 @@ class LotController extends Controller
         }
 
         // Perform batch insert in chunks
+        $insertedLots = [];
         if (!empty($batchData)) {
             try {
                 foreach (array_chunk($batchData, 100) as $chunk) {
                     LotModel::insert($chunk);
+                }
+                
+                // Get inserted lot IDs by matching on unique fields (lr_no, company_id)
+                // Since we can't get IDs from insert(), we need to query them back
+                $lrNos = array_filter(array_column($batchData, 'lr_no'));
+                if (!empty($lrNos)) {
+                    $insertedLots = LotModel::where('company_id', Auth::user()->company_id)
+                        ->whereIn('lr_no', $lrNos)
+                        ->get()
+                        ->keyBy('lr_no');
                 }
             } catch (\Exception $e) {
                 return response()->json([
@@ -361,10 +381,52 @@ class LotController extends Controller
             }
         }
 
+        // Update purchase invoices with lot_id
+        $updatedInvoices = 0;
+        if (!empty($insertedLots) && !empty($recordMap)) {
+            foreach ($insertedLots as $lrNo => $lot) {
+                try {
+                    if (!isset($recordMap[$lrNo])) {
+                        continue;
+                    }
+                    
+                    $record = $recordMap[$lrNo];
+                    $lotId = $lot->id;
+                    
+                    // Parse invoice numbers from lr_invoice field
+                    $invoiceString = $record['lr_invoice'] ?? null;
+                    if (empty($invoiceString)) {
+                        continue;
+                    }
+                    
+                    // Clean and split invoice numbers
+                    $invoiceString = is_string($invoiceString) 
+                        ? str_replace(['["', '"]', '","'], ['', '', ','], $invoiceString)
+                        : $invoiceString;
+                    
+                    $invoiceNumbers = array_filter(array_map('trim', explode(',', $invoiceString)));
+                    
+                    if (!empty($invoiceNumbers)) {
+                        // Update purchase invoices by purchase_invoice_no
+                        $updated = PurchaseInvoiceModel::where('company_id', Auth::user()->company_id)
+                            ->whereIn('purchase_invoice_no', $invoiceNumbers)
+                            ->update(['lot_id' => $lotId]);
+                        
+                        $updatedInvoices += $updated;
+                    }
+                } catch (\Exception $e) {
+                    $errors[] = [
+                        'record' => $record,
+                        'error'  => 'Failed to update purchase invoices: ' . $e->getMessage()
+                    ];
+                }
+            }
+        }
+
         return response()->json([
             'code'    => 200,
             'success' => true,
-            'message' => "Lot import completed with $successful successful records.",
+            'message' => "Lot import completed with $successful successful records. Updated $updatedInvoices purchase invoices.",
             'errors'  => $errors
         ]);
     }

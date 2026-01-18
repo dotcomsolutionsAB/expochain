@@ -24,7 +24,8 @@ class PurchaseInvoiceModel extends Model
         'igst',
         'total',
         'gross',
-        'round_off'
+        'round_off',
+        'lot_id'
     ];
 
     public function products()
