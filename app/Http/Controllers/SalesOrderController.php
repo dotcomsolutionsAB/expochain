@@ -226,6 +226,7 @@ class SalesOrderController extends Controller
         $clientId = $request->input('client_id');
         $clientContactId = $request->input('client_contact_id');
         $name = $request->input('name');
+        $search = $request->input('search'); // Generic search for name and sales_order_no
         $user = $request->input('user'); 
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
@@ -317,6 +318,13 @@ class SalesOrderController extends Controller
         }
         if ($name) {
             $query->where('name', 'LIKE', '%' . $name . '%');
+        }
+        // Generic search in name and sales_order_no
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'LIKE', '%' . $search . '%')
+                  ->orWhere('sales_order_no', 'LIKE', '%' . $search . '%');
+            });
         }
         if (!empty($status)) {
             $statusArray = explode(',', $status);
