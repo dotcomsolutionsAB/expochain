@@ -300,7 +300,7 @@ class LotController extends Controller
                 $batchData[] = [
                     'name'           => null,
                     'company_id'     => Auth::user()->company_id,
-                    'lr_name'        => $record['lr_name'] ?? null,
+                    'name'        => $record['lr_name'] ?? null,
                     'lr_no'          => $record['lr_no'] ?? null,
                     'date' => ($record['lr_date'] === '0000-00-00' || empty($record['lr_date'])) ? null : $record['lr_date'],
                     'shipping_by'    => $record['lr_shipping'] ?? null,
