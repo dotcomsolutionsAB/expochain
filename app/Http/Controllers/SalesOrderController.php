@@ -87,11 +87,61 @@ class SalesOrderController extends Controller
         $response = $counterController->view($sendRequest);
         $decodedResponse = json_decode($response->getContent(), true);
 
+        // Generate sales_order_no from counter (similar to sales invoice)
+        $get_customer_type = null;
+        if (($decodedResponse['code'] ?? null) === 200 && !empty($decodedResponse['data'][0])) {
+            $data = $decodedResponse['data'];
+            $get_customer_type = $data[0]['type'] ?? null;
+        }
+
+        if ($get_customer_type === "auto") {
+            // Auto-generate sales order number
+            $prefix      = $decodedResponse['data'][0]['prefix']      ?? '';
+            $nextNumber  = $decodedResponse['data'][0]['next_number'] ?? 1;
+            $postfix     = $decodedResponse['data'][0]['postfix']     ?? '';
+
+            $sales_order_no = $prefix .
+                str_pad($nextNumber, 3, '0', STR_PAD_LEFT) .
+                $postfix;
+        } else {
+            // Use manual sales order number from request
+            $sales_order_no = $request->input('sales_order_no');
+        }
+
+        // Safety: if still null, throw a validation-like error
+        if (empty($sales_order_no)) {
+            return response()->json([
+                'code'    => 200,
+                'success' => false,
+                'message' => 'Sales order number could not be generated or is missing.',
+                'data'    => [],
+            ], 200);
+        }
+
+        // Uniqueness check
+        $exists = SalesOrderModel::where('company_id', Auth::user()->company_id)
+            ->where('sales_order_no', $sales_order_no)
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'code'    => 200,
+                'success' => false,
+                'message' => 'The combination of company_id and sales_order_no must be unique.',
+                'data'    => [],
+            ], 200);
+        }
+
+        // Get sales_order_date from request or use current date
+        $sales_order_date = $request->input('sales_order_date', date('Y-m-d'));
+
         // Register the sales order
         $register_sales_order = SalesOrderModel::create([
             'client_id' => $request->input('client_id'),
             'company_id' => Auth::user()->company_id,
             'name' => $client->name,
+            'sales_order_no' => $sales_order_no,
+            'sales_order_date' => $sales_order_date,
             'ref_no' => $request->input('ref_no'),
             'template' => $request->input('template'),
             'sales_person' => $request->input('sales_person'),
@@ -110,7 +160,7 @@ class SalesOrderController extends Controller
         foreach ($products as $product) {
             // Create a record for the product
             SalesOrderProductsModel::create([
-                'so_id' => $register_sales_order->so_id,
+                'so_id' => $register_sales_order->id,
                 'company_id' => Auth::user()->company_id,
                 'product_id' => $product['product_id'],
                 'product_name' => $product['product_name'],
@@ -136,7 +186,7 @@ class SalesOrderController extends Controller
         $addons = $validatedData['addons'] ?? [];
         foreach ($addons as $addon) {
             SalesOrderAddonsModel::create([
-                'so_id' => $register_sales_order->so_id,
+                'so_id' => $register_sales_order->id,
                 'company_id' => Auth::user()->company_id,
                 'name' => $addon['name'],
                 'amount' => $addon['amount'],
@@ -205,7 +255,7 @@ class SalesOrderController extends Controller
             },
             'get_user:id,name'
         ])
-            ->select('so_id', 'client_id', 'name',
+            ->select('id', 'client_id', 'name', 'sales_order_no', 'sales_order_date',
             'ref_no', 'template', 'sales_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
         )
         ->where('company_id', Auth::user()->company_id);
@@ -215,7 +265,7 @@ class SalesOrderController extends Controller
         }
         // 🔹 **Fetch Single Sales Order by ID**
         if ($id) {
-            $salesOrder = $query->where('so_id', $id)->first();
+            $salesOrder = $query->where('id', $id)->first();
             if (!$salesOrder) {
                 return response()->json([
                     'code'    => 200,
@@ -281,8 +331,8 @@ class SalesOrderController extends Controller
         // Get total record count before applying limit
         $totalRecords = $query->count();
 
-        // Order by latest so_id
-        $query->orderBy('so_id', 'desc');
+        // Order by latest id
+        $query->orderBy('id', 'desc');
 
         $query->offset($offset)->limit($limit);
 
@@ -369,7 +419,7 @@ class SalesOrderController extends Controller
             'addons.*.igst' => 'required|numeric',
         ]);
 
-        $salesOrder = SalesOrderModel::where('so_id', $id)->first();
+        $salesOrder = SalesOrderModel::where('id', $id)->first();
 
         if (!$salesOrder) {
             return response()->json(['code' => 404, 'success' => false, 'message' => 'Sales Order not found!'], 404);
@@ -509,7 +559,7 @@ class SalesOrderController extends Controller
     {
         $company_id = Auth::user()->company_id;
 
-        $delete_sales_order = SalesOrderModel::where('so_id', $id)
+        $delete_sales_order = SalesOrderModel::where('id', $id)
                                                 ->where('company_id', $company_id)
                                                 ->delete();
 
@@ -550,7 +600,7 @@ class SalesOrderController extends Controller
                 $query->select('so_id', 'product_id', 'product_name', 'quantity')
                     ->where('product_id', $productId); // Ensure product_id is filtered here
             }])
-            ->select('so_id')
+            ->select('id')
             ->where('client_id', $clientId) // Filter by client_id
             ->whereHas('products', function ($query) use ($productId) {
                 $query->where('product_id', $productId); // Filter by product_id in products table
@@ -581,7 +631,7 @@ class SalesOrderController extends Controller
         $salesOrdersData = $salesOrders->map(function ($order) {
             return $order->products->map(function ($product) use ($order) {
                 return [
-                    'so_id' => $order->so_id,
+                    'so_id' => $order->id,
                     'product_qty'    => $product->quantity,
                 ];
             });
@@ -1414,7 +1464,7 @@ class SalesOrderController extends Controller
                 ])
                 ->where('company_id', $companyId)
                 ->where('product_id', $productId)
-                ->select('sales_order_no','sales_order_date', 'product_id', 'quantity', 'sent', 'price', 'amount')
+                ->select('so_id', 'product_id', 'quantity', 'sent', 'price', 'amount')
                 ->get()
                 ->map(function ($item) {
                     return [
@@ -1559,7 +1609,7 @@ class SalesOrderController extends Controller
 
             // Fetch and transform data
             $records = $query
-                ->select('sales_order_no','sales_order_date','product_id', 'quantity', 'sent', 'price', 'amount')
+                ->select('so_id', 'product_id', 'quantity', 'sent', 'price', 'amount')
                 ->get()
                 ->map(function ($item) {
                     return [
@@ -1741,15 +1791,15 @@ class SalesOrderController extends Controller
                 'product:id,name'
             ])
             ->where('company_id', $companyId)
-            ->whereIn('id', $soIds);
+            ->whereIn('so_id', $soIds);
 
             // Get total count
             $totalRecords = $query->count();
 
             // Get related sales invoices
-            // Invoices linked via sales_order_id in sales_invoice table
+            // Invoices linked via so_id in sales_invoice table
             $salesInvoices = SalesInvoiceModel::where('company_id', $companyId)
-                ->whereIn('id', $soIds)
+                ->whereIn('so_id', $soIds)
                 ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'so_id')
                 ->get()
                 ->groupBy('so_id');
@@ -1769,7 +1819,7 @@ class SalesOrderController extends Controller
                     ->whereIn('id', $siIds)
                     ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'so_id')
                     ->get()
-                    ->groupBy('sales_order_id');
+                    ->groupBy('so_id');
 
                 // Merge both invoice sources
                 foreach ($siBySoId as $soId => $invoices) {

@@ -23,7 +23,7 @@ class SalesOrderAddonsModel extends Model
 
     public function salesOrder()
     {
-        return $this->belongsTo(SalesOrderModel::class, 'so_id');
+        return $this->belongsTo(SalesOrderModel::class, 'so_id', 'id');
     }
 
 

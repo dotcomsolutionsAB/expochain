@@ -9,7 +9,8 @@ class SalesOrderModel extends Model
     //
     protected $table = 't_sales_order';
     
-    protected $primaryKey = 'so_id';
+    // Primary key is 'id', not 'so_id'
+    protected $primaryKey = 'id';
     
     public $incrementing = true;
 
