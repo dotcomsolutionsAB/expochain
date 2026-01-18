@@ -234,6 +234,7 @@ class PurchaseOrderController extends Controller
         $query = PurchaseOrderModel::with([
             'products' => function ($query) {
                 $query->select(
+                    'id',
                     'purchase_order_id',
                     'product_id',
                     'product_name',
