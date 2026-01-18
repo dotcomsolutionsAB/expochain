@@ -234,6 +234,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/export_cash_invoice', [SalesInvoiceController::class, 'exportCashInvoices']);
     Route::post('/export_commission_invoice', [SalesInvoiceController::class, 'exportCommissionInvoices']);
 
+    Route::post('/sales/table', [HelperController::class, 'salesTable']);
+
 
     // Sales Return 
     Route::post('/add_sales_return', [SalesReturnController::class, 'add_sales_return']);
@@ -284,6 +286,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     Route::get('/purchase_invoice_migrate', [PurchaseInvoiceController::class, 'importPurchaseInvoices']);
     Route::post('/export_purchase_invoice_report', [PurchaseInvoiceController::class, 'exportPurchaseInvoiceReport']);
+
+    Route::post('/purchase/table', [HelperController::class, 'purchaseTable']);
 
     // Purchase Return
     Route::post('/add_purchase_return', [PurchaseReturnController::class, 'add_purchase_return']);

@@ -4941,4 +4941,132 @@ class HelperController extends Controller
         }
     }
 
+    /**
+     * Get monthly sales invoice table data
+     * Returns monthly breakdown with invoice count, totals with/without GST
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function salesTable(Request $request)
+    {
+        try {
+            $request->validate([
+                'start_date' => 'required|date',
+                'end_date' => 'required|date|after_or_equal:start_date',
+            ]);
+
+            $companyId = Auth::user()->company_id;
+            $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
+
+            // Query sales invoices grouped by month
+            $monthlyData = SalesInvoiceModel::where('company_id', $companyId)
+                ->whereBetween('sales_invoice_date', [$startDate, $endDate])
+                ->selectRaw('
+                    DATE_FORMAT(sales_invoice_date, "%Y-%m") as month_key,
+                    DATE_FORMAT(sales_invoice_date, "%M %Y") as month_name,
+                    COUNT(*) as total_invoices_count,
+                    SUM(total) as total_with_gst,
+                    SUM(gross) as total_without_gst
+                ')
+                ->groupBy('month_key', 'month_name')
+                ->orderBy('month_key', 'asc')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'month_name' => $item->month_name,
+                        'total_invoices_count' => (int) $item->total_invoices_count,
+                        'total_with_gst' => (float) round($item->total_with_gst ?? 0, 2),
+                        'total_without_gst' => (float) round($item->total_without_gst ?? 0, 2),
+                    ];
+                });
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Sales table data fetched successfully',
+                'data' => [
+                    'period' => [
+                        'start_date' => $startDate->toDateString(),
+                        'end_date' => $endDate->toDateString(),
+                    ],
+                    'records' => $monthlyData,
+                    'total_months' => $monthlyData->count(),
+                ]
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Get monthly purchase invoice table data
+     * Returns monthly breakdown with invoice count, totals with/without GST
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function purchaseTable(Request $request)
+    {
+        try {
+            $request->validate([
+                'start_date' => 'required|date',
+                'end_date' => 'required|date|after_or_equal:start_date',
+            ]);
+
+            $companyId = Auth::user()->company_id;
+            $startDate = Carbon::parse($request->input('start_date'))->startOfDay();
+            $endDate = Carbon::parse($request->input('end_date'))->endOfDay();
+
+            // Query purchase invoices grouped by month
+            $monthlyData = PurchaseInvoiceModel::where('company_id', $companyId)
+                ->whereBetween('purchase_invoice_date', [$startDate, $endDate])
+                ->selectRaw('
+                    DATE_FORMAT(purchase_invoice_date, "%Y-%m") as month_key,
+                    DATE_FORMAT(purchase_invoice_date, "%M %Y") as month_name,
+                    COUNT(*) as total_invoices_count,
+                    SUM(total) as total_with_gst,
+                    SUM(gross) as total_without_gst
+                ')
+                ->groupBy('month_key', 'month_name')
+                ->orderBy('month_key', 'asc')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'month_name' => $item->month_name,
+                        'total_invoices_count' => (int) $item->total_invoices_count,
+                        'total_with_gst' => (float) round($item->total_with_gst ?? 0, 2),
+                        'total_without_gst' => (float) round($item->total_without_gst ?? 0, 2),
+                    ];
+                });
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Purchase table data fetched successfully',
+                'data' => [
+                    'period' => [
+                        'start_date' => $startDate->toDateString(),
+                        'end_date' => $endDate->toDateString(),
+                    ],
+                    'records' => $monthlyData,
+                    'total_months' => $monthlyData->count(),
+                ]
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
 }
