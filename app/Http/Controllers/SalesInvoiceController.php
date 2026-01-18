@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\SalesInvoiceModel;
 use App\Models\SalesInvoiceProductsModel;
 use App\Models\SalesInvoiceAddonsModel;
+use App\Models\SalesOrderModel;
 use App\Models\ClientsModel;
 use App\Models\ClientsContactsModel;
 use App\Models\ClientAddressModel;
@@ -1283,14 +1284,16 @@ class SalesInvoiceController extends Controller
 
                 $roundoff = isset($addonsObj['roundoff']) && $addonsObj['roundoff'] !== '' ? (float)$addonsObj['roundoff'] : 0.0;
 
-                // Sales order mapping (string/array/empty)
+                // Sales order mapping - lookup by sales_order_no and get so_id
                 $salesOrderId = null;
-                if (array_key_exists('so_no', $record)) {
-                    if (is_array($record['so_no'])) {
-                        $filtered = array_filter($record['so_no']);
-                        $salesOrderId = empty($filtered) ? null : implode(', ', $filtered);
-                    } else {
-                        $salesOrderId = !empty($record['so_no']) && is_numeric($record['so_no']) ? (int)$record['so_no'] : null;
+                if (array_key_exists('so_no', $record) && !empty($record['so_no'])) {
+                    $soNo = is_array($record['so_no']) ? (array_filter($record['so_no'])[0] ?? null) : $record['so_no'];
+                    if ($soNo && is_string($soNo)) {
+                        // Lookup Sales Order by sales_order_no using model
+                        $salesOrder = SalesOrderModel::where('company_id', Auth::user()->company_id)
+                            ->where('sales_order_no', trim($soNo))
+                            ->first();
+                        $salesOrderId = $salesOrder ? (int)$salesOrder->so_id : null;
                     }
                 }
 
@@ -1412,7 +1415,20 @@ class SalesInvoiceController extends Controller
                                                     (strtoupper(trim((string)$it['place'])) === 'ANKURHATI' ? 3 : null))
                                                 )
                                                 : null,
-                        'so_id'            => isset($it['so_no']) && is_numeric($it['so_no']) ? (int)$it['so_no'] : null,
+                        'so_id'            => (function() use ($it) {
+                                                if (!isset($it['so_no']) || empty($it['so_no'])) {
+                                                    return null;
+                                                }
+                                                $soNo = is_string($it['so_no']) ? trim($it['so_no']) : null;
+                                                if ($soNo) {
+                                                    // Lookup Sales Order by sales_order_no for this item using model
+                                                    $salesOrder = SalesOrderModel::where('company_id', Auth::user()->company_id)
+                                                        ->where('sales_order_no', $soNo)
+                                                        ->first();
+                                                    return $salesOrder ? (int)$salesOrder->so_id : null;
+                                                }
+                                                return null;
+                                            })(),
                         'returned'         => isset($it['returned']) ? (float)$it['returned'] : 0.0,
                         'profit'           => isset($it['profit']) ? (float)$it['profit'] : 0.0,
                         'created_at'       => now(),

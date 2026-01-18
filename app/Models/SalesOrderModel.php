@@ -17,6 +17,8 @@ class SalesOrderModel extends Model
         'company_id',
         'client_id',
         'name',
+        'sales_order_no',
+        'sales_order_date',
         'ref_no',
         'template',
         'sales_person',
