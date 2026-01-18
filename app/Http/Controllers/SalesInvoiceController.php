@@ -1328,19 +1328,6 @@ class SalesInvoiceController extends Controller
                 }
                 
                 $salesInvoicesBatch[] = $invoiceData;
-                    'template'           => isset($tplObj['id']) ? (int)$tplObj['id'] : 0,
-                    'commission'         => !empty($record['commission']) ? (float)$record['commission'] : 0.0,
-                    'cash'               => !empty($record['cash']) ? (string)$record['cash'] : '0',
-                    'user'               => Auth::user()->id,
-                    'cgst'               => isset($taxObj['cgst']) ? (float)$taxObj['cgst'] : 0.0,
-                    'sgst'               => isset($taxObj['sgst']) ? (float)$taxObj['sgst'] : 0.0,
-                    'igst'               => isset($taxObj['igst']) ? (float)$taxObj['igst'] : 0.0,
-                    'total'              => isset($record['total']) ? round((float)$record['total'], 2) : 0.0,
-                    'gross'              => $invGross,
-                    'round_off'          => round($roundoff, 2),
-                    'created_at'         => now(),
-                    'updated_at'         => now(),
-                ];
             }
 
             // Insert parents
