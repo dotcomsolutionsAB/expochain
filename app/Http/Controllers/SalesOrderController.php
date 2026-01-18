@@ -1909,4 +1909,92 @@ class SalesOrderController extends Controller
         }
     }
 
+    /**
+     * Get mapped sales invoice items for a sales order product
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getSalesInvoiceItemsByOrderProduct(Request $request)
+    {
+        try {
+            // Validate request
+            $request->validate([
+                'sales_order_products_id' => 'required|integer|exists:t_sales_order_products,id',
+            ]);
+
+            $companyId = Auth::user()->company_id;
+            $salesOrderProductId = $request->input('sales_order_products_id');
+
+            // Get the sales order product to retrieve so_id and product_id
+            $salesOrderProduct = SalesOrderProductsModel::where('id', $salesOrderProductId)
+                ->where('company_id', $companyId)
+                ->first();
+
+            if (!$salesOrderProduct) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'Sales order product not found!',
+                    'data' => [],
+                ], 404);
+            }
+
+            // Get sales invoice products linked to this sales order product
+            $invoiceProducts = SalesInvoiceProductsModel::with([
+                    'salesInvoice:id,sales_invoice_no,sales_invoice_date'
+                ])
+                ->where('company_id', $companyId)
+                ->where('so_id', $salesOrderProduct->so_id)
+                ->where('product_id', $salesOrderProduct->product_id)
+                ->select('id', 'sales_invoice_id', 'quantity', 'price', 'discount', 'so_id', 'product_id')
+                ->get();
+
+            if ($invoiceProducts->isEmpty()) {
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'No sales invoice items found for this sales order product.',
+                    'data' => [],
+                ], 200);
+            }
+
+            // Transform the data to the required format
+            $invoiceItems = $invoiceProducts->map(function ($item) {
+                return [
+                    'date' => $item->salesInvoice ? $item->salesInvoice->sales_invoice_date : null,
+                    'sales_invoice_no' => $item->salesInvoice ? $item->salesInvoice->sales_invoice_no : null,
+                    'quantity' => (int) $item->quantity,
+                    'rate' => (float) $item->price,
+                    'discount' => (float) $item->discount,
+                ];
+            })->filter(function ($item) {
+                // Filter out items where invoice is null (shouldn't happen, but safety check)
+                return $item['date'] !== null && $item['sales_invoice_no'] !== null;
+            })->values();
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Sales invoice items retrieved successfully!',
+                'data' => $invoiceItems,
+                'count' => $invoiceItems->count(),
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'code' => 422,
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
 }
