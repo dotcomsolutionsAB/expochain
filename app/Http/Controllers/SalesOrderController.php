@@ -977,7 +977,7 @@ class SalesOrderController extends Controller
                     'igst'             => (float)($taxData['igst'] ?? 0),
                     'total'            => (float)($record['total'] ?? 0),
                     'template'         => (is_array($record['pdf_template']) ? $record['pdf_template'] : (json_decode($record['pdf_template'] ?? '[]', true) ?: []))['id'] ?? '0',
-                    'status'           => [1 => 'pending', 2 => 'partial', 3 => 'completed'][$record['status']] ?? 'pending',
+                    'status'           => [0 => 'pending', 1 => 'completed', 2 => 'partial', 3 => 'short_closed'][$record['status']] ?? 'pending',
                     'gross'            => $gross,
                     'round_off'        => $roundoff,
                     'created_at'       => now(),
