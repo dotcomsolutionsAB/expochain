@@ -70,8 +70,10 @@ class LotController extends Controller
             $offset = $request->input('offset', 0);
             $limit = $request->input('limit', 10);
 
-            // Build base query
-            $query = LotModel::query();
+            // Build base query with purchase invoices relationship
+            $query = LotModel::with(['purchaseInvoices' => function ($query) {
+                $query->select('id', 'supplier_id', 'name', 'purchase_invoice_no', 'purchase_invoice_date', 'oa_no', 'ref_no', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off', 'lot_id');
+            }]);
 
             // If a filter for lr_no is provided, add a where clause (partial match)
             if ($request->filled('lr_no')) {
@@ -91,15 +93,14 @@ class LotController extends Controller
                     ], 404);
                 }
 
-                // Transform the invoice field into an array of invoice objects
-                $lot->invoices = $this->transformInvoiceColumn($lot->invoice);
+                // Add purchase invoices from relationship
+                $lot->purchase_invoices = $lot->purchaseInvoices ?? collect([]);
 
                 return response()->json([
                     'code'    => 200,
                     'success' => true,
                     'message' => 'Lot fetched successfully.',
-                    'data'    => $lot->makeHidden(['invoice', 'created_at','updated_at']),
-                    'total_records' => $totalRecords,
+                    'data'    => $lot->makeHidden(['invoice', 'created_at', 'updated_at', 'purchaseInvoices']),
                 ]);
             }
 
@@ -111,9 +112,9 @@ class LotController extends Controller
                     ->limit($limit)
                     ->get();
 
-                // Transform the invoice field for each record
+                // Add purchase invoices from relationship for each lot
                 $lots->each(function ($lot) {
-                    $lot->invoices = $this->transformInvoiceColumn($lot->invoice);
+                    $lot->purchase_invoices = $lot->purchaseInvoices ?? collect([]);
                 });
 
             return response()->json([
