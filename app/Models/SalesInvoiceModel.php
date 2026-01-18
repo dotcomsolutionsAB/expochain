@@ -26,7 +26,9 @@ class SalesInvoiceModel extends Model
         'igst',
         'total',
         'gross',
-        'round_off'
+        'round_off',
+        'returned',
+        'profit'
     ];
 
     public function products()
