@@ -1414,7 +1414,7 @@ class SalesOrderController extends Controller
                 ])
                 ->where('company_id', $companyId)
                 ->where('product_id', $productId)
-                ->select('so_id', 'product_id', 'quantity', 'sent', 'price', 'amount')
+                ->select('sales_order_no','sales_order_date', 'product_id', 'quantity', 'sent', 'price', 'amount')
                 ->get()
                 ->map(function ($item) {
                     return [
@@ -1559,7 +1559,7 @@ class SalesOrderController extends Controller
 
             // Fetch and transform data
             $records = $query
-                ->select('so_id', 'product_id', 'quantity', 'sent', 'price', 'amount')
+                ->select('sales_order_no','sales_order_date','product_id', 'quantity', 'sent', 'price', 'amount')
                 ->get()
                 ->map(function ($item) {
                     return [
@@ -1741,7 +1741,7 @@ class SalesOrderController extends Controller
                 'product:id,name'
             ])
             ->where('company_id', $companyId)
-            ->whereIn('so_id', $soIds);
+            ->whereIn('id', $soIds);
 
             // Get total count
             $totalRecords = $query->count();
@@ -1749,7 +1749,7 @@ class SalesOrderController extends Controller
             // Get related sales invoices
             // Invoices linked via sales_order_id in sales_invoice table
             $salesInvoices = SalesInvoiceModel::where('company_id', $companyId)
-                ->whereIn('so_id', $soIds)
+                ->whereIn('id', $soIds)
                 ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'so_id')
                 ->get()
                 ->groupBy('so_id');
@@ -1787,8 +1787,8 @@ class SalesOrderController extends Controller
             
             $records = $query
                 ->select($sopTable.'.id', $sopTable.'.so_id', $sopTable.'.product_id', $sopTable.'.quantity', $sopTable.'.sent', $sopTable.'.price')
-                ->join($soTable.' as so', 'so.so_id', '=', $sopTable.'.so_id')
-                ->orderBy('so.so_id', 'desc')
+                ->join($soTable.' as so', 'so.id', '=', $sopTable.'.so_id')
+                ->orderBy('so.id', 'desc')
                 ->orderBy($sopTable.'.id', 'desc')
                 ->offset($offset)
                 ->limit($limit)
