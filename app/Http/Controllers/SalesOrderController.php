@@ -241,7 +241,7 @@ class SalesOrderController extends Controller
             'clientAddress', // let the relationship define its columns (with aliasing)
             'products' => function ($query) {
                 $query->select(
-                    'so_id', 'product_id', 'product_name', 'description',
+                    `id`,'so_id', 'product_id', 'product_name', 'description',
                     'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 
                     DB::raw('(tax / 2) as cgst_rate'), 
                     DB::raw('(tax / 2) as sgst_rate'), 
