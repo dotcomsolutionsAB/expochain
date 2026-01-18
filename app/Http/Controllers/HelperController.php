@@ -241,7 +241,7 @@ class HelperController extends Controller
                     ->orderBy('name', 'asc');
             } elseif ($sortCol === 'pending_so') {
                 $soPendingCountsSub = DB::table((new SalesOrderProductsModel)->getTable().' as sop')
-                    ->join((new SalesOrderModel)->getTable().' as so', 'so.so_id', '=', 'sop.sales_order_id')
+                    ->join((new SalesOrderModel)->getTable().' as so', 'so.id', '=', 'sop.so_id')
                     ->where('so.company_id', $companyId)
                     ->where('so.status', 'pending')
                     ->whereRaw('sop.sent < sop.quantity')
@@ -329,7 +329,7 @@ class HelperController extends Controller
             // Pending sales orders (per product, for this page)
             // Sum pending quantities (quantity - sent) where sent < quantity
             $pendingSales = DB::table((new SalesOrderProductsModel)->getTable().' as sop')
-                ->join((new SalesOrderModel)->getTable().' as so', 'so.so_id', '=', 'sop.so_id')
+                ->join((new SalesOrderModel)->getTable().' as so', 'so.id', '=', 'sop.so_id')
                 ->where('so.company_id', $companyId)
                 ->where('so.status', 'pending')
                 ->whereRaw('sop.sent < sop.quantity')
@@ -413,7 +413,7 @@ class HelperController extends Controller
                 
                 // Sum pending quantities for sales orders (quantity - sent) where sent < quantity
                 $totalSo = (float) DB::table((new SalesOrderProductsModel)->getTable().' as sop')
-                    ->join((new SalesOrderModel)->getTable().' as so', 'so.so_id', '=', 'sop.sales_order_id')
+                    ->join((new SalesOrderModel)->getTable().' as so', 'so.id', '=', 'sop.so_id')
                     ->where('so.company_id', $companyId)
                     ->where('so.status', 'pending')
                     ->whereRaw('sop.sent < sop.quantity')
