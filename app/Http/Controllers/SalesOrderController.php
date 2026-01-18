@@ -1064,6 +1064,7 @@ class SalesOrderController extends Controller
                         'amount'         => $amountBeforeTax + $taxTotal, // matches your previous logic
                         'channel'        => null, // channel not present in new schema; keep null
                         'sent'           => (int)($line['sent'] ?? 0),
+                        'short_closed'   => (int)($line['close'] ?? 0),
                         'created_at'     => now(),
                         'updated_at'     => now()
                     ];
