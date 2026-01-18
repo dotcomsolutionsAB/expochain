@@ -1350,6 +1350,7 @@ class PurchaseOrderController extends Controller
                                                 ))
                                                 : null,
                         'received'          => isset($item['received']) ? (float)$item['received'] : 0.0,
+                        'short_closed'      => ((int)($item['close'] ?? 0) == 1) ? max(0, (int)$qty - (int)($item['received'] ?? 0)) : 0,
                         'created_at'        => now(),
                         'updated_at'        => now(),
                     ];
