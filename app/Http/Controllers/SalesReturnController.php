@@ -51,6 +51,7 @@ class SalesReturnController extends Controller
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
+            'products.*.amount' => 'nullable|numeric|min:0',
             'products.*.godown' => 'required|integer|exists:t_godown,id'
         ]);
     
@@ -134,6 +135,7 @@ class SalesReturnController extends Controller
                 'cgst' => $product['cgst'],
                 'sgst' => $product['sgst'],
                 'igst' => $product['igst'],
+                'amount' => $product['amount'] ?? 0,
                 'godown' => $product['godown'],
             ]);
         }
@@ -167,7 +169,7 @@ class SalesReturnController extends Controller
 
             // Build the query
             $query = SalesReturnModel::with(['products' => function ($query) use ($productId, $productName) {
-                $query->select('sales_return_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'godown');
+                $query->select('sales_return_id', 'product_id', 'product_name', 'description', 'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 'amount', 'godown');
                 
                 // Apply product-related filters
                 if ($productId) {
@@ -353,6 +355,7 @@ class SalesReturnController extends Controller
             'products.*.cgst' => 'required|numeric',
             'products.*.sgst' => 'required|numeric',
             'products.*.igst' => 'required|numeric',
+            'products.*.amount' => 'nullable|numeric|min:0',
             'products.*.godown' => 'required|exists:t_godown,id'
         ]);
 
@@ -400,6 +403,7 @@ class SalesReturnController extends Controller
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
+                    'amount' => $productData['amount'] ?? 0,
                     'godown' => $productData['godown'],
                 ]);
             } else {
@@ -420,6 +424,7 @@ class SalesReturnController extends Controller
                     'cgst' => $productData['cgst'],
                     'sgst' => $productData['sgst'],
                     'igst' => $productData['igst'],
+                    'amount' => $productData['amount'] ?? 0,
                     'godown' => $productData['godown'],
                 ]);
             }
@@ -788,7 +793,7 @@ class SalesReturnController extends Controller
                 $lineCgst = isset($it['cgst']) ? (float)$it['cgst'] : 0.0;
                 $lineSgst = isset($it['sgst']) ? (float)$it['sgst'] : 0.0;
                 $lineIgst = isset($it['igst']) ? (float)$it['igst'] : 0.0;
-                // $lineAmt  = round($lineGross + $lineCgst + $lineSgst + $lineIgst, 2);
+                $lineAmt  = round($lineGross + $lineCgst + $lineSgst + $lineIgst, 2);
 
                 $salesReturnProductsBatch[] = [
                     'sales_return_id' => $salesReturnId,
@@ -806,8 +811,7 @@ class SalesReturnController extends Controller
                     'cgst'            => $lineCgst,
                     'sgst'            => $lineSgst,
                     'igst'            => $lineIgst,
-                    'gross'           => $lineGross, // keep if your table has it
-                    // 'amount'          => $lineAmt,   // keep if your table has it
+                    'amount'          => $lineAmt,
                     'godown'          => $godownId,
                     'created_at'      => now(),
                     'updated_at'      => now(),

@@ -26,6 +26,7 @@ class SalesReturnProductsModel extends Model
         'cgst',
         'sgst',
         'igst',
+        'amount',
         'godown',
     ];
 
