@@ -42,7 +42,7 @@ class SalesInvoiceController extends Controller
             'client_id' => 'required|integer|exists:t_clients,id',
             'sales_invoice_no' => 'required|string',
             'sales_invoice_date' => 'required|date_format:Y-m-d',
-            'sales_order_id' => 'nullable|string|exists:t_sales_order,so_id',
+            'so_id' => 'nullable|string|exists:t_sales_order,so_id',
             'template' => 'required|integer|exists:t_pdf_template,id',
             'sales_person' => 'required|integer|exists:users,id',
             'commission' => 'nullable|numeric',
@@ -167,7 +167,7 @@ class SalesInvoiceController extends Controller
             'name'               => $client->name,
             'sales_invoice_no'   => $sales_invoice_no,
             'sales_invoice_date' => $currentDate,
-            'sales_order_id'     => $request->input('sales_order_id'),
+            'so_id'     => $request->input('so_id'),
             'template'           => $request->input('template'),
             'sales_person'       => $request->input('sales_person'),
             'commission'         => $request->input('commission'),
@@ -334,7 +334,7 @@ class SalesInvoiceController extends Controller
         ])
         ->select('id', 'client_id', 'name', 'sales_invoice_no', 'sales_invoice_date',
             DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date_formatted'), 
-            'user', 'sales_order_id',
+            'user', 'so_id',
             'template', 'sales_person', 'commission', 'cash', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
         )
         ->where('company_id', Auth::user()->company_id);
@@ -474,7 +474,7 @@ class SalesInvoiceController extends Controller
             'sales_invoice_date' => 'required|date_format:Y-m-d',
 
             // 🔹 keep same as add_sales_invoice
-            'sales_order_id'     => 'nullable|integer|exists:t_sales_order,id',
+            'so_id'     => 'nullable|integer|exists:t_sales_order,so_id',
 
             'template'           => 'required|integer|exists:t_pdf_template,id',
             'sales_person'       => 'required|integer|exists:users,id',
@@ -554,7 +554,7 @@ class SalesInvoiceController extends Controller
             'name',
             'sales_invoice_no',
             'sales_invoice_date',
-            'sales_order_id',
+            'so_id',
             'template',
             'sales_person',
             'commission',
@@ -1301,7 +1301,7 @@ class SalesInvoiceController extends Controller
                     'sales_invoice_no'   => !empty($record['si_no']) ? trim($record['si_no']) : null,
                     'sales_invoice_date' => !empty($record['si_date']) && $record['si_date'] !== '0000-00-00'
                                             ? date('Y-m-d', strtotime($record['si_date'])) : now(),
-                    'sales_order_id'     => $salesOrderId,
+                    'so_id'     => $salesOrderId,
                     'template'           => isset($tplObj['id']) ? (int)$tplObj['id'] : 0,
                     'commission'         => !empty($record['commission']) ? (float)$record['commission'] : 0.0,
                     'cash'               => !empty($record['cash']) ? (string)$record['cash'] : '0',

@@ -34,8 +34,6 @@ class SalesOrderController extends Controller
         // Validate the request data
         $validatedData = $request->validate([
             'client_id' => 'required|integer|exists:t_clients,id',
-            'sales_order_no' => 'required|string|unique:t_sales_order,sales_order_no',
-            'sales_order_date' => 'required|date_format:Y-m-d',
             'ref_no' => 'required|string',
             'template' => 'required|integer|exists:t_pdf_template,id',
             'sales_person' => 'required|integer|exists:users,id',
@@ -89,38 +87,11 @@ class SalesOrderController extends Controller
         $response = $counterController->view($sendRequest);
         $decodedResponse = json_decode($response->getContent(), true);
 
-        if ($decodedResponse['code'] === 200) {
-            $data = $decodedResponse['data'];
-            $get_customer_type = $data[0]['type'];
-        }
-
-        if ($get_customer_type == "auto") {
-            $sales_order_no = $decodedResponse['data'][0]['prefix'] .
-                str_pad($decodedResponse['data'][0]['next_number'], 3, '0', STR_PAD_LEFT) .
-                $decodedResponse['data'][0]['postfix'];
-        } else {
-            $sales_order_no = $request->input('sales_order_no');
-        }
-
-        $exists = SalesOrderModel::where('company_id', Auth::user()->company_id)
-            ->where('sales_order_no', $sales_order_no)
-            ->exists();
-
-        if ($exists) {
-            return response()->json([
-                'code' => 422,
-                'success' => false,
-                'error' => 'The combination of company_id and sales_order_no must be unique.',
-            ], 422);
-        }
-
         // Register the sales order
         $register_sales_order = SalesOrderModel::create([
             'client_id' => $request->input('client_id'),
             'company_id' => Auth::user()->company_id,
             'name' => $client->name,
-            'sales_order_no' => $request->input('sales_order_no'),
-            'sales_order_date' => $request->input('sales_order_date'),
             'ref_no' => $request->input('ref_no'),
             'template' => $request->input('template'),
             'sales_person' => $request->input('sales_person'),
@@ -139,7 +110,7 @@ class SalesOrderController extends Controller
         foreach ($products as $product) {
             // Create a record for the product
             SalesOrderProductsModel::create([
-                'sales_order_id' => $register_sales_order->id,
+                'so_id' => $register_sales_order->so_id,
                 'company_id' => Auth::user()->company_id,
                 'product_id' => $product['product_id'],
                 'product_name' => $product['product_name'],
@@ -165,7 +136,7 @@ class SalesOrderController extends Controller
         $addons = $validatedData['addons'] ?? [];
         foreach ($addons as $addon) {
             SalesOrderAddonsModel::create([
-                'sales_order_id' => $register_sales_order->id,
+                'so_id' => $register_sales_order->so_id,
                 'company_id' => Auth::user()->company_id,
                 'name' => $addon['name'],
                 'amount' => $addon['amount'],
@@ -205,8 +176,6 @@ class SalesOrderController extends Controller
         $clientId = $request->input('client_id');
         $clientContactId = $request->input('client_contact_id');
         $name = $request->input('name');
-        $salesOrderNo = $request->input('sales_order_no');
-        $salesOrderDate = $request->input('sales_order_date');
         $user = $request->input('user'); 
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
@@ -221,7 +190,7 @@ class SalesOrderController extends Controller
             'clientAddress', // let the relationship define its columns (with aliasing)
             'products' => function ($query) {
                 $query->select(
-                    'sales_order_id', 'product_id', 'product_name', 'description',
+                    'so_id', 'product_id', 'product_name', 'description',
                     'quantity', 'unit', 'price', 'discount', 'discount_type', 'hsn', 'tax', 'cgst', 'sgst', 'igst', 
                     DB::raw('(tax / 2) as cgst_rate'), 
                     DB::raw('(tax / 2) as sgst_rate'), 
@@ -232,12 +201,11 @@ class SalesOrderController extends Controller
                 }]);
             },
             'addons' => function ($query) {
-                $query->select('sales_order_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
+                $query->select('so_id', 'name', 'amount', 'tax', 'hsn', 'cgst', 'sgst', 'igst');
             },
             'get_user:id,name'
         ])
-        ->select('id', 'client_id', 'name', 'sales_order_no', 'sales_order_date',
-            DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date_formatted'), 
+            ->select('so_id', 'client_id', 'name',
             'ref_no', 'template', 'sales_person', 'status', 'user', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
         )
         ->where('company_id', Auth::user()->company_id);
@@ -300,12 +268,6 @@ class SalesOrderController extends Controller
         if ($name) {
             $query->where('name', 'LIKE', '%' . $name . '%');
         }
-        if ($salesOrderNo) {
-            $query->where('sales_order_no', 'LIKE', '%' . $salesOrderNo . '%');
-        }
-        if ($salesOrderDate) {
-            $query->whereDate('sales_order_date', $salesOrderDate);
-        }
         if (!empty($status)) {
             $statusArray = explode(',', $status);
             $query->whereIn('status', $statusArray);
@@ -316,19 +278,11 @@ class SalesOrderController extends Controller
                 $query->whereIn('product_id', $productIdArray);
             });
         }      
-        if ($dateFrom && $dateTo) {
-            $query->whereBetween('sales_order_date', [$dateFrom, $dateTo]);
-        } elseif ($dateFrom) {
-            $query->whereDate('sales_order_date', '>=', $dateFrom);
-        } elseif ($dateTo) {
-            $query->whereDate('sales_order_date', '<=', $dateTo);
-        }
-
         // Get total record count before applying limit
         $totalRecords = $query->count();
 
-        // Order by latest sales_order_date
-        $query->orderBy('sales_order_date', 'desc');
+        // Order by latest so_id
+        $query->orderBy('so_id', 'desc');
 
         $query->offset($offset)->limit($limit);
 
@@ -349,8 +303,6 @@ class SalesOrderController extends Controller
 
         // Transform Data
         $get_sales_orders->transform(function ($order) {
-            $order->sales_order_date = $order->sales_order_date_formatted;
-            unset($order->sales_order_date_formatted);
             $order->amount_in_words = $this->convertNumberToWords($order->total);
             $order->total = is_numeric($order->total) ? number_format((float) $order->total, 2) : $order->total;
             $order->sales_person = $order->get_user ? ['id' => $order->get_user->id, 'name' => $order->get_user->name] : ['id' => null, 'name' => 'Unknown'];
@@ -377,8 +329,6 @@ class SalesOrderController extends Controller
         $request->validate([
             'client_id' => 'required|integer|exists:t_clients,id',
             'name' => 'nullable|string|exists:t_clients,name',
-            'sales_order_no' => 'required|string',
-            'sales_order_date' => 'required|date',
             'ref_no' => 'required|string',
             'template' => 'required|integer|exists:t_pdf_template,id',
             'sales_person' => 'required|integer|exists:users,id',
@@ -440,8 +390,6 @@ class SalesOrderController extends Controller
             'company_id' => Auth::user()->company_id,
             'name' => $request->input('name') !== null ? $request->input('name') : $salesOrder->name,
             'user' => Auth::user()->id,
-            'sales_order_no' => $request->input('sales_order_no'),
-            'sales_order_date' => $request->input('sales_order_date'),
             'ref_no' => $request->input('ref_no'),
             'template' => $request->input('template'),
             'sales_person' => $request->input('sales_person'),
@@ -460,7 +408,7 @@ class SalesOrderController extends Controller
         foreach ($products as $productData) {
             $requestProductIDs[] = $productData['product_id'];
 
-            $existingProduct = SalesOrderProductsModel::where('sales_order_id', $id)
+            $existingProduct = SalesOrderProductsModel::where('so_id', $id)
                                                     ->where('product_id', $productData['product_id'])
                                                     ->first();
 
@@ -484,7 +432,7 @@ class SalesOrderController extends Controller
                 ]);
             } else {
                 SalesOrderProductsModel::create([
-                    'sales_order_id' => $id,
+                    'so_id' => $id,
                     'company_id' => Auth::user()->company_id,
                     'product_id' => $productData['product_id'],
                     'product_name' => $productData['product_name'],
@@ -513,7 +461,7 @@ class SalesOrderController extends Controller
         foreach ($addons as $addonData) {
             $requestAddonNames[] = $addonData['name'];
 
-            $existingAddon = SalesOrderAddonsModel::where('sales_order_id', $id)
+            $existingAddon = SalesOrderAddonsModel::where('so_id', $id)
                                                 ->where('name', $addonData['name'])
                                                 ->first();
 
@@ -528,7 +476,7 @@ class SalesOrderController extends Controller
                 ]);
             } else {
                 SalesOrderAddonsModel::create([
-                    'sales_order_id' => $id,
+                    'so_id' => $id,
                     'name' => $addonData['name'],
                     'company_id' => Auth::user()->company_id,
                     'amount' => $addonData['amount'],
@@ -542,12 +490,12 @@ class SalesOrderController extends Controller
         }
 
         // Delete products not included in the request
-        $productsDeleted = SalesOrderProductsModel::where('sales_order_id', $id)
+        $productsDeleted = SalesOrderProductsModel::where('so_id', $id)
                                                 ->whereNotIn('product_id', $requestProductIDs)
                                                 ->delete();
 
         // Delete addons not included in the request
-        $addonsDeleted = SalesOrderAddonsModel::where('sales_order_id', $id)
+        $addonsDeleted = SalesOrderAddonsModel::where('so_id', $id)
                                             ->whereNotIn('name', $requestAddonNames)
                                             ->delete();
 
@@ -565,11 +513,11 @@ class SalesOrderController extends Controller
                                                 ->where('company_id', $company_id)
                                                 ->delete();
 
-        $delete_sales_order_products = SalesOrderProductsModel::where('sales_order_id', $id)
+        $delete_sales_order_products = SalesOrderProductsModel::where('so_id', $id)
                                                                 ->where('company_id', $company_id)
                                                                 ->delete();
 
-        $delete_sales_order_addons = SalesOrderAddonsModel::where('sales_order_id', $id)
+        $delete_sales_order_addons = SalesOrderAddonsModel::where('so_id', $id)
                                                             ->where('company_id', $company_id)
                                                             ->delete();
 
@@ -599,10 +547,10 @@ class SalesOrderController extends Controller
 
         // Query Sales Orders based on client_id and product_id
         $query = SalesOrderModel::with(['products' => function ($query) use ($productId) {
-                $query->select('sales_order_id', 'product_id', 'product_name', 'quantity')
+                $query->select('so_id', 'product_id', 'product_name', 'quantity')
                     ->where('product_id', $productId); // Ensure product_id is filtered here
             }])
-            ->select('id', 'sales_order_no')
+            ->select('so_id')
             ->where('client_id', $clientId) // Filter by client_id
             ->whereHas('products', function ($query) use ($productId) {
                 $query->where('product_id', $productId); // Filter by product_id in products table
@@ -633,8 +581,7 @@ class SalesOrderController extends Controller
         $salesOrdersData = $salesOrders->map(function ($order) {
             return $order->products->map(function ($product) use ($order) {
                 return [
-                    'sales_order_id' => $order->id,
-                    'sales_order_no' => $order->sales_order_no,
+                    'so_id' => $order->so_id,
                     'product_qty'    => $product->quantity,
                 ];
             });
@@ -655,7 +602,7 @@ class SalesOrderController extends Controller
     public function shortCloseSalesOrderProduct(Request $request)
     {
         // Get the inputs
-        $salesOrderId = $request->input('sales_order_id');
+        $salesOrderId = $request->input('so_id');
         $salesOrderItemId = $request->input('sales_order_item_id');
 
         // Check if the required parameters are provided
@@ -668,8 +615,8 @@ class SalesOrderController extends Controller
             ], 400);
         }
 
-        // Fetch the Sales Order Product by sales_order_id and sales_order_item_id
-        $salesOrderProduct = SalesOrderProductsModel::where('sales_order_id', $salesOrderId)
+        // Fetch the Sales Order Product by so_id and sales_order_item_id
+        $salesOrderProduct = SalesOrderProductsModel::where('so_id', $salesOrderId)
                                                     ->where('id', $salesOrderItemId)
                                                     ->first();
 
@@ -696,8 +643,7 @@ class SalesOrderController extends Controller
             'success' => true,
             'message' => 'Sales Order Product updated successfully!',
             'data'    => [
-                'sales_order_id'    => $salesOrderProduct->sales_order_id,
-                'sales_order_no'    => $salesOrderProduct->salesOrder->sales_order_no, // Get sales_order_no from related SalesOrderModel
+                'so_id'    => $salesOrderProduct->so_id,
                 'product_id'        => $salesOrderProduct->product_id,
                 'product_name'      => $salesOrderProduct->product_name,
                 'quantity'          => $salesOrderProduct->quantity,
@@ -1041,7 +987,7 @@ class SalesOrderController extends Controller
                     $lineGross = isset($line['gross']) ? (float)$line['gross'] : 0;
 
                     $productsBatch[] = [
-                        'sales_order_id' => $salesOrderId,
+                        'so_id' => $salesOrderId,
                         'company_id'     => Auth::user()->company_id,
                         'product_id'     => $get_product->id,
                         'product_name'   => $productName,
@@ -1069,7 +1015,7 @@ class SalesOrderController extends Controller
                 if (!empty($addonsData)) {
                     foreach ($addonsData as $name => $val) {
                         $addonsBatch[] = [
-                            'sales_order_id' => $salesOrderId,
+                            'so_id' => $salesOrderId,
                             'company_id'     => Auth::user()->company_id,
                             'name'           => $name,
                             'amount'         => (float)($val['cgst'] ?? 0) + (float)($val['sgst'] ?? 0) + (float)($val['igst'] ?? 0),
@@ -1468,7 +1414,7 @@ class SalesOrderController extends Controller
                 ])
                 ->where('company_id', $companyId)
                 ->where('product_id', $productId)
-                ->select('sales_order_id', 'product_id', 'quantity', 'sent', 'price', 'amount')
+                ->select('so_id', 'product_id', 'quantity', 'sent', 'price', 'amount')
                 ->get()
                 ->map(function ($item) {
                     return [
@@ -1613,7 +1559,7 @@ class SalesOrderController extends Controller
 
             // Fetch and transform data
             $records = $query
-                ->select('sales_order_id', 'product_id', 'quantity', 'sent', 'price', 'amount')
+                ->select('so_id', 'product_id', 'quantity', 'sent', 'price', 'amount')
                 ->get()
                 ->map(function ($item) {
                     return [
@@ -1795,7 +1741,7 @@ class SalesOrderController extends Controller
                 'product:id,name'
             ])
             ->where('company_id', $companyId)
-            ->whereIn('sales_order_id', $soIds);
+            ->whereIn('so_id', $soIds);
 
             // Get total count
             $totalRecords = $query->count();
@@ -1803,10 +1749,10 @@ class SalesOrderController extends Controller
             // Get related sales invoices
             // Invoices linked via sales_order_id in sales_invoice table
             $salesInvoices = SalesInvoiceModel::where('company_id', $companyId)
-                ->whereIn('sales_order_id', $soIds)
-                ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_id')
+                ->whereIn('so_id', $soIds)
+                ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'so_id')
                 ->get()
-                ->groupBy('sales_order_id');
+                ->groupBy('so_id');
 
             // Invoices linked via so_id in sales_invoice_products
             $siProducts = SalesInvoiceProductsModel::where('company_id', $companyId)
@@ -1821,7 +1767,7 @@ class SalesOrderController extends Controller
             if (!empty($siIds)) {
                 $siBySoId = SalesInvoiceModel::where('company_id', $companyId)
                     ->whereIn('id', $siIds)
-                    ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_id')
+                    ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'so_id')
                     ->get()
                     ->groupBy('sales_order_id');
 
@@ -1840,9 +1786,9 @@ class SalesOrderController extends Controller
             $sopTable = (new SalesOrderProductsModel)->getTable();
             
             $records = $query
-                ->select($sopTable.'.id', $sopTable.'.sales_order_id', $sopTable.'.product_id', $sopTable.'.quantity', $sopTable.'.sent', $sopTable.'.price')
-                ->join($soTable.' as so', 'so.so_id', '=', $sopTable.'.sales_order_id')
-                ->orderBy('so.sales_order_date', 'desc')
+                ->select($sopTable.'.id', $sopTable.'.so_id', $sopTable.'.product_id', $sopTable.'.quantity', $sopTable.'.sent', $sopTable.'.price')
+                ->join($soTable.' as so', 'so.so_id', '=', $sopTable.'.so_id')
+                ->orderBy('so.so_id', 'desc')
                 ->orderBy($sopTable.'.id', 'desc')
                 ->offset($offset)
                 ->limit($limit)
@@ -1870,8 +1816,6 @@ class SalesOrderController extends Controller
                             'id' => $item->product_id,
                             'name' => optional($item->product)->name,
                         ],
-                        'sales_order_no' => $so ? $so->sales_order_no : null,
-                        'date' => $so ? $so->sales_order_date : null,
                         'client' => [
                             'id' => $so && $so->client ? $so->client->id : null,
                             'name' => $so && $so->client ? $so->client->name : null,

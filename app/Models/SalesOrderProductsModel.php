@@ -10,7 +10,7 @@ class SalesOrderProductsModel extends Model
     protected $table = 't_sales_order_products';
 
     protected $fillable = [
-       'sales_order_id',
+       'so_id',
         'company_id',
         'product_id',
         'product_name',
@@ -34,7 +34,7 @@ class SalesOrderProductsModel extends Model
 
     public function salesOrder()
     {
-        return $this->belongsTo(SalesOrderModel::class, 'sales_order_id');
+        return $this->belongsTo(SalesOrderModel::class, 'so_id');
     }
 
     public function channel()

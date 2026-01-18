@@ -17,8 +17,6 @@ class SalesOrderModel extends Model
         'company_id',
         'client_id',
         'name',
-        'sales_order_no',
-        'sales_order_date',
         'ref_no',
         'template',
         'sales_person',
@@ -34,12 +32,12 @@ class SalesOrderModel extends Model
 
     public function products()
     {
-        return $this->hasMany(SalesOrderProductsModel::class, 'sales_order_id');
+        return $this->hasMany(SalesOrderProductsModel::class, 'so_id');
     }
 
     public function addons()
     {
-        return $this->hasMany(SalesOrderAddonsModel::class, 'sales_order_id');
+        return $this->hasMany(SalesOrderAddonsModel::class, 'so_id');
     }
 
     public function get_user()

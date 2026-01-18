@@ -329,7 +329,7 @@ class HelperController extends Controller
             // Pending sales orders (per product, for this page)
             // Sum pending quantities (quantity - sent) where sent < quantity
             $pendingSales = DB::table((new SalesOrderProductsModel)->getTable().' as sop')
-                ->join((new SalesOrderModel)->getTable().' as so', 'so.id', '=', 'sop.sales_order_id')
+                ->join((new SalesOrderModel)->getTable().' as so', 'so.so_id', '=', 'sop.so_id')
                 ->where('so.company_id', $companyId)
                 ->where('so.status', 'pending')
                 ->whereRaw('sop.sent < sop.quantity')
@@ -4343,7 +4343,7 @@ class HelperController extends Controller
         if (is_null($wantTypes) || in_array('sales_order', $wantTypes, true)) {
             $rows = \App\Models\SalesOrderProductsModel::query()
                 ->select([
-                    't_sales_order_products.sales_order_id as voucher_id',
+                    't_sales_order_products.so_id as voucher_id',
                     't_sales_order.sales_order_no          as voucher_no',
                     't_sales_order.sales_order_date        as date',
                     DB::raw("'sales_order' as type"),
@@ -4356,7 +4356,7 @@ class HelperController extends Controller
                     DB::raw('NULL as profit'),
                     DB::raw('NULL as place'),
                 ])
-                ->join('t_sales_order', 't_sales_order.so_id', '=', 't_sales_order_products.sales_order_id')
+                ->join('t_sales_order', 't_sales_order.so_id', '=', 't_sales_order_products.so_id')
                 ->leftJoin('t_clients', 't_clients.id', '=', 't_sales_order.client_id')
                 ->where('t_sales_order_products.product_id', $productId)
                 ->where('t_sales_order.company_id', $companyId)
@@ -4814,12 +4814,12 @@ class HelperController extends Controller
                 ], 200);
             }
 
-            $soIds = $soProductsWithPending->pluck('sales_order_id')
+            $soIds = $soProductsWithPending->pluck('so_id')
                 ->unique()
                 ->values();
 
             // Use the already filtered product details (where sent < quantity)
-            $soProductDetails = $soProductsWithPending->keyBy('sales_order_id');
+            $soProductDetails = $soProductsWithPending->keyBy('so_id');
 
             // Get sales orders (only pending status and only those with pending quantity items)
             $soQuery = SalesOrderModel::where('company_id', $companyId)
@@ -4845,12 +4845,12 @@ class HelperController extends Controller
             $soIdsForInvoice = $salesOrders->pluck('id')->unique();
             $salesInvoices = [];
             if ($soIdsForInvoice->isNotEmpty()) {
-                // Get invoices linked via sales_order_id
+                // Get invoices linked via so_id
                 $sisBySoId = SalesInvoiceModel::where('company_id', $companyId)
-                    ->whereIn('sales_order_id', $soIdsForInvoice)
-                    ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_id', 'gross', 'total')
+                    ->whereIn('so_id', $soIdsForInvoice)
+                    ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'so_id', 'gross', 'total')
                     ->get()
-                    ->groupBy('sales_order_id');
+                    ->groupBy('so_id');
 
                 // Get invoices linked via so_id in products
                 $siProductIds = SalesInvoiceProductsModel::where('company_id', $companyId)
@@ -4862,9 +4862,9 @@ class HelperController extends Controller
                 if ($siProductIds->isNotEmpty()) {
                     $sisBySoIdInProducts = SalesInvoiceModel::where('company_id', $companyId)
                         ->whereIn('id', $siProductIds)
-                        ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'sales_order_id', 'gross', 'total')
+                        ->select('id', 'sales_invoice_no', 'sales_invoice_date', 'so_id', 'gross', 'total')
                         ->get()
-                        ->groupBy('sales_order_id');
+                        ->groupBy('so_id');
 
                     // Merge both
                     foreach ($sisBySoIdInProducts as $soId => $invoices) {

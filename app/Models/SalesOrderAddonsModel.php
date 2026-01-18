@@ -10,7 +10,7 @@ class SalesOrderAddonsModel extends Model
     protected $table = 't_sales_order_addons';
 
     protected $fillable = [
-        'sales_order_id',
+        'so_id',
         'company_id',
         'name',
         'amount',
@@ -23,7 +23,7 @@ class SalesOrderAddonsModel extends Model
 
     public function salesOrder()
     {
-        return $this->belongsTo(SalesOrderModel::class, 'sales_order_id');
+        return $this->belongsTo(SalesOrderModel::class, 'so_id');
     }
 
 
