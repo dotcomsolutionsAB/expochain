@@ -7,6 +7,8 @@ use App\Models\PurchaseOrderModel;
 use App\Models\PurchaseOrderProductsModel;
 use App\Models\PurchaseOrderAddonsModel;
 use App\Models\PurchaseOrderTermsModel;
+use App\Models\PurchaseInvoiceProductsModel;
+use App\Models\PurchaseInvoiceModel;
 use App\Models\SuppliersModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
@@ -2087,6 +2089,93 @@ class PurchaseOrderController extends Controller
                 'data' => [],
                 'count' => 0,
                 'total_records' => 0
+            ], 500);
+        }
+    }
+
+    /**
+     * Get mapped purchase invoice items for a purchase order product
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getPurchaseInvoiceItemsByOrderProduct(Request $request)
+    {
+        try {
+            // Validate request
+            $request->validate([
+                'purchase_order_products_id' => 'required|integer|exists:t_purchase_order_products,id',
+            ]);
+
+            $companyId = Auth::user()->company_id;
+            $purchaseOrderProductId = $request->input('purchase_order_products_id');
+
+            // Get the purchase order product to retrieve product_id
+            $purchaseOrderProduct = PurchaseOrderProductsModel::where('id', $purchaseOrderProductId)
+                ->where('company_id', $companyId)
+                ->first();
+
+            if (!$purchaseOrderProduct) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'Purchase order product not found!',
+                    'data' => [],
+                ], 404);
+            }
+
+            // Get purchase invoice products with the same product_id
+            $invoiceProducts = PurchaseInvoiceProductsModel::with([
+                    'purchaseInvoice:id,purchase_invoice_no,purchase_invoice_date'
+                ])
+                ->where('company_id', $companyId)
+                ->where('product_id', $purchaseOrderProduct->product_id)
+                ->select('id', 'purchase_invoice_id', 'quantity', 'price', 'discount', 'product_id')
+                ->get();
+
+            if ($invoiceProducts->isEmpty()) {
+                return response()->json([
+                    'code' => 200,
+                    'success' => true,
+                    'message' => 'No purchase invoice items found for this purchase order product.',
+                    'data' => [],
+                ], 200);
+            }
+
+            // Transform the data to the required format
+            $invoiceItems = $invoiceProducts->map(function ($item) {
+                return [
+                    'date' => $item->purchaseInvoice ? $item->purchaseInvoice->purchase_invoice_date : null,
+                    'purchase_invoice_no' => $item->purchaseInvoice ? $item->purchaseInvoice->purchase_invoice_no : null,
+                    'qty' => (int) $item->quantity,
+                    'rate' => (float) $item->price,
+                    'discount' => (float) $item->discount,
+                ];
+            })->filter(function ($item) {
+                // Filter out items where invoice is null (shouldn't happen, but safety check)
+                return $item['date'] !== null && $item['purchase_invoice_no'] !== null;
+            })->values();
+
+            return response()->json([
+                'code' => 200,
+                'success' => true,
+                'message' => 'Purchase invoice items retrieved successfully!',
+                'data' => $invoiceItems,
+                'count' => $invoiceItems->count(),
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'code' => 422,
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'code' => 500,
+                'success' => false,
+                'message' => 'Something went wrong: ' . $e->getMessage(),
             ], 500);
         }
     }

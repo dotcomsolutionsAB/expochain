@@ -275,6 +275,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/purchase_order_by_product', [PurchaseOrderController::class, 'fetchPurchaseOrdersAllProduct']);
     
     Route::post('/export_purchase_order_report', [PurchaseOrderController::class, 'exportPurchaseOrdersReport']);
+    Route::post('/purchase_order_product_invoices', [PurchaseOrderController::class, 'getPurchaseInvoiceItemsByOrderProduct']);
 
 
     // Purchase Invoice
