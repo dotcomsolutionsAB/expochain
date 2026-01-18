@@ -1259,12 +1259,22 @@ class PurchaseInvoiceController extends Controller
         
         // Pre-fetch purchase orders by oa_no for po_id mapping
         $oaNos = collect($data)->pluck('oa_no')->filter()->unique()->values()->toArray();
-        $purchaseOrdersByOaNo = !empty($oaNos)
-            ? PurchaseOrderModel::where('company_id', Auth::user()->company_id)
+        $purchaseOrdersByOaNo = [];
+        if (!empty($oaNos)) {
+            // Get all purchase orders that match any of the oa_no values
+            $purchaseOrders = PurchaseOrderModel::where('company_id', Auth::user()->company_id)
                 ->whereIn('oa_no', $oaNos)
-                ->pluck('id', 'oa_no')
-                ->toArray()
-            : [];
+                ->get();
+            
+            // Build map with both exact and trimmed keys for flexible matching
+            foreach ($purchaseOrders as $po) {
+                if ($po->oa_no) {
+                    $purchaseOrdersByOaNo[$po->oa_no] = $po->id;
+                    // Also add trimmed version for matching
+                    $purchaseOrdersByOaNo[trim($po->oa_no)] = $po->id;
+                }
+            }
+        }
 
         // Build the purchase invoice rows (parent) first
         foreach ($data as $record) {
@@ -1305,8 +1315,16 @@ class PurchaseInvoiceController extends Controller
             // Lookup purchase order by oa_no to get po_id
             $poId = null;
             $oaNo = $record['oa_no'] ?? null;
-            if ($oaNo && isset($purchaseOrdersByOaNo[$oaNo])) {
-                $poId = $purchaseOrdersByOaNo[$oaNo];
+            if ($oaNo) {
+                $oaNoTrimmed = trim($oaNo);
+                // Try exact match first
+                if (isset($purchaseOrdersByOaNo[$oaNo])) {
+                    $poId = $purchaseOrdersByOaNo[$oaNo];
+                } 
+                // Try trimmed match
+                elseif (isset($purchaseOrdersByOaNo[$oaNoTrimmed])) {
+                    $poId = $purchaseOrdersByOaNo[$oaNoTrimmed];
+                }
             }
 
             $purchaseInvoicesBatch[] = [
