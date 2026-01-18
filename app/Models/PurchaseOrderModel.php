@@ -64,4 +64,9 @@ class PurchaseOrderModel extends Model
         // Here, 'supplier_id' in SupplierAddressModel should match the 'supplier_id' in ClientsModel.
         return $this->hasMany(SupplierAddressModel::class, 'supplier_id', 'supplier_id');
     }
+
+    public function purchaseInvoices()
+    {
+        return $this->hasMany(PurchaseInvoiceModel::class, 'po_id', 'id');
+    }
 }

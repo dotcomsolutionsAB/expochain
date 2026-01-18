@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Models\PurchaseInvoiceModel;
 use App\Models\PurchaseInvoiceProductsModel;
 use App\Models\PurchaseInvoiceAddonsModel;
+use App\Models\PurchaseOrderModel;
 use App\Models\SuppliersModel;
 use App\Models\ProductsModel;
 use App\Models\DiscountModel;
@@ -1211,10 +1212,17 @@ class PurchaseInvoiceController extends Controller
         ini_set('max_execution_time', 600); // Increase execution time
         ini_set('memory_limit', '1024M');   // Optimize memory usage
 
+        // Disable foreign key checks before truncating
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        
         // Truncate Purchase Invoice and related tables before import
         PurchaseInvoiceModel::truncate();
         PurchaseInvoiceProductsModel::truncate();
         PurchaseInvoiceAddonsModel::truncate();
+        
+        // Re-enable foreign key checks
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        
         DB::statement("SET SESSION sql_mode = REPLACE(REPLACE(@@sql_mode,'NO_ZERO_DATE',''),'NO_ZERO_IN_DATE','')");
         DB::statement("SET SESSION sql_mode = REPLACE(@@sql_mode,'STRICT_TRANS_TABLES','')");
 
@@ -1248,6 +1256,15 @@ class PurchaseInvoiceController extends Controller
         // **Step 1️⃣: Fetch Existing Data in Memory**
         $existingSuppliers = SuppliersModel::pluck('id', 'name')->toArray();
         $existingProducts  = ProductsModel::pluck('id', 'name')->toArray();
+        
+        // Pre-fetch purchase orders by oa_no for po_id mapping
+        $oaNos = collect($data)->pluck('oa_no')->filter()->unique()->values()->toArray();
+        $purchaseOrdersByOaNo = !empty($oaNos)
+            ? PurchaseOrderModel::where('company_id', Auth::user()->company_id)
+                ->whereIn('oa_no', $oaNos)
+                ->pluck('id', 'oa_no')
+                ->toArray()
+            : [];
 
         // Build the purchase invoice rows (parent) first
         foreach ($data as $record) {
@@ -1285,6 +1302,13 @@ class PurchaseInvoiceController extends Controller
                 $apiTotalGross = $tmpGross;
             }
 
+            // Lookup purchase order by oa_no to get po_id
+            $poId = null;
+            $oaNo = $record['oa_no'] ?? null;
+            if ($oaNo && isset($purchaseOrdersByOaNo[$oaNo])) {
+                $poId = $purchaseOrdersByOaNo[$oaNo];
+            }
+
             $purchaseInvoicesBatch[] = [
                 'company_id'            => Auth::user()->company_id,
                 'supplier_id'           => $supplierId,                     // <-- can be NULL now
@@ -1292,7 +1316,7 @@ class PurchaseInvoiceController extends Controller
                 'purchase_invoice_no'   => $record['pi_no'] ?? null,
                 // 'purchase_invoice_date' => !empty($record['pi_date']) ? date('Y-m-d', strtotime($record['pi_date'])) : null,
                 'purchase_invoice_date' => (function($v){ $v=trim((string)($v??'')); return ($v===''||$v==='0')?'0000-00-00':$v; })($record['pi_date']??null),
-                'oa_no'                 => $record['oa_no'] ?? null,
+                'oa_no'                 => $oaNo,
                 'ref_no'                => $record['reference_no'] ?? null,
                 'template'              => isset($templateObj['id']) ? (int)$templateObj['id'] : 0,
                 'user'                  => Auth::user()->id,
@@ -1302,6 +1326,7 @@ class PurchaseInvoiceController extends Controller
                 'total'                 => isset($record['total']) ? (float)$record['total'] : null,
                 'gross'                 => $apiTotalGross,  // will keep; we also update once more below just in case
                 'round_off'             => 0,               // updated later from addons.roundoff
+                'po_id'                 => $poId,           // Map to purchase order by oa_no
                 'created_at'            => now(),
                 'updated_at'            => now(),
             ];

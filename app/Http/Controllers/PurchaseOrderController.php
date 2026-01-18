@@ -2111,8 +2111,9 @@ class PurchaseOrderController extends Controller
             $companyId = Auth::user()->company_id;
             $purchaseOrderProductId = $request->input('purchase_order_products_id');
 
-            // Get the purchase order product to retrieve product_id
-            $purchaseOrderProduct = PurchaseOrderProductsModel::where('id', $purchaseOrderProductId)
+            // Get the purchase order product to retrieve product_id and purchase_order_id
+            $purchaseOrderProduct = PurchaseOrderProductsModel::with(['purchaseOrder:id,oa_no'])
+                ->where('id', $purchaseOrderProductId)
                 ->where('company_id', $companyId)
                 ->first();
 
@@ -2125,12 +2126,30 @@ class PurchaseOrderController extends Controller
                 ], 404);
             }
 
-            // Get purchase invoice products with the same product_id
+            if (!$purchaseOrderProduct->purchaseOrder) {
+                return response()->json([
+                    'code' => 404,
+                    'success' => false,
+                    'message' => 'Purchase order not found for this product!',
+                    'data' => [],
+                ], 404);
+            }
+
+            $purchaseOrderOaNo = $purchaseOrderProduct->purchaseOrder->oa_no;
+            $productId = $purchaseOrderProduct->product_id;
+
+            // Get purchase invoice products mapped to this purchase order (by oa_no) and same product_id
             $invoiceProducts = PurchaseInvoiceProductsModel::with([
-                    'purchaseInvoice:id,purchase_invoice_no,purchase_invoice_date'
+                    'purchaseInvoice' => function ($query) use ($purchaseOrderOaNo) {
+                        $query->select('id', 'purchase_invoice_no', 'purchase_invoice_date', 'oa_no')
+                              ->where('oa_no', $purchaseOrderOaNo);
+                    }
                 ])
                 ->where('company_id', $companyId)
-                ->where('product_id', $purchaseOrderProduct->product_id)
+                ->where('product_id', $productId)
+                ->whereHas('purchaseInvoice', function ($query) use ($purchaseOrderOaNo) {
+                    $query->where('oa_no', $purchaseOrderOaNo);
+                })
                 ->select('id', 'purchase_invoice_id', 'quantity', 'price', 'discount', 'product_id')
                 ->get();
 
