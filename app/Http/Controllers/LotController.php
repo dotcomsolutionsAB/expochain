@@ -69,6 +69,8 @@ class LotController extends Controller
             // Pagination defaults
             $offset = $request->input('offset', 0);
             $limit = $request->input('limit', 10);
+            $dateFrom = $request->input('date_from');
+            $dateTo = $request->input('date_to');
 
             // Build base query with purchase invoices relationship
             $query = LotModel::with(['purchaseInvoices' => function ($query) {
@@ -79,6 +81,14 @@ class LotController extends Controller
             if ($request->filled('lr_no')) {
                 $lrNo = $request->input('lr_no');
                 $query->where('lr_no', 'LIKE', '%' . $lrNo . '%');
+            }
+
+            // Date range filtering
+            if ($dateFrom) {
+                $query->whereDate('date', '>=', $dateFrom);
+            }
+            if ($dateTo) {
+                $query->whereDate('date', '<=', $dateTo);
             }
 
             // If an ID is provided, fetch that single record
