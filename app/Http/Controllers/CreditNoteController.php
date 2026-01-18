@@ -230,6 +230,8 @@ class CreditNoteController extends Controller
             $name = $request->input('name');
             $creditNoteNo = $request->input('credit_note_no');
             $creditNoteDate = $request->input('credit_note_date');
+            $dateFrom = $request->input('date_from');
+            $dateTo = $request->input('date_to');
             $limit = $request->input('limit', 10); // Default limit to 10
             $offset = $request->input('offset', 0); // Default offset to 0
 
@@ -261,6 +263,15 @@ class CreditNoteController extends Controller
             if ($creditNoteDate) {
                 $query->whereDate('credit_note_date', $creditNoteDate);
             }
+            if ($dateFrom) {
+                $query->whereDate('credit_note_date', '>=', $dateFrom);
+            }
+            if ($dateTo) {
+                $query->whereDate('credit_note_date', '<=', $dateTo);
+            }
+
+            // Sort by date descending (newest first)
+            $query->orderBy('credit_note_date', 'desc');
 
             // Get total record count before applying limit
             $totalRecords = $query->count();
