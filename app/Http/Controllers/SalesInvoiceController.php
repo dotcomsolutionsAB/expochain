@@ -366,6 +366,34 @@ class SalesInvoiceController extends Controller
                 $salesInvoice->client = null;
             }
 
+            // Collect unique so_id from products and get sales_order_no
+            $uniqueSoIds = $salesInvoice->products
+                ->pluck('so_id')
+                ->filter(function($soId) {
+                    return !is_null($soId) && $soId != 0;
+                })
+                ->unique()
+                ->values()
+                ->toArray();
+
+            $salesOrders = [];
+            if (!empty($uniqueSoIds)) {
+                $salesOrders = SalesOrderModel::where('company_id', Auth::user()->company_id)
+                    ->whereIn('id', $uniqueSoIds)
+                    ->select('id', 'sales_order_no')
+                    ->get()
+                    ->map(function($order) {
+                        return [
+                            'so_id' => $order->id,
+                            'sales_order_number' => $order->sales_order_no,
+                        ];
+                    })
+                    ->values()
+                    ->toArray();
+            }
+
+            $salesInvoice->sales_orders = $salesOrders;
+
             return response()->json([
                 'code' => 200,
                 'success' => true,
@@ -431,8 +459,33 @@ class SalesInvoiceController extends Controller
             ], 200);
         }
 
+        // Collect all unique so_ids from all invoices for efficient querying
+        $allSoIds = collect();
+        foreach ($get_sales_invoices as $invoice) {
+            $soIds = $invoice->products
+                ->pluck('so_id')
+                ->filter(function($soId) {
+                    return !is_null($soId) && $soId != 0;
+                });
+            $allSoIds = $allSoIds->merge($soIds);
+        }
+        $uniqueSoIds = $allSoIds->unique()->values()->toArray();
+
+        // Fetch all sales orders in one query
+        $salesOrdersMap = [];
+        if (!empty($uniqueSoIds)) {
+            $salesOrders = SalesOrderModel::where('company_id', Auth::user()->company_id)
+                ->whereIn('id', $uniqueSoIds)
+                ->select('id', 'sales_order_no')
+                ->get();
+            
+            foreach ($salesOrders as $order) {
+                $salesOrdersMap[$order->id] = $order->sales_order_no;
+            }
+        }
+
         // Transform Data
-        $get_sales_invoices->transform(function ($invoice) {
+        $get_sales_invoices->transform(function ($invoice) use ($salesOrdersMap) {
             $invoice->sales_invoice_date = $invoice->sales_invoice_date_formatted;
             unset($invoice->sales_invoice_date_formatted);
             $invoice->amount_in_words = $this->convertNumberToWords($invoice->total);
@@ -448,6 +501,28 @@ class SalesInvoiceController extends Controller
             } else {
                 $invoice->client = null;
             }
+
+            // Collect unique so_id from products and map to sales_order_no
+            $invoiceSoIds = $invoice->products
+                ->pluck('so_id')
+                ->filter(function($soId) {
+                    return !is_null($soId) && $soId != 0;
+                })
+                ->unique()
+                ->values()
+                ->toArray();
+
+            $salesOrders = [];
+            foreach ($invoiceSoIds as $soId) {
+                if (isset($salesOrdersMap[$soId])) {
+                    $salesOrders[] = [
+                        'so_id' => $soId,
+                        'sales_order_number' => $salesOrdersMap[$soId],
+                    ];
+                }
+            }
+
+            $invoice->sales_orders = $salesOrders;
 
             return $invoice;
         });
