@@ -811,6 +811,7 @@ class SalesReturnController extends Controller
                     'cgst'            => $lineCgst,
                     'sgst'            => $lineSgst,
                     'igst'            => $lineIgst,
+                    'gross'           => $lineGross,
                     'amount'          => $lineAmt,
                     'godown'          => $godownId,
                     'created_at'      => now(),
