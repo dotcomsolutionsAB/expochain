@@ -42,9 +42,7 @@ class SalesInvoiceController extends Controller
             'client_id' => 'required|integer|exists:t_clients,id',
             'sales_invoice_no' => 'required|string',
             'sales_invoice_date' => 'required|date_format:Y-m-d',
-            'sales_order_id' => 'nullable|string|exists:t_sales_order,id',
-            'sales_order_no' => 'nullable|string|exists:t_sales_order,sales_order_no', // (Number column)
-            'sales_order_date' => 'required|date_format:Y-m-d',
+            'sales_order_id' => 'nullable|string|exists:t_sales_order,so_id',
             'template' => 'required|integer|exists:t_pdf_template,id',
             'sales_person' => 'required|integer|exists:users,id',
             'commission' => 'nullable|numeric',
@@ -170,8 +168,6 @@ class SalesInvoiceController extends Controller
             'sales_invoice_no'   => $sales_invoice_no,
             'sales_invoice_date' => $currentDate,
             'sales_order_id'     => $request->input('sales_order_id'),
-            'sales_order_no'     => $request->input('sales_order_no'),
-            'sales_order_date'   => $request->input('sales_order_date'),
             'template'           => $request->input('template'),
             'sales_person'       => $request->input('sales_person'),
             'commission'         => $request->input('commission'),
@@ -305,7 +301,6 @@ class SalesInvoiceController extends Controller
         $name = $request->input('name');
         $salesInvoiceNo = $request->input('sales_invoice_no');
         $salesInvoiceDate = $request->input('sales_invoice_date');
-        $salesOrderNo = $request->input('sales_order_no');
         $product = $request->input('product');
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
@@ -339,8 +334,7 @@ class SalesInvoiceController extends Controller
         ])
         ->select('id', 'client_id', 'name', 'sales_invoice_no', 'sales_invoice_date',
             DB::raw('DATE_FORMAT(sales_invoice_date, "%d-%m-%Y") as sales_invoice_date_formatted'), 
-            'user', 'sales_order_id', 'sales_order_no',
-            DB::raw('DATE_FORMAT(sales_order_date, "%d-%m-%Y") as sales_order_date'), 
+            'user', 'sales_order_id',
             'template', 'sales_person', 'commission', 'cash', 'cgst', 'sgst', 'igst', 'total', 'gross', 'round_off'
         )
         ->where('company_id', Auth::user()->company_id);
@@ -391,9 +385,6 @@ class SalesInvoiceController extends Controller
         }
         if ($salesInvoiceDate) {
             $query->whereDate('sales_invoice_date', $salesInvoiceDate);
-        }
-        if ($salesOrderNo) {
-            $query->where('sales_order_no', 'LIKE', '%' . $salesOrderNo . '%');
         }
         if (!empty($productIds)) {
             $ids = array_filter(explode(',', $productIds)); // handles single & multi
@@ -484,8 +475,6 @@ class SalesInvoiceController extends Controller
 
             // 🔹 keep same as add_sales_invoice
             'sales_order_id'     => 'nullable|integer|exists:t_sales_order,id',
-            'sales_order_no'     => 'nullable|string|exists:t_sales_order,sales_order_no',
-            'sales_order_date'   => 'required|date_format:Y-m-d',
 
             'template'           => 'required|integer|exists:t_pdf_template,id',
             'sales_person'       => 'required|integer|exists:users,id',
@@ -566,8 +555,6 @@ class SalesInvoiceController extends Controller
             'sales_invoice_no',
             'sales_invoice_date',
             'sales_order_id',
-            'sales_order_no',
-            'sales_order_date',
             'template',
             'sales_person',
             'commission',

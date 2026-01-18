@@ -247,7 +247,7 @@ class SalesOrderController extends Controller
         }
         // 🔹 **Fetch Single Sales Order by ID**
         if ($id) {
-            $salesOrder = $query->where('id', $id)->first();
+            $salesOrder = $query->where('so_id', $id)->first();
             if (!$salesOrder) {
                 return response()->json([
                     'code'    => 200,
@@ -419,7 +419,7 @@ class SalesOrderController extends Controller
             'addons.*.igst' => 'required|numeric',
         ]);
 
-        $salesOrder = SalesOrderModel::where('id', $id)->first();
+        $salesOrder = SalesOrderModel::where('so_id', $id)->first();
 
         if (!$salesOrder) {
             return response()->json(['code' => 404, 'success' => false, 'message' => 'Sales Order not found!'], 404);
@@ -561,7 +561,7 @@ class SalesOrderController extends Controller
     {
         $company_id = Auth::user()->company_id;
 
-        $delete_sales_order = SalesOrderModel::where('id', $id)
+        $delete_sales_order = SalesOrderModel::where('so_id', $id)
                                                 ->where('company_id', $company_id)
                                                 ->delete();
 
@@ -1841,7 +1841,7 @@ class SalesOrderController extends Controller
             
             $records = $query
                 ->select($sopTable.'.id', $sopTable.'.sales_order_id', $sopTable.'.product_id', $sopTable.'.quantity', $sopTable.'.sent', $sopTable.'.price')
-                ->join($soTable.' as so', 'so.id', '=', $sopTable.'.sales_order_id')
+                ->join($soTable.' as so', 'so.so_id', '=', $sopTable.'.sales_order_id')
                 ->orderBy('so.sales_order_date', 'desc')
                 ->orderBy($sopTable.'.id', 'desc')
                 ->offset($offset)

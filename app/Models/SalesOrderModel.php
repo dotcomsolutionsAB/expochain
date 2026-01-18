@@ -8,6 +8,10 @@ class SalesOrderModel extends Model
 {
     //
     protected $table = 't_sales_order';
+    
+    protected $primaryKey = 'so_id';
+    
+    public $incrementing = true;
 
     protected $fillable = [
         'company_id',
